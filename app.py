@@ -3,7 +3,7 @@ import gspread
 import pandas as pd
 from datetime import datetime
 import streamlit.components.v1 as components
-import altair as alt # Nova biblioteca para os gráficos!
+import altair as alt
 
 # Configuração da página
 st.set_page_config(page_title="Portal Consorbens", layout="wide", initial_sidebar_state="expanded")
@@ -35,9 +35,8 @@ def carregar_ferramenta(nome_arquivo):
 menu_selecionado = ""
 is_logado = st.session_state['usuario_logado'] is not None
 
-# Logo isolada no topo
 st.sidebar.image("https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png", use_column_width=True)
-st.sidebar.write("") # Espaço para desgrudar os links da logo
+st.sidebar.write("") 
 
 if not is_logado:
     menu_selecionado = st.sidebar.radio(
@@ -89,29 +88,14 @@ is_simulator = menu_selecionado in simuladores
 
 css = """
 <style>
-    /* Margens da tela */
     .block-container { padding-top: 1rem; padding-bottom: 0rem; padding-left: 1rem; padding-right: 1rem; }
     
-    /* Menu Lateral Branco e Textos Escuros */
     [data-testid="stSidebar"] { background-color: #ffffff !important; }
     [data-testid="stSidebar"] p, [data-testid="stSidebar"] span, [data-testid="stSidebar"] div { color: #0f172a !important; }
     [data-testid="stSidebar"] hr { border-bottom-color: #e2e8f0 !important; }
-    
-    /* Estilo do Botão de Sair */
     [data-testid="stSidebar"] button { border: 1px solid #cbd5e1 !important; background-color: #f8fafc !important; }
 
-    /* ====== BOTÕES DA SETINHA ====== */
-    [data-testid="collapsedControl"] {
-        background-color: #ff6600 !important; 
-        border-radius: 8px !important;
-        box-shadow: 0px 4px 10px rgba(255, 102, 0, 0.6) !important;
-        padding: 8px !important;
-        margin-top: 15px !important;
-        margin-left: 15px !important;
-        opacity: 1 !important; 
-        z-index: 999999 !important; 
-    }
-    
+    [data-testid="collapsedControl"] { background-color: #ff6600 !important; border-radius: 8px !important; box-shadow: 0px 4px 10px rgba(255, 102, 0, 0.6) !important; padding: 8px !important; margin-top: 15px !important; margin-left: 15px !important; opacity: 1 !important; z-index: 999999 !important; }
     [data-testid="collapsedControl"] svg { fill: #ffffff !important; color: #ffffff !important; stroke: #ffffff !important; width: 20px !important; height: 20px !important; }
     [data-testid="collapsedControl"]:hover { background-color: #cc5200 !important; transform: scale(1.1) !important; }
     
@@ -125,7 +109,7 @@ css = """
 if is_simulator:
     css += """ .stApp { background-color: #0f172a !important; } """
 else:
-    css += """ .stApp { background-color: #f8fafc !important; } """
+    css += """ .stApp { background-color: #ffffff !important; } """ # Fundo branco puro garantido!
 
 css += "</style>"
 st.markdown(css, unsafe_allow_html=True)
@@ -176,107 +160,151 @@ if menu_selecionado == "Dashboard":
     if dados_vendas:
         df_vendas = pd.DataFrame(dados_vendas)
         
-        # Tentativa segura de identificar as colunas (mesmo que você mude a ordem depois)
+        # Mapeando os nomes exatos das colunas da planilha (para evitar erros)
         colunas = df_vendas.columns
-        col_data = colunas[1] if len(colunas) > 1 else colunas[0]
-        col_cliente = colunas[2] if len(colunas) > 2 else colunas[0]
-        col_vend = colunas[7] if len(colunas) > 7 else colunas[0]
-        col_admin = colunas[8] if len(colunas) > 8 else colunas[0]
-        col_prod = colunas[9] if len(colunas) > 9 else colunas[0]
+        col_data = colunas[1] if len(colunas) > 1 else 'Data'
+        col_cliente = colunas[2] if len(colunas) > 2 else 'Nome_Cliente'
+        col_vend = colunas[7] if len(colunas) > 7 else 'Vendedor'
+        col_admin = colunas[8] if len(colunas) > 8 else 'Administradora'
+        col_prod = colunas[9] if len(colunas) > 9 else 'Produto'
         
-        # Converte as datas da planilha para formato que o sistema entenda (para podermos filtrar os meses)
+        # Converte a data para o sistema entender
         df_vendas['Data_Real'] = pd.to_datetime(df_vendas[col_data], format="%d/%m/%Y", errors='coerce')
         
-        # Se for vendedor, esconde as vendas dos outros
+        # Filtra por vendedor (se não for Master)
         if st.session_state['perfil_logado'] == "Vendedor":
             df_vendas = df_vendas[df_vendas[col_vend] == st.session_state['nome_vendedor']]
             
-        # ==========================================
-        # 1. FILTROS GERAIS DO DASHBOARD
-        # ==========================================
-        st.subheader("Filtros do Gráfico")
-        f_col1, f_col2 = st.columns(2)
-        with f_col1:
-            filtro_tempo = st.selectbox("⏳ Período das Vendas:", ["Mês Atual", "Mês Anterior", "Anual", "Todas"])
-        with f_col2:
-            filtro_produto = st.selectbox("📦 Produto:", ["Todos", "Auto", "Imovel", "Moto", "Caminhao"])
-            
-        # Aplicando Filtro de Tempo
-        hoje = datetime.today()
-        df_filtrado = df_vendas.copy()
+        # =========================================================
+        # PARTE 1: GESTÃO E BUSCA DE CLIENTES (No Topo)
+        # =========================================================
+        st.subheader("👥 Ficha de Clientes")
         
-        if filtro_tempo == "Mês Atual":
-            df_filtrado = df_filtrado[(df_filtrado['Data_Real'].dt.month == hoje.month) & (df_filtrado['Data_Real'].dt.year == hoje.year)]
-        elif filtro_tempo == "Mês Anterior":
+        c_filtro1, c_filtro2 = st.columns([1, 2])
+        with c_filtro1:
+            filtro_cli = st.radio("Selecione os clientes:", ["Todos os Clientes", "Clientes do Mês Atual", "Clientes do Mês Passado"])
+        with c_filtro2:
+            busca_nome = st.text_input("🔍 Buscar Cliente por Nome (Digite para filtrar a tabela abaixo):")
+            
+        # Filtro de Data
+        hoje = datetime.today()
+        df_clientes = df_vendas.copy()
+        
+        if filtro_cli == "Clientes do Mês Atual":
+            df_clientes = df_clientes[(df_clientes['Data_Real'].dt.month == hoje.month) & (df_clientes['Data_Real'].dt.year == hoje.year)]
+        elif filtro_cli == "Clientes do Mês Passado":
             mes_ant = hoje.month - 1 if hoje.month > 1 else 12
             ano_ant = hoje.year if hoje.month > 1 else hoje.year - 1
-            df_filtrado = df_filtrado[(df_filtrado['Data_Real'].dt.month == mes_ant) & (df_filtrado['Data_Real'].dt.year == ano_ant)]
-        elif filtro_tempo == "Anual":
-            df_filtrado = df_filtrado[df_filtrado['Data_Real'].dt.year == hoje.year]
+            df_clientes = df_clientes[(df_clientes['Data_Real'].dt.month == mes_ant) & (df_clientes['Data_Real'].dt.year == ano_ant)]
             
-        # Aplicando Filtro de Produto
-        if filtro_produto != "Todos":
-            df_filtrado = df_filtrado[df_filtrado[col_prod].str.contains(filtro_produto, case=False, na=False)]
+        # Filtro de Busca (Corrigido para não falhar com letras maiúsculas/minúsculas)
+        if busca_nome:
+            df_clientes = df_clientes[df_clientes[col_cliente].astype(str).str.contains(busca_nome, case=False, na=False)]
             
-        # ==========================================
-        # 2. GRÁFICO DE PIZZA (ALTAIR)
-        # ==========================================
+        # Exibe a tabela formatada e completinha
+        if not df_clientes.empty:
+            df_display = df_clientes.copy()
+            # Junta Grupo e Cota em uma coluna só
+            df_display['Grupo e Cota'] = df_display['Grupo'].astype(str) + " / " + df_display['Cota'].astype(str)
+            
+            # Colunas exatas solicitadas
+            colunas_mostrar = [col_data, col_cliente, 'Grupo e Cota', 'Valor_Venda', col_prod, col_vend, col_admin]
+            
+            # Renomeia para ficar bonito na tela
+            df_display = df_display[colunas_mostrar].rename(columns={
+                col_data: 'Data da Venda',
+                col_cliente: 'Nome do Cliente',
+                'Valor_Venda': 'Valor (R$)',
+                col_prod: 'Tipo de Produto',
+                col_vend: 'Vendedor',
+                col_admin: 'Administradora'
+            })
+            
+            st.dataframe(df_display, use_container_width=True, hide_index=True)
+            
+            # --- ÁREA DO PERFIL DO CLIENTE (MÁGICA DAS MÚLTIPLAS COTAS) ---
+            st.write("")
+            st.markdown("### 📄 Entrar no Perfil do Cliente")
+            lista_clientes_filtrados = [""] + sorted(df_clientes[col_cliente].astype(str).unique().tolist())
+            cliente_selecionado = st.selectbox("Selecione um cliente para abrir a Ficha Completa:", lista_clientes_filtrados)
+
+            if cliente_selecionado != "":
+                # Busca TODAS as vendas daquele cliente no banco de dados inteiro
+                cotas_do_cliente = df_vendas[df_vendas[col_cliente].astype(str) == cliente_selecionado]
+
+                st.success(f"**Perfil do Cliente:** {cliente_selecionado}")
+                
+                info1, info2, info3 = st.columns(3)
+                info1.metric("Total de Cotas Adquiridas", len(cotas_do_cliente))
+                
+                # Soma tudo que ele investiu
+                total_investido = pd.to_numeric(cotas_do_cliente['Valor_Venda'], errors='coerce').sum()
+                info2.metric("Volume Total Investido", f"R$ {total_investido:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+                
+                telefone = cotas_do_cliente.iloc[0].get('Telefone', 'Não informado')
+                info3.metric("Telefone de Contato", telefone)
+
+                st.markdown(f"#### 📦 Cotas do Cliente ({len(cotas_do_cliente)})")
+                
+                # Exibe a tabela só com as cotas desse cliente específico
+                tabela_cotas = cotas_do_cliente[[col_data, col_admin, col_prod, 'Grupo', 'Cota', 'Valor_Venda']].rename(columns={
+                    col_data: 'Data', col_admin: 'Administradora', col_prod: 'Produto', 'Valor_Venda': 'Valor (R$)'
+                })
+                st.dataframe(tabela_cotas, use_container_width=True, hide_index=True)
+                
+        else:
+            st.warning("Nenhum cliente encontrado com esses filtros/busca.")
+
         st.divider()
-        if not df_filtrado.empty:
-            st.markdown(f"### 📈 Total de Vendas Encontradas: **{len(df_filtrado)}**")
+
+        # =========================================================
+        # PARTE 2: GRÁFICOS DE VENDAS (Na parte de baixo)
+        # =========================================================
+        st.subheader("📊 Gráficos de Vendas")
+        
+        g_filtro1, g_filtro2 = st.columns(2)
+        with g_filtro1:
+            filtro_tempo_grafico = st.selectbox("⏳ Período para o Gráfico:", ["Mês Atual", "Mês Anterior", "Anual", "Todas as Vendas"])
+        with g_filtro2:
+            filtro_produto_grafico = st.selectbox("📦 Produto:", ["Todos", "Auto", "Imovel", "Moto", "Caminhao"])
             
-            # Se procurou por "Todos", a pizza mostra os Produtos. Se filtrou um específico, mostra as Administradoras
-            agrupar_por = col_prod if filtro_produto == "Todos" else col_admin
-            df_grafico = df_filtrado[agrupar_por].value_counts().reset_index()
-            df_grafico.columns = ['Categoria', 'Quantidade']
+        # Aplicando filtros no gráfico
+        df_grafico_filtrado = df_vendas.copy()
+        
+        if filtro_tempo_grafico == "Mês Atual":
+            df_grafico_filtrado = df_grafico_filtrado[(df_grafico_filtrado['Data_Real'].dt.month == hoje.month) & (df_grafico_filtrado['Data_Real'].dt.year == hoje.year)]
+        elif filtro_tempo_grafico == "Mês Anterior":
+            mes_ant = hoje.month - 1 if hoje.month > 1 else 12
+            ano_ant = hoje.year if hoje.month > 1 else hoje.year - 1
+            df_grafico_filtrado = df_grafico_filtrado[(df_grafico_filtrado['Data_Real'].dt.month == mes_ant) & (df_grafico_filtrado['Data_Real'].dt.year == ano_ant)]
+        elif filtro_tempo_grafico == "Anual":
+            df_grafico_filtrado = df_grafico_filtrado[df_grafico_filtrado['Data_Real'].dt.year == hoje.year]
             
-            # Desenha a pizza
-            grafico_pizza = alt.Chart(df_grafico).mark_arc(innerRadius=50).encode(
+        if filtro_produto_grafico != "Todos":
+            df_grafico_filtrado = df_grafico_filtrado[df_grafico_filtrado[col_prod].str.contains(filtro_produto_grafico, case=False, na=False)]
+            
+        if not df_grafico_filtrado.empty:
+            st.markdown(f"**Total de Cotas no Período Selecionado: {len(df_grafico_filtrado)}**")
+            
+            # Gera os dados para a Pizza (Agrupa por Produto se 'Todos', ou por Administradora se for um produto específico)
+            agrupar_por = col_prod if filtro_produto_grafico == "Todos" else col_admin
+            df_pizza = df_grafico_filtrado[agrupar_por].value_counts().reset_index()
+            df_pizza.columns = ['Categoria', 'Quantidade']
+            
+            # Monta a Pizza com Altair
+            grafico_pizza = alt.Chart(df_pizza).mark_arc(innerRadius=60).encode(
                 theta=alt.Theta(field="Quantidade", type="quantitative"),
                 color=alt.Color(field="Categoria", type="nominal"),
                 tooltip=['Categoria', 'Quantidade']
             ).properties(height=350)
             
-            # Centraliza o gráfico lindamente na tela
-            g_col1, g_col2, g_col3 = st.columns([1, 2, 1])
-            with g_col2:
+            # Centraliza a Pizza
+            gp_col1, gp_col2, gp_col3 = st.columns([1, 2, 1])
+            with gp_col2:
                 st.altair_chart(grafico_pizza, use_container_width=True)
         else:
-            st.warning("📊 Nenhuma venda encontrada para os filtros selecionados.")
+            st.warning("📊 Não há vendas suficientes para gerar o gráfico com os filtros atuais.")
             
-        # ==========================================
-        # 3. GESTÃO E BUSCA DE CLIENTES (Painel Expansível)
-        # ==========================================
-        st.divider()
-        with st.expander("👥 CLIQUE AQUI PARA MOSTRAR/BUSCAR CLIENTES", expanded=False):
-            st.markdown("#### Buscar Base de Clientes")
-            
-            b_col1, b_col2 = st.columns([1, 2])
-            with b_col1:
-                filtro_cli = st.radio("Selecione o período dos clientes:", ["Todos os Clientes", "Clientes do Mês Atual", "Clientes do Mês Passado"])
-            with b_col2:
-                busca_nome = st.text_input("🔍 Buscar Cliente por Nome (Digite e dê Enter):")
-                
-            # Filtro da tabela de clientes
-            df_clientes = df_vendas.copy()
-            
-            if filtro_cli == "Clientes do Mês Atual":
-                df_clientes = df_clientes[(df_clientes['Data_Real'].dt.month == hoje.month) & (df_clientes['Data_Real'].dt.year == hoje.year)]
-            elif filtro_cli == "Clientes do Mês Passado":
-                mes_ant = hoje.month - 1 if hoje.month > 1 else 12
-                ano_ant = hoje.year if hoje.month > 1 else hoje.year - 1
-                df_clientes = df_clientes[(df_clientes['Data_Real'].dt.month == mes_ant) & (df_clientes['Data_Real'].dt.year == ano_ant)]
-                
-            if busca_nome:
-                df_clientes = df_clientes[df_clientes[col_cliente].str.contains(busca_nome, case=False, na=False)]
-                
-            if not df_clientes.empty:
-                # Mostra colunas mais relevantes para não poluir a tela
-                colunas_mostrar = [c for c in [col_data, col_cliente, col_prod, col_admin, 'Valor_Venda', 'Status'] if c in df_clientes.columns]
-                st.dataframe(df_clientes[colunas_mostrar], use_container_width=True)
-            else:
-                st.info("Nenhum cliente atende a esses critérios de busca.")
-                
     else:
         st.info("O sistema ainda não possui vendas cadastradas na planilha.")
 
