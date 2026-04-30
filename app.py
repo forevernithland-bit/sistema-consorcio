@@ -109,7 +109,7 @@ css = """
 if is_simulator:
     css += """ .stApp { background-color: #0f172a !important; } """
 else:
-    css += """ .stApp { background-color: #ffffff !important; } """ 
+    css += """ .stApp { background-color: #ffffff !important; } """
 
 css += "</style>"
 st.markdown(css, unsafe_allow_html=True)
@@ -151,6 +151,14 @@ def conectar_planilha():
 
 planilha = conectar_planilha()
 
+# Função inteligente para achar a coluna certa na planilha, não importa a ordem
+def encontra_coluna(df, palavras_chave):
+    for palavra in palavras_chave:
+        for col in df.columns:
+            if palavra.lower() in str(col).lower() and str(col).strip() != "":
+                return col
+    return None
+
 if menu_selecionado == "Dashboard":
     
     aba_vendas = planilha.worksheet("Vendas")
@@ -158,24 +166,38 @@ if menu_selecionado == "Dashboard":
     
     if dados_vendas:
         df_vendas = pd.DataFrame(dados_vendas)
-        
         colunas = df_vendas.columns
-        col_data = colunas[1] if len(colunas) > 1 else 'Data'
-        col_cliente = colunas[2] if len(colunas) > 2 else 'Nome_Cliente'
-        col_vend = colunas[7] if len(colunas) > 7 else 'Vendedor'
-        col_admin = colunas[8] if len(colunas) > 8 else 'Administradora'
-        col_prod = colunas[9] if len(colunas) > 9 else 'Produto'
         
+        # Mapeamento Inteligente
+        col_data = encontra_coluna(df_vendas, ['data']) or (colunas[1] if len(colunas) > 1 else colunas[0])
+        col_cliente = encontra_coluna(df_vendas, ['cliente', 'nome']) or (colunas[2] if len(colunas) > 2 else colunas[0])
+        col_vend = encontra_coluna(df_vendas, ['vendedor', 'corretor']) or (colunas[7] if len(colunas) > 7 else colunas[0])
+        col_admin = encontra_coluna(df_vendas, ['admin', 'administradora']) or (colunas[8] if len(colunas) > 8 else colunas[0])
+        col_prod = encontra_coluna(df_vendas, ['produto', 'tipo']) or (colunas[9] if len(colunas) > 9 else colunas[0])
+        col_grupo = encontra_coluna(df_vendas, ['grupo']) or (colunas[10] if len(colunas) > 10 else colunas[0])
+        col_cota = encontra_coluna(df_vendas, ['cota']) or (colunas[11] if len(colunas) > 11 else colunas[0])
+        col_valor = encontra_coluna(df_vendas, ['valor', 'venda', 'preço']) or (colunas[12] if len(colunas) > 12 else colunas[0])
+        col_status = encontra_coluna(df_vendas, ['status']) or (colunas[13] if len(colunas) > 13 else colunas[0])
+        
+        # Converte Datas
         if col_data in df_vendas.columns:
             df_vendas['Data_Real'] = pd.to_datetime(df_vendas[col_data], format="%d/%m/%Y", errors='coerce')
         else:
             df_vendas['Data_Real'] = pd.NaT
 
+        # Limpa o dinheiro ("R$ 26.143,00" vira 26143.00 para o computador conseguir somar)
+        if col_valor in df_vendas.columns:
+            df_vendas['Valor_Numerico'] = df_vendas[col_valor].astype(str).str.replace('R$', '', regex=False).str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.strip()
+            df_vendas['Valor_Numerico'] = pd.to_numeric(df_vendas['Valor_Numerico'], errors='coerce').fillna(0.0)
+        else:
+            df_vendas['Valor_Numerico'] = 0.0
+
+        # Filtro de vendedor
         if st.session_state['perfil_logado'] == "Vendedor" and col_vend in df_vendas.columns:
             df_vendas = df_vendas[df_vendas[col_vend] == st.session_state['nome_vendedor']]
             
         # =========================================================
-        # PARTE 1: GESTÃO E BUSCA DE CLIENTES (No Topo)
+        # PARTE 1: GESTÃO E BUSCA DE CLIENTES
         # =========================================================
         st.subheader("👥 Ficha de Clientes")
         
@@ -188,7 +210,6 @@ if menu_selecionado == "Dashboard":
         hoje = datetime.today()
         df_clientes = df_vendas.copy()
         
-        # Aplicando Filtro de Tempo nos Clientes
         if not df_clientes['Data_Real'].isna().all():
             if filtro_cli == "Mês Atual":
                 df_clientes = df_clientes[(df_clientes['Data_Real'].dt.month == hoje.month) & (df_clientes['Data_Real'].dt.year == hoje.year)]
@@ -199,24 +220,22 @@ if menu_selecionado == "Dashboard":
             elif filtro_cli == "Ano Atual":
                 df_clientes = df_clientes[df_clientes['Data_Real'].dt.year == hoje.year]
             
-        # Filtro de Busca por Nome
         if busca_nome and col_cliente in df_clientes.columns:
             df_clientes = df_clientes[df_clientes[col_cliente].astype(str).str.contains(busca_nome, case=False, na=False)]
             
         if not df_clientes.empty:
             df_display = df_clientes.copy()
             
-            if 'Grupo' in df_display.columns and 'Cota' in df_display.columns:
-                df_display['Grupo e Cota'] = df_display['Grupo'].astype(str) + " / " + df_display['Cota'].astype(str)
-            elif 'Grupo' in df_display.columns:
-                df_display['Grupo e Cota'] = df_display['Grupo'].astype(str)
-            elif 'Cota' in df_display.columns:
-                df_display['Grupo e Cota'] = df_display['Cota'].astype(str)
+            # Formata Grupo e Cota
+            if col_grupo in df_display.columns and col_cota in df_display.columns:
+                df_display['Grupo e Cota'] = df_display[col_grupo].astype(str) + " / " + df_display[col_cota].astype(str)
+            elif col_grupo in df_display.columns:
+                df_display['Grupo e Cota'] = df_display[col_grupo].astype(str)
             else:
                 df_display['Grupo e Cota'] = "N/A"
             
-            # Ordenação exata solicitada por você
-            colunas_desejadas = [col_cliente, 'Grupo e Cota', col_prod, col_admin, 'Valor_Venda', col_vend, col_data]
+            # Ordena e renomeia as colunas do jeito que você pediu
+            colunas_desejadas = [col_cliente, 'Grupo e Cota', col_prod, col_admin, col_valor, col_vend, col_data]
             colunas_mostrar = [c for c in colunas_desejadas if c in df_display.columns]
             
             nomes_bonitos = {
@@ -224,7 +243,7 @@ if menu_selecionado == "Dashboard":
                 'Grupo e Cota': 'Grupo e Cota',
                 col_prod: 'Tipo de Produto',
                 col_admin: 'Administradora',
-                'Valor_Venda': 'Valor da Venda',
+                col_valor: 'Valor da Venda',
                 col_vend: 'Vendedor',
                 col_data: 'Data da Venda'
             }
@@ -248,20 +267,18 @@ if menu_selecionado == "Dashboard":
                     info1, info2, info3 = st.columns(3)
                     info1.metric("Total de Cotas Adquiridas", len(cotas_do_cliente))
                     
-                    if 'Valor_Venda' in cotas_do_cliente.columns:
-                        total_investido = pd.to_numeric(cotas_do_cliente['Valor_Venda'], errors='coerce').sum()
-                        info2.metric("Volume Total Investido", f"R$ {total_investido:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-                    else:
-                        info2.metric("Volume Total Investido", "R$ 0,00")
+                    total_investido = cotas_do_cliente['Valor_Numerico'].sum()
+                    info2.metric("Volume Total Investido", f"R$ {total_investido:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
                     
-                    telefone = cotas_do_cliente.iloc[0].get('Telefone', 'Não informado') if 'Telefone' in cotas_do_cliente.columns else 'Não informado'
+                    telefone_col = encontra_coluna(cotas_do_cliente, ['telefone', 'tel'])
+                    telefone = cotas_do_cliente.iloc[0].get(telefone_col, 'Não informado') if telefone_col else 'Não informado'
                     info3.metric("Telefone de Contato", telefone)
 
                     st.markdown(f"#### 📦 Cotas do Cliente ({len(cotas_do_cliente)})")
                     
-                    colunas_ficha = [c for c in [col_data, col_admin, col_prod, 'Grupo', 'Cota', 'Valor_Venda'] if c in cotas_do_cliente.columns]
+                    colunas_ficha = [c for c in [col_data, col_admin, col_prod, col_grupo, col_cota, col_valor] if c in cotas_do_cliente.columns]
                     tabela_cotas = cotas_do_cliente[colunas_ficha].rename(columns={
-                        col_data: 'Data', col_admin: 'Administradora', col_prod: 'Produto', 'Valor_Venda': 'Valor (R$)'
+                        col_data: 'Data', col_admin: 'Administradora', col_prod: 'Produto', col_grupo: 'Grupo', col_cota: 'Cota', col_valor: 'Valor (R$)'
                     })
                     
                     st.dataframe(tabela_cotas, use_container_width=True, hide_index=True)
@@ -272,7 +289,7 @@ if menu_selecionado == "Dashboard":
         st.divider()
 
         # =========================================================
-        # PARTE 2: GRÁFICOS E SOMAS FINANCEIRAS (Na parte de baixo)
+        # PARTE 2: GRÁFICOS E SOMAS FINANCEIRAS
         # =========================================================
         st.subheader("📊 Gráficos de Vendas")
         
@@ -299,15 +316,11 @@ if menu_selecionado == "Dashboard":
             
         if not df_grafico_filtrado.empty:
             
-            # Cálculos de Totalizadores Financeiros e Volume
             total_cotas_graf = len(df_grafico_filtrado)
-            soma_financeira = 0
-            if 'Valor_Venda' in df_grafico_filtrado.columns:
-                soma_financeira = pd.to_numeric(df_grafico_filtrado['Valor_Venda'], errors='coerce').sum()
+            soma_financeira = df_grafico_filtrado['Valor_Numerico'].sum()
             
-            # Exibindo as métricas principais
             met_col1, met_col2 = st.columns(2)
-            met_col1.metric(label="Volume Total (R$)", value=f"R$ {soma_financeira:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+            met_col1.metric(label="Volume Total Vendido (R$)", value=f"R$ {soma_financeira:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
             met_col2.metric(label="Total de Cotas Vendidas", value=total_cotas_graf)
             st.write("")
             
@@ -378,9 +391,23 @@ elif menu_selecionado == "Gerenciar Vendas (Editar/Deletar)":
     aba_vendas = planilha.worksheet("Vendas")
     dados_vendas = aba_vendas.get_all_records()
     
+    # Função segura copiada do Dashboard para evitar quebrar esta tela também
+    def encontra_coluna(df, palavras_chave):
+        for palavra in palavras_chave:
+            for col in df.columns:
+                if palavra.lower() in str(col).lower() and str(col).strip() != "":
+                    return col
+        return None
+
     if dados_vendas:
         df_vendas = pd.DataFrame(dados_vendas)
-        opcoes_busca = df_vendas.apply(lambda row: f"Linha {row.name + 2} | Cliente: {row.get('Nome_Cliente', 'S/N')} - Grupo/Cota: {row.get('Grupo', '')}/{row.get('Cota', '')}", axis=1).tolist()
+        col_cliente = encontra_coluna(df_vendas, ['cliente', 'nome']) or df_vendas.columns[2]
+        col_grupo = encontra_coluna(df_vendas, ['grupo']) or df_vendas.columns[10]
+        col_cota = encontra_coluna(df_vendas, ['cota']) or df_vendas.columns[11]
+        col_valor = encontra_coluna(df_vendas, ['valor']) or df_vendas.columns[12]
+        col_status = encontra_coluna(df_vendas, ['status']) or df_vendas.columns[13]
+
+        opcoes_busca = df_vendas.apply(lambda row: f"Linha {row.name + 2} | Cliente: {row.get(col_cliente, 'S/N')} - Grupo/Cota: {row.get(col_grupo, '')}/{row.get(col_cota, '')}", axis=1).tolist()
         venda_selecionada = st.selectbox("Selecione a venda que deseja alterar ou excluir:", [""] + opcoes_busca)
         
         if venda_selecionada:
@@ -389,22 +416,30 @@ elif menu_selecionado == "Gerenciar Vendas (Editar/Deletar)":
             venda_atual = df_vendas.iloc[idx_dataframe]
             
             st.divider()
-            st.subheader(f"Editando Venda: {venda_atual.get('Nome_Cliente', '')}")
+            st.subheader(f"Editando Venda: {venda_atual.get(col_cliente, '')}")
             
             col1, col2 = st.columns(2)
             with col1:
-                novo_nome = st.text_input("Nome do Cliente", value=str(venda_atual.get('Nome_Cliente', '')))
-                novo_status = st.selectbox("Status", ["Vendido", "Contemplado", "Cancelado"], index=["Vendido", "Contemplado", "Cancelado"].index(venda_atual.get('Status_Cliente', 'Vendido') if venda_atual.get('Status_Cliente') in ["Vendido", "Contemplado", "Cancelado"] else "Vendido"))
+                novo_nome = st.text_input("Nome do Cliente", value=str(venda_atual.get(col_cliente, '')))
+                novo_status = st.selectbox("Status", ["Vendido", "Contemplado", "Cancelado"], index=["Vendido", "Contemplado", "Cancelado"].index(venda_atual.get(col_status, 'Vendido') if venda_atual.get(col_status) in ["Vendido", "Contemplado", "Cancelado"] else "Vendido"))
             with col2:
-                val_atual = str(venda_atual.get('Valor_Venda', '0')).replace('.','',1)
-                novo_valor = st.number_input("Valor da Venda (R$)", value=float(venda_atual.get('Valor_Venda', 0)) if val_atual.isdigit() else 0.0)
+                # Trata o valor monetário caso tenha vindo como string com "R$"
+                val_atual = str(venda_atual.get(col_valor, '0')).replace('R$', '').replace('.','').replace(',', '.').strip()
+                try:
+                    val_float = float(val_atual)
+                except:
+                    val_float = 0.0
+                novo_valor = st.number_input("Valor da Venda (R$)", value=val_float)
 
             col_btn1, col_btn2 = st.columns(2)
             with col_btn1:
                 if st.button("Salvar Alterações"):
-                    aba_vendas.update_cell(linha_planilha, 3, novo_nome)
-                    aba_vendas.update_cell(linha_planilha, 13, novo_valor) 
-                    aba_vendas.update_cell(linha_planilha, 14, novo_status)
+                    # Precisamos descobrir a letra exata da coluna ou atualizar a linha inteira.
+                    # Para simplificar e evitar erros de coluna, vamos deixar essa parte pendente de refatoração futura, 
+                    # mas atualizando via índice padrão por agora (como estava antes).
+                    aba_vendas.update_cell(linha_planilha, df_vendas.columns.get_loc(col_cliente) + 1, novo_nome)
+                    aba_vendas.update_cell(linha_planilha, df_vendas.columns.get_loc(col_valor) + 1, novo_valor) 
+                    aba_vendas.update_cell(linha_planilha, df_vendas.columns.get_loc(col_status) + 1, novo_status)
                     st.success("Alterações salvas na planilha!")
                     st.rerun()
             with col_btn2:
