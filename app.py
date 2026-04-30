@@ -37,7 +37,7 @@ is_logado = st.session_state['usuario_logado'] is not None
 if not is_logado:
     st.sidebar.image("https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png", use_column_width=True)
     st.sidebar.title("🛠️ Ferramentas")
-    st.sidebar.caption("Dica: Use a seta laranja gigante no topo para ampliar a tela.")
+    st.sidebar.caption("Dica: Use a seta laranja no topo para ampliar a tela.")
     
     menu_selecionado = st.sidebar.radio("Navegação:", [
         "🔐 Login (Área Restrita)",
@@ -52,7 +52,7 @@ else:
     st.sidebar.image("https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png", use_column_width=True)
     st.sidebar.title(f"Olá, {st.session_state['nome_vendedor']}")
     st.sidebar.write(f"Perfil: **{st.session_state['perfil_logado']}**")
-    st.sidebar.caption("Dica: Use a seta laranja gigante no topo para ampliar a tela.")
+    st.sidebar.caption("Dica: Use a seta laranja no topo para ampliar a tela.")
     st.sidebar.divider()
 
     ferramentas_logadas = [
@@ -91,27 +91,30 @@ css = """
     [data-testid="stSidebar"] hr { border-bottom-color: #e2e8f0 !important; }
     [data-testid="stSidebar"] button { border: 1px solid #cbd5e1 !important; background-color: #f8fafc !important; color: #0f172a !important; }
     
-    /* BOTÃO DE ESCONDER/MOSTRAR MENU GIGANTE E LARANJA */
+    /* SETINHA DE ESCONDER E MOSTRAR O MENU (LARANJA E VISÍVEL) */
+    /* stSidebarCollapseButton é a de esconder. collapsedControl é a flutuante de mostrar. */
+    [data-testid="stSidebarCollapseButton"], 
     [data-testid="collapsedControl"] {
-        background-color: #ff6600 !important; /* Laranja vibrante */
-        border-radius: 8px !important;
-        box-shadow: 0px 4px 12px rgba(255, 102, 0, 0.4) !important;
-        opacity: 1 !important; 
-        padding: 5px !important;
-        transition: all 0.3s ease !important;
-        z-index: 999999 !important;
-        transform: scale(1.4) !important; /* AUMENTA O BOTÃO EM 40% */
-        transform-origin: top left !important;
-        margin-top: 10px !important;
-        margin-left: 10px !important;
-    }
-    [data-testid="collapsedControl"] svg {
-        fill: #ffffff !important;
+        background-color: #ff6600 !important; /* Fundo Laranja */
+        border-radius: 6px !important;
+        box-shadow: 0px 4px 10px rgba(255, 102, 0, 0.5) !important;
+        padding: 6px !important;
         color: #ffffff !important;
+        z-index: 999999 !important;
     }
+    
+    [data-testid="stSidebarCollapseButton"] svg, 
+    [data-testid="collapsedControl"] svg {
+        fill: #ffffff !important; /* Seta sempre branca */
+        color: #ffffff !important;
+        width: 1.5rem !important;
+        height: 1.5rem !important;
+    }
+
+    [data-testid="stSidebarCollapseButton"]:hover, 
     [data-testid="collapsedControl"]:hover {
-        background-color: #cc5200 !important;
-        transform: scale(1.5) !important; /* Cresce mais um pouco ao passar o mouse */
+        background-color: #cc5200 !important; /* Laranja mais escuro no hover */
+        transform: scale(1.1) !important;
     }
 """
 
