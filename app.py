@@ -7,14 +7,40 @@ import streamlit.components.v1 as components
 # Configuração da página (agora com layout 100% otimizado)
 st.set_page_config(page_title="Portal Consorbens", layout="wide", initial_sidebar_state="expanded")
 
-# --- TRUQUE DE CSS PARA DEIXAR A TELA MAIOR E SEM MARGENS ---
+# --- TRUQUE DE CSS PARA TELA MAIOR E MENU BRANCO ---
 st.markdown("""
     <style>
+        /* Reduz as margens da tela principal para ampliar os simuladores */
         .block-container {
             padding-top: 1rem;
             padding-bottom: 0rem;
             padding-left: 1rem;
             padding-right: 1rem;
+        }
+        
+        /* 1. Força o fundo do menu lateral a ficar branco */
+        [data-testid="stSidebar"] {
+            background-color: #ffffff !important;
+        }
+        
+        /* 2. Força o texto do menu lateral a ficar escuro (para dar leitura) */
+        [data-testid="stSidebar"] p, 
+        [data-testid="stSidebar"] span, 
+        [data-testid="stSidebar"] label, 
+        [data-testid="stSidebar"] div {
+            color: #0f172a !important;
+        }
+        
+        /* 3. Ajusta a cor da linha divisória do menu */
+        [data-testid="stSidebar"] hr {
+            border-bottom-color: #e2e8f0 !important;
+        }
+        
+        /* 4. Melhora a borda e o texto do botão no menu lateral */
+        [data-testid="stSidebar"] button {
+            border: 1px solid #cbd5e1 !important;
+            background-color: #f8fafc !important;
+            color: #0f172a !important;
         }
     </style>
 """, unsafe_allow_html=True)
