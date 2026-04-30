@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Oportunidades Premium</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #1e293b; 
+            --primary-hover: #0f172a;
+            --bg-page: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-light: #64748b;
+            --border-color: #e2e8f0;
+            
+            /* Destaque 1 - Prazo Restante (Azul Céu / Sky Blue) */
+            --destaque-prazo-th: #0284c7;  
+            --destaque-prazo-bg: #f0f9ff;  
+            --destaque-prazo-txt: #0369a1; 
+
+            /* Destaque 2 - Menor Lance (Âmbar / Dourado) */
+            --destaque-lance-th: #d97706;  
+            --destaque-lance-bg: #fffbeb;  
+            --destaque-lance-txt: #b45309; 
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            margin: 0;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 35px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+        }
+
+        h1 { 
+            color: var(--text-main); 
+            text-align: center; 
+            font-size: 26px;
+            font-weight: 700;
+            margin-top: 0;
+            margin-bottom: 30px;
+        }
+
+        h3 {
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-top: 0;
+            border-bottom: 2px solid var(--bg-page);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        .sessao {
+            margin-bottom: 25px;
+            padding: 25px;
+            background-color: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .linha-filtros {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .campo {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        label { 
+            font-weight: 500; 
+            font-size: 13px; 
+            display: block; 
+            margin-bottom: 8px; 
+            color: var(--text-main);
+        }
+
+        select, input[type="text"] {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            font-size: 14px;
+            font-family: 'Inter', sans-serif;
+            box-sizing: border-box;
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            transition: all 0.2s ease;
+        }
+
+        select:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #94a3b8;
+            box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.2);
+            background-color: #fff;
+        }
+
+        input[type="file"] {
+            background-color: #fff;
+            padding: 10px;
+            width: 100%;
+            border: 1px dashed var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 15px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            width: 100%;
+            font-family: 'Inter', sans-serif;
+            margin-top: 10px;
+        }
+
+        button:hover { 
+            background-color: var(--primary-hover); 
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        p.dica {
+            font-size: 12px;
+            color: var(--text-light);
+            margin-top: 5px;
+            margin-bottom: 0;
+        }
+
+        #feedbackUpload {
+            margin-top: 15px;
+            padding: 12px 15px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 14px;
+            display: none;
+        }
+
+        .tabela-container {
+            width: 100%;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            background-color: #fff;
+            table-layout: auto;
+        }
+
+        th, td {
+            padding: 12px 8px; 
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: #f1f5f9; 
+            color: var(--text-main);
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.2s;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        th:hover { background-color: #e2e8f0; }
+        tr:hover td { background-color: #f8fafc; }
+
+        .icone-ordenacao { font-size: 11px; margin-left: 4px; color: var(--text-light); }
+
+        th.th-prazo { background-color: var(--destaque-prazo-th) !important; color: white !important; }
+        th.th-prazo:hover { background-color: #0369a1 !important; }
+        td.td-prazo { background-color: var(--destaque-prazo-bg) !important; color: var(--destaque-prazo-txt); font-weight: 600; }
+
+        th.th-lance { background-color: var(--destaque-lance-th) !important; color: white !important; }
+        th.th-lance:hover { background-color: #b45309 !important; }
+        td.td-lance { background-color: var(--destaque-lance-bg) !important; color: var(--destaque-lance-txt); font-weight: 700; font-size: 14px; }
+
+        #areaConfiguracoes, #areaResultados { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🚀 Gerador de Oportunidades</h1>
+
+    <div class="sessao">
+        <h3>1. Importar Planilha Atualizada</h3>
+        <input type="file" id="uploadExcel" accept=".xlsx, .xls, .csv">
+        <p class="dica">O sistema lerá automaticamente todas as abas (Imóveis, Veículos, etc).</p>
+        
+        <div id="feedbackUpload"></div>
+    </div>
+
+    <div class="sessao" id="areaConfiguracoes">
+        <h3>2. Filtros de Busca</h3>
+        
+        <div class="linha-filtros">
+            <div class="campo">
+                <label>Produto (Tipo do Bem):</label>
+                <select id="filtroProduto">
+                    <option value="">Selecione a categoria...</option>
+                    <option value="IMÓVEIS">Imóveis</option>
+                    <option value="VEÍCULOS LEVES">Veículos Leves</option>
+                    <option value="MOTOCICLETAS">Motocicletas</option>
+                    <option value="VEÍCULOS PESADOS">Veículos Pesados</option>
+                </select>
+            </div>
+            <div class="campo">
+                <label>Quantidade de Resultados:</label>
+                <select id="filtroQtd">
+                    <option value="5">Mostrar 5 resultados</option>
+                    <option value="10">Mostrar 10 resultados</option>
+                    <option value="15">Mostrar 15 resultados</option>
+                    <option value="20">Mostrar 20 resultados</option>
+                    <option value="999999">Mostrar TODOS os resultados</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="linha-filtros">
+            <div class="campo">
+                <label>Valor Mínimo do Bem:</label>
+                <input type="text" id="filtroMin" placeholder="Ex: R$ 50.000,00" onkeyup="mascaraMoeda(this)">
+            </div>
+            <div class="campo">
+                <label>Valor Máximo do Bem:</label>
+                <input type="text" id="filtroMax" placeholder="Ex: R$ 300.000,00" onkeyup="mascaraMoeda(this)">
+            </div>
+        </div>
+
+        <button id="btnGerar">Gerar Hipóteses Otimizadas</button>
+    </div>
+
+    <div class="sessao" id="areaResultados">
+        <h3 id="tituloResultado">Resultados Encontrados</h3>
+        <p class="dica" style="margin-bottom: 15px;">Dica: Clique nos títulos das colunas para ordenar os valores.</p>
+        <div class="tabela-container">
+            <div id="tabelaResultado"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let todosOsDados = [];
+    let dadosAtuaisExibidos = [];
+    let colunaOrdenacaoAtual = 'Menor Lance (%)';
+    let ordemCrescente = true;
+
+    function mascaraMoeda(i) {
+        let v = i.value.replace(/\D/g, '');
+        v = (v/100).toFixed(2).replace('.', ',');
+        v = v.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        i.value = v ? 'R$ ' + v : '';
+    }
+
+    function formatarParaNumero(valorMoeda) {
+        if (!valorMoeda) return NaN;
+        return parseFloat(valorMoeda.replace('R$ ', '').replace(/\./g, '').replace(',', '.'));
+    }
+
+    const uploadExcel = document.getElementById('uploadExcel');
+    const feedbackUpload = document.getElementById('feedbackUpload');
+    const areaConfiguracoes = document.getElementById('areaConfiguracoes');
+    const areaResultados = document.getElementById('areaResultados');
+    const btnGerar = document.getElementById('btnGerar');
+
+    uploadExcel.addEventListener('change', (evento) => {
+        const arquivo = evento.target.files[0];
+        if (!arquivo) return;
+
+        feedbackUpload.style.display = 'block';
+        feedbackUpload.style.backgroundColor = '#eff6ff';
+        feedbackUpload.style.border = '1px solid #3b82f6';
+        feedbackUpload.style.color = '#1d4ed8';
+        feedbackUpload.innerText = '⏳ Lendo o arquivo... aguarde.';
+        areaConfiguracoes.style.display = 'none';
+        areaResultados.style.display = 'none';
+
+        const leitor = new FileReader();
+        leitor.onload = function(e) {
+            try {
+                const dados = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(dados, { type: 'array' });
+                
+                todosOsDados = [];
+                
+                workbook.SheetNames.forEach(nomeAba => {
+                    const aba = workbook.Sheets[nomeAba];
+                    
+                    const linhasBrutas = XLSX.utils.sheet_to_json(aba, { header: 1 });
+                    let linhaCabecalho = -1;
+                    
+                    for (let i = 0; i < Math.min(15, linhasBrutas.length); i++) {
+                        if (linhasBrutas[i] && (linhasBrutas[i].includes('Tipo Bem') || linhasBrutas[i].includes('Grupo'))) {
+                            linhaCabecalho = i;
+                            break;
+                        }
+                    }
+
+                    if (linhaCabecalho !== -1) {
+                        const dadosAba = XLSX.utils.sheet_to_json(aba, { range: linhaCabecalho });
+                        todosOsDados = todosOsDados.concat(dadosAba);
+                    }
+                });
+
+                if(todosOsDados.length > 0) {
+                    feedbackUpload.style.backgroundColor = '#f0fdfa';
+                    feedbackUpload.style.border = '1px solid #10b981';
+                    feedbackUpload.style.color = '#047857';
+                    feedbackUpload.innerText = `✅ Sucesso! Planilha carregada e pronta para uso.`;
+                    
+                    areaConfiguracoes.style.display = 'block';
+                } else {
+                    throw new Error("Nenhum dado válido encontrado.");
+                }
+            } catch (erro) {
+                feedbackUpload.style.backgroundColor = '#fef2f2';
+                feedbackUpload.style.border = '1px solid #ef4444';
+                feedbackUpload.style.color = '#b91c1c';
+                feedbackUpload.innerText = `❌ Ocorreu um erro ao ler a planilha.`;
+            }
+        };
+        leitor.readAsArrayBuffer(arquivo);
+    });
+
+    btnGerar.addEventListener('click', () => {
+        const produto = document.getElementById('filtroProduto').value;
+        const qtdResultados = parseInt(document.getElementById('filtroQtd').value);
+        const valorMin = formatarParaNumero(document.getElementById('filtroMin').value);
+        const valorMax = formatarParaNumero(document.getElementById('filtroMax').value);
+
+        if (!produto) {
+            alert("Por favor, selecione a categoria do Produto!");
+            return;
+        }
+
+        let filtrados = todosOsDados.filter(item => {
+            if (item['Tipo Bem'] && item['Tipo Bem'].toUpperCase() !== produto.toUpperCase()) return false;
+            
+            let percLance = parseFloat(item['Menor % Lance Livre Contemplado']);
+            if (isNaN(percLance) || percLance < 0.30) return false;
+
+            let minPlanilha = parseFloat(item['Valor Min Bem']);
+            let maxPlanilha = parseFloat(item['Valor Máx Bem']);
+            
+            if (!isNaN(valorMin) && minPlanilha < valorMin) return false;
+            if (!isNaN(valorMax) && maxPlanilha > valorMax) return false;
+
+            return true;
+        });
+
+        dadosAtuaisExibidos = filtrados.map(item => {
+            let chaveVagas = Object.keys(item).find(k => k.toLowerCase().includes('vagas'));
+            let chaveMaiorLance = Object.keys(item).find(k => k.includes('Maior % Lance'));
+
+            return {
+                'Tipo do Bem': item['Tipo Bem'],
+                'Grupo': item['Grupo'],
+                'Crédito Mínimo': item['Valor Min Bem'],
+                'Crédito Máximo': item['Valor Máx Bem'],
+                'Prazo Restante': item['Prazo Restante Atual'],
+                'Menor Lance (%)': item['Menor % Lance Livre Contemplado'],
+                'Maior Lance (%)': item[chaveMaiorLance],
+                'Visão de Vagas': item[chaveVagas] || 'N/A'
+            };
+        });
+
+        colunaOrdenacaoAtual = 'Menor Lance (%)';
+        ordemCrescente = true;
+        ordenarDados(colunaOrdenacaoAtual, ordemCrescente);
+
+        dadosAtuaisExibidos = dadosAtuaisExibidos.slice(0, qtdResultados);
+
+        areaResultados.style.display = 'block';
+        montarTabela(dadosAtuaisExibidos);
+    });
+
+    function ordenarPorColuna(coluna) {
+        if (colunaOrdenacaoAtual === coluna) {
+            ordemCrescente = !ordemCrescente;
+        } else {
+            colunaOrdenacaoAtual = coluna;
+            ordemCrescente = true;
+        }
+        ordenarDados(colunaOrdenacaoAtual, ordemCrescente);
+        montarTabela(dadosAtuaisExibidos);
+    }
+
+    function ordenarDados(coluna, ascendente) {
+        dadosAtuaisExibidos.sort((a, b) => {
+            let valorA = a[coluna];
+            let valorB = b[coluna];
+            if (!isNaN(parseFloat(valorA)) && !isNaN(parseFloat(valorB))) {
+                valorA = parseFloat(valorA);
+                valorB = parseFloat(valorB);
+            }
+            if (valorA < valorB) return ascendente ? -1 : 1;
+            if (valorA > valorB) return ascendente ? 1 : -1;
+            return 0;
+        });
+    }
+
+    function montarTabela(dados) {
+        const areaTabela = document.getElementById('tabelaResultado');
+        
+        let textoResultados = dados.length === parseInt(document.getElementById('filtroQtd').value) 
+            ? `As ${dados.length} Melhores Oportunidades` 
+            : `Resultados Encontrados: ${dados.length}`;
+            
+        document.getElementById('tituloResultado').innerText = textoResultados;
+
+        if (dados.length === 0) {
+            areaTabela.innerHTML = "<p style='color:#e11d48; text-align:center; padding: 20px; font-weight: 500;'>Nenhuma oportunidade encontrada com estes filtros.</p>";
+            return;
+        }
+
+        let html = '<table><thead><tr>';
+        const colunas = Object.keys(dados[0]);
+        
+        colunas.forEach(col => { 
+            let icone = col === colunaOrdenacaoAtual ? (ordemCrescente ? ' ▲' : ' ▼') : ' ↕';
+            
+            let classeTh = '';
+            if (col === 'Prazo Restante') classeTh = 'class="th-prazo"';
+            if (col === 'Menor Lance (%)') classeTh = 'class="th-lance"';
+            
+            html += `<th ${classeTh} onclick="ordenarPorColuna('${col}')">${col} <span class="icone-ordenacao">${icone}</span></th>`; 
+        });
+        html += '</tr></thead><tbody>';
+        
+        dados.forEach(linha => {
+            html += '<tr>';
+            colunas.forEach(col => {
+                let valor = linha[col];
+                
+                if ((col === 'Menor Lance (%)' || col === 'Maior Lance (%)') && !isNaN(valor) && valor !== undefined) {
+                    valor = (parseFloat(valor) * 100).toFixed(2) + '%';
+                }
+                if ((col === 'Crédito Mínimo' || col === 'Crédito Máximo') && !isNaN(valor) && valor !== undefined) {
+                    valor = parseFloat(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                }
+
+                let classeTd = '';
+                if (col === 'Prazo Restante') classeTd = 'class="td-prazo"';
+                if (col === 'Menor Lance (%)') classeTd = 'class="td-lance"';
+
+                html += `<td ${classeTd}>${valor !== undefined && valor !== "" ? valor : '-'}</td>`;
+            });
+            html += '</tr>';
+        });
+        
+        html += '</tbody></table>';
+        areaTabela.innerHTML = html;
+    }
+</script>
+
+</body>
+</html>

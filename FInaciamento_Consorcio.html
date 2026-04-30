@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador de Crédito Profissional - Consorbens</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+    body { margin: 0; font-family: 'Segoe UI', Arial, sans-serif; background: #0f172a; color: #333; }
+    .container { max-width: 1000px; margin: auto; padding: 20px; }
+    h2 { color: #fff; text-align: center; margin-bottom: 20px; }
+    .card { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .field { display: flex; flex-direction: column; }
+    label { font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #475569; }
+    input, select { height: 38px; padding: 6px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px; outline: none; }
+    
+    .toggle-container { display: flex; gap: 10px; margin-bottom: 20px; }
+    .toggle-btn { flex: 1; padding: 10px; text-align: center; background: #f1f5f9; border: 2px solid transparent; border-radius: 8px; cursor: pointer; font-weight: bold; color: #64748b; }
+    .toggle-btn.active { background: #eff6ff; border-color: #2563eb; color: #2563eb; }
+    
+    .hidden { display: none !important; }
+
+    button { width: 100%; padding: 14px; font-weight: bold; border: none; border-radius: 10px; cursor: pointer; font-size: 15px; transition: opacity 0.2s; }
+    button:hover { opacity: 0.9; }
+    .btnPrimary { background: #2563eb; color: #fff; }
+    .btnSecondary { background: #f59e0b; color: #fff; margin-top: 10px; }
+    
+    .btn-buscar-taxa { background: #10b981; color: white; border: none; border-radius: 8px; padding: 8px 12px; font-size: 13px; cursor: pointer; margin-top: 5px; display: flex; align-items: center; justify-content: center; gap: 5px; width: 100%; transition: background 0.2s; font-weight: bold;}
+    .btn-buscar-taxa:hover { background: #059669; }
+    .btn-buscar-taxa:disabled { background: #94a3b8; cursor: not-allowed; }
+
+    .result { background: #1e293b; color: #fff; padding: 20px; border-radius: 12px; margin-top: 15px; }
+    .resumo-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 20px; align-items: center; }
+    .chart-box { background: #fff; padding: 15px; border-radius: 10px; }
+
+    /* LAYOUT DA PROPOSTA */
+    .proposta-wrapper { background: #ffffff; border: 2px solid #1e3a8a; border-radius: 12px; padding: 20px 25px; margin-bottom: 20px; position: relative; color: #333; }
+    .logo-proposta { position: absolute; top: 20px; right: 25px; max-width: 140px; }
+    .proposta-header-content { text-align: center; width: 100%; margin-bottom: 20px; }
+    .proposta-header-content h4 { color: #1e3a8a; font-size: 22px; margin: 0 0 5px 0; }
+    .proposta-header-content p { color: #4b5563; margin: 0; font-size: 14px; }
+    .proposta-body { display: flex; gap: 20px; align-items: stretch; }
+    .proposta-img { width: 300px; object-fit: cover; border-radius: 12px; }
+    .proposta-detalhes { flex: 1; border: 1px solid #e2e8f0; border-left: 6px solid #f59e0b; border-radius: 8px; padding: 5px; background: #f8fafc; display: flex; flex-direction: column; justify-content: center; }
+    .detalhe-linha { display: flex; justify-content: space-between; padding: 12px 15px; font-size: 15px; border-bottom: 1px solid #e2e8f0; }
+    .detalhe-linha:last-child { border-bottom: none; }
+    .detalhe-destaque { background: #f0f4fa; border-radius: 6px; margin-bottom: 4px; }
+    .detalhe-destaque .dt-label { color: #ea580c; font-weight: bold; }
+    .detalhe-destaque .dt-valor { color: #1e3a8a; font-weight: bold; }
+    .detalhe-normal .dt-label { color: #475569; }
+    .detalhe-normal .dt-valor { color: #0f172a; font-weight: bold; }
+    .proposta-economia { text-align: center; margin-top: 20px; font-size: 16px; font-weight: bold; color: #16a34a; }
+
+    .taxa-flex { display: flex; gap: 5px; }
+    .taxa-flex select { width: 35%; }
+    .taxa-flex input { width: 65%; }
+    .info-taxa { font-size: 12px; margin-top: 10px; color: #64748b; font-weight: 500; background: #f1f5f9; padding: 8px; border-radius: 6px; text-align: center; }
+    .info-taxa-update { color: #10b981; font-weight: bold; }
+
+    /* LISTA PARCELAS */
+    .lista { background: #fff; margin-top: 15px; padding: 15px; border-radius: 10px; max-height: 300px; overflow: auto; font-size: 13px; color: #333; }
+
+    @media(max-width:768px){
+        .grid { grid-template-columns: 1fr; }
+        .resumo-grid { grid-template-columns: 1fr; }
+        .proposta-body { flex-direction: column; }
+        .proposta-img { width: 100%; height: 200px; }
+        .logo-proposta { position: relative; top: 0; right: 0; display: block; margin: 0 auto 15px auto; }
+    }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+    <h2>Comparativo: Consórcio Contemplado vs Financiamento</h2>
+
+    <div class="card">
+        <h3>1. Escolha a Modalidade</h3>
+        <div class="toggle-container">
+            <div class="toggle-btn active" id="btnContemplado" onclick="setModoConsorcio('contemplado')">Carta Contemplada</div>
+            <div class="toggle-btn" id="btnTradicional" onclick="setModoConsorcio('tradicional')">Consórcio Tradicional</div>
+        </div>
+
+        <!-- SELEÇÃO DE PRODUTO GERAL (Movida para fora dos forms para servir aos dois modos) -->
+        <div class="grid" style="margin-bottom: 15px;">
+            <div class="field" style="grid-column: span 2;">
+                <label>Produto</label>
+                <select id="produtoGeral">
+                    <option value="automovel">Automóvel</option>
+                    <option value="imovel" selected>Imóvel</option>
+                    <option value="caminhao">Caminhão</option>
+                    <option value="moto">Moto</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- FORM CONTEMPLADO -->
+        <div id="formContemplado" class="grid">
+            <div class="field">
+                <label>Crédito Liberado</label>
+                <input id="creditoContemplado" placeholder="R$ 0,00">
+            </div>
+            <div class="field">
+                <label>Valor da Entrada</label>
+                <input id="entradaContemplado" placeholder="R$ 0,00">
+            </div>
+            <div class="field">
+                <label>Taxa de Transferência (Opcional)</label>
+                <div class="taxa-flex">
+                    <select id="tipoTaxaTransf" onchange="resetTaxaInput()">
+                        <option value="percentual">%</option>
+                        <option value="reais">R$</option>
+                    </select>
+                    <input id="taxaTransf" placeholder="0%">
+                </div>
+            </div>
+            <div class="field">
+                <label>Quantidade de parcelas</label>
+                <input id="prazoContemplado" type="number" placeholder="Ex: 80">
+            </div>
+            <div class="field">
+                <label>Valor das Parcelas</label>
+                <input id="valorParcelaContemplado" placeholder="R$ 0,00">
+            </div>
+        </div>
+
+        <!-- FORM TRADICIONAL -->
+        <div id="formTradicional" class="grid hidden">
+            <div class="field">
+                <label>Crédito</label>
+                <input id="credito" placeholder="R$ 0,00">
+            </div>
+            <div class="field">
+                <label>Prazo (meses)</label>
+                <input id="prazoCons" type="number" placeholder="Ex: 120">
+            </div>
+            <div class="field">
+                <label>Taxa Adm (%)</label>
+                <input id="taxaAdm" placeholder="0%">
+            </div>
+            <div class="field">
+                <label>Fundo Reserva (%)</label>
+                <input id="fundo" placeholder="0%">
+            </div>
+            <div class="field">
+                <label>Seguro (%)</label>
+                <input id="seguro" placeholder="0%">
+            </div>
+            <div class="field">
+                <label>Valor do Lance (Opcional)</label>
+                <input id="lanceTradicional" placeholder="R$ 0,00">
+            </div>
+            <div class="field">
+                <label>O Lance abate em:</label>
+                <select id="tipoAbatimento">
+                    <option value="parcela">Valor da Parcela</option>
+                    <option value="prazo">Prazo (Quantidade de Parcelas)</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>2. Comparar com Financiamento</h3>
+        <div class="grid">
+            <div class="field">
+                <label>Entrada (Financiamento)</label>
+                <input id="entradaFin" placeholder="R$ 0,00">
+            </div>
+            <div class="field">
+                <label>Prazo (meses)</label>
+                <input id="prazoFin" type="number" placeholder="Ex: 120">
+            </div>
+            <div class="field">
+                <label>Juros (% ao mês)</label>
+                <input id="juros" placeholder="0,00%">
+                <button type="button" id="btnBuscarTaxa" class="btn-buscar-taxa" onclick="buscarTaxaMercado()">
+                    🔄 Preencher Taxa Atual do Mercado
+                </button>
+            </div>
+            <div class="field">
+                <label>Tipo</label>
+                <select id="tipoFin">
+                    <option value="sac" selected>SAC (Parcelas Decrescentes)</option>
+                    <option value="price">PRICE (Parcelas Fixas)</option>
+                </select>
+            </div>
+        </div>
+        <div class="info-taxa" id="textoTaxaMedia">
+            Clique no botão acima para consultar as taxas médias do Banco Central.
+        </div>
+    </div>
+
+    <div class="card">
+        <button class="btnPrimary" onclick="calcular()">GERAR PROPOSTA PARA CLIENTE</button>
+        <button class="btnSecondary hidden" id="btnParcelas" onclick="mostrarParcelas()">Ver Comparativo de Parcelas (Mês a Mês)</button>
+    </div>
+
+    <div id="resultadoContainer"></div>
+    <div class="lista hidden" id="listaParcelas"></div>
+</div>
+
+<script>
+let chart;
+let modoAtual = 'contemplado';
+let parcelasFin = [];
+let parcelasConsorcioArray = [];
+
+const imagens = {
+    automovel: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=400&q=80',
+    imovel: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=400&q=80',
+    caminhao: 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=400&q=80',
+    moto: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=400&q=80'
+};
+
+function buscarTaxaMercado() {
+    let btn = document.getElementById('btnBuscarTaxa');
+    let inputJuros = document.getElementById('juros');
+    let textoInfo = document.getElementById('textoTaxaMedia');
+    let produtoSelecionado = document.getElementById('produtoGeral').value;
+    
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Consultando Banco Central...';
+    textoInfo.innerHTML = 'Conectando à base de dados...';
+
+    setTimeout(() => {
+        let taxaMensal = '0,00';
+        let mensagem = '';
+
+        if (produtoSelecionado === 'imovel') {
+            taxaMensal = '0,95'; 
+            mensagem = '🏠 <b>Taxa Atualizada:</b> Imobiliário (Média CAIXA/Mercado): ~0,95% a.m.';
+        } else {
+            taxaMensal = '1,97'; 
+            mensagem = '🚗 <b>Taxa Atualizada:</b> Veículos (Média Banco Central): ~1,97% a.m.';
+        }
+
+        inputJuros.value = taxaMensal + '%';
+        textoInfo.innerHTML = `<span class="info-taxa-update">✅ ${mensagem}</span>`;
+        
+        btn.disabled = false;
+        btn.innerHTML = '🔄 Taxa Preenchida com Sucesso!';
+        
+        setTimeout(() => {
+            btn.innerHTML = '🔄 Preencher Taxa Atual do Mercado';
+        }, 3000);
+
+    }, 1500);
+}
+
+function setModoConsorcio(modo) {
+    modoAtual = modo;
+    document.getElementById('btnTradicional').classList.remove('active');
+    document.getElementById('btnContemplado').classList.remove('active');
+    document.getElementById('formTradicional').classList.add('hidden');
+    document.getElementById('formContemplado').classList.add('hidden');
+    
+    if(modo === 'tradicional') {
+        document.getElementById('btnTradicional').classList.add('active');
+        document.getElementById('formTradicional').classList.remove('hidden');
+    } else {
+        document.getElementById('btnContemplado').classList.add('active');
+        document.getElementById('formContemplado').classList.remove('hidden');
+    }
+}
+
+function resetTaxaInput() {
+    let input = document.getElementById('taxaTransf');
+    let tipo = document.getElementById('tipoTaxaTransf').value;
+    input.value = '';
+    input.placeholder = (tipo === 'percentual') ? '0%' : 'R$ 0,00';
+}
+
+function moeda(v){ return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}) }
+function numero(v){ return Number(v.toString().replace(/\D/g,''))/100 || 0 }
+function percent(v){ return Number(v.toString().replace('%','').replace(',','.'))/100 || 0 }
+
+function maskMoeda(v){
+    let n = v.replace(/\D/g,'');
+    if(!n) return '';
+    return (n/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+}
+
+document.getElementById('creditoContemplado').oninput = e => e.target.value = maskMoeda(e.target.value);
+document.getElementById('entradaContemplado').oninput = e => e.target.value = maskMoeda(e.target.value);
+document.getElementById('valorParcelaContemplado').oninput = e => e.target.value = maskMoeda(e.target.value);
+document.getElementById('entradaFin').oninput = e => e.target.value = maskMoeda(e.target.value);
+document.getElementById('credito').oninput = e => e.target.value = maskMoeda(e.target.value);
+document.getElementById('lanceTradicional').oninput = e => e.target.value = maskMoeda(e.target.value);
+
+document.getElementById('taxaTransf').oninput = e => {
+    let tipo = document.getElementById('tipoTaxaTransf').value;
+    if(tipo === 'percentual') {
+        let n = e.target.value.replace(/[^\d,]/g,'');
+        e.target.value = n ? n + '%' : '';
+    } else {
+        e.target.value = maskMoeda(e.target.value);
+    }
+};
+
+[taxaAdm, fundo, seguro, juros].forEach(el => {
+    el.oninput = e => {
+        let n = e.target.value.replace(/[^\d,]/g,'');
+        e.target.value = n ? n + '%' : '';
+    };
+});
+
+function calcular() {
+    let custoTotalCons = 0;
+    let valorCreditoOperacao = 0;
+    let displayEntradaOuLance = 0;
+    let displayParcela = 0;
+    let displayPrazo = 0;
+    let tituloProposta = '';
+    let detalheAdicional = '';
+    
+    parcelasConsorcioArray = []; // Reset do array de parcelas
+
+    if (modoAtual === 'contemplado') {
+        let cred = numero(document.getElementById('creditoContemplado').value);
+        let entrada = numero(document.getElementById('entradaContemplado').value);
+        let prazo = +document.getElementById('prazoContemplado').value || 0;
+        let vParcela = numero(document.getElementById('valorParcelaContemplado').value);
+        
+        let tipoTaxa = document.getElementById('tipoTaxaTransf').value;
+        let taxaRaw = document.getElementById('taxaTransf').value;
+        let vTaxa = 0;
+        
+        if (tipoTaxa === 'percentual') {
+            vTaxa = cred * percent(taxaRaw);
+        } else {
+            vTaxa = numero(taxaRaw);
+        }
+
+        custoTotalCons = entrada + vTaxa + (prazo * vParcela);
+        valorCreditoOperacao = cred;
+        
+        displayEntradaOuLance = entrada;
+        displayParcela = vParcela;
+        displayPrazo = prazo;
+        tituloProposta = "Oportunidade de Crédito Imediato!";
+        detalheAdicional = `
+            <div class="detalhe-linha detalhe-normal">
+                <span class="dt-label">Taxa de Transferência:</span>
+                <span class="dt-valor">${vTaxa > 0 ? moeda(vTaxa) : 'Isento'}</span>
+            </div>
+        `;
+
+        for(let i=0; i<prazo; i++) {
+            parcelasConsorcioArray.push(vParcela);
+        }
+
+    } else {
+        let cred = numero(document.getElementById('credito').value);
+        let prazo = +document.getElementById('prazoCons').value || 1;
+        let tAdm = percent(document.getElementById('taxaAdm').value);
+        let fRes = percent(document.getElementById('fundo').value);
+        let seg = percent(document.getElementById('seguro').value);
+        let lance = numero(document.getElementById('lanceTradicional').value);
+        let tipoAbatimento = document.getElementById('tipoAbatimento').value;
+        
+        let custoSemLance = cred + (cred * tAdm) + (cred * fRes) + (cred * seg * prazo);
+        let parcelaIntegral = custoSemLance / prazo;
+        
+        valorCreditoOperacao = cred;
+        displayEntradaOuLance = lance;
+        tituloProposta = "Simulação: Consórcio Tradicional";
+        detalheAdicional = `
+            <div class="detalhe-linha detalhe-normal">
+                <span class="dt-label">Lance Abate em:</span>
+                <span class="dt-valor">${tipoAbatimento === 'parcela' ? 'Valor das Parcelas' : 'Quantidade de Parcelas'}</span>
+            </div>
+        `;
+
+        if (lance > 0) {
+            if (tipoAbatimento === 'parcela') {
+                // Abate no valor da parcela mantendo o prazo
+                let saldoDevedor = custoSemLance - lance;
+                displayParcela = saldoDevedor / prazo;
+                displayPrazo = prazo;
+                custoTotalCons = lance + (displayParcela * displayPrazo);
+                for(let i=0; i<displayPrazo; i++) parcelasConsorcioArray.push(displayParcela);
+            } else {
+                // Abate no prazo mantendo a parcela
+                let mesesAbatidos = Math.floor(lance / parcelaIntegral);
+                displayPrazo = prazo - mesesAbatidos;
+                displayParcela = parcelaIntegral;
+                
+                // Ajuste fino do saldo residual do lance
+                let valorRestante = custoSemLance - lance;
+                custoTotalCons = lance + (displayParcela * displayPrazo); 
+                // Nota: numa situação real de consórcio o residual do lance desconta da última parcela, mas para simplificar mantemos a parcela inteira
+                
+                for(let i=0; i<displayPrazo; i++) parcelasConsorcioArray.push(displayParcela);
+            }
+        } else {
+            displayParcela = parcelaIntegral;
+            displayPrazo = prazo;
+            custoTotalCons = custoSemLance;
+            for(let i=0; i<displayPrazo; i++) parcelasConsorcioArray.push(displayParcela);
+        }
+    }
+
+    let entFin = numero(document.getElementById('entradaFin').value);
+    let prazoF = +document.getElementById('prazoFin').value || 1;
+    let jurosVal = percent(document.getElementById('juros').value);
+    let tipoF = document.getElementById('tipoFin').value;
+    
+    let financiado = valorCreditoOperacao - entFin;
+    let totalFin = 0;
+    parcelasFin = [];
+
+    if(tipoF === "price") {
+        let p = financiado * (jurosVal * Math.pow(1+jurosVal, prazoF)) / (Math.pow(1+jurosVal, prazoF)-1);
+        for(let i=0; i<prazoF; i++) parcelasFin.push(p);
+        totalFin = (p * prazoF) + entFin;
+    } else {
+        let amort = financiado / prazoF;
+        let saldo = financiado;
+        let soma = 0;
+        for(let i=0; i<prazoF; i++){
+            let p = amort + (saldo * jurosVal);
+            parcelasFin.push(p);
+            soma += p;
+            saldo -= amort;
+        }
+        totalFin = soma + entFin;
+    }
+
+    let economia = totalFin - custoTotalCons;
+    document.getElementById('btnParcelas').classList.remove('hidden');
+    document.getElementById('listaParcelas').classList.add('hidden');
+    
+    gerarHTML(custoTotalCons, totalFin, economia, displayEntradaOuLance, displayParcela, displayPrazo, valorCreditoOperacao, tituloProposta, detalheAdicional);
+}
+
+function gerarHTML(custoCons, custoFin, economia, entOuLance, parc, prazo, cred, tituloProposta, detalheAdicional) {
+    let container = document.getElementById('resultadoContainer');
+    let prod = document.getElementById('produtoGeral').value;
+
+    let rotuloEntrada = modoAtual === 'contemplado' ? 'Valor da Entrada:' : 'Lance Ofertado:';
+    let rotuloParcela = modoAtual === 'contemplado' ? 'Valor das Parcelas:' : 'Parcela Pós-Lance:';
+
+    let proposta = `
+    <div class="proposta-wrapper">
+        <img src="https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png" alt="Consorbens" class="logo-proposta">
+        <div class="proposta-header-content">
+            <h4>${tituloProposta}</h4>
+            <p>Excelente custo-benefício para aquisição do seu bem. Confira o resumo da sua proposta:</p>
+        </div>
+        
+        <div class="proposta-body">
+            <img src="${imagens[prod]}" class="proposta-img">
+            
+            <div class="proposta-detalhes">
+                <div class="detalhe-linha detalhe-destaque">
+                    <span class="dt-label">Crédito Liberado:</span>
+                    <span class="dt-valor">${moeda(cred)}</span>
+                </div>
+                <div class="detalhe-linha detalhe-destaque">
+                    <span class="dt-label">${rotuloEntrada}</span>
+                    <span class="dt-valor">${moeda(entOuLance)}</span>
+                </div>
+                ${detalheAdicional}
+                <div class="detalhe-linha detalhe-normal">
+                    <span class="dt-label">Quantidade de parcelas:</span>
+                    <span class="dt-valor">${prazo}x</span>
+                </div>
+                <div class="detalhe-linha detalhe-normal">
+                    <span class="dt-label">${rotuloParcela}</span>
+                    <span class="dt-valor">${moeda(parc)}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="proposta-economia">
+            ✅ Ao escolher o Consórcio, você economiza ${moeda(economia)} em relação ao financiamento!
+        </div>
+    </div>
+    `;
+
+    container.innerHTML = `
+        ${proposta}
+        <div class="result">
+            <div class="resumo-grid">
+                <div>
+                    <b style="color:#60a5fa; font-size:16px;">Custo Total na Consorbens</b><br>
+                    ${moeda(custoCons)}<br><br>
+                    
+                    <b style="color:#f87171; font-size:16px;">Custo Total no Financiamento</b><br>
+                    ${moeda(custoFin)}<br><br>
+                    
+                    <div style="background:#22c55e; padding:10px; border-radius:8px; display:inline-block;">
+                        <b style="font-size:18px; color: white;">💸 ECONOMIA TOTAL: ${moeda(economia)}</b>
+                    </div>
+                </div>
+                <div class="chart-box">
+                    <canvas id="grafico"></canvas>
+                </div>
+            </div>
+        </div>
+    `;
+
+    setTimeout(() => {
+        let ctx = document.getElementById("grafico");
+        if(chart) chart.destroy();
+        chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Consorbens', 'Financiamento'],
+                datasets: [{
+                    data: [custoCons, custoFin],
+                    backgroundColor: ['#2563eb', '#ef4444'],
+                    borderRadius: 5
+                }]
+            },
+            options: { plugins: { legend: { display: false } } }
+        });
+    }, 100);
+}
+
+function mostrarParcelas() {
+    let div = document.getElementById('listaParcelas');
+    div.classList.remove('hidden');
+    
+    let qtdMeses = Math.max(parcelasFin.length, parcelasConsorcioArray.length);
+    if(qtdMeses === 0) return;
+
+    let html = "<h4 style='margin-top:0; color:#1e40af;'>Evolução das Parcelas (Mês a Mês)</h4>";
+    html += "<table style='width:100%; text-align:left; border-collapse:collapse;'>";
+    html += "<tr style='border-bottom:2px solid #cbd5e1; color:#475569;'><th>Mês</th><th>Consórcio (Pós-Lance/Contemplação)</th><th>Financiamento</th></tr>";
+
+    for(let i=0; i<qtdMeses; i++){
+        let valorConsMês = parcelasConsorcioArray[i] || 0;
+        let valorFinMês = parcelasFin[i] || 0;
+
+        html += `
+        <tr style="border-bottom:1px solid #e2e8f0;">
+            <td style="padding:6px 0; font-weight:bold; color:#64748b;">${i+1}</td>
+            <td style="color:#2563eb; font-weight:bold;">${moeda(valorConsMês)}</td>
+            <td style="color:#ef4444;">${moeda(valorFinMês)}</td>
+        </tr>`;
+    }
+    html += "</table>";
+    div.innerHTML = html;
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador Final</title>
+
+<style>
+body{margin:0;font-family:Arial;background:#0f172a}
+.container{max-width:980px;margin:auto;padding:10px}
+.top-buttons{text-align:center;color:#fff;font-weight:bold;margin-bottom:12px}
+.btns{display:flex;justify-content:center;gap:10px;margin-top:8px;flex-wrap:wrap}
+.btnProduto,.btnLembrete{
+padding:14px;
+border:2px solid #fff;
+background:#000;
+color:#fff;
+cursor:pointer;
+border-radius:6px;
+}
+.btnProduto.active{background:#fff;color:#000}
+.btnLembrete{background:#f97316;border:none}
+
+.card{
+background:#fff;
+border-radius:12px;
+padding:12px;
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:10px;
+box-sizing:border-box;
+}
+
+input,select{
+padding:12px;
+border-radius:6px;
+border:1px solid #ccc;
+width:100%;
+box-sizing:border-box;
+}
+
+.gray{background:#e5e7eb;font-weight:bold}
+.small{font-size:12px;color:#555;margin-top:6px}
+
+.footer{
+grid-column:span 2;
+background:#111;
+color:#fff;
+padding:10px;
+border-radius:8px;
+line-height:1.5;
+font-size:15px;
+}
+.highlight{color:#22c55e;font-weight:bold;font-size:17px}
+.creditoDestacado{color:#fff;font-size:18px;font-weight:bold;margin-top:6px;}
+.lanceAmarelo {color: #facc15; font-size: 17px; font-weight: bold;}
+
+button.gerar{
+grid-column:span 2;
+padding:14px;
+border:none;
+border-radius:8px;
+background:#f97316;
+color:#fff;
+font-size:16px;
+font-weight:bold;
+cursor:pointer;
+}
+
+/* Layout da Proposta */
+.proposta {
+    margin-top: 20px;
+    background: #fff;
+    border-radius: 12px;
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+    max-width: 950px;
+    box-sizing: border-box;
+}
+.proposta-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    width: 100%;
+}
+.proposta-title {
+    font-size: 20px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+.logoResumo {
+    height: 60px;
+    width: auto;
+}
+.proposta-body {
+    display: flex;
+    gap: 25px;
+    flex-wrap: wrap;
+}
+.proposta img.produtoImg {
+    width: 420px;
+    height: 280px;
+    object-fit: cover;
+    border-radius: 10px;
+}
+.info {
+    flex: 1;
+    min-width: 280px;
+    font-size: 15px;
+    line-height: 1.6;
+    color: #111;
+}
+.green { color: #16a34a; font-size: 20px; font-weight: bold; margin-bottom: 10px; }
+.red { color: #cc0000; font-size: 12px; margin-top: 15px; }
+.blue { color: #2563eb; font-size: 12px; font-weight: bold; white-space: nowrap; }
+
+.modalBg{
+display:none;
+position:fixed;
+top:0;left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,.7);
+justify-content:center;
+align-items:center;
+z-index:999;
+}
+
+.modal{
+background:#fff;
+padding:25px;
+border-radius:12px;
+max-width:500px;
+width:90%;
+position:relative;
+line-height:1.8;
+}
+
+.fechar{
+position:absolute;
+top:8px;
+right:12px;
+font-size:22px;
+cursor:pointer;
+font-weight:bold;
+}
+
+@media(max-width:768px){
+.card{grid-template-columns:1fr}
+.footer,button.gerar{grid-column:span 1}
+.proposta img.produtoImg{width:100%;height:auto}
+.proposta-header { flex-direction: column; gap: 15px; text-align: center; }
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="top-buttons">
+Selecione um produto
+<div class="btns">
+<button class="btnProduto active" onclick="setProduto('auto',this)">Automóvel</button>
+<button class="btnProduto" onclick="setProduto('moto',this)">Moto</button>
+<button class="btnProduto" onclick="setProduto('imovel',this)">Imóvel</button>
+<button class="btnProduto" onclick="setProduto('caminhao',this)">Caminhão</button>
+<button class="btnLembrete" onclick="abrirModal()">LEMBRETES</button>
+</div>
+</div>
+
+<div class="card">
+
+<input id="grupo" placeholder="Grupo">
+<select id="tipoPlano" onchange="calcular()">
+<option value="reduzida">Parcela Reduzida</option>
+<option value="integral">Parcela Integral</option>
+</select>
+
+<input id="cotas" type="number" placeholder="Cotas" value="1" oninput="calcular()">
+<input id="credito" placeholder="Crédito (R$)">
+
+<input id="prazoGrupo" type="number" placeholder="Prazo Grupo">
+<input id="prazo" type="number" placeholder="Prazo Cota">
+
+<input id="taxa" placeholder="Taxa (%)">
+
+<select id="seguroTipo" onchange="calcular()">
+<option value="com">Com Seguro</option>
+<option value="sem">Sem Seguro</option>
+</select>
+
+<div>
+<input id="embutido" placeholder="Embutido (%)">
+<div class="small" id="embRef"></div>
+</div>
+
+<div>
+<input id="recurso" placeholder="Recurso Próprio (%)">
+<div class="small" id="recRef"></div>
+</div>
+
+<div>
+<input class="gray" id="creditoReduzido" readonly>
+<div class="small" id="lblReduzido"></div>
+</div>
+
+<div>
+<input class="gray" id="parcelaAntes" readonly>
+<div class="small">Parcelas Iniciais</div>
+</div>
+
+<div class="footer">
+<div class="highlight">LANCE TOTAL EM: <span id="lanceTotalPerc"></span></div>
+Lance Ofertado Total (Emb. + Rec.): <span id="lanceOf"></span><br>
+Somente Recursos Próprios: <span id="lanceRecFooter" class="lanceAmarelo"></span><br>
+<div class="creditoDestacado">Crédito Liberado: <span id="liberado"></span></div>
+Parcelas Pós: <span id="parcelasPos"></span>
+</div>
+
+<button class="gerar" onclick="gerarProposta()">Gerar Proposta</button>
+
+</div>
+
+<div id="resultado"></div>
+
+</div>
+
+<div class="modalBg" id="modalBg">
+<div class="modal">
+<div class="fechar" onclick="fecharModal()">×</div>
+<h2>Lembretes</h2>
+Crédito de moto não é possível parcelar o lance<br>
+Embutido de Moto: 15%<br>
+Embutido de Automóveis: 15%<br>
+Embutido de Imóveis: 25%<br>
+Embutido de Caminhões: 30%<br><br>
+<b>Maturidade de Veículos Yamaha:</b><br>
+Motos: 10 anos<br>
+Carros: 10 anos<br>
+Caminhões: 10 anos
+</div>
+</div>
+
+<script>
+let produto='auto'
+const seguros={auto:0.000884,moto:0.000914,imovel:0.000276,caminhao:0.00036}
+const imagens={
+auto:'https://images.unsplash.com/photo-1583367761342-046cb0d6165b?q=80&w=870&auto=format&fit=crop',
+moto:'https://images.unsplash.com/photo-1660725997223-efbedf3397fb?q=80&w=870&auto=format&fit=crop',
+imovel:'https://images.unsplash.com/photo-1600585154340-be6161a56a0c',
+caminhao:'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?q=80&w=870&auto=format&fit=crop'
+}
+function abrirModal(){modalBg.style.display='flex'}
+function fecharModal(){modalBg.style.display='none'}
+function setProduto(p,el){
+produto=p
+document.querySelectorAll('.btnProduto').forEach(b=>b.classList.remove('active'))
+el.classList.add('active')
+calcular()
+}
+function moeda(v){return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
+function numero(v){if(!v)return 0;return parseFloat(v.replace(/[^0-9,]/g,'').replace(',','.'))||0}
+function percent(v){if(!v)return 0;return parseFloat(v.replace('%','').replace(',','.'))/100||0}
+function maskMoeda(v){let n=v.replace(/\D/g,'');if(!n)return'';return(n/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
+function maskPercent(v){let n=v.replace(/[^\d,]/g,'');return n?n+'%':''}
+credito.oninput=e=>{e.target.value=maskMoeda(e.target.value);calcular()}
+taxa.oninput=e=>{e.target.value=maskPercent(e.target.value);calcular()}
+embutido.oninput=e=>{e.target.value=maskPercent(e.target.value);calcular()}
+recurso.oninput=e=>{e.target.value=maskPercent(e.target.value);calcular()}
+
+let rec=0
+
+function calcular(){
+let cota=+cotas.value||1
+let cred=numero(credito.value)*cota
+let prazoC=+prazo.value||1
+let prazoG=+prazoGrupo.value||1
+let tx=percent(taxa.value)
+let emb=percent(embutido.value)
+let recPerc=percent(recurso.value)
+let usarSeguro=seguroTipo.value==='com'
+let seguro=usarSeguro?seguros[produto]:0
+
+let reduzido=tipoPlano.value==='reduzida'?cred*0.7:cred
+creditoReduzido.value=moeda(reduzido)
+lblReduzido.innerText=tipoPlano.value==='reduzida'?'Crédito Reduzido':''
+
+let baseLance = (tipoPlano.value === 'reduzida' ? reduzido : cred);
+
+// O Embutido incide sobre a base sem a taxa administrativa
+let embVal = baseLance * emb;
+embRef.innerText = 'Equivale a ' + moeda(embVal);
+
+// O Recurso Próprio incide sobre a base com a taxa administrativa
+let baseRecTotal = baseLance * (1 + tx);
+rec = baseRecTotal * recPerc;
+recRef.innerText = 'Equivale a ' + moeda(rec);
+
+// Lance Ofertado Total é a soma do Embutido + Recurso Próprio real
+let lanceOfertaTotal = embVal + rec;
+let lanceTotalPercNum = emb + recPerc;
+lanceTotalPerc.innerText = ((lanceTotalPercNum*100)).toFixed(2)+'%';
+
+let seguroVal = usarSeguro ? (cred * seguro) : 0;
+let parcIntSemSeguro = ((cred * (1 + tx)) / prazoC) * 1.008;
+
+let parcelaAntesCalc;
+if(tipoPlano.value === 'integral') {
+    parcelaAntesCalc = parcIntSemSeguro + seguroVal;
+} else {
+    parcelaAntesCalc = ((reduzido * (1 + tx)) / prazoC) * 1.010236 + seguroVal;
+}
+parcelaAntes.value=moeda(parcelaAntesCalc)
+
+let liberadoCalc = cred - embVal;
+
+let saldoDevedorTotal = cred * (1 + tx);
+
+// CORREÇÃO CRUCIAL DA PARCELA PÓS: 
+// O lance embutido reduz o CRÉDITO, não a parcela. 
+// Apenas o valor de RECURSOS PRÓPRIOS abate o Saldo Devedor nas parcelas.
+let proporcaoLance = rec / saldoDevedorTotal; 
+let parcelaPos = (parcIntSemSeguro * (1 - proporcaoLance)) + seguroVal;
+
+if(tipoPlano.value === 'integral') {
+    let amortizacao = (rec / prazoC) * 1.00837;
+    parcelaPos = parcIntSemSeguro + seguroVal - amortizacao;
+} else {
+    parcelaPos = parcelaPos * 1.0062; 
+}
+
+lanceOf.innerText=moeda(lanceOfertaTotal)
+document.getElementById('lanceRecFooter').innerText = moeda(rec);
+liberado.innerText=moeda(liberadoCalc)
+parcelasPos.innerText=(prazoC-1)+'x de '+moeda(parcelaPos)
+}
+
+function gerarProposta(){
+let grupoTxt=grupo.value?grupo.value:'-';
+let parcelamento=(produto==='moto')?'':' | Pode parcelar em 4x sem juros';
+resultado.innerHTML=`
+<div class="proposta">
+  <div class="proposta-header">
+    <div class="proposta-title">PROPOSTA DE CONSÓRCIO GRUPO: ${grupoTxt}</div>
+    <img class="logoResumo" src="https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png" alt="Consorbens Logo">
+  </div>
+  <div class="proposta-body">
+    <img class="produtoImg" src="${imagens[produto]}" alt="Produto">
+    <div class="info">
+      Crédito Contratado: ${credito.value}<br>
+      Quantidade de Cotas: ${cotas.value}<br>
+      Prazo Contratado: ${prazo.value}<br>
+      Parcelas ANTES: ${parcelaAntes.value}<br>
+      Valor de Lance (Recursos Próprios): ${moeda(rec)} <span class="blue">${parcelamento}</span><br>
+      <br>
+      Parcela PÓS: ${parcelasPos.innerText.split(' de ')[1]}<br>
+      Prazo PÓS: ${prazo.value-1}<br>
+      <br>
+      <div class="green">Crédito Líquido: ${liberado.innerText}</div>
+      <div class="red">
+        SIMULADO COM VALORES APROXIMADOS.<br>
+        NÃO É GARANTIA DE CONTEMPLAÇÃO
+      </div>
+    </div>
+  </div>
+</div>`
+}
+</script>
+</body>
+</html>

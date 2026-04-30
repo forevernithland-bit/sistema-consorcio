@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador Itaú Consórcios</title>
+
+<style>
+body{margin:0;font-family:Arial;background:#0f172a}
+.container{max-width:980px;margin:auto;padding:10px}
+.top-header {text-align:center; margin-bottom: 15px;}
+.logo-itau {height: 50px; margin-bottom: 10px;}
+.top-buttons{text-align:center;color:#fff;font-weight:bold;margin-bottom:12px}
+.btns{display:flex;justify-content:center;gap:10px;margin-top:8px;flex-wrap:wrap}
+.btnProduto,.btnLembrete{
+padding:14px;
+border:2px solid #ec7000; /* Laranja Itaú */
+background:#000;
+color:#fff;
+cursor:pointer;
+border-radius:6px;
+font-weight:bold;
+}
+.btnProduto.active{background:#ec7000;color:#fff;border-color:#ec7000}
+.btnLembrete{background:#111;border:1px solid #555}
+
+.card{
+background:#fff;
+border-radius:12px;
+padding:15px;
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:12px;
+box-sizing:border-box;
+}
+
+input,select{
+padding:12px;
+border-radius:6px;
+border:1px solid #ccc;
+width:100%;
+box-sizing:border-box;
+}
+
+.gray{background:#e5e7eb;font-weight:bold}
+.small{font-size:12px;color:#555;margin-top:6px}
+
+.footer{
+grid-column:span 2;
+background:#111;
+color:#fff;
+padding:15px;
+border-radius:8px;
+line-height:1.6;
+font-size:15px;
+}
+.highlight{color:#ec7000;font-weight:bold;font-size:17px}
+.creditoDestacado{color:#fff;font-size:18px;font-weight:bold;margin-top:6px;}
+.lanceAmarelo {color: #facc15; font-size: 17px; font-weight: bold;}
+.blocoPosContemplacao { background: #222; padding: 10px; border-radius: 6px; margin-top: 10px; border-left: 4px solid #ec7000;}
+
+button.gerar{
+grid-column:span 2;
+padding:14px;
+border:none;
+border-radius:8px;
+background:#ec7000;
+color:#fff;
+font-size:16px;
+font-weight:bold;
+cursor:pointer;
+}
+
+/* Layout da Proposta */
+.proposta {
+    margin-top: 20px;
+    background: #fff;
+    border-radius: 12px;
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+    max-width: 950px;
+    box-sizing: border-box;
+}
+.proposta-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    width: 100%;
+    border-bottom: 2px solid #ec7000;
+    padding-bottom: 10px;
+}
+.proposta-title {
+    font-size: 20px;
+    font-weight: bold;
+    color: #ec7000;
+    text-transform: uppercase;
+}
+.proposta-body {
+    display: flex;
+    gap: 25px;
+    flex-wrap: wrap;
+}
+
+.col-esq {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 420px;
+}
+
+.proposta img.produtoImg {
+    width: 100%;
+    height: 280px;
+    object-fit: cover;
+    border-radius: 10px;
+}
+
+.logoConsorbens {
+    height: 55px;
+    object-fit: contain;
+    align-self: flex-start;
+}
+
+.info {
+    flex: 1;
+    min-width: 280px;
+    font-size: 15px;
+    line-height: 1.6;
+    color: #111;
+}
+.green { color: #ec7000; font-size: 20px; font-weight: bold; margin-bottom: 10px; }
+.red { color: #555; font-size: 12px; margin-top: 15px; font-style: italic;}
+.blue { color: #2563eb; font-size: 12px; font-weight: bold; white-space: nowrap; }
+
+.modalBg{
+display:none;
+position:fixed;
+top:0;left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,.7);
+justify-content:center;
+align-items:center;
+z-index:999;
+}
+
+.modal{
+background:#fff;
+padding:25px;
+border-radius:12px;
+max-width:500px;
+width:90%;
+position:relative;
+line-height:1.8;
+}
+
+.fechar{
+position:absolute;
+top:8px;
+right:12px;
+font-size:22px;
+cursor:pointer;
+font-weight:bold;
+}
+
+@media(max-width:768px){
+.card{grid-template-columns:1fr}
+.footer,button.gerar{grid-column:span 1}
+.col-esq { width: 100%; }
+.proposta-header { flex-direction: column; gap: 15px; text-align: center; }
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="top-header">
+  <img class="logo-itau" src="https://upload.wikimedia.org/wikipedia/commons/1/15/Ita%C3%BA_Unibanco_logo.svg" alt="Itaú Consórcios">
+</div>
+
+<div class="top-buttons">
+Selecione um produto
+<div class="btns">
+<button class="btnProduto active" onclick="setProduto('imovel',this)">Imóvel</button>
+<button class="btnProduto" onclick="setProduto('auto',this)">Automóvel</button>
+<button class="btnProduto" onclick="setProduto('moto',this)">Moto</button>
+<button class="btnProduto" onclick="setProduto('caminhao',this)">Caminhão</button>
+<button class="btnLembrete" onclick="abrirModal()">LEMBRETES ITAÚ</button>
+</div>
+</div>
+
+<div class="card">
+<input id="grupo" placeholder="Grupo (Ex: 50080)">
+<input id="cotas" type="number" placeholder="Quantidade de Cotas" value="1" oninput="calcular()">
+
+<input id="credito" placeholder="Crédito (R$)">
+<input id="prazo" type="number" placeholder="Prazo (Meses)">
+
+<input id="taxa" placeholder="Taxa Admin (%)">
+<input id="fundoReserva" placeholder="Fundo de Reserva (%)">
+
+<div>
+<input id="embutido" placeholder="Lance Embutido (%)">
+<div class="small" id="embRef"></div>
+</div>
+
+<div>
+<input id="recurso" placeholder="Recursos Próprios (%)">
+<div class="small" id="recRef"></div>
+</div>
+
+<div>
+<input class="gray" id="parcelaAntes" readonly>
+<div class="small">Parcela Inicial (Com Seguro)</div>
+</div>
+
+<div style="visibility: hidden;"></div> <div class="footer">
+<div class="highlight">LANCE TOTAL EM: <span id="lanceTotalPerc"></span></div>
+Lance Ofertado Total (Emb. + Rec.): <span id="lanceOf"></span><br>
+Somente Recursos Próprios: <span id="lanceRecFooter" class="lanceAmarelo"></span><br>
+<div class="creditoDestacado">Crédito Liberado: <span id="liberado"></span></div>
+
+<div class="blocoPosContemplacao">
+  <b>Parcela Pós Contemplação (Reduzindo Valor):</b><br>
+  - Com Seguro: <span id="parcelaPosCom" style="color: #4ade80;"></span><br>
+  - Sem Seguro: <span id="parcelaPosSem" style="color: #94a3b8;"></span><br>
+  <br>
+  <b>OU Redução de Prazo (Mantendo a Parcela):</b><br>
+  - <span id="reducaoPrazo" style="color: #facc15;"></span> Parcelas a menos
+</div>
+
+</div>
+
+<button class="gerar" onclick="gerarProposta()">Gerar Proposta Itaú</button>
+</div>
+
+<div id="resultado"></div>
+</div>
+
+<div class="modalBg" id="modalBg">
+<div class="modal">
+<div class="fechar" onclick="fecharModal()">×</div>
+<h2>Lembretes Itaú</h2>
+<b>Limites de Embutido:</b><br>
+Imóveis: Até 30%<br>
+Veículos: Verificar campanha vigente<br><br>
+<b>Fundo de Reserva Padrão:</b><br>
+Geralmente varia entre 1% e 5% dependendo do grupo.<br><br>
+*O Seguro Prestamista no Itaú tem taxa aproximada de 0,06711% ao mês sobre o crédito.
+</div>
+</div>
+
+<script>
+let produto='imovel'
+// Taxa de seguro exata baseada no cálculo de R$100.000 do Itaú (67,11 de diferença)
+const taxaSeguroMensal = 0.0006711; 
+
+const imagens={
+auto:'https://images.unsplash.com/photo-1583367761342-046cb0d6165b?q=80&w=870&auto=format&fit=crop',
+moto:'https://images.unsplash.com/photo-1660725997223-efbedf3397fb?q=80&w=870&auto=format&fit=crop',
+imovel:'https://images.unsplash.com/photo-1600585154340-be6161a56a0c',
+caminhao:'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?q=80&w=870&auto=format&fit=crop'
+}
+
+function abrirModal(){modalBg.style.display='flex'}
+function fecharModal(){modalBg.style.display='none'}
+function setProduto(p,el){
+produto=p
+document.querySelectorAll('.btnProduto').forEach(b=>b.classList.remove('active'))
+el.classList.add('active')
+calcular()
+}
+function moeda(v){return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
+function numero(v){if(!v)return 0;return parseFloat(v.replace(/[^0-9,]/g,'').replace(',','.'))||0}
+function percent(v){if(!v)return 0;return parseFloat(v.replace('%','').replace(',','.'))/100||0}
+function maskMoeda(v){let n=v.replace(/\D/g,'');if(!n)return'';return(n/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
+function maskPercent(v){let n=v.replace(/[^\d,]/g,'');return n?n+'%':''}
+
+credito.oninput=e=>{e.target.value=maskMoeda(e.target.value);calcular()}
+taxa.oninput=e=>{e.target.value=maskPercent(e.target.value);calcular()}
+fundoReserva.oninput=e=>{e.target.value=maskPercent(e.target.value);calcular()}
+embutido.oninput=e=>{e.target.value=maskPercent(e.target.value);calcular()}
+recurso.oninput=e=>{e.target.value=maskPercent(e.target.value);calcular()}
+prazo.oninput=e=>{calcular()}
+
+let recVal=0
+let lanceTotalGlobal=0
+let libCalcGlobal=0
+let novaParcComSeguroGlobal=0
+let novaParcSemSeguroGlobal=0
+let parcReduzidasGlobal=0
+
+function calcular(){
+let cota=+cotas.value||1
+let cred=numero(credito.value)*cota
+let prazoC=+prazo.value||1
+let tx=percent(taxa.value)
+let fr=percent(fundoReserva.value)
+let emb=percent(embutido.value)
+let recPerc=percent(recurso.value)
+
+let embVal = cred * emb;
+embRef.innerText = 'R$ ' + embVal.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+
+recVal = cred * recPerc;
+recRef.innerText = 'R$ ' + recVal.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+
+lanceTotalGlobal = embVal + recVal;
+let lanceTotalPercNum = emb + recPerc;
+lanceTotalPerc.innerText = ((lanceTotalPercNum*100)).toFixed(2)+'%';
+
+let dividaTotal = cred * (1 + tx + fr);
+let parcelaBaseSemSeguro = dividaTotal / prazoC;
+
+let seguroVal = cred * taxaSeguroMensal;
+
+let parcelaInicialComSeguro = parcelaBaseSemSeguro + seguroVal;
+parcelaAntes.value = moeda(parcelaInicialComSeguro);
+
+libCalcGlobal = cred - embVal;
+
+let saldoApos1a = dividaTotal - parcelaBaseSemSeguro; 
+let saldoAposLance = saldoApos1a - lanceTotalGlobal; 
+
+novaParcSemSeguroGlobal = saldoAposLance / (prazoC - 1);
+novaParcComSeguroGlobal = novaParcSemSeguroGlobal + seguroVal; 
+
+parcReduzidasGlobal = Math.floor(lanceTotalGlobal / parcelaBaseSemSeguro);
+
+lanceOf.innerText = moeda(lanceTotalGlobal);
+document.getElementById('lanceRecFooter').innerText = moeda(recVal);
+liberado.innerText = moeda(libCalcGlobal);
+
+document.getElementById('parcelaPosCom').innerText = moeda(novaParcComSeguroGlobal);
+document.getElementById('parcelaPosSem').innerText = moeda(novaParcSemSeguroGlobal);
+document.getElementById('reducaoPrazo').innerText = parcReduzidasGlobal;
+}
+
+function gerarProposta(){
+let grupoTxt=grupo.value?grupo.value:'-';
+let txtPrazoRes = prazo.value ? (prazo.value - 1) : '-';
+
+resultado.innerHTML=`
+<div class="proposta">
+  <div class="proposta-header">
+    <div class="proposta-title">PROPOSTA DE CONSÓRCIO ITAÚ - GRUPO: ${grupoTxt}</div>
+  </div>
+  <div class="proposta-body">
+    
+    <div class="col-esq">
+        <img class="produtoImg" src="${imagens[produto]}" alt="Produto">
+        <img class="logoConsorbens" src="https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png" alt="Logo Consorbens">
+    </div>
+
+    <div class="info">
+      <strong>Crédito Contratado:</strong> ${credito.value}<br>
+      <strong>Prazo Contratado:</strong> ${prazo.value} meses<br>
+      <strong>Taxa Admin:</strong> ${taxa.value || '0%'} | <strong>Fundo Reserva:</strong> ${fundoReserva.value || '0%'}<br>
+      <strong>Parcela Inicial:</strong> ${parcelaAntes.value}<br>
+      <strong>Lance (Recursos Próprios):</strong> ${moeda(recVal)} <br>
+      <strong>Lance Total Ofertado:</strong> ${lanceTotalPerc.innerText} (${moeda(lanceTotalGlobal)})<br>
+      <br>
+      <div class="green">Crédito Liberado: ${moeda(libCalcGlobal)}</div>
+      
+      <strong>CENÁRIOS PÓS CONTEMPLAÇÃO:</strong><br>
+      <u>Opção 1: Redução do Valor da Parcela</u><br>
+      - Novo Valor Com Seguro: ${moeda(novaParcComSeguroGlobal)} (Faltando ${txtPrazoRes}x)<br>
+      - Novo Valor Sem Seguro: ${moeda(novaParcSemSeguroGlobal)} (Faltando ${txtPrazoRes}x)<br>
+      <br>
+      <u>Opção 2: Redução de Prazo</u><br>
+      - Elimina ${parcReduzidasGlobal} parcelas do final do plano (Mantendo a parcela inicial).<br>
+
+      <div class="red">
+        * Simulação baseada nas regras matemáticas do Itaú Consórcios.<br>
+        * Valores de seguro podem sofrer leves alterações conforme a idade do cotista e campanha vigente.<br>
+        * A contemplação depende de sorteio ou aprovação de lance em assembleia.
+      </div>
+    </div>
+  </div>
+</div>`
+}
+
+// Inicia com os placeholders vazios esperando o usuário
+calcular();
+</script>
+</body>
+</html>
