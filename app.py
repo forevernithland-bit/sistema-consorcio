@@ -37,7 +37,7 @@ is_logado = st.session_state['usuario_logado'] is not None
 if not is_logado:
     st.sidebar.image("https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png", use_column_width=True)
     st.sidebar.title("🛠️ Ferramentas")
-    st.sidebar.caption("Dica: Use o botão laranja no topo para esconder o menu.")
+    st.sidebar.caption("Dica: Use a seta laranja gigante no topo para ampliar a tela.")
     
     menu_selecionado = st.sidebar.radio("Navegação:", [
         "🔐 Login (Área Restrita)",
@@ -52,7 +52,7 @@ else:
     st.sidebar.image("https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png", use_column_width=True)
     st.sidebar.title(f"Olá, {st.session_state['nome_vendedor']}")
     st.sidebar.write(f"Perfil: **{st.session_state['perfil_logado']}**")
-    st.sidebar.caption("Dica: Use o botão laranja no topo para esconder o menu.")
+    st.sidebar.caption("Dica: Use a seta laranja gigante no topo para ampliar a tela.")
     st.sidebar.divider()
 
     ferramentas_logadas = [
@@ -77,7 +77,6 @@ else:
         st.rerun()
 
 # === 3. ESTILIZAÇÃO INTELIGENTE (CORES E BOTÃO) ===
-# Verifica se a tela atual é um simulador para mudar a cor do fundo
 simuladores = ["🏍️ Simulador Yamaha", "🏦 Simulador Itaú", "🎯 Guia de Oportunidades", "⚖️ Financiamento x Consórcio"]
 is_simulator = menu_selecionado in simuladores
 
@@ -92,23 +91,27 @@ css = """
     [data-testid="stSidebar"] hr { border-bottom-color: #e2e8f0 !important; }
     [data-testid="stSidebar"] button { border: 1px solid #cbd5e1 !important; background-color: #f8fafc !important; color: #0f172a !important; }
     
-    /* BOTÃO DE ESCONDER/MOSTRAR MENU BEM DESTACADO */
+    /* BOTÃO DE ESCONDER/MOSTRAR MENU GIGANTE E LARANJA */
     [data-testid="collapsedControl"] {
-        background-color: #ec7000 !important;
-        border-radius: 6px !important;
-        box-shadow: 0px 4px 8px rgba(0,0,0,0.4) !important;
+        background-color: #ff6600 !important; /* Laranja vibrante */
+        border-radius: 8px !important;
+        box-shadow: 0px 4px 12px rgba(255, 102, 0, 0.4) !important;
         opacity: 1 !important; 
-        padding: 4px !important;
+        padding: 5px !important;
         transition: all 0.3s ease !important;
         z-index: 999999 !important;
-    }
-    [data-testid="collapsedControl"]:hover {
-        background-color: #ff851b !important;
-        transform: scale(1.1) !important;
+        transform: scale(1.4) !important; /* AUMENTA O BOTÃO EM 40% */
+        transform-origin: top left !important;
+        margin-top: 10px !important;
+        margin-left: 10px !important;
     }
     [data-testid="collapsedControl"] svg {
         fill: #ffffff !important;
         color: #ffffff !important;
+    }
+    [data-testid="collapsedControl"]:hover {
+        background-color: #cc5200 !important;
+        transform: scale(1.5) !important; /* Cresce mais um pouco ao passar o mouse */
     }
 """
 
