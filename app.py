@@ -26,7 +26,6 @@ def carregar_ferramenta(nome_arquivo):
     try:
         with open(nome_arquivo, 'r', encoding='utf-8') as f:
             html_code = f.read()
-            # Ajusta a altura para caber a ferramenta inteira sem barra de rolagem dupla
             components.html(html_code, height=900, scrolling=True)
     except FileNotFoundError:
         st.error(f"⚠️ O arquivo {nome_arquivo} não foi encontrado. Certifique-se de ter criado ele no GitHub com este nome exato!")
@@ -36,7 +35,6 @@ if st.session_state['usuario_logado'] is None:
     st.sidebar.image("https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png", use_column_width=True)
     st.sidebar.title("🛠️ Ferramentas")
     
-    # Menu visível para quem não está logado
     menu_publico = st.sidebar.radio("Navegação:", [
         "🔐 Login (Área Restrita)",
         "🏍️ Simulador Yamaha",
@@ -46,9 +44,8 @@ if st.session_state['usuario_logado'] is None:
     ])
     
     st.sidebar.divider()
-    st.sidebar.caption("Portal Consorbens © 2024")
+    st.sidebar.caption("Portal Consorbens © 2026")
 
-    # Mostrando a tela de acordo com o clique no menu
     if menu_publico == "🔐 Login (Área Restrita)":
         st.title("🔒 Acesso ao Sistema de CRM")
         st.write("Digite suas credenciais para gerenciar comissões e vendas.")
@@ -69,23 +66,19 @@ if st.session_state['usuario_logado'] is None:
                     
     elif menu_publico == "🏍️ Simulador Yamaha":
         carregar_ferramenta("yamaha.html")
-        
     elif menu_publico == "🏦 Simulador Itaú":
         carregar_ferramenta("itau.html")
-        
     elif menu_publico == "🎯 Guia de Oportunidades":
         carregar_ferramenta("guia.html")
-        
     elif menu_publico == "⚖️ Financiamento x Consórcio":
         carregar_ferramenta("comparador.html")
         
-    st.stop() # Bloqueia o resto do código para quem não logou
+    st.stop() 
 
 # ====================================================================
-# === DAQUI PARA BAIXO É A ÁREA RESTRITA (SÓ ENTRA QUEM TEM SENHA) ===
+# === 3. ÁREA RESTRITA (SÓ ENTRA QUEM TEM SENHA) =====================
 # ====================================================================
 
-# Conexão com o Google Sheets
 @st.cache_resource
 def conectar_planilha():
     credentials = dict(st.secrets["gcp_service_account"])
@@ -95,16 +88,23 @@ def conectar_planilha():
 
 planilha = conectar_planilha()
 
-# Menu Lateral (Logado)
 st.sidebar.image("https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png", use_column_width=True)
 st.sidebar.title(f"Olá, {st.session_state['nome_vendedor']}")
 st.sidebar.write(f"Perfil: **{st.session_state['perfil_logado']}**")
 st.sidebar.divider()
 
+# Lista de ferramentas que aparecem para todos que estão logados
+ferramentas_logadas = [
+    "🏍️ Simulador Yamaha", 
+    "🏦 Simulador Itaú", 
+    "🎯 Guia de Oportunidades", 
+    "⚖️ Financiamento x Consórcio"
+]
+
 if st.session_state['perfil_logado'] == "Master":
-    opcoes_menu = ["Dashboard", "Nova Venda", "Gerenciar Vendas (Editar/Deletar)", "Baixar Parcela"]
+    opcoes_menu = ["Dashboard", "Nova Venda", "Gerenciar Vendas (Editar/Deletar)", "Baixar Parcela"] + ferramentas_logadas
 else:
-    opcoes_menu = ["Dashboard", "Nova Venda"]
+    opcoes_menu = ["Dashboard", "Nova Venda"] + ferramentas_logadas
 
 menu = st.sidebar.radio("Navegação do CRM:", opcoes_menu)
 
@@ -124,7 +124,6 @@ if menu == "Dashboard":
     
     if dados_vendas:
         df_vendas = pd.DataFrame(dados_vendas)
-        
         if st.session_state['perfil_logado'] == "Vendedor":
             st.write("Aqui estão as vendas registradas por você:")
             df_vendas = df_vendas[df_vendas['Vendedor'] == st.session_state['nome_vendedor']]
@@ -220,3 +219,13 @@ elif menu == "Gerenciar Vendas (Editar/Deletar)":
 elif menu == "Baixar Parcela":
     st.title("💰 Recebimento de Comissão (Baixa)")
     st.info("Esta tela calculará a divisão exata quando as parcelas forem geradas automaticamente.")
+
+# --- TELAS DAS FERRAMENTAS (ÁREA LOGADA) ---
+elif menu == "🏍️ Simulador Yamaha":
+    carregar_ferramenta("yamaha.html")
+elif menu == "🏦 Simulador Itaú":
+    carregar_ferramenta("itau.html")
+elif menu == "🎯 Guia de Oportunidades":
+    carregar_ferramenta("guia.html")
+elif menu == "⚖️ Financiamento x Consórcio":
+    carregar_ferramenta("comparador.html")
