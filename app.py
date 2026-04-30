@@ -4,46 +4,8 @@ import pandas as pd
 from datetime import datetime
 import streamlit.components.v1 as components
 
-# Configuração da página (agora com layout 100% otimizado)
+# Configuração da página (layout 100% otimizado)
 st.set_page_config(page_title="Portal Consorbens", layout="wide", initial_sidebar_state="expanded")
-
-# --- TRUQUE DE CSS PARA TELA MAIOR E MENU BRANCO ---
-st.markdown("""
-    <style>
-        /* Reduz as margens da tela principal para ampliar os simuladores */
-        .block-container {
-            padding-top: 1rem;
-            padding-bottom: 0rem;
-            padding-left: 1rem;
-            padding-right: 1rem;
-        }
-        
-        /* 1. Força o fundo do menu lateral a ficar branco */
-        [data-testid="stSidebar"] {
-            background-color: #ffffff !important;
-        }
-        
-        /* 2. Força o texto do menu lateral a ficar escuro (para dar leitura) */
-        [data-testid="stSidebar"] p, 
-        [data-testid="stSidebar"] span, 
-        [data-testid="stSidebar"] label, 
-        [data-testid="stSidebar"] div {
-            color: #0f172a !important;
-        }
-        
-        /* 3. Ajusta a cor da linha divisória do menu */
-        [data-testid="stSidebar"] hr {
-            border-bottom-color: #e2e8f0 !important;
-        }
-        
-        /* 4. Melhora a borda e o texto do botão no menu lateral */
-        [data-testid="stSidebar"] button {
-            border: 1px solid #cbd5e1 !important;
-            background-color: #f8fafc !important;
-            color: #0f172a !important;
-        }
-    </style>
-""", unsafe_allow_html=True)
 
 # === 1. CONFIGURAÇÃO DE USUÁRIOS E SENHAS ===
 USUARIOS = {
@@ -68,24 +30,107 @@ def carregar_ferramenta(nome_arquivo):
     except FileNotFoundError:
         st.error(f"⚠️ O arquivo {nome_arquivo} não foi encontrado. Certifique-se de ter criado ele no GitHub com este nome exato!")
 
-# === 2. ÁREA PÚBLICA (ANTES DO LOGIN) ===
-if st.session_state['usuario_logado'] is None:
+# === 2. LÓGICA DO MENU LATERAL ===
+menu_selecionado = ""
+is_logado = st.session_state['usuario_logado'] is not None
+
+if not is_logado:
     st.sidebar.image("https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png", use_column_width=True)
     st.sidebar.title("🛠️ Ferramentas")
-    st.sidebar.caption("Dica: Clique na setinha '<' lá no topo para esconder este menu e ampliar a tela.")
+    st.sidebar.caption("Dica: Use o botão laranja no topo para esconder o menu.")
     
-    menu_publico = st.sidebar.radio("Navegação:", [
+    menu_selecionado = st.sidebar.radio("Navegação:", [
         "🔐 Login (Área Restrita)",
         "🏍️ Simulador Yamaha",
         "🏦 Simulador Itaú",
         "🎯 Guia de Oportunidades",
         "⚖️ Financiamento x Consórcio"
     ])
-    
     st.sidebar.divider()
     st.sidebar.caption("Portal Consorbens © 2026")
+else:
+    st.sidebar.image("https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png", use_column_width=True)
+    st.sidebar.title(f"Olá, {st.session_state['nome_vendedor']}")
+    st.sidebar.write(f"Perfil: **{st.session_state['perfil_logado']}**")
+    st.sidebar.caption("Dica: Use o botão laranja no topo para esconder o menu.")
+    st.sidebar.divider()
 
-    if menu_publico == "🔐 Login (Área Restrita)":
+    ferramentas_logadas = [
+        "🏍️ Simulador Yamaha", 
+        "🏦 Simulador Itaú", 
+        "🎯 Guia de Oportunidades", 
+        "⚖️ Financiamento x Consórcio"
+    ]
+
+    if st.session_state['perfil_logado'] == "Master":
+        opcoes_menu = ["Dashboard", "Nova Venda", "Gerenciar Vendas (Editar/Deletar)", "Baixar Parcela"] + ferramentas_logadas
+    else:
+        opcoes_menu = ["Dashboard", "Nova Venda"] + ferramentas_logadas
+
+    menu_selecionado = st.sidebar.radio("Navegação do CRM:", opcoes_menu)
+    st.sidebar.divider()
+    
+    if st.sidebar.button("Sair do Sistema (Logout)"):
+        st.session_state['usuario_logado'] = None
+        st.session_state['perfil_logado'] = None
+        st.session_state['nome_vendedor'] = None
+        st.rerun()
+
+# === 3. ESTILIZAÇÃO INTELIGENTE (CORES E BOTÃO) ===
+# Verifica se a tela atual é um simulador para mudar a cor do fundo
+simuladores = ["🏍️ Simulador Yamaha", "🏦 Simulador Itaú", "🎯 Guia de Oportunidades", "⚖️ Financiamento x Consórcio"]
+is_simulator = menu_selecionado in simuladores
+
+css = """
+<style>
+    /* Reduz as margens gerais da tela */
+    .block-container { padding-top: 1rem; padding-bottom: 0rem; padding-left: 1rem; padding-right: 1rem; }
+    
+    /* Menu Lateral Sempre Branco e com letras escuras */
+    [data-testid="stSidebar"] { background-color: #ffffff !important; }
+    [data-testid="stSidebar"] p, [data-testid="stSidebar"] span, [data-testid="stSidebar"] label, [data-testid="stSidebar"] div { color: #0f172a !important; }
+    [data-testid="stSidebar"] hr { border-bottom-color: #e2e8f0 !important; }
+    [data-testid="stSidebar"] button { border: 1px solid #cbd5e1 !important; background-color: #f8fafc !important; color: #0f172a !important; }
+    
+    /* BOTÃO DE ESCONDER/MOSTRAR MENU BEM DESTACADO */
+    [data-testid="collapsedControl"] {
+        background-color: #ec7000 !important;
+        border-radius: 6px !important;
+        box-shadow: 0px 4px 8px rgba(0,0,0,0.4) !important;
+        opacity: 1 !important; 
+        padding: 4px !important;
+        transition: all 0.3s ease !important;
+        z-index: 999999 !important;
+    }
+    [data-testid="collapsedControl"]:hover {
+        background-color: #ff851b !important;
+        transform: scale(1.1) !important;
+    }
+    [data-testid="collapsedControl"] svg {
+        fill: #ffffff !important;
+        color: #ffffff !important;
+    }
+"""
+
+if is_simulator:
+    css += """
+    /* Fundo ESCURO apenas nos simuladores */
+    .stApp { background-color: #0f172a !important; }
+    header[data-testid="stHeader"] { background-color: transparent !important; }
+    """
+else:
+    css += """
+    /* Fundo CLARO no Sistema de Comissões e Login */
+    .stApp { background-color: #f8fafc !important; }
+    header[data-testid="stHeader"] { background-color: transparent !important; }
+    """
+
+css += "</style>"
+st.markdown(css, unsafe_allow_html=True)
+
+# === 4. RENDERIZAÇÃO DAS TELAS ===
+if not is_logado:
+    if menu_selecionado == "🔐 Login (Área Restrita)":
         st.title("🔒 Acesso ao Sistema de CRM")
         st.write("Digite suas credenciais para gerenciar comissões e vendas.")
         
@@ -103,21 +148,18 @@ if st.session_state['usuario_logado'] is None:
                 else:
                     st.error("❌ Usuário ou senha incorretos.")
                     
-    elif menu_publico == "🏍️ Simulador Yamaha":
+    elif menu_selecionado == "🏍️ Simulador Yamaha":
         carregar_ferramenta("yamaha.html")
-    elif menu_publico == "🏦 Simulador Itaú":
+    elif menu_selecionado == "🏦 Simulador Itaú":
         carregar_ferramenta("itau.html")
-    elif menu_publico == "🎯 Guia de Oportunidades":
+    elif menu_selecionado == "🎯 Guia de Oportunidades":
         carregar_ferramenta("guia.html")
-    elif menu_publico == "⚖️ Financiamento x Consórcio":
+    elif menu_selecionado == "⚖️ Financiamento x Consórcio":
         carregar_ferramenta("comparador.html")
         
     st.stop() 
 
-# ====================================================================
-# === 3. ÁREA RESTRITA (SÓ ENTRA QUEM TEM SENHA) =====================
-# ====================================================================
-
+# --- ÁREA RESTRITA (Logado) ---
 @st.cache_resource
 def conectar_planilha():
     credentials = dict(st.secrets["gcp_service_account"])
@@ -127,36 +169,7 @@ def conectar_planilha():
 
 planilha = conectar_planilha()
 
-st.sidebar.image("https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png", use_column_width=True)
-st.sidebar.title(f"Olá, {st.session_state['nome_vendedor']}")
-st.sidebar.write(f"Perfil: **{st.session_state['perfil_logado']}**")
-st.sidebar.caption("Dica: Clique na setinha '<' lá no topo para esconder este menu e ampliar a tela.")
-st.sidebar.divider()
-
-# Lista de ferramentas que aparecem para todos que estão logados
-ferramentas_logadas = [
-    "🏍️ Simulador Yamaha", 
-    "🏦 Simulador Itaú", 
-    "🎯 Guia de Oportunidades", 
-    "⚖️ Financiamento x Consórcio"
-]
-
-if st.session_state['perfil_logado'] == "Master":
-    opcoes_menu = ["Dashboard", "Nova Venda", "Gerenciar Vendas (Editar/Deletar)", "Baixar Parcela"] + ferramentas_logadas
-else:
-    opcoes_menu = ["Dashboard", "Nova Venda"] + ferramentas_logadas
-
-menu = st.sidebar.radio("Navegação do CRM:", opcoes_menu)
-
-st.sidebar.divider()
-if st.sidebar.button("Sair do Sistema (Logout)"):
-    st.session_state['usuario_logado'] = None
-    st.session_state['perfil_logado'] = None
-    st.session_state['nome_vendedor'] = None
-    st.rerun()
-
-# --- TELAS DO SISTEMA CRM ---
-if menu == "Dashboard":
+if menu_selecionado == "Dashboard":
     st.title("📊 Painel de Vendas")
     
     aba_vendas = planilha.worksheet("Vendas")
@@ -177,7 +190,7 @@ if menu == "Dashboard":
     else:
         st.info("O sistema ainda não possui vendas cadastradas.")
 
-elif menu == "Nova Venda":
+elif menu_selecionado == "Nova Venda":
     st.title("📝 Cadastrar Nova Venda")
     
     with st.form("form_venda"):
@@ -215,7 +228,7 @@ elif menu == "Nova Venda":
             else:
                 st.error("Preencha todos os campos obrigatórios (*).")
 
-elif menu == "Gerenciar Vendas (Editar/Deletar)":
+elif menu_selecionado == "Gerenciar Vendas (Editar/Deletar)":
     st.title("🛠️ Gerenciar e Editar Vendas")
     st.warning("Área Restrita (Apenas Sócios). Muito cuidado ao deletar informações!")
     
@@ -256,16 +269,16 @@ elif menu == "Gerenciar Vendas (Editar/Deletar)":
                     st.error("Venda apagada permanentemente!")
                     st.rerun()
 
-elif menu == "Baixar Parcela":
+elif menu_selecionado == "Baixar Parcela":
     st.title("💰 Recebimento de Comissão (Baixa)")
     st.info("Esta tela calculará a divisão exata quando as parcelas forem geradas automaticamente.")
 
-# --- TELAS DAS FERRAMENTAS (ÁREA LOGADA) ---
-elif menu == "🏍️ Simulador Yamaha":
+# --- TELAS DAS FERRAMENTAS ---
+elif menu_selecionado == "🏍️ Simulador Yamaha":
     carregar_ferramenta("yamaha.html")
-elif menu == "🏦 Simulador Itaú":
+elif menu_selecionado == "🏦 Simulador Itaú":
     carregar_ferramenta("itau.html")
-elif menu == "🎯 Guia de Oportunidades":
+elif menu_selecionado == "🎯 Guia de Oportunidades":
     carregar_ferramenta("guia.html")
-elif menu == "⚖️ Financiamento x Consórcio":
+elif menu_selecionado == "⚖️ Financiamento x Consórcio":
     carregar_ferramenta("comparador.html")
