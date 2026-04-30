@@ -4,7 +4,7 @@ import pandas as pd
 from datetime import datetime
 import streamlit.components.v1 as components
 
-# Configuração da página (layout 100% otimizado)
+# Configuração da página
 st.set_page_config(page_title="Portal Consorbens", layout="wide", initial_sidebar_state="expanded")
 
 # === 1. CONFIGURAÇÃO DE USUÁRIOS E SENHAS ===
@@ -30,16 +30,17 @@ def carregar_ferramenta(nome_arquivo):
     except FileNotFoundError:
         st.error(f"⚠️ O arquivo {nome_arquivo} não foi encontrado. Certifique-se de ter criado ele no GitHub com este nome exato!")
 
-# === 2. LÓGICA DO MENU LATERAL ===
+# === 2. LÓGICA DO MENU LATERAL (TOTALMENTE LIMPO) ===
 menu_selecionado = ""
 is_logado = st.session_state['usuario_logado'] is not None
 
+# Colocamos a logo no topo do menu
+st.sidebar.image("https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png", use_column_width=True)
+st.sidebar.write("") # Apenas um espaço em branco para dar um respiro
+
 if not is_logado:
-    st.sidebar.image("https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png", use_column_width=True)
-    
-    # Menu super limpo sem os textos extras
     menu_selecionado = st.sidebar.radio(
-        "Menu", 
+        "Navegação", # Label (será escondido no CSS)
         [
             "🔐 Login (Área Restrita)",
             "🏍️ Simulador Yamaha",
@@ -47,16 +48,9 @@ if not is_logado:
             "🎯 Oportunidades Itaú",
             "⚖️ Financiamento x Consórcio"
         ],
-        label_visibility="collapsed" # Isso esconde a palavra "Navegação"
+        label_visibility="collapsed" # Esconde o título do menu
     )
-    st.sidebar.divider()
-    st.sidebar.caption("Portal Consorbens © 2026")
 else:
-    st.sidebar.image("https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png", use_column_width=True)
-    st.sidebar.title(f"Olá, {st.session_state['nome_vendedor']}")
-    st.sidebar.write(f"Perfil: **{st.session_state['perfil_logado']}**")
-    st.sidebar.divider()
-
     ferramentas_logadas = [
         "🏍️ Simulador Yamaha", 
         "🏦 Simulador Itaú", 
@@ -69,21 +63,20 @@ else:
     else:
         opcoes_menu = ["Dashboard", "Nova Venda"] + ferramentas_logadas
 
-    # Menu limpo também para os logados
     menu_selecionado = st.sidebar.radio(
-        "Menu", 
+        "Navegação", 
         opcoes_menu,
         label_visibility="collapsed"
     )
-    st.sidebar.divider()
     
+    st.sidebar.write("") # Espaço em branco
     if st.sidebar.button("Sair do Sistema (Logout)"):
         st.session_state['usuario_logado'] = None
         st.session_state['perfil_logado'] = None
         st.session_state['nome_vendedor'] = None
         st.rerun()
 
-# === 3. ESTILIZAÇÃO INTELIGENTE (CORES E BOTÃO) ===
+# === 3. ESTILIZAÇÃO (SETINHAS LARANJAS FORÇADAS) ===
 simuladores = ["🏍️ Simulador Yamaha", "🏦 Simulador Itaú", "🎯 Oportunidades Itaú", "⚖️ Financiamento x Consórcio"]
 is_simulator = menu_selecionado in simuladores
 
@@ -94,51 +87,53 @@ css = """
     
     /* Menu Lateral Sempre Branco e com letras escuras */
     [data-testid="stSidebar"] { background-color: #ffffff !important; }
-    [data-testid="stSidebar"] p, [data-testid="stSidebar"] span, [data-testid="stSidebar"] label, [data-testid="stSidebar"] div { color: #0f172a !important; }
+    [data-testid="stSidebar"] * { color: #0f172a !important; }
     [data-testid="stSidebar"] hr { border-bottom-color: #e2e8f0 !important; }
+    
+    /* Botão de Logout no menu lateral */
     [data-testid="stSidebar"] button { border: 1px solid #cbd5e1 !important; background-color: #f8fafc !important; color: #0f172a !important; }
     
-    /* === A MÁGICA DA SETINHA LARANJA === */
-    button[kind="header"], 
-    [data-testid="collapsedControl"], 
-    [data-testid="stSidebarCollapseButton"] {
-        background-color: #ff6600 !important; 
+    /* ====== SETINHAS LARANJAS (MOSTRAR E ESCONDER) ====== */
+    /* 1. Botão que FICA FLUTUANDO para abrir o menu */
+    [data-testid="collapsedControl"] {
+        background-color: #ff6600 !important;
         border-radius: 8px !important;
-        box-shadow: 0px 4px 12px rgba(255, 102, 0, 0.6) !important;
-        opacity: 1 !important; 
-        z-index: 999999 !important;
-        padding: 5px !important;
-        margin-top: 10px !important;
-        margin-left: 10px !important;
+        box-shadow: 0px 4px 10px rgba(255,102,0,0.6) !important;
+        z-index: 999999 !important; /* Força ficar na frente do fundo preto */
     }
     
-    button[kind="header"] *, 
-    [data-testid="collapsedControl"] *, 
-    [data-testid="stSidebarCollapseButton"] * {
-        fill: #ffffff !important;
-        color: #ffffff !important;
-        stroke: #ffffff !important;
+    /* 2. Botão que FICA DENTRO DO MENU para fechar */
+    [data-testid="stSidebarCollapseButton"] {
+        background-color: #ff6600 !important;
+        border-radius: 6px !important;
     }
-
-    button[kind="header"]:hover, 
+    
+    /* Pinta o ícone da setinha (SVG) de branco em ambos os botões */
+    [data-testid="collapsedControl"] svg, 
+    [data-testid="stSidebarCollapseButton"] svg {
+        color: #ffffff !important;
+        fill: #ffffff !important;
+    }
+    
+    /* Efeito ao passar o mouse */
     [data-testid="collapsedControl"]:hover, 
     [data-testid="stSidebarCollapseButton"]:hover {
         background-color: #cc5200 !important;
-        transform: scale(1.1) !important;
     }
+    
+    /* Esconde a barra branca inútil do topo para não atrapalhar os botões */
+    header[data-testid="stHeader"] { background-color: transparent !important; }
 """
 
 if is_simulator:
     css += """
     /* Fundo ESCURO apenas nos simuladores */
     .stApp { background-color: #0f172a !important; }
-    header[data-testid="stHeader"] { background-color: transparent !important; }
     """
 else:
     css += """
     /* Fundo CLARO no Sistema de Comissões e Login */
     .stApp { background-color: #f8fafc !important; }
-    header[data-testid="stHeader"] { background-color: transparent !important; }
     """
 
 css += "</style>"
