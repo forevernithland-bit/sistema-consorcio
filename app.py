@@ -39,7 +39,7 @@ st.sidebar.image("https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png
 st.sidebar.write("") # Espaço para desgrudar os links da logo
 
 if not is_logado:
-    # Apenas os links (AGORA VÃO APARECER!)
+    # Apenas os links, sem nenhum texto adicional
     menu_selecionado = st.sidebar.radio(
         "Menu Principal", 
         [
@@ -57,7 +57,7 @@ if not is_logado:
     st.sidebar.caption("Portal Consorbens © 2026")
     
 else:
-    # Mostra quem está logado
+    # Mostra quem está logado rapidamente e os links
     st.sidebar.write(f"👤 **{st.session_state['nome_vendedor']}**")
     st.sidebar.divider()
 
@@ -100,37 +100,49 @@ css = """
     [data-testid="stSidebar"] * { color: #0f172a !important; }
     [data-testid="stSidebar"] hr { border-bottom-color: #e2e8f0 !important; }
     
+    /* Esconde a palavra "Navegação" caso o label_visibility falhe */
+    [data-testid="stSidebar"] .stRadio label { display: none !important; }
+    
     /* Estilo do Botão de Sair */
     [data-testid="stSidebar"] button { border: 1px solid #cbd5e1 !important; background-color: #f8fafc !important; }
 
-    /* ====== BOTÃO DA SETINHA DEFINITIVO (100% LARANJA) ====== */
-    button[kind="header"], 
-    button[data-testid="collapsedControl"], 
-    button[data-testid="stSidebarCollapseButton"] {
-        background-color: #ff6600 !important;
-        border: none !important;
+    /* ====== BOTÃO PARA REEXIBIR O MENU (A SETINHA QUE SUMIA) ====== */
+    [data-testid="collapsedControl"] {
+        background-color: #ff6600 !important; /* Laranja Consorbens */
         border-radius: 8px !important;
-        box-shadow: 0px 4px 8px rgba(255, 102, 0, 0.5) !important;
-        padding: 6px !important;
-        margin: 10px !important;
-        z-index: 999999 !important;
+        box-shadow: 0px 4px 10px rgba(255, 102, 0, 0.6) !important;
+        padding: 8px !important;
+        margin-top: 15px !important;
+        margin-left: 15px !important;
+        opacity: 1 !important; 
+        z-index: 999999 !important; /* Força ficar por cima do preto */
     }
     
-    /* Garante que a setinha dentro do botão fique branca */
-    button[kind="header"] svg, 
-    button[data-testid="collapsedControl"] svg, 
-    button[data-testid="stSidebarCollapseButton"] svg {
+    /* Garante que o ícone da setinha seja BRANCO e grande */
+    [data-testid="collapsedControl"] svg {
         fill: #ffffff !important;
-        stroke: #ffffff !important;
         color: #ffffff !important;
+        stroke: #ffffff !important;
+        width: 20px !important;
+        height: 20px !important;
     }
 
-    /* Efeito ao passar o mouse */
-    button[kind="header"]:hover, 
-    button[data-testid="collapsedControl"]:hover, 
-    button[data-testid="stSidebarCollapseButton"]:hover {
+    [data-testid="collapsedControl"]:hover {
         background-color: #cc5200 !important;
         transform: scale(1.1) !important;
+    }
+    
+    /* ====== BOTÃO PARA ESCONDER O MENU (DENTRO DA BARRA BRANCA) ====== */
+    [data-testid="stSidebarCollapseButton"] {
+        background-color: #ff6600 !important;
+        border-radius: 6px !important;
+    }
+    [data-testid="stSidebarCollapseButton"] svg {
+        fill: #ffffff !important;
+        color: #ffffff !important;
+    }
+    [data-testid="stSidebarCollapseButton"]:hover {
+        background-color: #cc5200 !important;
     }
     
     /* Esconde a barra branca inútil do topo do Streamlit */
