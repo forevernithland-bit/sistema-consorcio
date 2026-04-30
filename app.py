@@ -10,8 +10,8 @@ st.set_page_config(page_title="CRM Consórcios", layout="wide")
 # Aqui você pode mudar o login e a senha da sua equipe. 
 # Mantenha o "perfil" como "Master" para os sócios e "Vendedor" para a equipe.
 USUARIOS = {
-    "breno": {"senha": "Consorbens@2026", "perfil": "Master", "nome": "BRENO LIMA"},
-    "uriel": {"senha": "Consorbens@2026", "perfil": "Master", "nome": "URIEL GOMES"},
+    "breno": {"senha": "123", "perfil": "Master", "nome": "BRENO LIMA"},
+    "uriel": {"senha": "123", "perfil": "Master", "nome": "URIEL GOMES"},
     "vendedor1": {"senha": "123", "perfil": "Vendedor", "nome": "Vendedor Terceiro"},
     "consorbens": {"senha": "123", "perfil": "Vendedor", "nome": "Consorbens"}
 }
