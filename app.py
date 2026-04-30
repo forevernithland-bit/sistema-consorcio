@@ -4,7 +4,7 @@ import pandas as pd
 from datetime import datetime
 import streamlit.components.v1 as components
 
-# Configuração da página (layout 100% otimizado)
+# Configuração da página
 st.set_page_config(page_title="Portal Consorbens", layout="wide", initial_sidebar_state="expanded")
 
 # === 1. CONFIGURAÇÃO DE USUÁRIOS E SENHAS ===
@@ -30,35 +30,41 @@ def carregar_ferramenta(nome_arquivo):
     except FileNotFoundError:
         st.error(f"⚠️ O arquivo {nome_arquivo} não foi encontrado. Certifique-se de ter criado ele no GitHub com este nome exato!")
 
-# === 2. LÓGICA DO MENU LATERAL ===
+# === 2. LÓGICA DO MENU LATERAL (VISUAL MINIMALISTA DA IMAGEM) ===
 menu_selecionado = ""
 is_logado = st.session_state['usuario_logado'] is not None
 
+# Logo isolada no topo
+st.sidebar.image("https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png", use_column_width=True)
+st.sidebar.write("") # Espaço para desgrudar os links da logo
+
 if not is_logado:
-    st.sidebar.image("https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png", use_column_width=True)
-    st.sidebar.title("🛠️ Ferramentas")
-    st.sidebar.caption("Dica: Use a seta laranja no topo para ampliar a tela.")
+    # Apenas os links, sem nenhum texto adicional
+    menu_selecionado = st.sidebar.radio(
+        "", 
+        [
+            "🔐 Login (Área Restrita)",
+            "🏍️ Simulador Yamaha",
+            "🏦 Simulador Itaú",
+            "🎯 Oportunidades Itaú",
+            "⚖️ Financiamento x Consórcio"
+        ],
+        label_visibility="collapsed"
+    )
     
-    menu_selecionado = st.sidebar.radio("Navegação:", [
-        "🔐 Login (Área Restrita)",
-        "🏍️ Simulador Yamaha",
-        "🏦 Simulador Itaú",
-        "🎯 Guia de Oportunidades",
-        "⚖️ Financiamento x Consórcio"
-    ])
+    # Rodapé igual ao da imagem
     st.sidebar.divider()
     st.sidebar.caption("Portal Consorbens © 2026")
+    
 else:
-    st.sidebar.image("https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png", use_column_width=True)
-    st.sidebar.title(f"Olá, {st.session_state['nome_vendedor']}")
-    st.sidebar.write(f"Perfil: **{st.session_state['perfil_logado']}**")
-    st.sidebar.caption("Dica: Use a seta laranja no topo para ampliar a tela.")
+    # Mostra quem está logado rapidamente e os links
+    st.sidebar.write(f"👤 **{st.session_state['nome_vendedor']}**")
     st.sidebar.divider()
 
     ferramentas_logadas = [
         "🏍️ Simulador Yamaha", 
         "🏦 Simulador Itaú", 
-        "🎯 Guia de Oportunidades", 
+        "🎯 Oportunidades Itaú", 
         "⚖️ Financiamento x Consórcio"
     ]
 
@@ -67,74 +73,84 @@ else:
     else:
         opcoes_menu = ["Dashboard", "Nova Venda"] + ferramentas_logadas
 
-    menu_selecionado = st.sidebar.radio("Navegação do CRM:", opcoes_menu)
-    st.sidebar.divider()
+    menu_selecionado = st.sidebar.radio(
+        "", 
+        opcoes_menu,
+        label_visibility="collapsed"
+    )
     
-    if st.sidebar.button("Sair do Sistema (Logout)"):
+    st.sidebar.write("")
+    if st.sidebar.button("Sair do Sistema"):
         st.session_state['usuario_logado'] = None
         st.session_state['perfil_logado'] = None
         st.session_state['nome_vendedor'] = None
         st.rerun()
 
-# === 3. ESTILIZAÇÃO INTELIGENTE (CORES E BOTÃO) ===
-simuladores = ["🏍️ Simulador Yamaha", "🏦 Simulador Itaú", "🎯 Guia de Oportunidades", "⚖️ Financiamento x Consórcio"]
+# === 3. ESTILIZAÇÃO FORÇADA (CSS BRUTO) ===
+simuladores = ["🏍️ Simulador Yamaha", "🏦 Simulador Itaú", "🎯 Oportunidades Itaú", "⚖️ Financiamento x Consórcio"]
 is_simulator = menu_selecionado in simuladores
 
 css = """
 <style>
-    /* Reduz as margens gerais da tela */
+    /* Margens da tela */
     .block-container { padding-top: 1rem; padding-bottom: 0rem; padding-left: 1rem; padding-right: 1rem; }
     
-    /* Menu Lateral Sempre Branco e com letras escuras */
+    /* Menu Lateral Branco e Textos Escuros */
     [data-testid="stSidebar"] { background-color: #ffffff !important; }
-    [data-testid="stSidebar"] p, [data-testid="stSidebar"] span, [data-testid="stSidebar"] label, [data-testid="stSidebar"] div { color: #0f172a !important; }
+    [data-testid="stSidebar"] * { color: #0f172a !important; }
     [data-testid="stSidebar"] hr { border-bottom-color: #e2e8f0 !important; }
-    [data-testid="stSidebar"] button { border: 1px solid #cbd5e1 !important; background-color: #f8fafc !important; color: #0f172a !important; }
     
-    /* === A MÁGICA DA SETINHA LARANJA === */
-    /* Ataca todos os possíveis botões de recolher/expandir do Streamlit */
+    /* Esconde a palavra "Navegação" caso o label_visibility falhe */
+    [data-testid="stSidebar"] .stRadio label { display: none !important; }
+    
+    /* Estilo do Botão de Sair */
+    [data-testid="stSidebar"] button { border: 1px solid #cbd5e1 !important; background-color: #f8fafc !important; }
+
+    /* ====== BOTÃO DA SETINHA DEFINITIVO (100% LARANJA) ====== */
     button[kind="header"], 
-    [data-testid="collapsedControl"], 
-    [data-testid="stSidebarCollapseButton"] {
-        background-color: #ff6600 !important; /* Laranja vibrante SEMPRE */
+    button[data-testid="collapsedControl"], 
+    button[data-testid="stSidebarCollapseButton"] {
+        background: #ff6600 !important;
+        background-color: #ff6600 !important;
+        border: none !important;
         border-radius: 8px !important;
-        box-shadow: 0px 4px 12px rgba(255, 102, 0, 0.6) !important;
-        opacity: 1 !important; 
+        box-shadow: 0px 4px 8px rgba(255, 102, 0, 0.5) !important;
+        padding: 6px !important;
+        margin: 10px !important;
         z-index: 999999 !important;
-        padding: 5px !important;
-        margin-top: 10px !important;
-        margin-left: 10px !important;
     }
     
-    /* Força o ícone (SVG) de dentro do botão a ficar branco */
-    button[kind="header"] *, 
-    [data-testid="collapsedControl"] *, 
-    [data-testid="stSidebarCollapseButton"] * {
+    /* Garante que a setinha dentro do botão fique branca */
+    button[kind="header"] svg, 
+    button[data-testid="collapsedControl"] svg, 
+    button[data-testid="stSidebarCollapseButton"] svg {
         fill: #ffffff !important;
-        color: #ffffff !important;
         stroke: #ffffff !important;
+        color: #ffffff !important;
     }
 
-    /* Efeito de passar o mouse */
+    /* Efeito ao passar o mouse */
     button[kind="header"]:hover, 
-    [data-testid="collapsedControl"]:hover, 
-    [data-testid="stSidebarCollapseButton"]:hover {
+    button[data-testid="collapsedControl"]:hover, 
+    button[data-testid="stSidebarCollapseButton"]:hover {
+        background: #cc5200 !important;
         background-color: #cc5200 !important;
         transform: scale(1.1) !important;
     }
+    
+    /* Esconde a barra branca inútil do topo do Streamlit */
+    header[data-testid="stHeader"] { background: transparent !important; background-color: transparent !important; }
 """
 
 if is_simulator:
     css += """
-    /* Fundo ESCURO apenas nos simuladores */
+    /* Fundo PRETO apenas nos simuladores */
     .stApp { background-color: #0f172a !important; }
-    header[data-testid="stHeader"] { background-color: transparent !important; }
     """
 else:
     css += """
-    /* Fundo CLARO no Sistema de Comissões e Login */
+    /* Fundo CLARO no CRM e Login */
     .stApp { background-color: #f8fafc !important; }
-    header[data-testid="stHeader"] { background-color: transparent !important; }
     """
 
 css += "</style>"
@@ -143,9 +159,8 @@ st.markdown(css, unsafe_allow_html=True)
 # === 4. RENDERIZAÇÃO DAS TELAS ===
 if not is_logado:
     if menu_selecionado == "🔐 Login (Área Restrita)":
-        st.title("🔒 Acesso ao Sistema de CRM")
-        st.write("Digite suas credenciais para gerenciar comissões e vendas.")
         
+        # FORMULÁRIO DE LOGIN LIMPO (Igual à imagem)
         with st.form("form_login"):
             usuario_input = st.text_input("Usuário (Login)").lower()
             senha_input = st.text_input("Senha", type="password")
@@ -164,7 +179,7 @@ if not is_logado:
         carregar_ferramenta("yamaha.html")
     elif menu_selecionado == "🏦 Simulador Itaú":
         carregar_ferramenta("itau.html")
-    elif menu_selecionado == "🎯 Guia de Oportunidades":
+    elif menu_selecionado == "🎯 Oportunidades Itaú":
         carregar_ferramenta("guia.html")
     elif menu_selecionado == "⚖️ Financiamento x Consórcio":
         carregar_ferramenta("comparador.html")
@@ -290,7 +305,7 @@ elif menu_selecionado == "🏍️ Simulador Yamaha":
     carregar_ferramenta("yamaha.html")
 elif menu_selecionado == "🏦 Simulador Itaú":
     carregar_ferramenta("itau.html")
-elif menu_selecionado == "🎯 Guia de Oportunidades":
+elif menu_selecionado == "🎯 Oportunidades Itaú":
     carregar_ferramenta("guia.html")
 elif menu_selecionado == "⚖️ Financiamento x Consórcio":
     carregar_ferramenta("comparador.html")
