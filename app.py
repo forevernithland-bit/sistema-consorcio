@@ -109,7 +109,7 @@ css = """
 if is_simulator:
     css += """ .stApp { background-color: #0f172a !important; } """
 else:
-    css += """ .stApp { background-color: #ffffff !important; } """ # Fundo branco puro garantido!
+    css += """ .stApp { background-color: #ffffff !important; } """
 
 css += "</style>"
 st.markdown(css, unsafe_allow_html=True)
@@ -160,7 +160,7 @@ if menu_selecionado == "Dashboard":
     if dados_vendas:
         df_vendas = pd.DataFrame(dados_vendas)
         
-        # Mapeando os nomes exatos das colunas da planilha (para evitar erros)
+        # Mapeando os nomes exatos das colunas da planilha (com fallback seguro)
         colunas = df_vendas.columns
         col_data = colunas[1] if len(colunas) > 1 else 'Data'
         col_cliente = colunas[2] if len(colunas) > 2 else 'Nome_Cliente'
@@ -168,11 +168,14 @@ if menu_selecionado == "Dashboard":
         col_admin = colunas[8] if len(colunas) > 8 else 'Administradora'
         col_prod = colunas[9] if len(colunas) > 9 else 'Produto'
         
-        # Converte a data para o sistema entender
-        df_vendas['Data_Real'] = pd.to_datetime(df_vendas[col_data], format="%d/%m/%Y", errors='coerce')
-        
+        # Proteção: Garante que as colunas mapeadas realmente existem no DataFrame antes de usar
+        if col_data in df_vendas.columns:
+            df_vendas['Data_Real'] = pd.to_datetime(df_vendas[col_data], format="%d/%m/%Y", errors='coerce')
+        else:
+            df_vendas['Data_Real'] = pd.NaT
+
         # Filtra por vendedor (se não for Master)
-        if st.session_state['perfil_logado'] == "Vendedor":
+        if st.session_state['perfil_logado'] == "Vendedor" and col_vend in df_vendas.columns:
             df_vendas = df_vendas[df_vendas[col_vend] == st.session_state['nome_vendedor']]
             
         # =========================================================
@@ -190,67 +193,82 @@ if menu_selecionado == "Dashboard":
         hoje = datetime.today()
         df_clientes = df_vendas.copy()
         
-        if filtro_cli == "Clientes do Mês Atual":
-            df_clientes = df_clientes[(df_clientes['Data_Real'].dt.month == hoje.month) & (df_clientes['Data_Real'].dt.year == hoje.year)]
-        elif filtro_cli == "Clientes do Mês Passado":
-            mes_ant = hoje.month - 1 if hoje.month > 1 else 12
-            ano_ant = hoje.year if hoje.month > 1 else hoje.year - 1
-            df_clientes = df_clientes[(df_clientes['Data_Real'].dt.month == mes_ant) & (df_clientes['Data_Real'].dt.year == ano_ant)]
+        if not df_clientes['Data_Real'].isna().all():
+            if filtro_cli == "Clientes do Mês Atual":
+                df_clientes = df_clientes[(df_clientes['Data_Real'].dt.month == hoje.month) & (df_clientes['Data_Real'].dt.year == hoje.year)]
+            elif filtro_cli == "Clientes do Mês Passado":
+                mes_ant = hoje.month - 1 if hoje.month > 1 else 12
+                ano_ant = hoje.year if hoje.month > 1 else hoje.year - 1
+                df_clientes = df_clientes[(df_clientes['Data_Real'].dt.month == mes_ant) & (df_clientes['Data_Real'].dt.year == ano_ant)]
             
-        # Filtro de Busca (Corrigido para não falhar com letras maiúsculas/minúsculas)
-        if busca_nome:
+        # Filtro de Busca Segura
+        if busca_nome and col_cliente in df_clientes.columns:
             df_clientes = df_clientes[df_clientes[col_cliente].astype(str).str.contains(busca_nome, case=False, na=False)]
             
-        # Exibe a tabela formatada e completinha
+        # Exibe a tabela formatada
         if not df_clientes.empty:
             df_display = df_clientes.copy()
-            # Junta Grupo e Cota em uma coluna só
-            df_display['Grupo e Cota'] = df_display['Grupo'].astype(str) + " / " + df_display['Cota'].astype(str)
             
-            # Colunas exatas solicitadas
-            colunas_mostrar = [col_data, col_cliente, 'Grupo e Cota', 'Valor_Venda', col_prod, col_vend, col_admin]
+            # --- PROTEÇÃO CONTRA KEYERROR AQUI ---
+            # Só tenta juntar "Grupo e Cota" se as duas colunas existirem na planilha do Google
+            if 'Grupo' in df_display.columns and 'Cota' in df_display.columns:
+                df_display['Grupo e Cota'] = df_display['Grupo'].astype(str) + " / " + df_display['Cota'].astype(str)
+            elif 'Grupo' in df_display.columns:
+                df_display['Grupo e Cota'] = df_display['Grupo'].astype(str)
+            elif 'Cota' in df_display.columns:
+                df_display['Grupo e Cota'] = df_display['Cota'].astype(str)
+            else:
+                df_display['Grupo e Cota'] = "N/A"
             
-            # Renomeia para ficar bonito na tela
-            df_display = df_display[colunas_mostrar].rename(columns={
+            # Pega apenas as colunas que realmente existem para não dar erro
+            colunas_desejadas = [col_data, col_cliente, 'Grupo e Cota', 'Valor_Venda', col_prod, col_vend, col_admin]
+            colunas_mostrar = [c for c in colunas_desejadas if c in df_display.columns]
+            
+            # Renomeia o que for possível
+            nomes_bonitos = {
                 col_data: 'Data da Venda',
                 col_cliente: 'Nome do Cliente',
                 'Valor_Venda': 'Valor (R$)',
                 col_prod: 'Tipo de Produto',
                 col_vend: 'Vendedor',
                 col_admin: 'Administradora'
-            })
+            }
+            df_display = df_display[colunas_mostrar].rename(columns=nomes_bonitos)
             
             st.dataframe(df_display, use_container_width=True, hide_index=True)
             
-            # --- ÁREA DO PERFIL DO CLIENTE (MÁGICA DAS MÚLTIPLAS COTAS) ---
+            # --- ÁREA DO PERFIL DO CLIENTE ---
             st.write("")
             st.markdown("### 📄 Entrar no Perfil do Cliente")
-            lista_clientes_filtrados = [""] + sorted(df_clientes[col_cliente].astype(str).unique().tolist())
-            cliente_selecionado = st.selectbox("Selecione um cliente para abrir a Ficha Completa:", lista_clientes_filtrados)
+            
+            if col_cliente in df_clientes.columns:
+                lista_clientes_filtrados = [""] + sorted(df_clientes[col_cliente].astype(str).unique().tolist())
+                cliente_selecionado = st.selectbox("Selecione um cliente para abrir a Ficha Completa:", lista_clientes_filtrados)
 
-            if cliente_selecionado != "":
-                # Busca TODAS as vendas daquele cliente no banco de dados inteiro
-                cotas_do_cliente = df_vendas[df_vendas[col_cliente].astype(str) == cliente_selecionado]
+                if cliente_selecionado != "":
+                    cotas_do_cliente = df_vendas[df_vendas[col_cliente].astype(str) == cliente_selecionado]
 
-                st.success(f"**Perfil do Cliente:** {cliente_selecionado}")
-                
-                info1, info2, info3 = st.columns(3)
-                info1.metric("Total de Cotas Adquiridas", len(cotas_do_cliente))
-                
-                # Soma tudo que ele investiu
-                total_investido = pd.to_numeric(cotas_do_cliente['Valor_Venda'], errors='coerce').sum()
-                info2.metric("Volume Total Investido", f"R$ {total_investido:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-                
-                telefone = cotas_do_cliente.iloc[0].get('Telefone', 'Não informado')
-                info3.metric("Telefone de Contato", telefone)
+                    st.success(f"**Perfil do Cliente:** {cliente_selecionado}")
+                    
+                    info1, info2, info3 = st.columns(3)
+                    info1.metric("Total de Cotas Adquiridas", len(cotas_do_cliente))
+                    
+                    if 'Valor_Venda' in cotas_do_cliente.columns:
+                        total_investido = pd.to_numeric(cotas_do_cliente['Valor_Venda'], errors='coerce').sum()
+                        info2.metric("Volume Total Investido", f"R$ {total_investido:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+                    else:
+                        info2.metric("Volume Total Investido", "R$ 0,00")
+                    
+                    telefone = cotas_do_cliente.iloc[0].get('Telefone', 'Não informado') if 'Telefone' in cotas_do_cliente.columns else 'Não informado'
+                    info3.metric("Telefone de Contato", telefone)
 
-                st.markdown(f"#### 📦 Cotas do Cliente ({len(cotas_do_cliente)})")
-                
-                # Exibe a tabela só com as cotas desse cliente específico
-                tabela_cotas = cotas_do_cliente[[col_data, col_admin, col_prod, 'Grupo', 'Cota', 'Valor_Venda']].rename(columns={
-                    col_data: 'Data', col_admin: 'Administradora', col_prod: 'Produto', 'Valor_Venda': 'Valor (R$)'
-                })
-                st.dataframe(tabela_cotas, use_container_width=True, hide_index=True)
+                    st.markdown(f"#### 📦 Cotas do Cliente ({len(cotas_do_cliente)})")
+                    
+                    # Seleciona colunas da ficha do cliente de forma segura
+                    colunas_ficha = [c for c in [col_data, col_admin, col_prod, 'Grupo', 'Cota', 'Valor_Venda'] if c in cotas_do_cliente.columns]
+                    tabela_cotas = cotas_do_cliente[colunas_ficha].rename(columns=nomes_bonitos)
+                    
+                    st.dataframe(tabela_cotas, use_container_width=True, hide_index=True)
                 
         else:
             st.warning("Nenhum cliente encontrado com esses filtros/busca.")
@@ -271,37 +289,39 @@ if menu_selecionado == "Dashboard":
         # Aplicando filtros no gráfico
         df_grafico_filtrado = df_vendas.copy()
         
-        if filtro_tempo_grafico == "Mês Atual":
-            df_grafico_filtrado = df_grafico_filtrado[(df_grafico_filtrado['Data_Real'].dt.month == hoje.month) & (df_grafico_filtrado['Data_Real'].dt.year == hoje.year)]
-        elif filtro_tempo_grafico == "Mês Anterior":
-            mes_ant = hoje.month - 1 if hoje.month > 1 else 12
-            ano_ant = hoje.year if hoje.month > 1 else hoje.year - 1
-            df_grafico_filtrado = df_grafico_filtrado[(df_grafico_filtrado['Data_Real'].dt.month == mes_ant) & (df_grafico_filtrado['Data_Real'].dt.year == ano_ant)]
-        elif filtro_tempo_grafico == "Anual":
-            df_grafico_filtrado = df_grafico_filtrado[df_grafico_filtrado['Data_Real'].dt.year == hoje.year]
+        if not df_grafico_filtrado['Data_Real'].isna().all():
+            if filtro_tempo_grafico == "Mês Atual":
+                df_grafico_filtrado = df_grafico_filtrado[(df_grafico_filtrado['Data_Real'].dt.month == hoje.month) & (df_grafico_filtrado['Data_Real'].dt.year == hoje.year)]
+            elif filtro_tempo_grafico == "Mês Anterior":
+                mes_ant = hoje.month - 1 if hoje.month > 1 else 12
+                ano_ant = hoje.year if hoje.month > 1 else hoje.year - 1
+                df_grafico_filtrado = df_grafico_filtrado[(df_grafico_filtrado['Data_Real'].dt.month == mes_ant) & (df_grafico_filtrado['Data_Real'].dt.year == ano_ant)]
+            elif filtro_tempo_grafico == "Anual":
+                df_grafico_filtrado = df_grafico_filtrado[df_grafico_filtrado['Data_Real'].dt.year == hoje.year]
             
-        if filtro_produto_grafico != "Todos":
-            df_grafico_filtrado = df_grafico_filtrado[df_grafico_filtrado[col_prod].str.contains(filtro_produto_grafico, case=False, na=False)]
+        if filtro_produto_grafico != "Todos" and col_prod in df_grafico_filtrado.columns:
+            df_grafico_filtrado = df_grafico_filtrado[df_grafico_filtrado[col_prod].astype(str).str.contains(filtro_produto_grafico, case=False, na=False)]
             
         if not df_grafico_filtrado.empty:
             st.markdown(f"**Total de Cotas no Período Selecionado: {len(df_grafico_filtrado)}**")
             
-            # Gera os dados para a Pizza (Agrupa por Produto se 'Todos', ou por Administradora se for um produto específico)
+            # Evita erro se as colunas não existirem
             agrupar_por = col_prod if filtro_produto_grafico == "Todos" else col_admin
-            df_pizza = df_grafico_filtrado[agrupar_por].value_counts().reset_index()
-            df_pizza.columns = ['Categoria', 'Quantidade']
-            
-            # Monta a Pizza com Altair
-            grafico_pizza = alt.Chart(df_pizza).mark_arc(innerRadius=60).encode(
-                theta=alt.Theta(field="Quantidade", type="quantitative"),
-                color=alt.Color(field="Categoria", type="nominal"),
-                tooltip=['Categoria', 'Quantidade']
-            ).properties(height=350)
-            
-            # Centraliza a Pizza
-            gp_col1, gp_col2, gp_col3 = st.columns([1, 2, 1])
-            with gp_col2:
-                st.altair_chart(grafico_pizza, use_container_width=True)
+            if agrupar_por in df_grafico_filtrado.columns:
+                df_pizza = df_grafico_filtrado[agrupar_por].value_counts().reset_index()
+                df_pizza.columns = ['Categoria', 'Quantidade']
+                
+                grafico_pizza = alt.Chart(df_pizza).mark_arc(innerRadius=60).encode(
+                    theta=alt.Theta(field="Quantidade", type="quantitative"),
+                    color=alt.Color(field="Categoria", type="nominal"),
+                    tooltip=['Categoria', 'Quantidade']
+                ).properties(height=350)
+                
+                gp_col1, gp_col2, gp_col3 = st.columns([1, 2, 1])
+                with gp_col2:
+                    st.altair_chart(grafico_pizza, use_container_width=True)
+            else:
+                st.warning("Faltam colunas na planilha para gerar este gráfico.")
         else:
             st.warning("📊 Não há vendas suficientes para gerar o gráfico com os filtros atuais.")
             
@@ -355,7 +375,7 @@ elif menu_selecionado == "Gerenciar Vendas (Editar/Deletar)":
     
     if dados_vendas:
         df_vendas = pd.DataFrame(dados_vendas)
-        opcoes_busca = df_vendas.apply(lambda row: f"Linha {row.name + 2} | Cliente: {row['Nome_Cliente']} - Grupo/Cota: {row['Grupo']}/{row['Cota']}", axis=1).tolist()
+        opcoes_busca = df_vendas.apply(lambda row: f"Linha {row.name + 2} | Cliente: {row.get('Nome_Cliente', 'S/N')} - Grupo/Cota: {row.get('Grupo', '')}/{row.get('Cota', '')}", axis=1).tolist()
         venda_selecionada = st.selectbox("Selecione a venda que deseja alterar ou excluir:", [""] + opcoes_busca)
         
         if venda_selecionada:
@@ -364,14 +384,15 @@ elif menu_selecionado == "Gerenciar Vendas (Editar/Deletar)":
             venda_atual = df_vendas.iloc[idx_dataframe]
             
             st.divider()
-            st.subheader(f"Editando Venda: {venda_atual['Nome_Cliente']}")
+            st.subheader(f"Editando Venda: {venda_atual.get('Nome_Cliente', '')}")
             
             col1, col2 = st.columns(2)
             with col1:
-                novo_nome = st.text_input("Nome do Cliente", value=str(venda_atual['Nome_Cliente']))
+                novo_nome = st.text_input("Nome do Cliente", value=str(venda_atual.get('Nome_Cliente', '')))
                 novo_status = st.selectbox("Status", ["Vendido", "Contemplado", "Cancelado"], index=["Vendido", "Contemplado", "Cancelado"].index(venda_atual.get('Status_Cliente', 'Vendido') if venda_atual.get('Status_Cliente') in ["Vendido", "Contemplado", "Cancelado"] else "Vendido"))
             with col2:
-                novo_valor = st.number_input("Valor da Venda (R$)", value=float(venda_atual['Valor_Venda'] if str(venda_atual['Valor_Venda']).replace('.','',1).isdigit() else 0.0))
+                val_atual = str(venda_atual.get('Valor_Venda', '0')).replace('.','',1)
+                novo_valor = st.number_input("Valor da Venda (R$)", value=float(venda_atual.get('Valor_Venda', 0)) if val_atual.isdigit() else 0.0)
 
             col_btn1, col_btn2 = st.columns(2)
             with col_btn1:
