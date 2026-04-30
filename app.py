@@ -39,9 +39,9 @@ st.sidebar.image("https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png
 st.sidebar.write("") # Espaço para desgrudar os links da logo
 
 if not is_logado:
-    # Apenas os links, sem nenhum texto adicional
+    # Apenas os links (AGORA VÃO APARECER!)
     menu_selecionado = st.sidebar.radio(
-        "Menu Principal", 
+        " ", # Deixei apenas um espaço em branco para não bugar
         [
             "🔐 Login (Área Restrita)",
             "🏍️ Simulador Yamaha",
@@ -74,7 +74,7 @@ else:
         opcoes_menu = ["Dashboard", "Nova Venda"] + ferramentas_logadas
 
     menu_selecionado = st.sidebar.radio(
-        "Menu Principal", 
+        " ", 
         opcoes_menu,
         label_visibility="collapsed"
     )
@@ -97,11 +97,8 @@ css = """
     
     /* Menu Lateral Branco e Textos Escuros */
     [data-testid="stSidebar"] { background-color: #ffffff !important; }
-    [data-testid="stSidebar"] * { color: #0f172a !important; }
+    [data-testid="stSidebar"] p, [data-testid="stSidebar"] span, [data-testid="stSidebar"] div { color: #0f172a !important; }
     [data-testid="stSidebar"] hr { border-bottom-color: #e2e8f0 !important; }
-    
-    /* Esconde a palavra "Navegação" caso o label_visibility falhe */
-    [data-testid="stSidebar"] .stRadio label { display: none !important; }
     
     /* Estilo do Botão de Sair */
     [data-testid="stSidebar"] button { border: 1px solid #cbd5e1 !important; background-color: #f8fafc !important; }
