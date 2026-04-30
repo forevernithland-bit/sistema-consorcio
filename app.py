@@ -4,8 +4,20 @@ import pandas as pd
 from datetime import datetime
 import streamlit.components.v1 as components
 
-# Configuração da página
-st.set_page_config(page_title="Portal Consorbens", layout="wide")
+# Configuração da página (agora com layout 100% otimizado)
+st.set_page_config(page_title="Portal Consorbens", layout="wide", initial_sidebar_state="expanded")
+
+# --- TRUQUE DE CSS PARA DEIXAR A TELA MAIOR E SEM MARGENS ---
+st.markdown("""
+    <style>
+        .block-container {
+            padding-top: 1rem;
+            padding-bottom: 0rem;
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 # === 1. CONFIGURAÇÃO DE USUÁRIOS E SENHAS ===
 USUARIOS = {
@@ -34,6 +46,7 @@ def carregar_ferramenta(nome_arquivo):
 if st.session_state['usuario_logado'] is None:
     st.sidebar.image("https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png", use_column_width=True)
     st.sidebar.title("🛠️ Ferramentas")
+    st.sidebar.caption("Dica: Clique na setinha '<' lá no topo para esconder este menu e ampliar a tela.")
     
     menu_publico = st.sidebar.radio("Navegação:", [
         "🔐 Login (Área Restrita)",
@@ -91,6 +104,7 @@ planilha = conectar_planilha()
 st.sidebar.image("https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png", use_column_width=True)
 st.sidebar.title(f"Olá, {st.session_state['nome_vendedor']}")
 st.sidebar.write(f"Perfil: **{st.session_state['perfil_logado']}**")
+st.sidebar.caption("Dica: Clique na setinha '<' lá no topo para esconder este menu e ampliar a tela.")
 st.sidebar.divider()
 
 # Lista de ferramentas que aparecem para todos que estão logados
