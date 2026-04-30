@@ -30,7 +30,7 @@ def carregar_ferramenta(nome_arquivo):
     except FileNotFoundError:
         st.error(f"⚠️ O arquivo {nome_arquivo} não foi encontrado. Certifique-se de ter criado ele no GitHub com este nome exato!")
 
-# === 2. LÓGICA DO MENU LATERAL (VISUAL MINIMALISTA DA IMAGEM) ===
+# === 2. LÓGICA DO MENU LATERAL ===
 menu_selecionado = ""
 is_logado = st.session_state['usuario_logado'] is not None
 
@@ -39,9 +39,9 @@ st.sidebar.image("https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png
 st.sidebar.write("") # Espaço para desgrudar os links da logo
 
 if not is_logado:
-    # Apenas os links, sem nenhum texto adicional
+    # Apenas os links (AGORA VÃO APARECER!)
     menu_selecionado = st.sidebar.radio(
-        "", 
+        "Menu Principal", 
         [
             "🔐 Login (Área Restrita)",
             "🏍️ Simulador Yamaha",
@@ -52,12 +52,12 @@ if not is_logado:
         label_visibility="collapsed"
     )
     
-    # Rodapé igual ao da imagem
+    # Rodapé
     st.sidebar.divider()
     st.sidebar.caption("Portal Consorbens © 2026")
     
 else:
-    # Mostra quem está logado rapidamente e os links
+    # Mostra quem está logado
     st.sidebar.write(f"👤 **{st.session_state['nome_vendedor']}**")
     st.sidebar.divider()
 
@@ -74,7 +74,7 @@ else:
         opcoes_menu = ["Dashboard", "Nova Venda"] + ferramentas_logadas
 
     menu_selecionado = st.sidebar.radio(
-        "", 
+        "Menu Principal", 
         opcoes_menu,
         label_visibility="collapsed"
     )
@@ -100,9 +100,6 @@ css = """
     [data-testid="stSidebar"] * { color: #0f172a !important; }
     [data-testid="stSidebar"] hr { border-bottom-color: #e2e8f0 !important; }
     
-    /* Esconde a palavra "Navegação" caso o label_visibility falhe */
-    [data-testid="stSidebar"] .stRadio label { display: none !important; }
-    
     /* Estilo do Botão de Sair */
     [data-testid="stSidebar"] button { border: 1px solid #cbd5e1 !important; background-color: #f8fafc !important; }
 
@@ -110,7 +107,6 @@ css = """
     button[kind="header"], 
     button[data-testid="collapsedControl"], 
     button[data-testid="stSidebarCollapseButton"] {
-        background: #ff6600 !important;
         background-color: #ff6600 !important;
         border: none !important;
         border-radius: 8px !important;
@@ -133,13 +129,12 @@ css = """
     button[kind="header"]:hover, 
     button[data-testid="collapsedControl"]:hover, 
     button[data-testid="stSidebarCollapseButton"]:hover {
-        background: #cc5200 !important;
         background-color: #cc5200 !important;
         transform: scale(1.1) !important;
     }
     
     /* Esconde a barra branca inútil do topo do Streamlit */
-    header[data-testid="stHeader"] { background: transparent !important; background-color: transparent !important; }
+    header[data-testid="stHeader"] { background-color: transparent !important; }
 """
 
 if is_simulator:
@@ -160,20 +155,26 @@ st.markdown(css, unsafe_allow_html=True)
 if not is_logado:
     if menu_selecionado == "🔐 Login (Área Restrita)":
         
-        # FORMULÁRIO DE LOGIN LIMPO (Igual à imagem)
-        with st.form("form_login"):
-            usuario_input = st.text_input("Usuário (Login)").lower()
-            senha_input = st.text_input("Senha", type="password")
-            btn_login = st.form_submit_button("Entrar no Sistema")
-            
-            if btn_login:
-                if usuario_input in USUARIOS and USUARIOS[usuario_input]["senha"] == senha_input:
-                    st.session_state['usuario_logado'] = usuario_input
-                    st.session_state['perfil_logado'] = USUARIOS[usuario_input]["perfil"]
-                    st.session_state['nome_vendedor'] = USUARIOS[usuario_input]["nome"]
-                    st.rerun() 
-                else:
-                    st.error("❌ Usuário ou senha incorretos.")
+        # Cria um espaçamento no topo para empurrar o formulário para o meio
+        st.markdown("<br><br><br><br>", unsafe_allow_html=True)
+        
+        # Usa colunas invisíveis para espremer o formulário no centro (menor)
+        col_esq, col_meio, col_dir = st.columns([1, 1.2, 1])
+        
+        with col_meio:
+            with st.form("form_login"):
+                usuario_input = st.text_input("Usuário (Login)").lower()
+                senha_input = st.text_input("Senha", type="password")
+                btn_login = st.form_submit_button("Entrar no Sistema")
+                
+                if btn_login:
+                    if usuario_input in USUARIOS and USUARIOS[usuario_input]["senha"] == senha_input:
+                        st.session_state['usuario_logado'] = usuario_input
+                        st.session_state['perfil_logado'] = USUARIOS[usuario_input]["perfil"]
+                        st.session_state['nome_vendedor'] = USUARIOS[usuario_input]["nome"]
+                        st.rerun() 
+                    else:
+                        st.error("❌ Usuário ou senha incorretos.")
                     
     elif menu_selecionado == "🏍️ Simulador Yamaha":
         carregar_ferramenta("yamaha.html")
