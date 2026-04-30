@@ -3,6 +3,7 @@ import gspread
 import pandas as pd
 from datetime import datetime
 import streamlit.components.v1 as components
+import altair as alt # Nova biblioteca para os gráficos!
 
 # Configuração da página
 st.set_page_config(page_title="Portal Consorbens", layout="wide", initial_sidebar_state="expanded")
@@ -39,9 +40,8 @@ st.sidebar.image("https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png
 st.sidebar.write("") # Espaço para desgrudar os links da logo
 
 if not is_logado:
-    # Apenas os links (AGORA VÃO APARECER!)
     menu_selecionado = st.sidebar.radio(
-        " ", # Deixei apenas um espaço em branco para não bugar
+        " ", 
         [
             "🔐 Login (Área Restrita)",
             "🏍️ Simulador Yamaha",
@@ -51,13 +51,10 @@ if not is_logado:
         ],
         label_visibility="collapsed"
     )
-    
-    # Rodapé
     st.sidebar.divider()
     st.sidebar.caption("Portal Consorbens © 2026")
     
 else:
-    # Mostra quem está logado rapidamente e os links
     st.sidebar.write(f"👤 **{st.session_state['nome_vendedor']}**")
     st.sidebar.divider()
 
@@ -103,59 +100,32 @@ css = """
     /* Estilo do Botão de Sair */
     [data-testid="stSidebar"] button { border: 1px solid #cbd5e1 !important; background-color: #f8fafc !important; }
 
-    /* ====== BOTÃO PARA REEXIBIR O MENU (A SETINHA QUE SUMIA) ====== */
+    /* ====== BOTÕES DA SETINHA ====== */
     [data-testid="collapsedControl"] {
-        background-color: #ff6600 !important; /* Laranja Consorbens */
+        background-color: #ff6600 !important; 
         border-radius: 8px !important;
         box-shadow: 0px 4px 10px rgba(255, 102, 0, 0.6) !important;
         padding: 8px !important;
         margin-top: 15px !important;
         margin-left: 15px !important;
         opacity: 1 !important; 
-        z-index: 999999 !important; /* Força ficar por cima do preto */
+        z-index: 999999 !important; 
     }
     
-    /* Garante que o ícone da setinha seja BRANCO e grande */
-    [data-testid="collapsedControl"] svg {
-        fill: #ffffff !important;
-        color: #ffffff !important;
-        stroke: #ffffff !important;
-        width: 20px !important;
-        height: 20px !important;
-    }
-
-    [data-testid="collapsedControl"]:hover {
-        background-color: #cc5200 !important;
-        transform: scale(1.1) !important;
-    }
+    [data-testid="collapsedControl"] svg { fill: #ffffff !important; color: #ffffff !important; stroke: #ffffff !important; width: 20px !important; height: 20px !important; }
+    [data-testid="collapsedControl"]:hover { background-color: #cc5200 !important; transform: scale(1.1) !important; }
     
-    /* ====== BOTÃO PARA ESCONDER O MENU (DENTRO DA BARRA BRANCA) ====== */
-    [data-testid="stSidebarCollapseButton"] {
-        background-color: #ff6600 !important;
-        border-radius: 6px !important;
-    }
-    [data-testid="stSidebarCollapseButton"] svg {
-        fill: #ffffff !important;
-        color: #ffffff !important;
-    }
-    [data-testid="stSidebarCollapseButton"]:hover {
-        background-color: #cc5200 !important;
-    }
+    [data-testid="stSidebarCollapseButton"] { background-color: #ff6600 !important; border-radius: 6px !important; }
+    [data-testid="stSidebarCollapseButton"] svg { fill: #ffffff !important; color: #ffffff !important; }
+    [data-testid="stSidebarCollapseButton"]:hover { background-color: #cc5200 !important; }
     
-    /* Esconde a barra branca inútil do topo do Streamlit */
     header[data-testid="stHeader"] { background-color: transparent !important; }
 """
 
 if is_simulator:
-    css += """
-    /* Fundo PRETO apenas nos simuladores */
-    .stApp { background-color: #0f172a !important; }
-    """
+    css += """ .stApp { background-color: #0f172a !important; } """
 else:
-    css += """
-    /* Fundo CLARO no CRM e Login */
-    .stApp { background-color: #f8fafc !important; }
-    """
+    css += """ .stApp { background-color: #f8fafc !important; } """
 
 css += "</style>"
 st.markdown(css, unsafe_allow_html=True)
@@ -163,13 +133,8 @@ st.markdown(css, unsafe_allow_html=True)
 # === 4. RENDERIZAÇÃO DAS TELAS ===
 if not is_logado:
     if menu_selecionado == "🔐 Login (Área Restrita)":
-        
-        # Cria um espaçamento no topo para empurrar o formulário para o meio
         st.markdown("<br><br><br><br>", unsafe_allow_html=True)
-        
-        # Usa colunas invisíveis para espremer o formulário no centro (menor)
         col_esq, col_meio, col_dir = st.columns([1, 1.2, 1])
-        
         with col_meio:
             with st.form("form_login"):
                 usuario_input = st.text_input("Usuário (Login)").lower()
@@ -184,15 +149,11 @@ if not is_logado:
                         st.rerun() 
                     else:
                         st.error("❌ Usuário ou senha incorretos.")
-                    
-    elif menu_selecionado == "🏍️ Simulador Yamaha":
-        carregar_ferramenta("yamaha.html")
-    elif menu_selecionado == "🏦 Simulador Itaú":
-        carregar_ferramenta("itau.html")
-    elif menu_selecionado == "🎯 Oportunidades Itaú":
-        carregar_ferramenta("guia.html")
-    elif menu_selecionado == "⚖️ Financiamento x Consórcio":
-        carregar_ferramenta("comparador.html")
+                        
+    elif menu_selecionado == "🏍️ Simulador Yamaha": carregar_ferramenta("yamaha.html")
+    elif menu_selecionado == "🏦 Simulador Itaú": carregar_ferramenta("itau.html")
+    elif menu_selecionado == "🎯 Oportunidades Itaú": carregar_ferramenta("guia.html")
+    elif menu_selecionado == "⚖️ Financiamento x Consórcio": carregar_ferramenta("comparador.html")
         
     st.stop() 
 
@@ -207,25 +168,117 @@ def conectar_planilha():
 planilha = conectar_planilha()
 
 if menu_selecionado == "Dashboard":
-    st.title("📊 Painel de Vendas")
+    st.title("📊 Painel de Controle e Vendas")
     
     aba_vendas = planilha.worksheet("Vendas")
     dados_vendas = aba_vendas.get_all_records()
     
     if dados_vendas:
         df_vendas = pd.DataFrame(dados_vendas)
+        
+        # Tentativa segura de identificar as colunas (mesmo que você mude a ordem depois)
+        colunas = df_vendas.columns
+        col_data = colunas[1] if len(colunas) > 1 else colunas[0]
+        col_cliente = colunas[2] if len(colunas) > 2 else colunas[0]
+        col_vend = colunas[7] if len(colunas) > 7 else colunas[0]
+        col_admin = colunas[8] if len(colunas) > 8 else colunas[0]
+        col_prod = colunas[9] if len(colunas) > 9 else colunas[0]
+        
+        # Converte as datas da planilha para formato que o sistema entenda (para podermos filtrar os meses)
+        df_vendas['Data_Real'] = pd.to_datetime(df_vendas[col_data], format="%d/%m/%Y", errors='coerce')
+        
+        # Se for vendedor, esconde as vendas dos outros
         if st.session_state['perfil_logado'] == "Vendedor":
-            st.write("Aqui estão as vendas registradas por você:")
-            df_vendas = df_vendas[df_vendas['Vendedor'] == st.session_state['nome_vendedor']]
-        else:
-            st.write("Visão Geral do Sistema (Todas as Vendas):")
+            df_vendas = df_vendas[df_vendas[col_vend] == st.session_state['nome_vendedor']]
             
-        if not df_vendas.empty:
-            st.dataframe(df_vendas.tail(10))
+        # ==========================================
+        # 1. FILTROS GERAIS DO DASHBOARD
+        # ==========================================
+        st.subheader("Filtros do Gráfico")
+        f_col1, f_col2 = st.columns(2)
+        with f_col1:
+            filtro_tempo = st.selectbox("⏳ Período das Vendas:", ["Mês Atual", "Mês Anterior", "Anual", "Todas"])
+        with f_col2:
+            filtro_produto = st.selectbox("📦 Produto:", ["Todos", "Auto", "Imovel", "Moto", "Caminhao"])
+            
+        # Aplicando Filtro de Tempo
+        hoje = datetime.today()
+        df_filtrado = df_vendas.copy()
+        
+        if filtro_tempo == "Mês Atual":
+            df_filtrado = df_filtrado[(df_filtrado['Data_Real'].dt.month == hoje.month) & (df_filtrado['Data_Real'].dt.year == hoje.year)]
+        elif filtro_tempo == "Mês Anterior":
+            mes_ant = hoje.month - 1 if hoje.month > 1 else 12
+            ano_ant = hoje.year if hoje.month > 1 else hoje.year - 1
+            df_filtrado = df_filtrado[(df_filtrado['Data_Real'].dt.month == mes_ant) & (df_filtrado['Data_Real'].dt.year == ano_ant)]
+        elif filtro_tempo == "Anual":
+            df_filtrado = df_filtrado[df_filtrado['Data_Real'].dt.year == hoje.year]
+            
+        # Aplicando Filtro de Produto
+        if filtro_produto != "Todos":
+            df_filtrado = df_filtrado[df_filtrado[col_prod].str.contains(filtro_produto, case=False, na=False)]
+            
+        # ==========================================
+        # 2. GRÁFICO DE PIZZA (ALTAIR)
+        # ==========================================
+        st.divider()
+        if not df_filtrado.empty:
+            st.markdown(f"### 📈 Total de Vendas Encontradas: **{len(df_filtrado)}**")
+            
+            # Se procurou por "Todos", a pizza mostra os Produtos. Se filtrou um específico, mostra as Administradoras
+            agrupar_por = col_prod if filtro_produto == "Todos" else col_admin
+            df_grafico = df_filtrado[agrupar_por].value_counts().reset_index()
+            df_grafico.columns = ['Categoria', 'Quantidade']
+            
+            # Desenha a pizza
+            grafico_pizza = alt.Chart(df_grafico).mark_arc(innerRadius=50).encode(
+                theta=alt.Theta(field="Quantidade", type="quantitative"),
+                color=alt.Color(field="Categoria", type="nominal"),
+                tooltip=['Categoria', 'Quantidade']
+            ).properties(height=350)
+            
+            # Centraliza o gráfico lindamente na tela
+            g_col1, g_col2, g_col3 = st.columns([1, 2, 1])
+            with g_col2:
+                st.altair_chart(grafico_pizza, use_container_width=True)
         else:
-            st.info("Nenhuma venda encontrada para o seu usuário.")
+            st.warning("📊 Nenhuma venda encontrada para os filtros selecionados.")
+            
+        # ==========================================
+        # 3. GESTÃO E BUSCA DE CLIENTES (Painel Expansível)
+        # ==========================================
+        st.divider()
+        with st.expander("👥 CLIQUE AQUI PARA MOSTRAR/BUSCAR CLIENTES", expanded=False):
+            st.markdown("#### Buscar Base de Clientes")
+            
+            b_col1, b_col2 = st.columns([1, 2])
+            with b_col1:
+                filtro_cli = st.radio("Selecione o período dos clientes:", ["Todos os Clientes", "Clientes do Mês Atual", "Clientes do Mês Passado"])
+            with b_col2:
+                busca_nome = st.text_input("🔍 Buscar Cliente por Nome (Digite e dê Enter):")
+                
+            # Filtro da tabela de clientes
+            df_clientes = df_vendas.copy()
+            
+            if filtro_cli == "Clientes do Mês Atual":
+                df_clientes = df_clientes[(df_clientes['Data_Real'].dt.month == hoje.month) & (df_clientes['Data_Real'].dt.year == hoje.year)]
+            elif filtro_cli == "Clientes do Mês Passado":
+                mes_ant = hoje.month - 1 if hoje.month > 1 else 12
+                ano_ant = hoje.year if hoje.month > 1 else hoje.year - 1
+                df_clientes = df_clientes[(df_clientes['Data_Real'].dt.month == mes_ant) & (df_clientes['Data_Real'].dt.year == ano_ant)]
+                
+            if busca_nome:
+                df_clientes = df_clientes[df_clientes[col_cliente].str.contains(busca_nome, case=False, na=False)]
+                
+            if not df_clientes.empty:
+                # Mostra colunas mais relevantes para não poluir a tela
+                colunas_mostrar = [c for c in [col_data, col_cliente, col_prod, col_admin, 'Valor_Venda', 'Status'] if c in df_clientes.columns]
+                st.dataframe(df_clientes[colunas_mostrar], use_container_width=True)
+            else:
+                st.info("Nenhum cliente atende a esses critérios de busca.")
+                
     else:
-        st.info("O sistema ainda não possui vendas cadastradas.")
+        st.info("O sistema ainda não possui vendas cadastradas na planilha.")
 
 elif menu_selecionado == "Nova Venda":
     st.title("📝 Cadastrar Nova Venda")
@@ -311,11 +364,7 @@ elif menu_selecionado == "Baixar Parcela":
     st.info("Esta tela calculará a divisão exata quando as parcelas forem geradas automaticamente.")
 
 # --- TELAS DAS FERRAMENTAS ---
-elif menu_selecionado == "🏍️ Simulador Yamaha":
-    carregar_ferramenta("yamaha.html")
-elif menu_selecionado == "🏦 Simulador Itaú":
-    carregar_ferramenta("itau.html")
-elif menu_selecionado == "🎯 Oportunidades Itaú":
-    carregar_ferramenta("guia.html")
-elif menu_selecionado == "⚖️ Financiamento x Consórcio":
-    carregar_ferramenta("comparador.html")
+elif menu_selecionado == "🏍️ Simulador Yamaha": carregar_ferramenta("yamaha.html")
+elif menu_selecionado == "🏦 Simulador Itaú": carregar_ferramenta("itau.html")
+elif menu_selecionado == "🎯 Oportunidades Itaú": carregar_ferramenta("guia.html")
+elif menu_selecionado == "⚖️ Financiamento x Consórcio": carregar_ferramenta("comparador.html")
