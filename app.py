@@ -152,42 +152,39 @@ def conectar_planilha():
 planilha = conectar_planilha()
 
 if menu_selecionado == "Dashboard":
+    
     aba_vendas = planilha.worksheet("Vendas")
-    # Trocamos para get_all_values() para ler como uma matriz bruta, ignorando cabeçalhos!
     dados_brutos = aba_vendas.get_all_values()
     
     if len(dados_brutos) > 1:
-        # Pula a linha 0 (cabeçalho) e transforma em DataFrame garantindo as posições numéricas
+        # A OPÇÃO NUCLEAR: Forçar a estrutura exata da planilha
         df_vendas = pd.DataFrame(dados_brutos[1:])
         
-        # Garante que a matriz tem pelo menos 14 colunas para não dar erro
-        for i in range(len(df_vendas.columns), 14):
-            df_vendas[i] = ""
-            
-        # Nomenclatura fixa baseada nas POSIÇÕES que o código salva as vendas
-        df_vendas = df_vendas.rename(columns={
-            1: 'Data_Venda',
-            2: 'Nome_Cliente',
-            3: 'Telefone_Cliente',
-            7: 'Vendedor_Nome',
-            8: 'Admin_Nome',
-            9: 'Tipo_Produto',
-            10: 'Grupo_Num',
-            11: 'Cota_Num',
-            12: 'Valor_Financeiro',
-            13: 'Status_Venda'
-        })
+        # Garante que temos 14 colunas (preenchendo com vazio se faltar)
+        col_count = len(df_vendas.columns)
+        if col_count < 14:
+            for i in range(col_count, 14):
+                df_vendas[i] = ""
+        
+        # Corta qualquer coluna extra que tenha sobrado
+        df_vendas = df_vendas.iloc[:, :14]
+        
+        # Renomeia na MARRA, usando a posição exata em que salvamos a venda
+        df_vendas.columns = [
+            "ID_Vazio", "Data_Venda", "Nome_Cliente", "Telefone", "Vazio1", "Vazio2", "Vazio3",
+            "Vendedor", "Administradora", "Produto", "Grupo", "Cota", "Valor_Venda", "Status"
+        ]
         
         # Converte Data de forma segura
         df_vendas['Data_Real'] = pd.to_datetime(df_vendas['Data_Venda'], format="%d/%m/%Y", errors='coerce')
 
         # Limpa o Valor Financeiro (transforma texto em número para somar)
-        df_vendas['Valor_Numerico'] = df_vendas['Valor_Financeiro'].astype(str).str.replace('R$', '', regex=False).str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.strip()
+        df_vendas['Valor_Numerico'] = df_vendas['Valor_Venda'].astype(str).str.replace('R$', '', regex=False).str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.strip()
         df_vendas['Valor_Numerico'] = pd.to_numeric(df_vendas['Valor_Numerico'], errors='coerce').fillna(0.0)
 
-        # Filtro de vendedor
+        # Filtro de vendedor (Se for master, vê tudo, se não, só vê as dele)
         if st.session_state['perfil_logado'] == "Vendedor":
-            df_vendas = df_vendas[df_vendas['Vendedor_Nome'] == st.session_state['nome_vendedor']]
+            df_vendas = df_vendas[df_vendas['Vendedor'] == st.session_state['nome_vendedor']]
             
         # =========================================================
         # PARTE 1: GESTÃO E BUSCA DE CLIENTES
@@ -221,20 +218,22 @@ if menu_selecionado == "Dashboard":
         if not df_clientes.empty:
             df_display = df_clientes.copy()
             
-            # Formata Grupo e Cota (mesmo se vazios)
-            df_display['Grupo e Cota'] = df_display['Grupo_Num'].astype(str) + " / " + df_display['Cota_Num'].astype(str)
-            df_display['Grupo e Cota'] = df_display['Grupo e Cota'].replace(" / ", "N/A") # Limpa se os dois forem vazios
+            # Junta Grupo e Cota (e deixa bonito se tiver vazio)
+            df_display['Grupo e Cota'] = df_display.apply(
+                lambda x: f"{x['Grupo']} / {x['Cota']}" if str(x['Grupo']).strip() or str(x['Cota']).strip() else "N/A", 
+                axis=1
+            )
             
-            # Ordenação exata solicitada
-            colunas_desejadas = ['Nome_Cliente', 'Grupo e Cota', 'Tipo_Produto', 'Admin_Nome', 'Valor_Financeiro', 'Vendedor_Nome', 'Data_Venda']
+            # Ordenação exata que você pediu
+            colunas_desejadas = ['Nome_Cliente', 'Grupo e Cota', 'Produto', 'Administradora', 'Valor_Venda', 'Vendedor', 'Data_Venda']
             
             nomes_bonitos = {
                 'Nome_Cliente': 'Nome',
                 'Grupo e Cota': 'Grupo e Cota',
-                'Tipo_Produto': 'Tipo de Produto',
-                'Admin_Nome': 'Administradora',
-                'Valor_Financeiro': 'Valor da Venda',
-                'Vendedor_Nome': 'Vendedor',
+                'Produto': 'Tipo de Produto',
+                'Administradora': 'Administradora',
+                'Valor_Venda': 'Valor da Venda',
+                'Vendedor': 'Vendedor',
                 'Data_Venda': 'Data da Venda'
             }
             df_display = df_display[colunas_desejadas].rename(columns=nomes_bonitos)
@@ -245,7 +244,10 @@ if menu_selecionado == "Dashboard":
             st.write("")
             st.markdown("### 📄 Entrar no Perfil do Cliente")
             
-            lista_clientes_filtrados = [""] + sorted(df_clientes['Nome_Cliente'].astype(str).unique().tolist())
+            # Remove nomes em branco da lista
+            lista_nomes_limpa = sorted([n for n in df_clientes['Nome_Cliente'].astype(str).unique() if n.strip() != ""])
+            lista_clientes_filtrados = [""] + lista_nomes_limpa
+            
             cliente_selecionado = st.selectbox("Selecione um cliente para abrir a Ficha Completa:", lista_clientes_filtrados)
 
             if cliente_selecionado != "":
@@ -259,14 +261,14 @@ if menu_selecionado == "Dashboard":
                 total_investido = cotas_do_cliente['Valor_Numerico'].sum()
                 info2.metric("Volume Total Investido", f"R$ {total_investido:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
                 
-                telefone = cotas_do_cliente.iloc[0].get('Telefone_Cliente', 'Não informado')
-                info3.metric("Telefone de Contato", telefone if telefone.strip() != "" else 'Não informado')
+                telefone = str(cotas_do_cliente.iloc[0]['Telefone']).strip()
+                info3.metric("Telefone de Contato", telefone if telefone != "" else 'Não informado')
 
                 st.markdown(f"#### 📦 Cotas do Cliente ({len(cotas_do_cliente)})")
                 
-                colunas_ficha = ['Data_Venda', 'Admin_Nome', 'Tipo_Produto', 'Grupo_Num', 'Cota_Num', 'Valor_Financeiro']
+                colunas_ficha = ['Data_Venda', 'Administradora', 'Produto', 'Grupo', 'Cota', 'Valor_Venda']
                 tabela_cotas = cotas_do_cliente[colunas_ficha].rename(columns={
-                    'Data_Venda': 'Data', 'Admin_Nome': 'Administradora', 'Tipo_Produto': 'Produto', 'Grupo_Num': 'Grupo', 'Cota_Num': 'Cota', 'Valor_Financeiro': 'Valor (R$)'
+                    'Data_Venda': 'Data', 'Valor_Venda': 'Valor (R$)'
                 })
                 
                 st.dataframe(tabela_cotas, use_container_width=True, hide_index=True)
@@ -300,7 +302,7 @@ if menu_selecionado == "Dashboard":
                 df_grafico_filtrado = df_grafico_filtrado[df_grafico_filtrado['Data_Real'].dt.year == hoje.year]
             
         if filtro_produto_grafico != "Todos":
-            df_grafico_filtrado = df_grafico_filtrado[df_grafico_filtrado['Tipo_Produto'].astype(str).str.contains(filtro_produto_grafico, case=False, na=False)]
+            df_grafico_filtrado = df_grafico_filtrado[df_grafico_filtrado['Produto'].astype(str).str.contains(filtro_produto_grafico, case=False, na=False)]
             
         if not df_grafico_filtrado.empty:
             total_cotas_graf = len(df_grafico_filtrado)
@@ -311,7 +313,7 @@ if menu_selecionado == "Dashboard":
             met_col2.metric(label="Total de Cotas Vendidas", value=total_cotas_graf)
             st.write("")
             
-            agrupar_por = 'Tipo_Produto' if filtro_produto_grafico == "Todos" else 'Admin_Nome'
+            agrupar_por = 'Produto' if filtro_produto_grafico == "Todos" else 'Administradora'
             df_pizza = df_grafico_filtrado[agrupar_por].value_counts().reset_index()
             df_pizza.columns = ['Categoria', 'Quantidade']
             
@@ -376,15 +378,20 @@ elif menu_selecionado == "Gerenciar Vendas (Editar/Deletar)":
     dados_brutos = aba_vendas.get_all_values()
     
     if len(dados_brutos) > 1:
+        # Mesma trava nuclear aqui!
         df_vendas = pd.DataFrame(dados_brutos[1:])
-        for i in range(len(df_vendas.columns), 14):
-            df_vendas[i] = ""
-            
-        df_vendas = df_vendas.rename(columns={
-            2: 'Nome_Cliente', 10: 'Grupo_Num', 11: 'Cota_Num', 12: 'Valor_Financeiro', 13: 'Status_Venda'
-        })
+        col_count = len(df_vendas.columns)
+        if col_count < 14:
+            for i in range(col_count, 14):
+                df_vendas[i] = ""
+        df_vendas = df_vendas.iloc[:, :14]
         
-        opcoes_busca = df_vendas.apply(lambda row: f"Linha {row.name + 2} | Cliente: {row.get('Nome_Cliente', 'S/N')} - Grupo/Cota: {row.get('Grupo_Num', '')}/{row.get('Cota_Num', '')}", axis=1).tolist()
+        df_vendas.columns = [
+            "ID_Vazio", "Data_Venda", "Nome_Cliente", "Telefone", "Vazio1", "Vazio2", "Vazio3",
+            "Vendedor", "Administradora", "Produto", "Grupo", "Cota", "Valor_Venda", "Status"
+        ]
+        
+        opcoes_busca = df_vendas.apply(lambda row: f"Linha {row.name + 2} | Cliente: {row['Nome_Cliente']} - Grupo/Cota: {row['Grupo']}/{row['Cota']}", axis=1).tolist()
         venda_selecionada = st.selectbox("Selecione a venda que deseja alterar ou excluir:", [""] + opcoes_busca)
         
         if venda_selecionada:
@@ -393,14 +400,14 @@ elif menu_selecionado == "Gerenciar Vendas (Editar/Deletar)":
             venda_atual = df_vendas.iloc[idx_dataframe]
             
             st.divider()
-            st.subheader(f"Editando Venda: {venda_atual.get('Nome_Cliente', '')}")
+            st.subheader(f"Editando Venda: {venda_atual['Nome_Cliente']}")
             
             col1, col2 = st.columns(2)
             with col1:
-                novo_nome = st.text_input("Nome do Cliente", value=str(venda_atual.get('Nome_Cliente', '')))
-                novo_status = st.selectbox("Status", ["Vendido", "Contemplado", "Cancelado"], index=["Vendido", "Contemplado", "Cancelado"].index(venda_atual.get('Status_Venda', 'Vendido') if venda_atual.get('Status_Venda') in ["Vendido", "Contemplado", "Cancelado"] else "Vendido"))
+                novo_nome = st.text_input("Nome do Cliente", value=str(venda_atual['Nome_Cliente']))
+                novo_status = st.selectbox("Status", ["Vendido", "Contemplado", "Cancelado"], index=["Vendido", "Contemplado", "Cancelado"].index(venda_atual['Status'] if venda_atual['Status'] in ["Vendido", "Contemplado", "Cancelado"] else "Vendido"))
             with col2:
-                val_atual = str(venda_atual.get('Valor_Financeiro', '0')).replace('R$', '').replace('.','').replace(',', '.').strip()
+                val_atual = str(venda_atual['Valor_Venda']).replace('R$', '').replace('.','').replace(',', '.').strip()
                 try:
                     val_float = float(val_atual)
                 except:
@@ -410,10 +417,9 @@ elif menu_selecionado == "Gerenciar Vendas (Editar/Deletar)":
             col_btn1, col_btn2 = st.columns(2)
             with col_btn1:
                 if st.button("Salvar Alterações"):
-                    # Aqui usamos a posição cravada da planilha para não ter erro
-                    aba_vendas.update_cell(linha_planilha, 3, novo_nome) # Coluna 3 = Cliente
-                    aba_vendas.update_cell(linha_planilha, 13, novo_valor) # Coluna 13 = Valor
-                    aba_vendas.update_cell(linha_planilha, 14, novo_status) # Coluna 14 = Status
+                    aba_vendas.update_cell(linha_planilha, 3, novo_nome) # Coluna 3 exata = Nome
+                    aba_vendas.update_cell(linha_planilha, 13, novo_valor) # Coluna 13 exata = Valor
+                    aba_vendas.update_cell(linha_planilha, 14, novo_status) # Coluna 14 exata = Status
                     st.success("Alterações salvas na planilha!")
                     st.rerun()
             with col_btn2:
