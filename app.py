@@ -91,29 +91,35 @@ css = """
     [data-testid="stSidebar"] hr { border-bottom-color: #e2e8f0 !important; }
     [data-testid="stSidebar"] button { border: 1px solid #cbd5e1 !important; background-color: #f8fafc !important; color: #0f172a !important; }
     
-    /* SETINHA DE ESCONDER E MOSTRAR O MENU (LARANJA E VISÍVEL) */
-    /* stSidebarCollapseButton é a de esconder. collapsedControl é a flutuante de mostrar. */
-    [data-testid="stSidebarCollapseButton"], 
-    [data-testid="collapsedControl"] {
-        background-color: #ff6600 !important; /* Fundo Laranja */
-        border-radius: 6px !important;
-        box-shadow: 0px 4px 10px rgba(255, 102, 0, 0.5) !important;
-        padding: 6px !important;
-        color: #ffffff !important;
+    /* === A MÁGICA DA SETINHA LARANJA === */
+    /* Ataca todos os possíveis botões de recolher/expandir do Streamlit */
+    button[kind="header"], 
+    [data-testid="collapsedControl"], 
+    [data-testid="stSidebarCollapseButton"] {
+        background-color: #ff6600 !important; /* Laranja vibrante SEMPRE */
+        border-radius: 8px !important;
+        box-shadow: 0px 4px 12px rgba(255, 102, 0, 0.6) !important;
+        opacity: 1 !important; 
         z-index: 999999 !important;
+        padding: 5px !important;
+        margin-top: 10px !important;
+        margin-left: 10px !important;
     }
     
-    [data-testid="stSidebarCollapseButton"] svg, 
-    [data-testid="collapsedControl"] svg {
-        fill: #ffffff !important; /* Seta sempre branca */
+    /* Força o ícone (SVG) de dentro do botão a ficar branco */
+    button[kind="header"] *, 
+    [data-testid="collapsedControl"] *, 
+    [data-testid="stSidebarCollapseButton"] * {
+        fill: #ffffff !important;
         color: #ffffff !important;
-        width: 1.5rem !important;
-        height: 1.5rem !important;
+        stroke: #ffffff !important;
     }
 
-    [data-testid="stSidebarCollapseButton"]:hover, 
-    [data-testid="collapsedControl"]:hover {
-        background-color: #cc5200 !important; /* Laranja mais escuro no hover */
+    /* Efeito de passar o mouse */
+    button[kind="header"]:hover, 
+    [data-testid="collapsedControl"]:hover, 
+    [data-testid="stSidebarCollapseButton"]:hover {
+        background-color: #cc5200 !important;
         transform: scale(1.1) !important;
     }
 """
