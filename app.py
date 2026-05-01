@@ -105,7 +105,6 @@ css = """
     
     header[data-testid="stHeader"] { background-color: transparent !important; }
     
-    /* Estilizando as abas de relatório para ficarem bonitas */
     button[data-baseweb="tab"] { font-size: 16px !important; font-weight: bold !important; }
 """
 
@@ -182,7 +181,16 @@ if menu_selecionado == "Dashboard":
         
         c_filtro1, c_filtro2 = st.columns([1, 2])
         with c_filtro1:
-            filtro_cli = st.selectbox("⏳ Filtro por Data da Venda:", ["Todos os Clientes", "Mês Atual", "Mês Anterior", "Ano Atual"])
+            filtro_cli = st.selectbox("⏳ Filtro por Data da Venda:", ["Todos os Clientes", "Mês Atual", "Mês Anterior", "Ano Atual", "Período Personalizado"])
+            
+            # Calendário customizado
+            if filtro_cli == "Período Personalizado":
+                col_d1, col_d2 = st.columns(2)
+                with col_d1:
+                    data_inicio = st.date_input("Data Inicial", format="DD/MM/YYYY")
+                with col_d2:
+                    data_fim = st.date_input("Data Final", format="DD/MM/YYYY")
+                    
         with c_filtro2:
             busca_nome = st.text_input("🔍 Buscar Cliente por Nome:")
             
@@ -199,6 +207,8 @@ if menu_selecionado == "Dashboard":
                 df_clientes = df_clientes[mask_datas_validas & (df_clientes['Data_Real'].dt.month == mes_ant) & (df_clientes['Data_Real'].dt.year == ano_ant)]
             elif filtro_cli == "Ano Atual":
                 df_clientes = df_clientes[mask_datas_validas & (df_clientes['Data_Real'].dt.year == hoje.year)]
+            elif filtro_cli == "Período Personalizado":
+                df_clientes = df_clientes[mask_datas_validas & (df_clientes['Data_Real'].dt.date >= data_inicio) & (df_clientes['Data_Real'].dt.date <= data_fim)]
             
         if busca_nome.strip() != "":
             termo = busca_nome.strip()
@@ -210,15 +220,16 @@ if menu_selecionado == "Dashboard":
             df_display['valor da venda'] = df_display['Valor_Numerico'].apply(lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
             
             colunas_desejadas = ['Nome do cliente', 'Grupo e cota', 'PRODUTO', 'ADMINISTRADORA', 'valor da venda', 'VENDEDOR', 'DATA']
-            nomes_bonitos = { 'Nome do cliente': 'Nome', 'PRODUTO': 'tipo de produto', 'ADMINISTRADORA': 'Administradora', 'VENDEDOR': 'vendedor', 'DATA': 'data da venda' }
+            nomes_bonitos = { 'Nome do cliente': 'Nome', 'PRODUTO': 'Tipo de Produto', 'ADMINISTRADORA': 'Administradora', 'VENDEDOR': 'Vendedor', 'DATA': 'Data da Venda' }
             df_display = df_display[colunas_desejadas].rename(columns=nomes_bonitos)
             
+            # Força o alinhamento centralizado
             estilo_tabela = df_display.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}])
             st.dataframe(estilo_tabela, use_container_width=True, hide_index=True)
             
             total_vendas_tabela = df_clientes['Valor_Numerico'].sum()
             valor_formatado_total = f"R$ {total_vendas_tabela:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-            st.markdown(f"""<div style="text-align: right; padding-top: 10px;"><h4 style="color: #ff6600; font-weight: bold; margin: 0;">💰 Soma Total das Vendas na Tabela: {valor_formatado_total}</h4></div>""", unsafe_allow_html=True)
+            st.markdown(f"""<div style="text-align: right; padding-top: 10px;"><h4 style="color: #ff6600; font-weight: bold; margin: 0;">TOTAL: {valor_formatado_total}</h4></div>""", unsafe_allow_html=True)
             
             # --- ÁREA DO PERFIL DO CLIENTE ---
             st.write("")
@@ -259,21 +270,32 @@ if menu_selecionado == "Dashboard":
         
         g_filtro1, g_filtro2 = st.columns(2)
         with g_filtro1:
-            filtro_tempo_grafico = st.selectbox("⏳ Período para o Gráfico:", ["Mês Atual", "Mês Anterior", "Anual", "Todas as Vendas"])
+            filtro_tempo_grafico = st.selectbox("⏳ Período para o Gráfico:", ["Mês Atual", "Mês Anterior", "Anual", "Todas as Vendas", "Período Personalizado"])
+            
+            if filtro_tempo_grafico == "Período Personalizado":
+                col_g1, col_g2 = st.columns(2)
+                with col_g1:
+                    g_data_inicio = st.date_input("Data Inicial do Gráfico", format="DD/MM/YYYY", key="g_inicio")
+                with col_g2:
+                    g_data_fim = st.date_input("Data Final do Gráfico", format="DD/MM/YYYY", key="g_fim")
+                    
         with g_filtro2:
             filtro_produto_grafico = st.selectbox("📦 Produto:", ["Todos", "Auto", "Imovel", "Moto", "Caminhao"])
             
         df_grafico_filtrado = df_vendas.copy()
         
-        if not df_grafico_filtrado['Data_Real'].isna().all():
+        if filtro_tempo_grafico != "Todas as Vendas" and not df_grafico_filtrado['Data_Real'].isna().all():
+            mask_datas_validas = df_grafico_filtrado['Data_Real'].notna()
             if filtro_tempo_grafico == "Mês Atual":
-                df_grafico_filtrado = df_grafico_filtrado[(df_grafico_filtrado['Data_Real'].dt.month == hoje.month) & (df_grafico_filtrado['Data_Real'].dt.year == hoje.year)]
+                df_grafico_filtrado = df_grafico_filtrado[mask_datas_validas & (df_grafico_filtrado['Data_Real'].dt.month == hoje.month) & (df_grafico_filtrado['Data_Real'].dt.year == hoje.year)]
             elif filtro_tempo_grafico == "Mês Anterior":
                 mes_ant = hoje.month - 1 if hoje.month > 1 else 12
                 ano_ant = hoje.year if hoje.month > 1 else hoje.year - 1
-                df_grafico_filtrado = df_grafico_filtrado[(df_grafico_filtrado['Data_Real'].dt.month == mes_ant) & (df_grafico_filtrado['Data_Real'].dt.year == ano_ant)]
+                df_grafico_filtrado = df_grafico_filtrado[mask_datas_validas & (df_grafico_filtrado['Data_Real'].dt.month == mes_ant) & (df_grafico_filtrado['Data_Real'].dt.year == ano_ant)]
             elif filtro_tempo_grafico == "Anual":
-                df_grafico_filtrado = df_grafico_filtrado[df_grafico_filtrado['Data_Real'].dt.year == hoje.year]
+                df_grafico_filtrado = df_grafico_filtrado[mask_datas_validas & (df_grafico_filtrado['Data_Real'].dt.year == hoje.year)]
+            elif filtro_tempo_grafico == "Período Personalizado":
+                df_grafico_filtrado = df_grafico_filtrado[mask_datas_validas & (df_grafico_filtrado['Data_Real'].dt.date >= g_data_inicio) & (df_grafico_filtrado['Data_Real'].dt.date <= g_data_fim)]
             
         if filtro_produto_grafico != "Todos":
             df_grafico_filtrado = df_grafico_filtrado[df_grafico_filtrado['PRODUTO'].astype(str).str.contains(filtro_produto_grafico, case=False, na=False)]
@@ -428,7 +450,16 @@ elif menu_selecionado == "Relatórios":
         df_vendas['Valor_Numerico'] = pd.to_numeric(df_vendas['Valor_Numerico'], errors='coerce').fillna(0.0)
 
         # Filtro Global de Tempo para os Relatórios
-        filtro_tempo_rel = st.selectbox("⏳ Selecione o Período dos Relatórios:", ["Mês Atual", "Mês Anterior", "Ano Atual", "Todas as Vendas"])
+        col_rel_1, col_rel_2 = st.columns([1, 2])
+        with col_rel_1:
+            filtro_tempo_rel = st.selectbox("⏳ Selecione o Período dos Relatórios:", ["Mês Atual", "Mês Anterior", "Ano Atual", "Todas as Vendas", "Período Personalizado"])
+            
+            if filtro_tempo_rel == "Período Personalizado":
+                r_d1, r_d2 = st.columns(2)
+                with r_d1:
+                    r_data_inicio = st.date_input("Data Inicial", format="DD/MM/YYYY", key="r_inicio")
+                with r_d2:
+                    r_data_fim = st.date_input("Data Final", format="DD/MM/YYYY", key="r_fim")
         
         hoje = datetime.today()
         df_filtrado = df_vendas.copy()
@@ -443,6 +474,8 @@ elif menu_selecionado == "Relatórios":
                 df_filtrado = df_filtrado[mask_datas_validas & (df_filtrado['Data_Real'].dt.month == mes_ant) & (df_filtrado['Data_Real'].dt.year == ano_ant)]
             elif filtro_tempo_rel == "Ano Atual":
                 df_filtrado = df_filtrado[mask_datas_validas & (df_filtrado['Data_Real'].dt.year == hoje.year)]
+            elif filtro_tempo_rel == "Período Personalizado":
+                df_filtrado = df_filtrado[mask_datas_validas & (df_filtrado['Data_Real'].dt.date >= r_data_inicio) & (df_filtrado['Data_Real'].dt.date <= r_data_fim)]
                 
         # Filtro Master/Vendedor
         if st.session_state['perfil_logado'] == "Vendedor":
@@ -465,11 +498,10 @@ elif menu_selecionado == "Relatórios":
                 
                 resumo_vendedor['Volume Formatado'] = resumo_vendedor['Volume_Total'].apply(lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
                 
-                # Exibe a tabela
+                # Força centralização nas tabelas de Relatório
                 estilo_vendedor = resumo_vendedor[['VENDEDOR', 'Quantidade', 'Volume Formatado']].style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}])
                 st.dataframe(estilo_vendedor, use_container_width=True, hide_index=True)
                 
-                # Gráfico de barras simples
                 grafico_vend = alt.Chart(resumo_vendedor).mark_bar(color='#ff6600').encode(
                     x=alt.X('VENDEDOR:N', title='Vendedor', sort='-y'),
                     y=alt.Y('Volume_Total:Q', title='Volume de Vendas (R$)'),
@@ -509,7 +541,6 @@ elif menu_selecionado == "Relatórios":
                 
                 st.metric("Comissão Total do Período (Todos os Vendedores)", f"R$ {total_geral_comissao:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
                 
-                # Formatando para a tabela
                 df_comissoes['Volume Total Vendido'] = df_comissoes['Volume_Total'].apply(lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
                 df_comissoes['Comissão a Receber'] = df_comissoes['Comissão a Receber'].apply(lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
                 
