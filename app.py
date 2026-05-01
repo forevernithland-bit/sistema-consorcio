@@ -229,12 +229,13 @@ if menu_selecionado == "Dashboard":
             
             st.info("👆 Dica: Clique na linha de um cliente na tabela abaixo para abrir a ficha completa dele!")
             
+            # --- AQUI ESTAVA O ERRO DO HÍFEN (-) vs UNDERLINE (_) ---
             tabela_interativa = st.dataframe(
                 estilo_tabela, 
                 use_container_width=True, 
                 hide_index=True,
                 on_select="rerun",
-                selection_mode="single_row"
+                selection_mode="single-row" # Hífen inserido com sucesso!
             )
             
             total_vendas_tabela = df_clientes['Valor_Numerico'].sum()
@@ -563,7 +564,6 @@ elif menu_selecionado == "Relatórios":
 elif menu_selecionado == "Administradoras":
     st.title("🏢 Gestão de Administradoras e Regras de Comissionamento")
     
-    # Criando a aba automaticamente se não existir
     try:
         aba_admin = planilha.worksheet("Administradoras")
     except gspread.exceptions.WorksheetNotFound:
