@@ -94,7 +94,13 @@ is_simulator = menu_selecionado in simuladores
 css = """
 <style>
     .block-container { padding-top: 1rem; padding-bottom: 0rem; padding-left: 1rem; padding-right: 1rem; }
-    [data-testid="stSidebar"] { background-color: #ffffff !important; }
+    
+    /* === LINHA DIVISÓRIA DO MENU LATERAL === */
+    [data-testid="stSidebar"] { 
+        background-color: #ffffff !important; 
+        border-right: 2px solid #e2e8f0 !important; /* Essa é a linha vertical cinza clarinha */
+    }
+    
     [data-testid="stSidebar"] p, [data-testid="stSidebar"] span, [data-testid="stSidebar"] div { color: #0f172a !important; }
     [data-testid="stSidebar"] hr { border-bottom-color: #e2e8f0 !important; }
     [data-testid="stSidebar"] button { border: 1px solid #cbd5e1 !important; background-color: #f8fafc !important; }
