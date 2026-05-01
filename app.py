@@ -22,9 +22,11 @@ if 'usuario_logado' not in st.session_state:
     st.session_state['perfil_logado'] = None
     st.session_state['nome_vendedor'] = None
 if 'menu_lateral' not in st.session_state:
-    st.session_state['menu_lateral'] = "Dashboard"
+    st.session_state['menu_lateral'] = "🔐 Login (Área Restrita)"
 if 'cliente_visualizado' not in st.session_state:
     st.session_state['cliente_visualizado'] = None
+if 'key_tabela' not in st.session_state:
+    st.session_state['key_tabela'] = 0
 
 def carregar_ferramenta(nome_arquivo):
     try:
@@ -34,19 +36,14 @@ def carregar_ferramenta(nome_arquivo):
     except FileNotFoundError:
         st.error(f"⚠️ O arquivo {nome_arquivo} não foi encontrado. Certifique-se de ter criado ele no GitHub com este nome exato!")
 
-# === 2. LÓGICA DO MENU LATERAL ===
+# === 2. LÓGICA DO MENU LATERAL (Navegação Segura) ===
 is_logado = st.session_state['usuario_logado'] is not None
 
 st.sidebar.image("https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png", use_column_width=True)
 st.sidebar.write("") 
 
 if not is_logado:
-    st.sidebar.radio(
-        " ", 
-        ["🔐 Login (Área Restrita)", "🏍️ Simulador Yamaha", "🏦 Simulador Itaú", "🎯 Oportunidades Itaú", "⚖️ Financiamento x Consórcio"],
-        label_visibility="collapsed",
-        key="menu_lateral"
-    )
+    opcoes_menu = ["🔐 Login (Área Restrita)", "🏍️ Simulador Yamaha", "🏦 Simulador Itaú", "🎯 Oportunidades Itaú", "⚖️ Financiamento x Consórcio"]
     st.sidebar.divider()
     st.sidebar.caption("Portal Consorbens © 2026")
 else:
@@ -60,22 +57,31 @@ else:
     else:
         opcoes_menu = ["Dashboard", "Nova Venda", "Relatórios"] + ferramentas_logadas
 
-    st.sidebar.radio(
-        " ", 
-        opcoes_menu,
-        label_visibility="collapsed",
-        key="menu_lateral"
-    )
-    
+# Acha a posição da página atual para não dar erro
+try:
+    idx_menu = opcoes_menu.index(st.session_state['menu_lateral'])
+except ValueError:
+    idx_menu = 0
+
+menu_selecionado = st.sidebar.radio(
+    " ", 
+    opcoes_menu,
+    index=idx_menu,
+    label_visibility="collapsed"
+)
+
+# Atualiza silenciosamente a navegação
+st.session_state['menu_lateral'] = menu_selecionado
+
+if is_logado:
     st.sidebar.write("")
     if st.sidebar.button("Sair do Sistema"):
         st.session_state['usuario_logado'] = None
         st.session_state['perfil_logado'] = None
         st.session_state['nome_vendedor'] = None
         st.session_state['cliente_visualizado'] = None
+        st.session_state['menu_lateral'] = "🔐 Login (Área Restrita)"
         st.rerun()
-
-menu_selecionado = st.session_state['menu_lateral']
 
 # === 3. ESTILIZAÇÃO FORÇADA (CSS BRUTO) ===
 simuladores = ["🏍️ Simulador Yamaha", "🏦 Simulador Itaú", "🎯 Oportunidades Itaú", "⚖️ Financiamento x Consórcio"]
@@ -96,6 +102,8 @@ css = """
     [data-testid="stSidebarCollapseButton"]:hover { background-color: #cc5200 !important; }
     header[data-testid="stHeader"] { background-color: transparent !important; }
     button[data-baseweb="tab"] { font-size: 16px !important; font-weight: bold !important; }
+    button[kind="primary"] { background-color: #2b615e !important; border-color: #2b615e !important; color: #ffffff !important; font-weight: bold !important; }
+    button[kind="primary"]:hover { background-color: #1a3c3a !important; border-color: #1a3c3a !important; color: #ffffff !important; transform: scale(1.02); transition: all 0.2s ease-in-out; }
 """
 
 if is_simulator: css += """ .stApp { background-color: #0f172a !important; } """
@@ -113,13 +121,14 @@ if not is_logado:
             with st.form("form_login"):
                 usuario_input = st.text_input("Usuário (Login)").lower()
                 senha_input = st.text_input("Senha", type="password")
-                btn_login = st.form_submit_button("Entrar no Sistema")
+                btn_login = st.form_submit_button("Entrar no Sistema", type="primary")
                 
                 if btn_login:
                     if usuario_input in USUARIOS and USUARIOS[usuario_input]["senha"] == senha_input:
                         st.session_state['usuario_logado'] = usuario_input
                         st.session_state['perfil_logado'] = USUARIOS[usuario_input]["perfil"]
                         st.session_state['nome_vendedor'] = USUARIOS[usuario_input]["nome"]
+                        st.session_state['menu_lateral'] = "Dashboard" # Navegação super segura
                         st.rerun() 
                     else:
                         st.error("❌ Usuário ou senha incorretos.")
@@ -141,9 +150,7 @@ def conectar_planilha():
 
 planilha = conectar_planilha()
 
-# Cria a aba de Clientes automaticamente se não existir
-try:
-    aba_clientes = planilha.worksheet("Clientes")
+try: aba_clientes = planilha.worksheet("Clientes")
 except:
     aba_clientes = planilha.add_worksheet("Clientes", 1000, 6)
     aba_clientes.append_row(["Nome", "Telefone", "Email", "Endereco", "Aniversario", "Data_Cadastro"])
@@ -159,13 +166,14 @@ if menu_selecionado == "Dashboard":
     if st.session_state['cliente_visualizado'] is not None:
         cliente_nome = st.session_state['cliente_visualizado']
         
+        # Botão voltar com reset de cache da tabela (Adeus Loop Infinito!)
         if st.button("⬅️ Voltar ao Dashboard"):
             st.session_state['cliente_visualizado'] = None
+            st.session_state['key_tabela'] += 1
             st.rerun()
             
         st.title(f"👤 Perfil do Cliente: {cliente_nome}")
         
-        # Puxa os dados do banco de Clientes
         dados_cli = aba_clientes.get_all_records()
         df_cli = pd.DataFrame(dados_cli)
         
@@ -256,6 +264,7 @@ if menu_selecionado == "Dashboard":
                 st.subheader("👥 Ficha de Clientes")
             with col_t2:
                 st.write("") 
+                # Botão Nova Venda (Navegação Segura)
                 if st.button("➕ Nova Venda", use_container_width=True, type="primary"):
                     st.session_state['menu_lateral'] = "Nova Venda"
                     st.rerun()
@@ -297,18 +306,19 @@ if menu_selecionado == "Dashboard":
                 
                 estilo_tabela = df_display.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}])
                 
+                # A mágica do Reset da Tabela para não dar Loop no clique
                 tabela_interativa = st.dataframe(
                     estilo_tabela, 
                     use_container_width=True, 
                     hide_index=True,
                     on_select="rerun",
-                    selection_mode="single-row" 
+                    selection_mode="single-row",
+                    key=f"tabela_clientes_{st.session_state['key_tabela']}" 
                 )
                 
-                # TOTALIZADOR ENXUTO
                 total_vendas_tabela = df_clientes['Valor_Numerico'].sum()
                 valor_formatado_total = f"R$ {total_vendas_tabela:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-                st.markdown(f"""<div style="text-align: right; padding-top: 10px;"><h4 style="color: #ff6600; font-weight: bold; margin: 0;">TOTAL: {valor_formatado_total}</h4></div>""", unsafe_allow_html=True)
+                st.markdown(f"""<div style="text-align: right; padding-top: 10px;"><h4 style="color: #2b615e; font-weight: bold; margin: 0;">TOTAL: {valor_formatado_total}</h4></div>""", unsafe_allow_html=True)
                 
                 linhas_selecionadas = tabela_interativa.selection.rows
                 if len(linhas_selecionadas) > 0:
@@ -415,12 +425,10 @@ elif menu_selecionado == "Nova Venda":
         
         if salvar:
             if cliente and grupo and cota and valor > 0:
-                # Salva a Venda
                 aba_vendas = planilha.worksheet("Vendas")
                 nova_linha = ["", cliente, str(data.strftime("%d/%m/%Y")), produto, vendedor, grupo, cota, admin, status, valor]
                 aba_vendas.append_row(nova_linha)
                 
-                # Salva o Cliente no Banco de Dados Novo (se ele não existir lá)
                 try: nomes_cadastrados = aba_clientes.col_values(1)
                 except: nomes_cadastrados = []
                 
@@ -444,7 +452,6 @@ elif menu_selecionado == "Gerenciar Vendas (Editar/Deletar)":
         if col_count < 10:
             for i in range(col_count, 10): df_vendas[i] = ""
         df_vendas = df_vendas.iloc[:, :10]
-        
         df_vendas.columns = ["ID_cliente", "Nome do cliente", "DATA", "PRODUTO", "VENDEDOR", "GRUPO", "COTA", "ADMINISTRADORA", "STATUS", "VALOR"]
         
         opcoes_busca = df_vendas.apply(lambda row: f"Linha {row.name + 2} | Cliente: {row['Nome do cliente']} - Grupo/Cota: {row['GRUPO']}/{row['COTA']}", axis=1).tolist()
@@ -470,14 +477,14 @@ elif menu_selecionado == "Gerenciar Vendas (Editar/Deletar)":
 
             col_btn1, col_btn2 = st.columns(2)
             with col_btn1:
-                if st.button("Salvar Alterações"):
+                if st.button("Salvar Alterações", type="primary"):
                     aba_vendas.update_cell(linha_planilha, 2, novo_nome)   
                     aba_vendas.update_cell(linha_planilha, 10, novo_valor) 
                     aba_vendas.update_cell(linha_planilha, 9, novo_status) 
                     st.success("Alterações salvas na planilha!")
                     st.rerun()
             with col_btn2:
-                if st.button("🚨 DELETAR ESTA VENDA", type="primary"):
+                if st.button("🚨 DELETAR ESTA VENDA"):
                     aba_vendas.delete_rows(linha_planilha)
                     st.error("Venda apagada permanentemente!")
                     st.rerun()
@@ -496,7 +503,6 @@ elif menu_selecionado == "Relatórios":
         if col_count < 10:
             for i in range(col_count, 10): df_vendas[i] = ""
         df_vendas = df_vendas.iloc[:, :10]
-        
         df_vendas.columns = ["ID_cliente", "Nome do cliente", "DATA", "PRODUTO", "VENDEDOR", "GRUPO", "COTA", "ADMINISTRADORA", "STATUS", "VALOR"]
         
         df_vendas['Data_Real'] = pd.to_datetime(df_vendas['DATA'], dayfirst=True, errors='coerce')
@@ -565,7 +571,6 @@ elif menu_selecionado == "Administradoras":
     st.title("🏢 Gestão de Administradoras e Regras de Comissionamento")
     try: aba_admin = planilha.worksheet("Administradoras")
     except gspread.exceptions.WorksheetNotFound:
-        st.warning("Criando nova aba de Administradoras na planilha pela primeira vez... Aguarde.")
         aba_admin = planilha.add_worksheet(title="Administradoras", rows=100, cols=10)
         aba_admin.append_row(["Administradora", "Produto", "Comissão Total (%)", "Regra de Pagamento (Parcelas)"])
         st.rerun()
@@ -588,13 +593,12 @@ elif menu_selecionado == "Administradoras":
         with st.form("form_nova_admin"):
             col_a1, col_a2 = st.columns(2)
             with col_a1:
-                nome_admin = st.text_input("Nome da Administradora * (Ex: YAMAHA, ITAÚ)")
+                nome_admin = st.text_input("Nome da Administradora *")
                 produto_admin = st.selectbox("Produto *", ["Automóvel", "Caminhão", "Serviços", "Motos", "Imóveis"])
             with col_a2:
                 comissao_total = st.number_input("Comissão Total (%) *", min_value=0.0, step=0.1, format="%.2f")
-                regra_parcelas = st.text_area("Regras de Pagamento * (Ex: Paga 1% na 1ª parcela, 0.5% na 2ª, etc.)")
-            
-            if st.form_submit_button("Salvar Regra"):
+                regra_parcelas = st.text_area("Regras de Pagamento *")
+            if st.form_submit_button("Salvar Regra", type="primary"):
                 if nome_admin and produto_admin and comissao_total >= 0 and regra_parcelas:
                     aba_admin.append_row([nome_admin.upper(), produto_admin, f"{comissao_total}%", regra_parcelas])
                     st.success(f"Regra cadastrada com sucesso!")
@@ -606,12 +610,10 @@ elif menu_selecionado == "Administradoras":
         if not df_admin.empty:
             opcoes_admin = df_admin.apply(lambda row: f"Linha {row.name + 2} | {row['Administradora']} - {row['Produto']}", axis=1).tolist()
             regra_selecionada = st.selectbox("Selecione a regra para editar:", [""] + opcoes_admin)
-            
             if regra_selecionada:
                 linha_planilha_admin = int(regra_selecionada.split(" | ")[0].replace("Linha ", ""))
                 idx_df = linha_planilha_admin - 2
                 regra_atual = df_admin.iloc[idx_df]
-                
                 st.divider()
                 col_e1, col_e2 = st.columns(2)
                 with col_e1:
@@ -623,10 +625,9 @@ elif menu_selecionado == "Administradoras":
                     except: val_comissao_float = 0.0
                     edit_comissao = st.number_input("Comissão Total (%)", value=val_comissao_float)
                     edit_parcelas = st.text_area("Regra de Pagamento", value=regra_atual['Regra de Pagamento (Parcelas)'])
-                    
                 col_btn_e1, col_btn_e2 = st.columns(2)
                 with col_btn_e1:
-                    if st.button("Salvar Alterações de Regra"):
+                    if st.button("Salvar Alterações", type="primary"):
                         aba_admin.update_cell(linha_planilha_admin, 1, edit_nome.upper())
                         aba_admin.update_cell(linha_planilha_admin, 2, edit_prod)
                         aba_admin.update_cell(linha_planilha_admin, 3, f"{edit_comissao}%")
@@ -634,7 +635,7 @@ elif menu_selecionado == "Administradoras":
                         st.success("Regra alterada com sucesso!")
                         st.rerun()
                 with col_btn_e2:
-                    if st.button("🚨 EXCLUIR REGRA PERMANENTEMENTE", type="primary"):
+                    if st.button("🚨 EXCLUIR REGRA PERMANENTEMENTE"):
                         aba_admin.delete_rows(linha_planilha_admin)
                         st.error("Regra deletada!")
                         st.rerun()
