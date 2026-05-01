@@ -2,7 +2,7 @@ import streamlit as st
 import gspread
 import pandas as pd
 from datetime import datetime
-import requests # <--- NOVA BIBLIOTECA PARA BUSCAR O CEP
+import requests 
 import streamlit.components.v1 as components
 import altair as alt
 
@@ -276,13 +276,14 @@ if menu_selecionado == "Dashboard":
                 
             col_t1, col_t2 = st.columns([4, 1])
             with col_t2:
+                st.write("")
                 if st.button("Nova Venda", use_container_width=True, type="primary"):
                     st.session_state['menu_lateral'] = "Nova Venda"
                     st.rerun()
             
             c_filtro1, c_filtro2 = st.columns([1, 2])
             with c_filtro1:
-                filtro_cli = st.selectbox("⏳ Filtro por Data da Venda:", ["Todos os Clientes", "Mês Atual", "Mês Anterior", "Ano Atual", "Período Personalizado"])
+                filtro_cli = st.selectbox("⏳ Filtro por Data da Venda:", ["Últimos 5 Cadastros", "Todos os Clientes", "Mês Atual", "Mês Anterior", "Ano Atual", "Período Personalizado"])
                 if filtro_cli == "Período Personalizado":
                     col_d1, col_d2 = st.columns(2)
                     with col_d1: data_inicio = st.date_input("Data Inicial", format="DD/MM/YYYY")
@@ -293,7 +294,10 @@ if menu_selecionado == "Dashboard":
             hoje = datetime.today()
             df_clientes = df_vendas.copy()
             
-            if filtro_cli != "Todos os Clientes":
+            # Aplica os filtros de tempo
+            if filtro_cli == "Últimos 5 Cadastros" and busca_nome.strip() == "":
+                df_clientes = df_clientes.tail(5).iloc[::-1] # Puxa os últimos 5 e inverte (mais novo no topo)
+            elif filtro_cli != "Todos os Clientes" and filtro_cli != "Últimos 5 Cadastros":
                 mask_datas_validas = df_clientes['Data_Real'].notna()
                 if filtro_cli == "Mês Atual": df_clientes = df_clientes[mask_datas_validas & (df_clientes['Data_Real'].dt.month == hoje.month) & (df_clientes['Data_Real'].dt.year == hoje.year)]
                 elif filtro_cli == "Mês Anterior":
@@ -303,8 +307,9 @@ if menu_selecionado == "Dashboard":
                 elif filtro_cli == "Ano Atual": df_clientes = df_clientes[mask_datas_validas & (df_clientes['Data_Real'].dt.year == hoje.year)]
                 elif filtro_cli == "Período Personalizado": df_clientes = df_clientes[mask_datas_validas & (df_clientes['Data_Real'].dt.date >= data_inicio) & (df_clientes['Data_Real'].dt.date <= data_fim)]
                 
+            # Se tiver buscando por nome, busca em tudo e ignora o limite de 5
             if busca_nome.strip() != "":
-                df_clientes = df_clientes[df_clientes['Nome do cliente'].astype(str).str.contains(busca_nome.strip(), case=False, na=False)]
+                df_clientes = df_vendas[df_vendas['Nome do cliente'].astype(str).str.contains(busca_nome.strip(), case=False, na=False)]
                 
             if not df_clientes.empty:
                 df_display = df_clientes.copy()
@@ -416,7 +421,6 @@ elif menu_selecionado == "Nova Venda":
     with col_cep1:
         cep = st.text_input("CEP (Digite e clique fora)", max_chars=9)
         
-    # --- MÁGICA DO VIACEP ---
     if cep != st.session_state.get('last_cep', ''):
         cep_limpo = ''.join(filter(str.isdigit, cep))
         if len(cep_limpo) == 8:
@@ -458,7 +462,6 @@ elif menu_selecionado == "Nova Venda":
         admin = st.selectbox("Administradora *", ["YAMAHA", "ITAÚ", "ROMA", "EMBRACON"])
         produto = st.selectbox("Produto *", ["Auto", "Imovel", "Moto", "Caminhão", "Serviços"])
         
-    # --- MÁGICA DAS MÚLTIPLAS COTAS ---
     st.markdown("##### Cotas Adquiridas")
     if 'qtd_cotas' not in st.session_state:
         st.session_state['qtd_cotas'] = 1
@@ -487,7 +490,6 @@ elif menu_selecionado == "Nova Venda":
         else:
             aba_vendas = planilha.worksheet("Vendas")
             
-            # Monta o Endereço Bonitinho
             partes_endereco = [p for p in [rua, numero, complemento, bairro, cidade, uf] if p]
             if cep: partes_endereco.append(f"CEP: {cep}")
             endereco_completo = ", ".join(partes_endereco)
@@ -504,7 +506,7 @@ elif menu_selecionado == "Nova Venda":
                 aba_clientes.append_row([cliente, telefone_formatado, email, endereco_completo, aniversario, str(datetime.today().strftime("%d/%m/%Y"))])
 
             st.success(f"{len(cotas_data)} Venda(s) e Cadastro de {cliente} salvos com sucesso!")
-            st.session_state['qtd_cotas'] = 1 # Reseta as cotas para a próxima venda
+            st.session_state['qtd_cotas'] = 1 
 
 elif menu_selecionado == "Gerenciar Vendas (Editar/Deletar)":
     st.title("🛠️ Gerenciar e Editar Vendas")
