@@ -36,7 +36,7 @@ def carregar_ferramenta(nome_arquivo):
     except FileNotFoundError:
         st.error(f"⚠️ O arquivo {nome_arquivo} não foi encontrado. Certifique-se de ter criado ele no GitHub com este nome exato!")
 
-# === 2. LÓGICA DO MENU LATERAL (Navegação Segura) ===
+# === 2. LÓGICA DO MENU LATERAL ===
 is_logado = st.session_state['usuario_logado'] is not None
 
 st.sidebar.image("https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png", use_column_width=True)
@@ -58,22 +58,26 @@ else:
         opcoes_menu = ["Dashboard", "Nova Venda", "Relatórios"] + ferramentas_logadas
 
 # Acha a posição da página atual para não dar erro
-try:
-    idx_menu = opcoes_menu.index(st.session_state['menu_lateral'])
-except ValueError:
-    idx_menu = 0
+try: idx_menu = opcoes_menu.index(st.session_state['menu_lateral'])
+except ValueError: idx_menu = 0
 
-menu_selecionado = st.sidebar.radio(
-    " ", 
-    opcoes_menu,
-    index=idx_menu,
-    label_visibility="collapsed"
-)
+menu_selecionado = st.sidebar.radio(" ", opcoes_menu, index=idx_menu, label_visibility="collapsed")
 
-# Atualiza silenciosamente a navegação
+# === A MÁGICA DA NAVEGAÇÃO: Limpa a memória se sair do Dashboard ===
+if menu_selecionado != "Dashboard":
+    st.session_state['cliente_visualizado'] = None
+
 st.session_state['menu_lateral'] = menu_selecionado
 
 if is_logado:
+    st.sidebar.write("")
+    # Botão de escape rápido se o usuário estiver vendo um cliente
+    if menu_selecionado == "Dashboard" and st.session_state['cliente_visualizado'] is not None:
+        if st.sidebar.button("⬅️ Voltar ao Dashboard", type="primary", use_container_width=True):
+            st.session_state['cliente_visualizado'] = None
+            st.session_state['key_tabela'] += 1
+            st.rerun()
+            
     st.sidebar.write("")
     if st.sidebar.button("Sair do Sistema"):
         st.session_state['usuario_logado'] = None
@@ -102,8 +106,10 @@ css = """
     [data-testid="stSidebarCollapseButton"]:hover { background-color: #cc5200 !important; }
     header[data-testid="stHeader"] { background-color: transparent !important; }
     button[data-baseweb="tab"] { font-size: 16px !important; font-weight: bold !important; }
-    button[kind="primary"] { background-color: #2b615e !important; border-color: #2b615e !important; color: #ffffff !important; font-weight: bold !important; }
-    button[kind="primary"]:hover { background-color: #1a3c3a !important; border-color: #1a3c3a !important; color: #ffffff !important; transform: scale(1.02); transition: all 0.2s ease-in-out; }
+    
+    /* === VERDE DÓLAR FINANCEIRO PARA OS BOTÕES PRIMÁRIOS === */
+    button[kind="primary"] { background-color: #1b7a43 !important; border-color: #1b7a43 !important; color: #ffffff !important; font-weight: bold !important; }
+    button[kind="primary"]:hover { background-color: #11572e !important; border-color: #11572e !important; color: #ffffff !important; transform: scale(1.02); transition: all 0.2s ease-in-out; }
 """
 
 if is_simulator: css += """ .stApp { background-color: #0f172a !important; } """
@@ -128,7 +134,7 @@ if not is_logado:
                         st.session_state['usuario_logado'] = usuario_input
                         st.session_state['perfil_logado'] = USUARIOS[usuario_input]["perfil"]
                         st.session_state['nome_vendedor'] = USUARIOS[usuario_input]["nome"]
-                        st.session_state['menu_lateral'] = "Dashboard" # Navegação super segura
+                        st.session_state['menu_lateral'] = "Dashboard" 
                         st.rerun() 
                     else:
                         st.error("❌ Usuário ou senha incorretos.")
@@ -166,8 +172,7 @@ if menu_selecionado == "Dashboard":
     if st.session_state['cliente_visualizado'] is not None:
         cliente_nome = st.session_state['cliente_visualizado']
         
-        # Botão voltar com reset de cache da tabela (Adeus Loop Infinito!)
-        if st.button("⬅️ Voltar ao Dashboard"):
+        if st.button("⬅️ Voltar ao Dashboard", type="primary"):
             st.session_state['cliente_visualizado'] = None
             st.session_state['key_tabela'] += 1
             st.rerun()
@@ -264,7 +269,6 @@ if menu_selecionado == "Dashboard":
                 st.subheader("👥 Ficha de Clientes")
             with col_t2:
                 st.write("") 
-                # Botão Nova Venda (Navegação Segura)
                 if st.button("➕ Nova Venda", use_container_width=True, type="primary"):
                     st.session_state['menu_lateral'] = "Nova Venda"
                     st.rerun()
@@ -306,7 +310,6 @@ if menu_selecionado == "Dashboard":
                 
                 estilo_tabela = df_display.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}])
                 
-                # A mágica do Reset da Tabela para não dar Loop no clique
                 tabela_interativa = st.dataframe(
                     estilo_tabela, 
                     use_container_width=True, 
@@ -318,7 +321,7 @@ if menu_selecionado == "Dashboard":
                 
                 total_vendas_tabela = df_clientes['Valor_Numerico'].sum()
                 valor_formatado_total = f"R$ {total_vendas_tabela:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-                st.markdown(f"""<div style="text-align: right; padding-top: 10px;"><h4 style="color: #2b615e; font-weight: bold; margin: 0;">TOTAL: {valor_formatado_total}</h4></div>""", unsafe_allow_html=True)
+                st.markdown(f"""<div style="text-align: right; padding-top: 10px;"><h4 style="color: #1b7a43; font-weight: bold; margin: 0;">TOTAL: {valor_formatado_total}</h4></div>""", unsafe_allow_html=True)
                 
                 linhas_selecionadas = tabela_interativa.selection.rows
                 if len(linhas_selecionadas) > 0:
