@@ -65,9 +65,9 @@ else:
     ]
 
     if st.session_state['perfil_logado'] == "Master":
-        opcoes_menu = ["Dashboard", "Nova Venda", "Gerenciar Vendas (Editar/Deletar)", "Baixar Parcela"] + ferramentas_logadas
+        opcoes_menu = ["Dashboard", "Nova Venda", "Gerenciar Vendas (Editar/Deletar)", "Relatórios", "Baixar Parcela"] + ferramentas_logadas
     else:
-        opcoes_menu = ["Dashboard", "Nova Venda"] + ferramentas_logadas
+        opcoes_menu = ["Dashboard", "Nova Venda", "Relatórios"] + ferramentas_logadas
 
     menu_selecionado = st.sidebar.radio(
         " ", 
@@ -104,6 +104,9 @@ css = """
     [data-testid="stSidebarCollapseButton"]:hover { background-color: #cc5200 !important; }
     
     header[data-testid="stHeader"] { background-color: transparent !important; }
+    
+    /* Estilizando as abas de relatório para ficarem bonitas */
+    button[data-baseweb="tab"] { font-size: 16px !important; font-weight: bold !important; }
 """
 
 if is_simulator:
@@ -158,35 +161,17 @@ if menu_selecionado == "Dashboard":
     
     if len(dados_brutos) > 1:
         df_vendas = pd.DataFrame(dados_brutos[1:])
-        
-        # Garante que temos as 10 colunas exatas da sua planilha Google
         col_count = len(df_vendas.columns)
         if col_count < 10:
-            for i in range(col_count, 10):
-                df_vendas[i] = ""
-        
+            for i in range(col_count, 10): df_vendas[i] = ""
         df_vendas = df_vendas.iloc[:, :10]
         
-        # O MAPA DO TESOURO: Nomeando exatamente de acordo com sua ordem
-        df_vendas.columns = [
-            "ID_cliente",       # Coluna 1
-            "Nome do cliente",  # Coluna 2
-            "DATA",             # Coluna 3
-            "PRODUTO",          # Coluna 4
-            "VENDEDOR",         # Coluna 5
-            "GRUPO",            # Coluna 6
-            "COTA",             # Coluna 7
-            "ADMINISTRADORA",   # Coluna 8
-            "STATUS",           # Coluna 9
-            "VALOR"             # Coluna 10
-        ]
+        df_vendas.columns = ["ID_cliente", "Nome do cliente", "DATA", "PRODUTO", "VENDEDOR", "GRUPO", "COTA", "ADMINISTRADORA", "STATUS", "VALOR"]
         
-        # Tratamento de dados seguro
-        df_vendas['Data_Real'] = pd.to_datetime(df_vendas['DATA'], format="%d/%m/%Y", errors='coerce')
+        df_vendas['Data_Real'] = pd.to_datetime(df_vendas['DATA'], dayfirst=True, errors='coerce')
         df_vendas['Valor_Numerico'] = df_vendas['VALOR'].astype(str).str.replace('R$', '', regex=False).str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.strip()
         df_vendas['Valor_Numerico'] = pd.to_numeric(df_vendas['Valor_Numerico'], errors='coerce').fillna(0.0)
 
-        # Filtro de Vendedor
         if st.session_state['perfil_logado'] == "Vendedor":
             df_vendas = df_vendas[df_vendas['VENDEDOR'] == st.session_state['nome_vendedor']]
             
@@ -197,53 +182,43 @@ if menu_selecionado == "Dashboard":
         
         c_filtro1, c_filtro2 = st.columns([1, 2])
         with c_filtro1:
-            filtro_cli = st.selectbox("⏳ Período de Cadastro:", ["Todos os Clientes", "Mês Atual", "Mês Anterior", "Ano Atual"])
+            filtro_cli = st.selectbox("⏳ Filtro por Data da Venda:", ["Todos os Clientes", "Mês Atual", "Mês Anterior", "Ano Atual"])
         with c_filtro2:
             busca_nome = st.text_input("🔍 Buscar Cliente por Nome:")
             
         hoje = datetime.today()
         df_clientes = df_vendas.copy()
         
-        # Aplicando Filtro de Tempo
-        if not df_clientes['Data_Real'].isna().all():
+        if filtro_cli != "Todos os Clientes":
+            mask_datas_validas = df_clientes['Data_Real'].notna()
             if filtro_cli == "Mês Atual":
-                df_clientes = df_clientes[(df_clientes['Data_Real'].dt.month == hoje.month) & (df_clientes['Data_Real'].dt.year == hoje.year)]
+                df_clientes = df_clientes[mask_datas_validas & (df_clientes['Data_Real'].dt.month == hoje.month) & (df_clientes['Data_Real'].dt.year == hoje.year)]
             elif filtro_cli == "Mês Anterior":
                 mes_ant = hoje.month - 1 if hoje.month > 1 else 12
                 ano_ant = hoje.year if hoje.month > 1 else hoje.year - 1
-                df_clientes = df_clientes[(df_clientes['Data_Real'].dt.month == mes_ant) & (df_clientes['Data_Real'].dt.year == ano_ant)]
+                df_clientes = df_clientes[mask_datas_validas & (df_clientes['Data_Real'].dt.month == mes_ant) & (df_clientes['Data_Real'].dt.year == ano_ant)]
             elif filtro_cli == "Ano Atual":
-                df_clientes = df_clientes[df_clientes['Data_Real'].dt.year == hoje.year]
+                df_clientes = df_clientes[mask_datas_validas & (df_clientes['Data_Real'].dt.year == hoje.year)]
             
-        # Filtro de Busca
-        if busca_nome:
-            df_clientes = df_clientes[df_clientes['Nome do cliente'].astype(str).str.contains(busca_nome, case=False, na=False)]
+        if busca_nome.strip() != "":
+            termo = busca_nome.strip()
+            df_clientes = df_clientes[df_clientes['Nome do cliente'].astype(str).str.contains(termo, case=False, na=False)]
             
         if not df_clientes.empty:
             df_display = df_clientes.copy()
-            
-            # Formata Grupo e Cota
-            df_display['Grupo e cota'] = df_display.apply(
-                lambda x: f"{x['GRUPO']} / {x['COTA']}" if str(x['GRUPO']).strip() or str(x['COTA']).strip() else "N/A", 
-                axis=1
-            )
-            
-            # Formata o Valor em Reais
+            df_display['Grupo e cota'] = df_display.apply(lambda x: f"{x['GRUPO']} / {x['COTA']}" if str(x['GRUPO']).strip() or str(x['COTA']).strip() else "N/A", axis=1)
             df_display['valor da venda'] = df_display['Valor_Numerico'].apply(lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
             
-            # ORDEM E NOMES EXATOS QUE VOCÊ PEDIU PARA A TABELA
             colunas_desejadas = ['Nome do cliente', 'Grupo e cota', 'PRODUTO', 'ADMINISTRADORA', 'valor da venda', 'VENDEDOR', 'DATA']
-            
-            nomes_bonitos = {
-                'Nome do cliente': 'Nome',
-                'PRODUTO': 'tipo de produto',
-                'ADMINISTRADORA': 'Administradora',
-                'VENDEDOR': 'vendedor',
-                'DATA': 'data da venda'
-            }
-            
+            nomes_bonitos = { 'Nome do cliente': 'Nome', 'PRODUTO': 'tipo de produto', 'ADMINISTRADORA': 'Administradora', 'VENDEDOR': 'vendedor', 'DATA': 'data da venda' }
             df_display = df_display[colunas_desejadas].rename(columns=nomes_bonitos)
-            st.dataframe(df_display, use_container_width=True, hide_index=True)
+            
+            estilo_tabela = df_display.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}])
+            st.dataframe(estilo_tabela, use_container_width=True, hide_index=True)
+            
+            total_vendas_tabela = df_clientes['Valor_Numerico'].sum()
+            valor_formatado_total = f"R$ {total_vendas_tabela:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            st.markdown(f"""<div style="text-align: right; padding-top: 10px;"><h4 style="color: #ff6600; font-weight: bold; margin: 0;">💰 Soma Total das Vendas na Tabela: {valor_formatado_total}</h4></div>""", unsafe_allow_html=True)
             
             # --- ÁREA DO PERFIL DO CLIENTE ---
             st.write("")
@@ -264,21 +239,23 @@ if menu_selecionado == "Dashboard":
                 info2.metric("Volume Total Investido", f"R$ {total_investido:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
 
                 st.markdown(f"#### 📦 Cotas do Cliente ({len(cotas_do_cliente)})")
-                
                 cotas_do_cliente['Valor Formatado'] = cotas_do_cliente['Valor_Numerico'].apply(lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-                
                 colunas_ficha = ['DATA', 'ADMINISTRADORA', 'PRODUTO', 'GRUPO', 'COTA', 'Valor Formatado']
-                st.dataframe(cotas_do_cliente[colunas_ficha].rename(columns={'DATA': 'Data', 'ADMINISTRADORA': 'Administradora', 'PRODUTO': 'Produto', 'GRUPO': 'Grupo', 'COTA': 'Cota', 'Valor Formatado': 'Valor (R$)'}), use_container_width=True, hide_index=True)
+                
+                ficha_display = cotas_do_cliente[colunas_ficha].rename(columns={'DATA': 'Data', 'ADMINISTRADORA': 'Administradora', 'PRODUTO': 'Produto', 'GRUPO': 'Grupo', 'COTA': 'Cota', 'Valor Formatado': 'Valor (R$)'})
+                estilo_ficha = ficha_display.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}])
+                
+                st.dataframe(estilo_ficha, use_container_width=True, hide_index=True)
                 
         else:
-            st.warning("Nenhum cliente encontrado com esses filtros/busca.")
+            st.warning("Nenhum cliente encontrado com esses filtros ou termos de busca.")
 
         st.divider()
 
         # =========================================================
-        # PARTE 2: GRÁFICOS E SOMAS FINANCEIRAS
+        # PARTE 2: GRÁFICOS
         # =========================================================
-        st.subheader("📊 Gráficos de Vendas")
+        st.subheader("📊 Gráficos de Vendas Globais")
         
         g_filtro1, g_filtro2 = st.columns(2)
         with g_filtro1:
@@ -337,7 +314,7 @@ elif menu_selecionado == "Nova Venda":
         with col1:
             data = st.date_input("Data da Venda", format="DD/MM/YYYY")
             cliente = st.text_input("Nome do Cliente *")
-            telefone = st.text_input("Telefone (Opcional - só informativo, não vai para a planilha)") # A planilha não tem campo de telefone, então não salvamos
+            telefone = st.text_input("Telefone (Opcional - só informativo, não vai para a planilha)")
             
             if st.session_state['perfil_logado'] == "Master":
                 vendedor = st.selectbox("Vendedor *", ["BRENO LIMA", "URIEL GOMES", "Consorbens", "Vendedor Terceiro"])
@@ -358,10 +335,8 @@ elif menu_selecionado == "Nova Venda":
         if salvar:
             if cliente and grupo and cota and valor > 0:
                 aba_vendas = planilha.worksheet("Vendas")
-                
-                # Salvando NA ORDEM EXATA da sua planilha
                 nova_linha = [
-                    "", # Coluna 1: ID_cliente (deixamos vazio ou gere um depois)
+                    "", # Coluna 1: ID_cliente 
                     cliente, # Coluna 2: Nome do cliente
                     str(data.strftime("%d/%m/%Y")), # Coluna 3: DATA
                     produto, # Coluna 4: PRODUTO
@@ -388,14 +363,10 @@ elif menu_selecionado == "Gerenciar Vendas (Editar/Deletar)":
         df_vendas = pd.DataFrame(dados_brutos[1:])
         col_count = len(df_vendas.columns)
         if col_count < 10:
-            for i in range(col_count, 10):
-                df_vendas[i] = ""
+            for i in range(col_count, 10): df_vendas[i] = ""
         df_vendas = df_vendas.iloc[:, :10]
         
-        df_vendas.columns = [
-            "ID_cliente", "Nome do cliente", "DATA", "PRODUTO", "VENDEDOR",
-            "GRUPO", "COTA", "ADMINISTRADORA", "STATUS", "VALOR"
-        ]
+        df_vendas.columns = ["ID_cliente", "Nome do cliente", "DATA", "PRODUTO", "VENDEDOR", "GRUPO", "COTA", "ADMINISTRADORA", "STATUS", "VALOR"]
         
         opcoes_busca = df_vendas.apply(lambda row: f"Linha {row.name + 2} | Cliente: {row['Nome do cliente']} - Grupo/Cota: {row['GRUPO']}/{row['COTA']}", axis=1).tolist()
         venda_selecionada = st.selectbox("Selecione a venda que deseja alterar ou excluir:", [""] + opcoes_busca)
@@ -421,10 +392,9 @@ elif menu_selecionado == "Gerenciar Vendas (Editar/Deletar)":
             col_btn1, col_btn2 = st.columns(2)
             with col_btn1:
                 if st.button("Salvar Alterações"):
-                    # Editando as colunas certas do Google Sheets (1 a 10)
-                    aba_vendas.update_cell(linha_planilha, 2, novo_nome)   # Coluna 2 = Nome
-                    aba_vendas.update_cell(linha_planilha, 10, novo_valor) # Coluna 10 = Valor
-                    aba_vendas.update_cell(linha_planilha, 9, novo_status) # Coluna 9 = Status
+                    aba_vendas.update_cell(linha_planilha, 2, novo_nome)   
+                    aba_vendas.update_cell(linha_planilha, 10, novo_valor) 
+                    aba_vendas.update_cell(linha_planilha, 9, novo_status) 
                     st.success("Alterações salvas na planilha!")
                     st.rerun()
             with col_btn2:
@@ -434,6 +404,120 @@ elif menu_selecionado == "Gerenciar Vendas (Editar/Deletar)":
                     st.rerun()
     else:
         st.info("Nenhuma venda para gerenciar.")
+
+# =========================================================
+# TELA DE RELATÓRIOS
+# =========================================================
+elif menu_selecionado == "Relatórios":
+    st.title("📑 Relatórios Gerenciais")
+    
+    aba_vendas = planilha.worksheet("Vendas")
+    dados_brutos = aba_vendas.get_all_values()
+    
+    if len(dados_brutos) > 1:
+        df_vendas = pd.DataFrame(dados_brutos[1:])
+        col_count = len(df_vendas.columns)
+        if col_count < 10:
+            for i in range(col_count, 10): df_vendas[i] = ""
+        df_vendas = df_vendas.iloc[:, :10]
+        
+        df_vendas.columns = ["ID_cliente", "Nome do cliente", "DATA", "PRODUTO", "VENDEDOR", "GRUPO", "COTA", "ADMINISTRADORA", "STATUS", "VALOR"]
+        
+        df_vendas['Data_Real'] = pd.to_datetime(df_vendas['DATA'], dayfirst=True, errors='coerce')
+        df_vendas['Valor_Numerico'] = df_vendas['VALOR'].astype(str).str.replace('R$', '', regex=False).str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.strip()
+        df_vendas['Valor_Numerico'] = pd.to_numeric(df_vendas['Valor_Numerico'], errors='coerce').fillna(0.0)
+
+        # Filtro Global de Tempo para os Relatórios
+        filtro_tempo_rel = st.selectbox("⏳ Selecione o Período dos Relatórios:", ["Mês Atual", "Mês Anterior", "Ano Atual", "Todas as Vendas"])
+        
+        hoje = datetime.today()
+        df_filtrado = df_vendas.copy()
+        
+        if filtro_tempo_rel != "Todas as Vendas":
+            mask_datas_validas = df_filtrado['Data_Real'].notna()
+            if filtro_tempo_rel == "Mês Atual":
+                df_filtrado = df_filtrado[mask_datas_validas & (df_filtrado['Data_Real'].dt.month == hoje.month) & (df_filtrado['Data_Real'].dt.year == hoje.year)]
+            elif filtro_tempo_rel == "Mês Anterior":
+                mes_ant = hoje.month - 1 if hoje.month > 1 else 12
+                ano_ant = hoje.year if hoje.month > 1 else hoje.year - 1
+                df_filtrado = df_filtrado[mask_datas_validas & (df_filtrado['Data_Real'].dt.month == mes_ant) & (df_filtrado['Data_Real'].dt.year == ano_ant)]
+            elif filtro_tempo_rel == "Ano Atual":
+                df_filtrado = df_filtrado[mask_datas_validas & (df_filtrado['Data_Real'].dt.year == hoje.year)]
+                
+        # Filtro Master/Vendedor
+        if st.session_state['perfil_logado'] == "Vendedor":
+            df_filtrado = df_filtrado[df_filtrado['VENDEDOR'] == st.session_state['nome_vendedor']]
+            
+        st.divider()
+
+        if df_filtrado.empty:
+            st.warning("Nenhuma venda registrada no período selecionado.")
+        else:
+            # Criando o sistema de abas
+            tab1, tab2, tab3 = st.tabs(["👤 Vendas por Usuário", "🏢 Vendas por Administradora", "💰 Comissões por Vendedor"])
+            
+            with tab1:
+                st.subheader("Vendas por Usuário (Vendedor)")
+                resumo_vendedor = df_filtrado.groupby('VENDEDOR').agg(
+                    Quantidade=('Nome do cliente', 'count'),
+                    Volume_Total=('Valor_Numerico', 'sum')
+                ).reset_index()
+                
+                resumo_vendedor['Volume Formatado'] = resumo_vendedor['Volume_Total'].apply(lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+                
+                # Exibe a tabela
+                estilo_vendedor = resumo_vendedor[['VENDEDOR', 'Quantidade', 'Volume Formatado']].style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}])
+                st.dataframe(estilo_vendedor, use_container_width=True, hide_index=True)
+                
+                # Gráfico de barras simples
+                grafico_vend = alt.Chart(resumo_vendedor).mark_bar(color='#ff6600').encode(
+                    x=alt.X('VENDEDOR:N', title='Vendedor', sort='-y'),
+                    y=alt.Y('Volume_Total:Q', title='Volume de Vendas (R$)'),
+                    tooltip=['VENDEDOR', 'Quantidade', 'Volume_Total']
+                ).properties(height=300)
+                st.altair_chart(grafico_vend, use_container_width=True)
+
+            with tab2:
+                st.subheader("Vendas por Administradora")
+                resumo_admin = df_filtrado.groupby('ADMINISTRADORA').agg(
+                    Quantidade=('Nome do cliente', 'count'),
+                    Volume_Total=('Valor_Numerico', 'sum')
+                ).reset_index()
+                
+                resumo_admin['Volume Formatado'] = resumo_admin['Volume_Total'].apply(lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+                
+                estilo_admin = resumo_admin[['ADMINISTRADORA', 'Quantidade', 'Volume Formatado']].style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}])
+                st.dataframe(estilo_admin, use_container_width=True, hide_index=True)
+                
+                grafico_admin = alt.Chart(resumo_admin).mark_bar(color='#0f172a').encode(
+                    x=alt.X('ADMINISTRADORA:N', title='Administradora', sort='-y'),
+                    y=alt.Y('Volume_Total:Q', title='Volume de Vendas (R$)'),
+                    tooltip=['ADMINISTRADORA', 'Quantidade', 'Volume_Total']
+                ).properties(height=300)
+                st.altair_chart(grafico_admin, use_container_width=True)
+
+            with tab3:
+                st.subheader("Relatório de Comissões Estimadas")
+                st.info("💡 Como a planilha não tem uma coluna de % de comissão de cada vendedor, informe a comissão média abaixo para calcular a projeção financeira.")
+                
+                pct_comissao = st.number_input("Porcentagem Média de Comissão (%)", min_value=0.0, max_value=100.0, value=1.0, step=0.1)
+                
+                df_comissoes = df_filtrado.groupby('VENDEDOR').agg(Volume_Total=('Valor_Numerico', 'sum')).reset_index()
+                df_comissoes['Comissão a Receber'] = df_comissoes['Volume_Total'] * (pct_comissao / 100)
+                
+                total_geral_comissao = df_comissoes['Comissão a Receber'].sum()
+                
+                st.metric("Comissão Total do Período (Todos os Vendedores)", f"R$ {total_geral_comissao:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+                
+                # Formatando para a tabela
+                df_comissoes['Volume Total Vendido'] = df_comissoes['Volume_Total'].apply(lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+                df_comissoes['Comissão a Receber'] = df_comissoes['Comissão a Receber'].apply(lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+                
+                estilo_comissao = df_comissoes[['VENDEDOR', 'Volume Total Vendido', 'Comissão a Receber']].style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}])
+                st.dataframe(estilo_comissao, use_container_width=True, hide_index=True)
+
+    else:
+        st.info("O sistema ainda não possui vendas cadastradas na planilha.")
 
 elif menu_selecionado == "Baixar Parcela":
     st.title("💰 Recebimento de Comissão (Baixa)")
