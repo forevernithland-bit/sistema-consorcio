@@ -2,6 +2,7 @@ import streamlit as st
 import gspread
 import pandas as pd
 from datetime import datetime
+import requests # <--- NOVA BIBLIOTECA PARA BUSCAR O CEP
 import streamlit.components.v1 as components
 import altair as alt
 
@@ -36,6 +37,15 @@ def carregar_ferramenta(nome_arquivo):
     except FileNotFoundError:
         st.error(f"⚠️ O arquivo {nome_arquivo} não foi encontrado. Certifique-se de ter criado ele no GitHub com este nome exato!")
 
+def formatar_telefone(tel):
+    """Formata o telefone automaticamente se o usuário digitar só números"""
+    nums = ''.join(filter(str.isdigit, tel))
+    if len(nums) == 11:
+        return f"({nums[:2]}) {nums[2:7]}-{nums[7:]}"
+    elif len(nums) == 10:
+        return f"({nums[:2]}) {nums[2:6]}-{nums[6:]}"
+    return tel
+
 # === 2. LÓGICA DO MENU LATERAL ===
 is_logado = st.session_state['usuario_logado'] is not None
 
@@ -44,8 +54,6 @@ st.sidebar.write("")
 
 if not is_logado:
     opcoes_menu = ["🔐 Login (Área Restrita)", "🏍️ Simulador Yamaha", "🏦 Simulador Itaú", "🎯 Oportunidades Itaú", "⚖️ Financiamento x Consórcio"]
-    st.sidebar.divider()
-    st.sidebar.caption("Portal Consorbens © 2026")
 else:
     st.sidebar.write(f"👤 **{st.session_state['nome_vendedor']}**")
     st.sidebar.divider()
@@ -63,7 +71,7 @@ except ValueError: idx_menu = 0
 
 menu_selecionado = st.sidebar.radio(" ", opcoes_menu, index=idx_menu, label_visibility="collapsed")
 
-# === A MÁGICA DA NAVEGAÇÃO: Limpa a memória se sair do Dashboard ===
+# Limpa a memória se sair do Dashboard
 if menu_selecionado != "Dashboard":
     st.session_state['cliente_visualizado'] = None
 
@@ -71,7 +79,6 @@ st.session_state['menu_lateral'] = menu_selecionado
 
 if is_logado:
     st.sidebar.write("")
-    # Botão de escape rápido se o usuário estiver vendo um cliente
     if menu_selecionado == "Dashboard" and st.session_state['cliente_visualizado'] is not None:
         if st.sidebar.button("⬅️ Voltar ao Dashboard", type="primary", use_container_width=True):
             st.session_state['cliente_visualizado'] = None
@@ -87,6 +94,16 @@ if is_logado:
         st.session_state['menu_lateral'] = "🔐 Login (Área Restrita)"
         st.rerun()
 
+# --- RODAPÉ CENTRALIZADO DO MENU LATERAL ---
+st.sidebar.markdown(
+    """
+    <div style="text-align: center; margin-top: 30px; padding-top: 15px; border-top: 1px solid #e2e8f0; color: #64748b; font-size: 0.85rem;">
+        Portal Consorbens &copy; 2026
+    </div>
+    """, 
+    unsafe_allow_html=True
+)
+
 # === 3. ESTILIZAÇÃO FORÇADA (CSS BRUTO) ===
 simuladores = ["🏍️ Simulador Yamaha", "🏦 Simulador Itaú", "🎯 Oportunidades Itaú", "⚖️ Financiamento x Consórcio"]
 is_simulator = menu_selecionado in simuladores
@@ -98,7 +115,7 @@ css = """
     /* === LINHA DIVISÓRIA DO MENU LATERAL === */
     [data-testid="stSidebar"] { 
         background-color: #ffffff !important; 
-        border-right: 2px solid #e2e8f0 !important; /* Essa é a linha vertical cinza clarinha */
+        border-right: 2px solid #e2e8f0 !important; 
     }
     
     [data-testid="stSidebar"] p, [data-testid="stSidebar"] span, [data-testid="stSidebar"] div { color: #0f172a !important; }
@@ -113,9 +130,9 @@ css = """
     header[data-testid="stHeader"] { background-color: transparent !important; }
     button[data-baseweb="tab"] { font-size: 16px !important; font-weight: bold !important; }
     
-    /* === VERDE DÓLAR FINANCEIRO PARA OS BOTÕES PRIMÁRIOS === */
-    button[kind="primary"] { background-color: #1b7a43 !important; border-color: #1b7a43 !important; color: #ffffff !important; font-weight: bold !important; }
-    button[kind="primary"]:hover { background-color: #11572e !important; border-color: #11572e !important; color: #ffffff !important; transform: scale(1.02); transition: all 0.2s ease-in-out; }
+    /* === VERDE DÓLAR MAIS CLARO E LIMPO === */
+    button[kind="primary"] { background-color: #239b56 !important; border-color: #239b56 !important; color: #ffffff !important; font-weight: bold !important; }
+    button[kind="primary"]:hover { background-color: #1b7a43 !important; border-color: #1b7a43 !important; color: #ffffff !important; transform: scale(1.02); transition: all 0.2s ease-in-out; }
 """
 
 if is_simulator: css += """ .stApp { background-color: #0f172a !important; } """
@@ -172,17 +189,9 @@ if menu_selecionado == "Dashboard":
     aba_vendas = planilha.worksheet("Vendas")
     dados_brutos = aba_vendas.get_all_values()
     
-    # -------------------------------------------------------------
-    # SE O USUÁRIO CLICOU EM UM CLIENTE: MOSTRA A PÁGINA DO CLIENTE
-    # -------------------------------------------------------------
     if st.session_state['cliente_visualizado'] is not None:
         cliente_nome = st.session_state['cliente_visualizado']
         
-        if st.button("⬅️ Voltar ao Dashboard", type="primary"):
-            st.session_state['cliente_visualizado'] = None
-            st.session_state['key_tabela'] += 1
-            st.rerun()
-            
         st.title(f"👤 Perfil do Cliente: {cliente_nome}")
         
         dados_cli = aba_clientes.get_all_records()
@@ -209,15 +218,16 @@ if menu_selecionado == "Dashboard":
             
             if is_master:
                 if st.form_submit_button("Salvar Alterações", type="primary"):
+                    telefone_formatado = formatar_telefone(telefone)
                     nomes_col = aba_clientes.col_values(1)
                     if cliente_nome in nomes_col:
                         row_idx = nomes_col.index(cliente_nome) + 1
-                        aba_clientes.update_cell(row_idx, 2, telefone)
+                        aba_clientes.update_cell(row_idx, 2, telefone_formatado)
                         aba_clientes.update_cell(row_idx, 3, email)
                         aba_clientes.update_cell(row_idx, 4, endereco)
                         aba_clientes.update_cell(row_idx, 5, aniversario)
                     else:
-                        aba_clientes.append_row([cliente_nome, telefone, email, endereco, aniversario, datetime.today().strftime("%d/%m/%Y")])
+                        aba_clientes.append_row([cliente_nome, telefone_formatado, email, endereco, aniversario, datetime.today().strftime("%d/%m/%Y")])
                     st.success("Dados do cliente atualizados com sucesso!")
                     st.rerun()
             else:
@@ -248,9 +258,6 @@ if menu_selecionado == "Dashboard":
             else:
                 st.warning("Nenhuma cota encontrada para este cliente.")
 
-    # -------------------------------------------------------------
-    # SE NÃO CLICOU EM NINGUÉM: MOSTRA O DASHBOARD NORMAL
-    # -------------------------------------------------------------
     else:
         if len(dados_brutos) > 1:
             df_vendas = pd.DataFrame(dados_brutos[1:])
@@ -267,15 +274,9 @@ if menu_selecionado == "Dashboard":
             if st.session_state['perfil_logado'] == "Vendedor":
                 df_vendas = df_vendas[df_vendas['VENDEDOR'] == st.session_state['nome_vendedor']]
                 
-            # =========================================================
-            # PARTE 1: GESTÃO E BUSCA DE CLIENTES
-            # =========================================================
             col_t1, col_t2 = st.columns([4, 1])
-            with col_t1:
-                st.subheader("👥 Ficha de Clientes")
             with col_t2:
-                st.write("") 
-                if st.button("➕ Nova Venda", use_container_width=True, type="primary"):
+                if st.button("Nova Venda", use_container_width=True, type="primary"):
                     st.session_state['menu_lateral'] = "Nova Venda"
                     st.rerun()
             
@@ -327,7 +328,7 @@ if menu_selecionado == "Dashboard":
                 
                 total_vendas_tabela = df_clientes['Valor_Numerico'].sum()
                 valor_formatado_total = f"R$ {total_vendas_tabela:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-                st.markdown(f"""<div style="text-align: right; padding-top: 10px;"><h4 style="color: #1b7a43; font-weight: bold; margin: 0;">TOTAL: {valor_formatado_total}</h4></div>""", unsafe_allow_html=True)
+                st.markdown(f"""<div style="text-align: right; padding-top: 10px;"><h4 style="color: #239b56; font-weight: bold; margin: 0;">TOTAL: {valor_formatado_total}</h4></div>""", unsafe_allow_html=True)
                 
                 linhas_selecionadas = tabela_interativa.selection.rows
                 if len(linhas_selecionadas) > 0:
@@ -341,9 +342,6 @@ if menu_selecionado == "Dashboard":
 
             st.divider()
 
-            # =========================================================
-            # PARTE 2: GRÁFICOS
-            # =========================================================
             st.subheader("📊 Gráficos de Vendas Globais")
             
             g_filtro1, g_filtro2 = st.columns(2)
@@ -398,55 +396,115 @@ if menu_selecionado == "Dashboard":
         else:
             st.info("O sistema ainda não possui vendas cadastradas na planilha.")
 
+# =========================================================
+# TELA DE NOVA VENDA DINÂMICA (Sem Form)
+# =========================================================
 elif menu_selecionado == "Nova Venda":
     st.title("📝 Cadastrar Nova Venda")
     
-    with st.form("form_venda"):
-        st.subheader("1. Dados do Cliente")
-        col_c1, col_c2 = st.columns(2)
-        with col_c1:
-            cliente = st.text_input("Nome do Cliente *")
-            telefone = st.text_input("Telefone")
-            endereco = st.text_input("Endereço Completo")
-        with col_c2:
-            email = st.text_input("E-mail")
-            aniversario = st.text_input("Data de Aniversário (DD/MM)")
+    st.subheader("1. Dados do Cliente")
+    col_c1, col_c2 = st.columns(2)
+    with col_c1:
+        cliente = st.text_input("Nome do Cliente *")
+        telefone = st.text_input("Telefone", placeholder="(31) 99999-9999", max_chars=15)
+    with col_c2:
+        email = st.text_input("E-mail")
+        aniversario = st.text_input("Data de Aniversário (DD/MM)", max_chars=5)
+        
+    st.markdown("##### Busca Rápida de Endereço")
+    col_cep1, col_cep2 = st.columns([1, 3])
+    with col_cep1:
+        cep = st.text_input("CEP (Digite e clique fora)", max_chars=9)
+        
+    # --- MÁGICA DO VIACEP ---
+    if cep != st.session_state.get('last_cep', ''):
+        cep_limpo = ''.join(filter(str.isdigit, cep))
+        if len(cep_limpo) == 8:
+            try:
+                res = requests.get(f"https://viacep.com.br/ws/{cep_limpo}/json/", timeout=5)
+                if res.status_code == 200:
+                    dados_cep = res.json()
+                    if "erro" not in dados_cep:
+                        st.session_state['venda_rua'] = dados_cep.get("logradouro", "")
+                        st.session_state['venda_bairro'] = dados_cep.get("bairro", "")
+                        st.session_state['venda_cidade'] = dados_cep.get("localidade", "")
+                        st.session_state['venda_uf'] = dados_cep.get("uf", "")
+                        st.success("✅ CEP Encontrado!")
+            except:
+                st.warning("⚠️ Serviço de CEP indisponível no momento.")
+        st.session_state['last_cep'] = cep
+
+    col_end1, col_end2, col_end3 = st.columns([2, 1, 1])
+    with col_end1: rua = st.text_input("Rua/Logradouro", key="venda_rua")
+    with col_end2: numero = st.text_input("Número", key="venda_numero")
+    with col_end3: complemento = st.text_input("Complemento", key="venda_complemento")
+
+    col_end4, col_end5, col_end6 = st.columns([2, 2, 1])
+    with col_end4: bairro = st.text_input("Bairro", key="venda_bairro")
+    with col_end5: cidade = st.text_input("Cidade", key="venda_cidade")
+    with col_end6: uf = st.text_input("UF", max_chars=2, key="venda_uf")
+
+    st.subheader("2. Dados da Venda")
+    col_v1, col_v2 = st.columns(2)
+    with col_v1:
+        data = st.date_input("Data da Venda", format="DD/MM/YYYY")
+        if st.session_state['perfil_logado'] == "Master":
+            vendedor = st.selectbox("Vendedor *", ["BRENO LIMA", "URIEL GOMES", "Consorbens", "Vendedor Terceiro"])
+        else:
+            st.write(f"**Vendedor:** {st.session_state['nome_vendedor']}")
+            vendedor = st.session_state['nome_vendedor']
             
-        st.subheader("2. Dados da Venda")
-        col1, col2 = st.columns(2)
-        with col1:
-            data = st.date_input("Data da Venda", format="DD/MM/YYYY")
-            if st.session_state['perfil_logado'] == "Master":
-                vendedor = st.selectbox("Vendedor *", ["BRENO LIMA", "URIEL GOMES", "Consorbens", "Vendedor Terceiro"])
-            else:
-                st.write(f"**Vendedor:** {st.session_state['nome_vendedor']}")
-                vendedor = st.session_state['nome_vendedor']
-                
-        with col2:
-            admin = st.selectbox("Administradora *", ["YAMAHA", "ITAÚ", "ROMA", "EMBRACON"])
-            produto = st.selectbox("Produto *", ["Auto", "Imovel", "Moto", "Caminhão", "Serviços"])
-            grupo = st.text_input("Grupo *")
-            cota = st.text_input("Cota *")
-            valor = st.number_input("Valor da Venda (R$) *", min_value=0.0, step=1000.0)
-            status = st.selectbox("Status", ["Vendido", "Contemplado", "Cancelado"])
+    with col_v2:
+        admin = st.selectbox("Administradora *", ["YAMAHA", "ITAÚ", "ROMA", "EMBRACON"])
+        produto = st.selectbox("Produto *", ["Auto", "Imovel", "Moto", "Caminhão", "Serviços"])
         
-        salvar = st.form_submit_button("Salvar Venda", type="primary")
+    # --- MÁGICA DAS MÚLTIPLAS COTAS ---
+    st.markdown("##### Cotas Adquiridas")
+    if 'qtd_cotas' not in st.session_state:
+        st.session_state['qtd_cotas'] = 1
+
+    cotas_data = []
+    for i in range(st.session_state['qtd_cotas']):
+        st.markdown(f"**Cota {i+1}**")
+        cq1, cq2, cq3, cq4 = st.columns(4)
+        with cq1: grupo = st.text_input(f"Grupo *", key=f"g_{i}")
+        with cq2: cota = st.text_input(f"Cota *", key=f"c_{i}")
+        with cq3: valor = st.number_input(f"Valor (R$) *", min_value=0.0, step=1000.0, key=f"v_{i}")
+        with cq4: status = st.selectbox(f"Status", ["Vendido", "Contemplado", "Cancelado"], key=f"s_{i}")
+        cotas_data.append({"grupo": grupo, "cota": cota, "valor": valor, "status": status})
+
+    if st.button("➕ Adicionar mais uma Cota"):
+        st.session_state['qtd_cotas'] += 1
+        st.rerun()
+
+    st.markdown("---")
+    
+    if st.button("Salvar Venda(s)", type="primary", use_container_width=True):
+        tem_cota_invalida = any(not c['grupo'] or not c['cota'] or c['valor'] <= 0 for c in cotas_data)
         
-        if salvar:
-            if cliente and grupo and cota and valor > 0:
-                aba_vendas = planilha.worksheet("Vendas")
-                nova_linha = ["", cliente, str(data.strftime("%d/%m/%Y")), produto, vendedor, grupo, cota, admin, status, valor]
+        if not cliente or tem_cota_invalida:
+            st.error("Preencha o Nome do Cliente e todos os campos obrigatórios (*) das cotas!")
+        else:
+            aba_vendas = planilha.worksheet("Vendas")
+            
+            # Monta o Endereço Bonitinho
+            partes_endereco = [p for p in [rua, numero, complemento, bairro, cidade, uf] if p]
+            if cep: partes_endereco.append(f"CEP: {cep}")
+            endereco_completo = ", ".join(partes_endereco)
+
+            for c in cotas_data:
+                nova_linha = ["", cliente, str(data.strftime("%d/%m/%Y")), produto, vendedor, c['grupo'], c['cota'], admin, c['status'], c['valor']]
                 aba_vendas.append_row(nova_linha)
-                
-                try: nomes_cadastrados = aba_clientes.col_values(1)
-                except: nomes_cadastrados = []
-                
-                if cliente not in nomes_cadastrados:
-                    aba_clientes.append_row([cliente, telefone, email, endereco, aniversario, str(datetime.today().strftime("%d/%m/%Y"))])
-                
-                st.success(f"Venda e Cadastro de {cliente} salvos com sucesso!")
-            else:
-                st.error("Preencha todos os campos obrigatórios (*).")
+
+            telefone_formatado = formatar_telefone(telefone)
+            try: nomes_cadastrados = aba_clientes.col_values(1)
+            except: nomes_cadastrados = []
+
+            if cliente not in nomes_cadastrados:
+                aba_clientes.append_row([cliente, telefone_formatado, email, endereco_completo, aniversario, str(datetime.today().strftime("%d/%m/%Y"))])
+
+            st.success(f"{len(cotas_data)} Venda(s) e Cadastro de {cliente} salvos com sucesso!")
+            st.session_state['qtd_cotas'] = 1 # Reseta as cotas para a próxima venda
 
 elif menu_selecionado == "Gerenciar Vendas (Editar/Deletar)":
     st.title("🛠️ Gerenciar e Editar Vendas")
