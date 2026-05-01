@@ -37,14 +37,26 @@ def carregar_ferramenta(nome_arquivo):
     except FileNotFoundError:
         st.error(f"⚠️ O arquivo {nome_arquivo} não foi encontrado. Certifique-se de ter criado ele no GitHub com este nome exato!")
 
+# === MÁSCARAS INTELIGENTES (TELEFONE E DATA) ===
 def formatar_telefone(tel):
-    """Formata o telefone automaticamente se o usuário digitar só números"""
-    nums = ''.join(filter(str.isdigit, tel))
-    if len(nums) == 11:
-        return f"({nums[:2]}) {nums[2:7]}-{nums[7:]}"
-    elif len(nums) == 10:
-        return f"({nums[:2]}) {nums[2:6]}-{nums[6:]}"
+    if not tel: return ""
+    nums = ''.join(filter(str.isdigit, str(tel)))
+    if len(nums) == 11: return f"({nums[:2]}) {nums[2:7]}-{nums[7:]}"
+    elif len(nums) == 10: return f"({nums[:2]}) {nums[2:6]}-{nums[6:]}"
     return tel
+
+def formatar_data(data_str):
+    if not data_str: return ""
+    nums = ''.join(filter(str.isdigit, str(data_str)))
+    if len(nums) > 4: return f"{nums[:2]}/{nums[2:4]}/{nums[4:8]}"
+    elif len(nums) > 2: return f"{nums[:2]}/{nums[2:]}"
+    return nums
+
+def mascara_tel_nova_venda():
+    st.session_state['tel_nv'] = formatar_telefone(st.session_state.get('tel_nv', ''))
+
+def mascara_aniv_nova_venda():
+    st.session_state['aniv_nv'] = formatar_data(st.session_state.get('aniv_nv', ''))
 
 # === 2. LÓGICA DO MENU LATERAL ===
 is_logado = st.session_state['usuario_logado'] is not None
@@ -112,12 +124,7 @@ css = """
 <style>
     .block-container { padding-top: 1rem; padding-bottom: 0rem; padding-left: 1rem; padding-right: 1rem; }
     
-    /* === LINHA DIVISÓRIA DO MENU LATERAL === */
-    [data-testid="stSidebar"] { 
-        background-color: #ffffff !important; 
-        border-right: 2px solid #e2e8f0 !important; 
-    }
-    
+    [data-testid="stSidebar"] { background-color: #ffffff !important; border-right: 2px solid #e2e8f0 !important; }
     [data-testid="stSidebar"] p, [data-testid="stSidebar"] span, [data-testid="stSidebar"] div { color: #0f172a !important; }
     [data-testid="stSidebar"] hr { border-bottom-color: #e2e8f0 !important; }
     [data-testid="stSidebar"] button { border: 1px solid #cbd5e1 !important; background-color: #f8fafc !important; }
@@ -130,7 +137,7 @@ css = """
     header[data-testid="stHeader"] { background-color: transparent !important; }
     button[data-baseweb="tab"] { font-size: 16px !important; font-weight: bold !important; }
     
-    /* === VERDE DÓLAR MAIS CLARO E LIMPO === */
+    /* === VERDE DÓLAR === */
     button[kind="primary"] { background-color: #239b56 !important; border-color: #239b56 !important; color: #ffffff !important; font-weight: bold !important; }
     button[kind="primary"]:hover { background-color: #1b7a43 !important; border-color: #1b7a43 !important; color: #ffffff !important; transform: scale(1.02); transition: all 0.2s ease-in-out; }
 """
@@ -209,25 +216,35 @@ if menu_selecionado == "Dashboard":
         if not is_master:
             st.info("🔒 Como Vendedor, você só pode visualizar estes dados. Para alterar, contate o Administrador.")
             
+        key_tel_edicao = f"tel_ed_{cliente_nome}"
+        key_aniv_edicao = f"aniv_ed_{cliente_nome}"
+        
+        if key_tel_edicao not in st.session_state:
+            st.session_state[key_tel_edicao] = info_cliente.get("Telefone", "")
+        if key_aniv_edicao not in st.session_state:
+            st.session_state[key_aniv_edicao] = info_cliente.get("Aniversario", "")
+            
+        def mascara_tel_edicao(): st.session_state[key_tel_edicao] = formatar_telefone(st.session_state[key_tel_edicao])
+        def mascara_aniv_edicao(): st.session_state[key_aniv_edicao] = formatar_data(st.session_state[key_aniv_edicao])
+
         with st.form("form_dados_cli"):
             c1, c2 = st.columns(2)
             endereco = c1.text_input("Endereço Completo", value=info_cliente.get("Endereco", ""), disabled=not is_master)
-            telefone = c1.text_input("Telefone", value=info_cliente.get("Telefone", ""), disabled=not is_master)
+            telefone_edit = c1.text_input("Telefone", key=key_tel_edicao, on_change=mascara_tel_edicao, disabled=not is_master, placeholder="(31) 99999-9999", max_chars=15)
             email = c2.text_input("E-mail", value=info_cliente.get("Email", ""), disabled=not is_master)
-            aniversario = c2.text_input("Data de Aniversário (DD/MM)", value=info_cliente.get("Aniversario", ""), disabled=not is_master)
+            aniversario_edit = c2.text_input("Data de Aniversário (DD/MM/AAAA)", key=key_aniv_edicao, on_change=mascara_aniv_edicao, disabled=not is_master, placeholder="DD/MM/AAAA", max_chars=10)
             
             if is_master:
                 if st.form_submit_button("Salvar Alterações", type="primary"):
-                    telefone_formatado = formatar_telefone(telefone)
                     nomes_col = aba_clientes.col_values(1)
                     if cliente_nome in nomes_col:
                         row_idx = nomes_col.index(cliente_nome) + 1
-                        aba_clientes.update_cell(row_idx, 2, telefone_formatado)
+                        aba_clientes.update_cell(row_idx, 2, st.session_state[key_tel_edicao])
                         aba_clientes.update_cell(row_idx, 3, email)
                         aba_clientes.update_cell(row_idx, 4, endereco)
-                        aba_clientes.update_cell(row_idx, 5, aniversario)
+                        aba_clientes.update_cell(row_idx, 5, st.session_state[key_aniv_edicao])
                     else:
-                        aba_clientes.append_row([cliente_nome, telefone_formatado, email, endereco, aniversario, datetime.today().strftime("%d/%m/%Y")])
+                        aba_clientes.append_row([cliente_nome, st.session_state[key_tel_edicao], email, endereco, st.session_state[key_aniv_edicao], datetime.today().strftime("%d/%m/%Y")])
                     st.success("Dados do cliente atualizados com sucesso!")
                     st.rerun()
             else:
@@ -294,9 +311,8 @@ if menu_selecionado == "Dashboard":
             hoje = datetime.today()
             df_clientes = df_vendas.copy()
             
-            # Aplica os filtros de tempo
             if filtro_cli == "Últimos 5 Cadastros" and busca_nome.strip() == "":
-                df_clientes = df_clientes.tail(5).iloc[::-1] # Puxa os últimos 5 e inverte (mais novo no topo)
+                df_clientes = df_clientes.tail(5).iloc[::-1]
             elif filtro_cli != "Todos os Clientes" and filtro_cli != "Últimos 5 Cadastros":
                 mask_datas_validas = df_clientes['Data_Real'].notna()
                 if filtro_cli == "Mês Atual": df_clientes = df_clientes[mask_datas_validas & (df_clientes['Data_Real'].dt.month == hoje.month) & (df_clientes['Data_Real'].dt.year == hoje.year)]
@@ -307,7 +323,6 @@ if menu_selecionado == "Dashboard":
                 elif filtro_cli == "Ano Atual": df_clientes = df_clientes[mask_datas_validas & (df_clientes['Data_Real'].dt.year == hoje.year)]
                 elif filtro_cli == "Período Personalizado": df_clientes = df_clientes[mask_datas_validas & (df_clientes['Data_Real'].dt.date >= data_inicio) & (df_clientes['Data_Real'].dt.date <= data_fim)]
                 
-            # Se tiver buscando por nome, busca em tudo e ignora o limite de 5
             if busca_nome.strip() != "":
                 df_clientes = df_vendas[df_vendas['Nome do cliente'].astype(str).str.contains(busca_nome.strip(), case=False, na=False)]
                 
@@ -402,7 +417,7 @@ if menu_selecionado == "Dashboard":
             st.info("O sistema ainda não possui vendas cadastradas na planilha.")
 
 # =========================================================
-# TELA DE NOVA VENDA DINÂMICA (Sem Form)
+# TELA DE NOVA VENDA DINÂMICA
 # =========================================================
 elif menu_selecionado == "Nova Venda":
     st.title("📝 Cadastrar Nova Venda")
@@ -410,16 +425,24 @@ elif menu_selecionado == "Nova Venda":
     st.subheader("1. Dados do Cliente")
     col_c1, col_c2 = st.columns(2)
     with col_c1:
-        cliente = st.text_input("Nome do Cliente *")
-        telefone = st.text_input("Telefone", placeholder="(31) 99999-9999", max_chars=15)
+        if 'venda_cliente' not in st.session_state: st.session_state['venda_cliente'] = ""
+        cliente = st.text_input("Nome do Cliente *", key="venda_cliente")
+        
+        if 'tel_nv' not in st.session_state: st.session_state['tel_nv'] = ""
+        telefone = st.text_input("Telefone", key="tel_nv", on_change=mascara_tel_nova_venda, placeholder="(31) 99999-9999", max_chars=15)
+        
     with col_c2:
-        email = st.text_input("E-mail")
-        aniversario = st.text_input("Data de Aniversário (DD/MM)", max_chars=5)
+        if 'venda_email' not in st.session_state: st.session_state['venda_email'] = ""
+        email = st.text_input("E-mail", key="venda_email")
+        
+        if 'aniv_nv' not in st.session_state: st.session_state['aniv_nv'] = ""
+        aniversario = st.text_input("Data de Aniversário (DD/MM/AAAA)", key="aniv_nv", on_change=mascara_aniv_nova_venda, placeholder="DD/MM/AAAA", max_chars=10)
         
     st.markdown("##### Busca Rápida de Endereço")
     col_cep1, col_cep2 = st.columns([1, 3])
     with col_cep1:
-        cep = st.text_input("CEP (Digite e clique fora)", max_chars=9)
+        if 'venda_cep' not in st.session_state: st.session_state['venda_cep'] = ""
+        cep = st.text_input("CEP (Digite e clique fora)", key="venda_cep", max_chars=9)
         
     if cep != st.session_state.get('last_cep', ''):
         cep_limpo = ''.join(filter(str.isdigit, cep))
@@ -439,14 +462,14 @@ elif menu_selecionado == "Nova Venda":
         st.session_state['last_cep'] = cep
 
     col_end1, col_end2, col_end3 = st.columns([2, 1, 1])
-    with col_end1: rua = st.text_input("Rua/Logradouro", key="venda_rua")
-    with col_end2: numero = st.text_input("Número", key="venda_numero")
-    with col_end3: complemento = st.text_input("Complemento", key="venda_complemento")
+    with col_end1: rua = st.text_input("Rua/Logradouro", key="venda_rua" if 'venda_rua' in st.session_state else None)
+    with col_end2: numero = st.text_input("Número", key="venda_numero" if 'venda_numero' in st.session_state else None)
+    with col_end3: complemento = st.text_input("Complemento", key="venda_complemento" if 'venda_complemento' in st.session_state else None)
 
     col_end4, col_end5, col_end6 = st.columns([2, 2, 1])
-    with col_end4: bairro = st.text_input("Bairro", key="venda_bairro")
-    with col_end5: cidade = st.text_input("Cidade", key="venda_cidade")
-    with col_end6: uf = st.text_input("UF", max_chars=2, key="venda_uf")
+    with col_end4: bairro = st.text_input("Bairro", key="venda_bairro" if 'venda_bairro' in st.session_state else None)
+    with col_end5: cidade = st.text_input("Cidade", key="venda_cidade" if 'venda_cidade' in st.session_state else None)
+    with col_end6: uf = st.text_input("UF", max_chars=2, key="venda_uf" if 'venda_uf' in st.session_state else None)
 
     st.subheader("2. Dados da Venda")
     col_v1, col_v2 = st.columns(2)
@@ -470,10 +493,18 @@ elif menu_selecionado == "Nova Venda":
     for i in range(st.session_state['qtd_cotas']):
         st.markdown(f"**Cota {i+1}**")
         cq1, cq2, cq3, cq4 = st.columns(4)
+        
+        # Cria as chaves no session_state para poder limpar depois
+        if f"g_{i}" not in st.session_state: st.session_state[f"g_{i}"] = ""
+        if f"c_{i}" not in st.session_state: st.session_state[f"c_{i}"] = ""
+        if f"v_{i}" not in st.session_state: st.session_state[f"v_{i}"] = 0.0
+        if f"s_{i}" not in st.session_state: st.session_state[f"s_{i}"] = "Vendido"
+        
         with cq1: grupo = st.text_input(f"Grupo *", key=f"g_{i}")
         with cq2: cota = st.text_input(f"Cota *", key=f"c_{i}")
         with cq3: valor = st.number_input(f"Valor (R$) *", min_value=0.0, step=1000.0, key=f"v_{i}")
         with cq4: status = st.selectbox(f"Status", ["Vendido", "Contemplado", "Cancelado"], key=f"s_{i}")
+        
         cotas_data.append({"grupo": grupo, "cota": cota, "valor": valor, "status": status})
 
     if st.button("➕ Adicionar mais uma Cota"):
@@ -482,31 +513,44 @@ elif menu_selecionado == "Nova Venda":
 
     st.markdown("---")
     
+    # === VALIDAÇÃO INTELIGENTE ===
     if st.button("Salvar Venda(s)", type="primary", use_container_width=True):
-        tem_cota_invalida = any(not c['grupo'] or not c['cota'] or c['valor'] <= 0 for c in cotas_data)
-        
-        if not cliente or tem_cota_invalida:
-            st.error("Preencha o Nome do Cliente e todos os campos obrigatórios (*) das cotas!")
+        if not str(cliente).strip():
+            st.error("❌ Preencha o Nome do Cliente!")
         else:
-            aba_vendas = planilha.worksheet("Vendas")
-            
-            partes_endereco = [p for p in [rua, numero, complemento, bairro, cidade, uf] if p]
-            if cep: partes_endereco.append(f"CEP: {cep}")
-            endereco_completo = ", ".join(partes_endereco)
+            erros_cotas = []
+            for i, c in enumerate(cotas_data):
+                if not str(c['grupo']).strip() or not str(c['cota']).strip() or c['valor'] <= 0.0:
+                    erros_cotas.append(str(i+1))
+                    
+            if erros_cotas:
+                st.error(f"❌ Atenção! Preencha o Grupo, Cota e um Valor (maior que zero) da(s) seguinte(s) Cota(s): {', '.join(erros_cotas)}")
+            else:
+                aba_vendas = planilha.worksheet("Vendas")
+                
+                partes_endereco = [p for p in [rua, numero, complemento, bairro, cidade, uf] if p]
+                if cep: partes_endereco.append(f"CEP: {cep}")
+                endereco_completo = ", ".join(partes_endereco)
 
-            for c in cotas_data:
-                nova_linha = ["", cliente, str(data.strftime("%d/%m/%Y")), produto, vendedor, c['grupo'], c['cota'], admin, c['status'], c['valor']]
-                aba_vendas.append_row(nova_linha)
+                for c in cotas_data:
+                    nova_linha = ["", cliente, str(data.strftime("%d/%m/%Y")), produto, vendedor, c['grupo'], c['cota'], admin, c['status'], c['valor']]
+                    aba_vendas.append_row(nova_linha)
 
-            telefone_formatado = formatar_telefone(telefone)
-            try: nomes_cadastrados = aba_clientes.col_values(1)
-            except: nomes_cadastrados = []
+                try: nomes_cadastrados = aba_clientes.col_values(1)
+                except: nomes_cadastrados = []
 
-            if cliente not in nomes_cadastrados:
-                aba_clientes.append_row([cliente, telefone_formatado, email, endereco_completo, aniversario, str(datetime.today().strftime("%d/%m/%Y"))])
+                if cliente not in nomes_cadastrados:
+                    aba_clientes.append_row([cliente, telefone, email, endereco_completo, aniversario, str(datetime.today().strftime("%d/%m/%Y"))])
 
-            st.success(f"{len(cotas_data)} Venda(s) e Cadastro de {cliente} salvos com sucesso!")
-            st.session_state['qtd_cotas'] = 1 
+                st.success(f"✅ {len(cotas_data)} Venda(s) e Cadastro de {cliente} salvos com sucesso!")
+                
+                # Limpa a tela para uma nova venda!
+                keys_to_clear = ['venda_cliente', 'tel_nv', 'venda_email', 'aniv_nv', 'venda_cep', 'last_cep', 'venda_rua', 'venda_numero', 'venda_complemento', 'venda_bairro', 'venda_cidade', 'venda_uf']
+                for i in range(st.session_state['qtd_cotas']): keys_to_clear.extend([f"g_{i}", f"c_{i}", f"v_{i}", f"s_{i}"])
+                
+                for key in keys_to_clear:
+                    if key in st.session_state: del st.session_state[key]
+                st.session_state['qtd_cotas'] = 1 
 
 elif menu_selecionado == "Gerenciar Vendas (Editar/Deletar)":
     st.title("🛠️ Gerenciar e Editar Vendas")
