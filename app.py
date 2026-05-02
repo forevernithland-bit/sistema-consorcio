@@ -72,21 +72,51 @@ st.sidebar.write("")
 
 if not is_logado:
     opcoes_menu = ["🔐 Login (Área Restrita)", "🏍️ Simulador Yamaha", "🏦 Simulador Itaú", "🎯 Oportunidades Itaú", "⚖️ Financiamento x Consórcio"]
+    try: idx_menu = opcoes_menu.index(st.session_state['menu_lateral'])
+    except ValueError: idx_menu = 0
+
+    selecao = st.sidebar.radio(" ", opcoes_menu, index=idx_menu, label_visibility="collapsed")
+    if selecao != st.session_state['menu_lateral']:
+        st.session_state['menu_lateral'] = selecao
+        st.rerun()
+
 else:
     st.sidebar.write(f"👤 **{st.session_state['nome_vendedor']}**")
     st.sidebar.divider()
+    
     ferramentas_logadas = ["🏍️ Simulador Yamaha", "🏦 Simulador Itaú", "🎯 Oportunidades Itaú", "⚖️ Financiamento x Consórcio"]
+    
     if st.session_state['perfil_logado'] == "Master":
-        opcoes_menu = ["Dashboard", "Nova Venda", "Gerenciar Vendas (Editar/Deletar)", "Relatórios", "Administradoras", "Baixar Parcela"] + ferramentas_logadas
+        opcoes_principais = ["Dashboard", "Nova Venda", "Relatórios", "Administradoras", "Baixar Parcela"]
     else:
-        opcoes_menu = ["Dashboard", "Nova Venda", "Relatórios"] + ferramentas_logadas
+        opcoes_principais = ["Dashboard", "Nova Venda", "Relatórios"]
 
-try: idx_menu = opcoes_menu.index(st.session_state['menu_lateral'])
-except ValueError: idx_menu = 0
+    idx_principal = opcoes_principais.index(st.session_state['menu_lateral']) if st.session_state['menu_lateral'] in opcoes_principais else None
 
-menu_selecionado = st.sidebar.radio(" ", opcoes_menu, index=idx_menu, label_visibility="collapsed")
-if menu_selecionado != "Dashboard": st.session_state['cliente_visualizado'] = None
-st.session_state['menu_lateral'] = menu_selecionado
+    selecao_principal = st.sidebar.radio(" ", opcoes_principais, index=idx_principal, label_visibility="collapsed")
+    
+    if selecao_principal != st.session_state.get('last_radio_selection'):
+        if selecao_principal is not None:
+            st.session_state['menu_lateral'] = selecao_principal
+            st.session_state['cliente_visualizado'] = None
+            st.session_state['last_radio_selection'] = selecao_principal
+            st.rerun()
+            
+    st.session_state['last_radio_selection'] = selecao_principal
+
+    st.sidebar.write("")
+    is_sim_active = st.session_state['menu_lateral'] in ferramentas_logadas
+    
+    with st.sidebar.expander("🛠️ Simuladores", expanded=is_sim_active):
+        for sim in ferramentas_logadas:
+            btn_type = "primary" if st.session_state['menu_lateral'] == sim else "secondary"
+            if st.button(sim, use_container_width=True, type=btn_type):
+                st.session_state['menu_lateral'] = sim
+                st.session_state['cliente_visualizado'] = None
+                st.session_state['last_radio_selection'] = None
+                st.rerun()
+
+menu_selecionado = st.session_state['menu_lateral']
 
 if is_logado:
     st.sidebar.write("")
@@ -95,6 +125,7 @@ if is_logado:
             st.session_state['cliente_visualizado'] = None
             st.session_state['key_tabela'] += 1
             st.rerun()
+            
     st.sidebar.write("")
     if st.sidebar.button("Sair do Sistema"):
         st.session_state.clear()
@@ -103,14 +134,32 @@ if is_logado:
 st.sidebar.markdown("""<div style="text-align: center; margin-top: 30px; padding-top: 15px; border-top: 1px solid #e2e8f0; color: #64748b; font-size: 0.85rem;">Portal Consorbens &copy; 2026</div>""", unsafe_allow_html=True)
 
 # === 3. ESTILIZAÇÃO CSS ===
+simuladores = ["🏍️ Simulador Yamaha", "🏦 Simulador Itaú", "🎯 Oportunidades Itaú", "⚖️ Financiamento x Consórcio"]
+is_simulator = menu_selecionado in simuladores
+
 css = """
 <style>
     .block-container { padding-top: 1rem; padding-bottom: 0rem; padding-left: 1rem; padding-right: 1rem; }
     [data-testid="stSidebar"] { background-color: #ffffff !important; border-right: 2px solid #e2e8f0 !important; }
+    [data-testid="stSidebar"] p, [data-testid="stSidebar"] span, [data-testid="stSidebar"] div { color: #0f172a !important; }
+    [data-testid="stSidebar"] hr { border-bottom-color: #e2e8f0 !important; }
+    [data-testid="stSidebar"] button { border: 1px solid #cbd5e1 !important; background-color: #f8fafc !important; }
+    [data-testid="collapsedControl"] { background-color: #ff6600 !important; border-radius: 8px !important; box-shadow: 0px 4px 10px rgba(255, 102, 0, 0.6) !important; padding: 8px !important; margin-top: 15px !important; margin-left: 15px !important; opacity: 1 !important; z-index: 999999 !important; }
+    [data-testid="collapsedControl"] svg { fill: #ffffff !important; color: #ffffff !important; stroke: #ffffff !important; width: 20px !important; height: 20px !important; }
+    [data-testid="collapsedControl"]:hover { background-color: #cc5200 !important; transform: scale(1.1) !important; }
+    [data-testid="stSidebarCollapseButton"] { background-color: #ff6600 !important; border-radius: 6px !important; }
+    [data-testid="stSidebarCollapseButton"] svg { fill: #ffffff !important; color: #ffffff !important; }
+    [data-testid="stSidebarCollapseButton"]:hover { background-color: #cc5200 !important; }
+    header[data-testid="stHeader"] { background-color: transparent !important; }
+    button[data-baseweb="tab"] { font-size: 16px !important; font-weight: bold !important; }
     button[kind="primary"] { background-color: #239b56 !important; border-color: #239b56 !important; color: #ffffff !important; font-weight: bold !important; }
     button[kind="primary"]:hover { background-color: #1b7a43 !important; border-color: #1b7a43 !important; color: #ffffff !important; transform: scale(1.02); transition: all 0.2s; }
 </style>
 """
+
+if is_simulator: css += """ <style>.stApp { background-color: #0f172a !important; }</style> """
+else: css += """ <style>.stApp { background-color: #ffffff !important; }</style> """
+
 st.markdown(css, unsafe_allow_html=True)
 
 # === 4. CONEXÃO PLANILHA ===
@@ -270,7 +319,6 @@ if menu_selecionado == "Dashboard":
                 estilo_ficha = ficha_display.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}])
                 st.dataframe(estilo_ficha, use_container_width=True, hide_index=True)
                 
-                # ADICIONADO: APAGAR COTA ESPECÍFICA (SOMENTE MASTER)
                 if is_master:
                     st.write("")
                     with st.expander("⚙️ Gerenciar / Excluir Cota Específica"):
@@ -514,47 +562,6 @@ elif menu_selecionado == "Nova Venda":
                     if k in st.session_state: del st.session_state[k]
                 st.session_state['qtd_cotas'] = 1 
 
-elif menu_selecionado == "Gerenciar Vendas (Editar/Deletar)":
-    st.title("🛠️ Gerenciar e Editar Vendas")
-    st.warning("Área Restrita (Apenas Sócios). Muito cuidado ao deletar informações!")
-    
-    aba_vendas = planilha.worksheet("Vendas")
-    dados_brutos = aba_vendas.get_all_values()
-    
-    if len(dados_brutos) > 1:
-        df_vendas = pd.DataFrame(dados_brutos[1:]).iloc[:, :10]
-        df_vendas.columns = ["ID_cliente", "Nome do cliente", "DATA", "PRODUTO", "VENDEDOR", "GRUPO", "COTA", "ADMINISTRADORA", "STATUS", "VALOR"]
-        opcoes_busca = df_vendas.apply(lambda r: f"Linha {r.name + 2} | Cliente: {r['Nome do cliente']} - Grupo/Cota: {r['GRUPO']}/{r['COTA']}", axis=1).tolist()
-        venda_selecionada = st.selectbox("Selecione a venda para alterar/excluir:", [""] + opcoes_busca)
-        
-        if venda_selecionada:
-            linha_planilha = int(venda_selecionada.split(" | ")[0].replace("Linha ", ""))
-            venda_atual = df_vendas.iloc[linha_planilha - 2]
-            st.divider()
-            st.subheader(f"Editando Venda: {venda_atual['Nome do cliente']}")
-            col1, col2 = st.columns(2)
-            with col1:
-                novo_nome = st.text_input("Nome do Cliente", value=str(venda_atual['Nome do cliente']))
-                novo_status = st.selectbox("Status", ["Vendido", "Contemplado", "Cancelado"], index=["Vendido", "Contemplado", "Cancelado"].index(venda_atual['STATUS'] if venda_atual['STATUS'] in ["Vendido", "Contemplado", "Cancelado"] else "Vendido"))
-            with col2:
-                val_float = pd.to_numeric(str(venda_atual['VALOR']).replace('R$', '').replace('.','').replace(',', '.').strip(), errors='coerce')
-                novo_valor = st.number_input("Valor da Venda (R$)", value=float(val_float) if not pd.isna(val_float) else 0.0)
-
-            col_btn1, col_btn2 = st.columns(2)
-            with col_btn1:
-                if st.button("Salvar Alterações", type="primary"):
-                    aba_vendas.update_cell(linha_planilha, 2, novo_nome)   
-                    aba_vendas.update_cell(linha_planilha, 10, novo_valor) 
-                    aba_vendas.update_cell(linha_planilha, 9, novo_status) 
-                    st.success("Alterações salvas na planilha!")
-                    st.rerun()
-            with col_btn2:
-                if st.button("🚨 DELETAR ESTA VENDA"):
-                    aba_vendas.delete_rows(linha_planilha)
-                    st.error("Venda apagada permanentemente!")
-                    st.rerun()
-    else: st.info("Nenhuma venda para gerenciar.")
-
 elif menu_selecionado == "Relatórios":
     st.title("📑 Relatórios Gerenciais")
     aba_vendas = planilha.worksheet("Vendas")
@@ -609,6 +616,7 @@ elif menu_selecionado == "Relatórios":
                 st.dataframe(dc.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}]), use_container_width=True, hide_index=True)
     else: st.info("Não possui vendas.")
 
+# === ABA ADMINISTRADORAS (COM BLINDAGEM DE COLUNAS) ===
 elif menu_selecionado == "Administradoras":
     st.title("🏢 Gestão de Administradoras")
     try: aba_admin = planilha.worksheet("Administradoras")
@@ -618,7 +626,17 @@ elif menu_selecionado == "Administradoras":
         st.rerun()
 
     dados_admin = aba_admin.get_all_values()
-    df_admin = pd.DataFrame(dados_admin[1:], columns=dados_admin[0]) if len(dados_admin) > 1 else pd.DataFrame(columns=["Administradora", "Produto", "Comissão Total (%)", "Regra de Pagamento (Parcelas)"])
+    
+    if len(dados_admin) > 1:
+        df_admin = pd.DataFrame(dados_admin[1:])
+        col_count = len(df_admin.columns)
+        # Preenche colunas vazias se a planilha foi bagunçada manualmente
+        if col_count < 4:
+            for i in range(col_count, 4): df_admin[i] = ""
+        df_admin = df_admin.iloc[:, :4]
+        df_admin.columns = ["Administradora", "Produto", "Comissão Total (%)", "Regra de Pagamento (Parcelas)"]
+    else: 
+        df_admin = pd.DataFrame(columns=["Administradora", "Produto", "Comissão Total (%)", "Regra de Pagamento (Parcelas)"])
 
     t1, t2, t3 = st.tabs(["📋 Regras", "➕ Nova", "✏️ Editar/Excluir"])
     with t1:
