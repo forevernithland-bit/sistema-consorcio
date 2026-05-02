@@ -32,6 +32,9 @@ if 'key_tabela' not in st.session_state:
 if 'tela_cheia_relatorio' not in st.session_state:
     st.session_state['tela_cheia_relatorio'] = False
 
+# === CORREÇÃO: Definir is_logado AQUI, antes de usar ===
+is_logado = st.session_state['usuario_logado'] is not None
+
 def carregar_ferramenta(nome_arquivo):
     try:
         with open(nome_arquivo, 'r', encoding='utf-8') as f:
@@ -751,8 +754,8 @@ if menu_selecionado == "Dashboard":
                 df_tab['Grupo e Cota'] = df_tab.apply(lambda x: f"{x['GRUPO']}/{x['COTA']}", axis=1)
                 df_tab['Valor Formatado'] = df_tab['Valor_Numerico'].apply(formatar_brl_puro)
                 
-                df_tab = df_tab[['Nome do cliente', 'PRODUTO', 'ADMINISTRADORA', 'Grupo e Cota', 'VENDEDOR', 'Valor Formatado', 'DATA']]
-                df_tab.columns = ['Cliente', 'Produto', 'Administradora', 'Grupo/Cota', 'Vendedor', 'Valor', 'Data da Venda']
+                df_tab = df_tab[['DATA', 'Nome do cliente', 'PRODUTO', 'ADMINISTRADORA', 'Grupo e Cota', 'VENDEDOR', 'Valor Formatado']]
+                df_tab.columns = ['Data da Venda', 'Cliente', 'Produto', 'Administradora', 'Grupo/Cota', 'Vendedor', 'Valor']
                 
                 tabela = st.dataframe(df_tab, on_select="rerun", selection_mode="single-row", use_container_width=True, hide_index=True)
                 
@@ -968,7 +971,7 @@ elif menu_selecionado == "Relatórios":
 
         if df_f.empty: st.warning("Nenhuma venda no período selecionado.")
         else:
-            t1, t2, t3 = st.tabs(["👤 Por Usuário", "🏢 Por Administradora", "💰 Comissionamento (Gerar)"])
+            t1, t2, t3 = st.tabs(["👤 Por Usuário", "🏢 Por Administradora", "💰 Comissionamento"])
             with t1:
                 rv = df_f.groupby('VENDEDOR').agg(Qtde=('Nome do cliente', 'count'), Vol=('Valor_Numerico', 'sum')).reset_index()
                 rv['Vol'] = rv['Vol'].apply(formatar_brl_puro)
