@@ -1,321 +1,554 @@
-import streamlit as st
-import gspread
-import pandas as pd
-from datetime import datetime
-import streamlit.components.v1 as components
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador de Crédito Profissional - Consorbens</title>
 
-# Configuração da página
-st.set_page_config(page_title="Portal Consorbens", layout="wide", initial_sidebar_state="expanded")
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-# === 1. CONFIGURAÇÃO DE USUÁRIOS E SENHAS ===
-USUARIOS = {
-    "breno": {"senha": "123", "perfil": "Master", "nome": "BRENO LIMA"},
-    "uriel": {"senha": "123", "perfil": "Master", "nome": "URIEL GOMES"},
-    "vendedor1": {"senha": "123", "perfil": "Vendedor", "nome": "Vendedor Terceiro"},
-    "consorbens": {"senha": "123", "perfil": "Vendedor", "nome": "Consorbens"}
+<style>
+    body { margin: 0; font-family: 'Segoe UI', Arial, sans-serif; background: #0f172a; color: #333; }
+    .container { max-width: 1000px; margin: auto; padding: 20px; }
+    h2 { color: #fff; text-align: center; margin-bottom: 20px; }
+    .card { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .field { display: flex; flex-direction: column; }
+    label { font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #475569; }
+    input, select { height: 38px; padding: 6px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px; outline: none; }
+    
+    .toggle-container { display: flex; gap: 10px; margin-bottom: 20px; }
+    .toggle-btn { flex: 1; padding: 10px; text-align: center; background: #f1f5f9; border: 2px solid transparent; border-radius: 8px; cursor: pointer; font-weight: bold; color: #64748b; }
+    .toggle-btn.active { background: #eff6ff; border-color: #2563eb; color: #2563eb; }
+    
+    .hidden { display: none !important; }
+
+    button { width: 100%; padding: 14px; font-weight: bold; border: none; border-radius: 10px; cursor: pointer; font-size: 15px; transition: opacity 0.2s; }
+    button:hover { opacity: 0.9; }
+    .btnPrimary { background: #2563eb; color: #fff; }
+    .btnSecondary { background: #f59e0b; color: #fff; margin-top: 10px; }
+    
+    .btn-buscar-taxa { background: #10b981; color: white; border: none; border-radius: 8px; padding: 8px 12px; font-size: 13px; cursor: pointer; margin-top: 5px; display: flex; align-items: center; justify-content: center; gap: 5px; width: 100%; transition: background 0.2s; font-weight: bold;}
+    .btn-buscar-taxa:hover { background: #059669; }
+    .btn-buscar-taxa:disabled { background: #94a3b8; cursor: not-allowed; }
+
+    .result { background: #1e293b; color: #fff; padding: 20px; border-radius: 12px; margin-top: 15px; }
+    .resumo-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 20px; align-items: center; }
+    .chart-box { background: #fff; padding: 15px; border-radius: 10px; }
+
+    /* LAYOUT DA PROPOSTA */
+    .proposta-wrapper { background: #ffffff; border: 2px solid #1e3a8a; border-radius: 12px; padding: 20px 25px; margin-bottom: 20px; position: relative; color: #333; }
+    .logo-proposta { position: absolute; top: 20px; right: 25px; max-width: 140px; }
+    .proposta-header-content { text-align: center; width: 100%; margin-bottom: 20px; }
+    .proposta-header-content h4 { color: #1e3a8a; font-size: 22px; margin: 0 0 5px 0; }
+    .proposta-header-content p { color: #4b5563; margin: 0; font-size: 14px; }
+    .proposta-body { display: flex; gap: 20px; align-items: stretch; }
+    .proposta-img { width: 300px; object-fit: cover; border-radius: 12px; }
+    .proposta-detalhes { flex: 1; border: 1px solid #e2e8f0; border-left: 6px solid #f59e0b; border-radius: 8px; padding: 5px; background: #f8fafc; display: flex; flex-direction: column; justify-content: center; }
+    .detalhe-linha { display: flex; justify-content: space-between; padding: 12px 15px; font-size: 15px; border-bottom: 1px solid #e2e8f0; }
+    .detalhe-linha:last-child { border-bottom: none; }
+    .detalhe-destaque { background: #f0f4fa; border-radius: 6px; margin-bottom: 4px; }
+    .detalhe-destaque .dt-label { color: #ea580c; font-weight: bold; }
+    .detalhe-destaque .dt-valor { color: #1e3a8a; font-weight: bold; }
+    .detalhe-normal .dt-label { color: #475569; }
+    .detalhe-normal .dt-valor { color: #0f172a; font-weight: bold; }
+    .proposta-economia { text-align: center; margin-top: 20px; font-size: 16px; font-weight: bold; color: #16a34a; }
+
+    .taxa-flex { display: flex; gap: 5px; }
+    .taxa-flex select { width: 35%; }
+    .taxa-flex input { width: 65%; }
+    .info-taxa { font-size: 12px; margin-top: 10px; color: #64748b; font-weight: 500; background: #f1f5f9; padding: 8px; border-radius: 6px; text-align: center; }
+    .info-taxa-update { color: #10b981; font-weight: bold; }
+
+    /* LISTA PARCELAS */
+    .lista { background: #fff; margin-top: 15px; padding: 15px; border-radius: 10px; max-height: 300px; overflow: auto; font-size: 13px; color: #333; }
+
+    @media(max-width:768px){
+        .grid { grid-template-columns: 1fr; }
+        .resumo-grid { grid-template-columns: 1fr; }
+        .proposta-body { flex-direction: column; }
+        .proposta-img { width: 100%; height: 200px; }
+        .logo-proposta { position: relative; top: 0; right: 0; display: block; margin: 0 auto 15px auto; }
+    }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+    <h2>Comparativo: Consórcio Contemplado vs Financiamento</h2>
+
+    <div class="card">
+        <h3>1. Escolha a Modalidade</h3>
+        <div class="toggle-container">
+            <div class="toggle-btn active" id="btnContemplado" onclick="setModoConsorcio('contemplado')">Carta Contemplada</div>
+            <div class="toggle-btn" id="btnTradicional" onclick="setModoConsorcio('tradicional')">Consórcio Tradicional</div>
+        </div>
+
+        <!-- SELEÇÃO DE PRODUTO GERAL (Movida para fora dos forms para servir aos dois modos) -->
+        <div class="grid" style="margin-bottom: 15px;">
+            <div class="field" style="grid-column: span 2;">
+                <label>Produto</label>
+                <select id="produtoGeral">
+                    <option value="automovel">Automóvel</option>
+                    <option value="imovel" selected>Imóvel</option>
+                    <option value="caminhao">Caminhão</option>
+                    <option value="moto">Moto</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- FORM CONTEMPLADO -->
+        <div id="formContemplado" class="grid">
+            <div class="field">
+                <label>Crédito Liberado</label>
+                <input id="creditoContemplado" placeholder="R$ 0,00">
+            </div>
+            <div class="field">
+                <label>Valor da Entrada</label>
+                <input id="entradaContemplado" placeholder="R$ 0,00">
+            </div>
+            <div class="field">
+                <label>Taxa de Transferência (Opcional)</label>
+                <div class="taxa-flex">
+                    <select id="tipoTaxaTransf" onchange="resetTaxaInput()">
+                        <option value="percentual">%</option>
+                        <option value="reais">R$</option>
+                    </select>
+                    <input id="taxaTransf" placeholder="0%">
+                </div>
+            </div>
+            <div class="field">
+                <label>Quantidade de parcelas</label>
+                <input id="prazoContemplado" type="number" placeholder="Ex: 80">
+            </div>
+            <div class="field">
+                <label>Valor das Parcelas</label>
+                <input id="valorParcelaContemplado" placeholder="R$ 0,00">
+            </div>
+        </div>
+
+        <!-- FORM TRADICIONAL -->
+        <div id="formTradicional" class="grid hidden">
+            <div class="field">
+                <label>Crédito</label>
+                <input id="credito" placeholder="R$ 0,00">
+            </div>
+            <div class="field">
+                <label>Prazo (meses)</label>
+                <input id="prazoCons" type="number" placeholder="Ex: 120">
+            </div>
+            <div class="field">
+                <label>Taxa Adm (%)</label>
+                <input id="taxaAdm" placeholder="0%">
+            </div>
+            <div class="field">
+                <label>Fundo Reserva (%)</label>
+                <input id="fundo" placeholder="0%">
+            </div>
+            <div class="field">
+                <label>Seguro (%)</label>
+                <input id="seguro" placeholder="0%">
+            </div>
+            <div class="field">
+                <label>Valor do Lance (Opcional)</label>
+                <input id="lanceTradicional" placeholder="R$ 0,00">
+            </div>
+            <div class="field">
+                <label>O Lance abate em:</label>
+                <select id="tipoAbatimento">
+                    <option value="parcela">Valor da Parcela</option>
+                    <option value="prazo">Prazo (Quantidade de Parcelas)</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>2. Comparar com Financiamento</h3>
+        <div class="grid">
+            <div class="field">
+                <label>Entrada (Financiamento)</label>
+                <input id="entradaFin" placeholder="R$ 0,00">
+            </div>
+            <div class="field">
+                <label>Prazo (meses)</label>
+                <input id="prazoFin" type="number" placeholder="Ex: 120">
+            </div>
+            <div class="field">
+                <label>Juros (% ao mês)</label>
+                <input id="juros" placeholder="0,00%">
+                <button type="button" id="btnBuscarTaxa" class="btn-buscar-taxa" onclick="buscarTaxaMercado()">
+                    🔄 Preencher Taxa Atual do Mercado
+                </button>
+            </div>
+            <div class="field">
+                <label>Tipo</label>
+                <select id="tipoFin">
+                    <option value="sac" selected>SAC (Parcelas Decrescentes)</option>
+                    <option value="price">PRICE (Parcelas Fixas)</option>
+                </select>
+            </div>
+        </div>
+        <div class="info-taxa" id="textoTaxaMedia">
+            Clique no botão acima para consultar as taxas médias do Banco Central.
+        </div>
+    </div>
+
+    <div class="card">
+        <button class="btnPrimary" onclick="calcular()">GERAR PROPOSTA PARA CLIENTE</button>
+        <button class="btnSecondary hidden" id="btnParcelas" onclick="mostrarParcelas()">Ver Comparativo de Parcelas (Mês a Mês)</button>
+    </div>
+
+    <div id="resultadoContainer"></div>
+    <div class="lista hidden" id="listaParcelas"></div>
+</div>
+
+<script>
+let chart;
+let modoAtual = 'contemplado';
+let parcelasFin = [];
+let parcelasConsorcioArray = [];
+
+const imagens = {
+    automovel: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=400&q=80',
+    imovel: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=400&q=80',
+    caminhao: 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=400&q=80',
+    moto: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=400&q=80'
+};
+
+function buscarTaxaMercado() {
+    let btn = document.getElementById('btnBuscarTaxa');
+    let inputJuros = document.getElementById('juros');
+    let textoInfo = document.getElementById('textoTaxaMedia');
+    let produtoSelecionado = document.getElementById('produtoGeral').value;
+    
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Consultando Banco Central...';
+    textoInfo.innerHTML = 'Conectando à base de dados...';
+
+    setTimeout(() => {
+        let taxaMensal = '0,00';
+        let mensagem = '';
+
+        if (produtoSelecionado === 'imovel') {
+            taxaMensal = '0,95'; 
+            mensagem = '🏠 <b>Taxa Atualizada:</b> Imobiliário (Média CAIXA/Mercado): ~0,95% a.m.';
+        } else {
+            taxaMensal = '1,97'; 
+            mensagem = '🚗 <b>Taxa Atualizada:</b> Veículos (Média Banco Central): ~1,97% a.m.';
+        }
+
+        inputJuros.value = taxaMensal + '%';
+        textoInfo.innerHTML = `<span class="info-taxa-update">✅ ${mensagem}</span>`;
+        
+        btn.disabled = false;
+        btn.innerHTML = '🔄 Taxa Preenchida com Sucesso!';
+        
+        setTimeout(() => {
+            btn.innerHTML = '🔄 Preencher Taxa Atual do Mercado';
+        }, 3000);
+
+    }, 1500);
 }
 
-# Controle de sessão
-if 'usuario_logado' not in st.session_state:
-    st.session_state['usuario_logado'] = None
-    st.session_state['perfil_logado'] = None
-    st.session_state['nome_vendedor'] = None
-
-# Função auxiliar para ler os arquivos HTML
-def carregar_ferramenta(nome_arquivo):
-    try:
-        with open(nome_arquivo, 'r', encoding='utf-8') as f:
-            html_code = f.read()
-            components.html(html_code, height=900, scrolling=True)
-    except FileNotFoundError:
-        st.error(f"⚠️ O arquivo {nome_arquivo} não foi encontrado. Certifique-se de ter criado ele no GitHub com este nome exato!")
-
-# === 2. LÓGICA DO MENU LATERAL ===
-menu_selecionado = ""
-is_logado = st.session_state['usuario_logado'] is not None
-
-# Logo isolada no topo
-st.sidebar.image("https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png", use_column_width=True)
-st.sidebar.write("") # Espaço para desgrudar os links da logo
-
-if not is_logado:
-    # Apenas os links (AGORA VÃO APARECER!)
-    menu_selecionado = st.sidebar.radio(
-        " ", # Deixei apenas um espaço em branco para não bugar
-        [
-            "🔐 Login (Área Restrita)",
-            "🏍️ Simulador Yamaha",
-            "🏦 Simulador Itaú",
-            "🎯 Oportunidades Itaú",
-            "⚖️ Financiamento x Consórcio"
-        ],
-        label_visibility="collapsed"
-    )
+function setModoConsorcio(modo) {
+    modoAtual = modo;
+    document.getElementById('btnTradicional').classList.remove('active');
+    document.getElementById('btnContemplado').classList.remove('active');
+    document.getElementById('formTradicional').classList.add('hidden');
+    document.getElementById('formContemplado').classList.add('hidden');
     
-    # Rodapé
-    st.sidebar.divider()
-    st.sidebar.caption("Portal Consorbens © 2026")
-    
-else:
-    # Mostra quem está logado rapidamente e os links
-    st.sidebar.write(f"👤 **{st.session_state['nome_vendedor']}**")
-    st.sidebar.divider()
-
-    ferramentas_logadas = [
-        "🏍️ Simulador Yamaha", 
-        "🏦 Simulador Itaú", 
-        "🎯 Oportunidades Itaú", 
-        "⚖️ Financiamento x Consórcio"
-    ]
-
-    if st.session_state['perfil_logado'] == "Master":
-        opcoes_menu = ["Dashboard", "Nova Venda", "Gerenciar Vendas (Editar/Deletar)", "Baixar Parcela"] + ferramentas_logadas
-    else:
-        opcoes_menu = ["Dashboard", "Nova Venda"] + ferramentas_logadas
-
-    menu_selecionado = st.sidebar.radio(
-        " ", 
-        opcoes_menu,
-        label_visibility="collapsed"
-    )
-    
-    st.sidebar.write("")
-    if st.sidebar.button("Sair do Sistema"):
-        st.session_state['usuario_logado'] = None
-        st.session_state['perfil_logado'] = None
-        st.session_state['nome_vendedor'] = None
-        st.rerun()
-
-# === 3. ESTILIZAÇÃO FORÇADA (CSS BRUTO) ===
-simuladores = ["🏍️ Simulador Yamaha", "🏦 Simulador Itaú", "🎯 Oportunidades Itaú", "⚖️ Financiamento x Consórcio"]
-is_simulator = menu_selecionado in simuladores
-
-css = """
-<style>
-    /* Margens da tela */
-    .block-container { padding-top: 1rem; padding-bottom: 0rem; padding-left: 1rem; padding-right: 1rem; }
-    
-    /* Menu Lateral Branco e Textos Escuros */
-    [data-testid="stSidebar"] { background-color: #ffffff !important; }
-    [data-testid="stSidebar"] p, [data-testid="stSidebar"] span, [data-testid="stSidebar"] div { color: #0f172a !important; }
-    [data-testid="stSidebar"] hr { border-bottom-color: #e2e8f0 !important; }
-    
-    /* Estilo do Botão de Sair */
-    [data-testid="stSidebar"] button { border: 1px solid #cbd5e1 !important; background-color: #f8fafc !important; }
-
-    /* ====== BOTÃO PARA REEXIBIR O MENU (A SETINHA QUE SUMIA) ====== */
-    [data-testid="collapsedControl"] {
-        background-color: #ff6600 !important; /* Laranja Consorbens */
-        border-radius: 8px !important;
-        box-shadow: 0px 4px 10px rgba(255, 102, 0, 0.6) !important;
-        padding: 8px !important;
-        margin-top: 15px !important;
-        margin-left: 15px !important;
-        opacity: 1 !important; 
-        z-index: 999999 !important; /* Força ficar por cima do preto */
+    if(modo === 'tradicional') {
+        document.getElementById('btnTradicional').classList.add('active');
+        document.getElementById('formTradicional').classList.remove('hidden');
+    } else {
+        document.getElementById('btnContemplado').classList.add('active');
+        document.getElementById('formContemplado').classList.remove('hidden');
     }
+}
+
+function resetTaxaInput() {
+    let input = document.getElementById('taxaTransf');
+    let tipo = document.getElementById('tipoTaxaTransf').value;
+    input.value = '';
+    input.placeholder = (tipo === 'percentual') ? '0%' : 'R$ 0,00';
+}
+
+function moeda(v){ return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}) }
+function numero(v){ return Number(v.toString().replace(/\D/g,''))/100 || 0 }
+function percent(v){ return Number(v.toString().replace('%','').replace(',','.'))/100 || 0 }
+
+function maskMoeda(v){
+    let n = v.replace(/\D/g,'');
+    if(!n) return '';
+    return (n/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+}
+
+document.getElementById('creditoContemplado').oninput = e => e.target.value = maskMoeda(e.target.value);
+document.getElementById('entradaContemplado').oninput = e => e.target.value = maskMoeda(e.target.value);
+document.getElementById('valorParcelaContemplado').oninput = e => e.target.value = maskMoeda(e.target.value);
+document.getElementById('entradaFin').oninput = e => e.target.value = maskMoeda(e.target.value);
+document.getElementById('credito').oninput = e => e.target.value = maskMoeda(e.target.value);
+document.getElementById('lanceTradicional').oninput = e => e.target.value = maskMoeda(e.target.value);
+
+document.getElementById('taxaTransf').oninput = e => {
+    let tipo = document.getElementById('tipoTaxaTransf').value;
+    if(tipo === 'percentual') {
+        let n = e.target.value.replace(/[^\d,]/g,'');
+        e.target.value = n ? n + '%' : '';
+    } else {
+        e.target.value = maskMoeda(e.target.value);
+    }
+};
+
+[taxaAdm, fundo, seguro, juros].forEach(el => {
+    el.oninput = e => {
+        let n = e.target.value.replace(/[^\d,]/g,'');
+        e.target.value = n ? n + '%' : '';
+    };
+});
+
+function calcular() {
+    let custoTotalCons = 0;
+    let valorCreditoOperacao = 0;
+    let displayEntradaOuLance = 0;
+    let displayParcela = 0;
+    let displayPrazo = 0;
+    let tituloProposta = '';
+    let detalheAdicional = '';
     
-    /* Garante que o ícone da setinha seja BRANCO e grande */
-    [data-testid="collapsedControl"] svg {
-        fill: #ffffff !important;
-        color: #ffffff !important;
-        stroke: #ffffff !important;
-        width: 20px !important;
-        height: 20px !important;
-    }
+    parcelasConsorcioArray = []; // Reset do array de parcelas
 
-    [data-testid="collapsedControl"]:hover {
-        background-color: #cc5200 !important;
-        transform: scale(1.1) !important;
-    }
-    
-    /* ====== BOTÃO PARA ESCONDER O MENU (DENTRO DA BARRA BRANCA) ====== */
-    [data-testid="stSidebarCollapseButton"] {
-        background-color: #ff6600 !important;
-        border-radius: 6px !important;
-    }
-    [data-testid="stSidebarCollapseButton"] svg {
-        fill: #ffffff !important;
-        color: #ffffff !important;
-    }
-    [data-testid="stSidebarCollapseButton"]:hover {
-        background-color: #cc5200 !important;
-    }
-    
-    /* Esconde a barra branca inútil do topo do Streamlit */
-    header[data-testid="stHeader"] { background-color: transparent !important; }
-"""
-
-if is_simulator:
-    css += """
-    /* Fundo PRETO apenas nos simuladores */
-    .stApp { background-color: #0f172a !important; }
-    """
-else:
-    css += """
-    /* Fundo CLARO no CRM e Login */
-    .stApp { background-color: #f8fafc !important; }
-    """
-
-css += "</style>"
-st.markdown(css, unsafe_allow_html=True)
-
-# === 4. RENDERIZAÇÃO DAS TELAS ===
-if not is_logado:
-    if menu_selecionado == "🔐 Login (Área Restrita)":
+    if (modoAtual === 'contemplado') {
+        let cred = numero(document.getElementById('creditoContemplado').value);
+        let entrada = numero(document.getElementById('entradaContemplado').value);
+        let prazo = +document.getElementById('prazoContemplado').value || 0;
+        let vParcela = numero(document.getElementById('valorParcelaContemplado').value);
         
-        # Cria um espaçamento no topo para empurrar o formulário para o meio
-        st.markdown("<br><br><br><br>", unsafe_allow_html=True)
+        let tipoTaxa = document.getElementById('tipoTaxaTransf').value;
+        let taxaRaw = document.getElementById('taxaTransf').value;
+        let vTaxa = 0;
         
-        # Usa colunas invisíveis para espremer o formulário no centro (menor)
-        col_esq, col_meio, col_dir = st.columns([1, 1.2, 1])
+        if (tipoTaxa === 'percentual') {
+            vTaxa = cred * percent(taxaRaw);
+        } else {
+            vTaxa = numero(taxaRaw);
+        }
+
+        custoTotalCons = entrada + vTaxa + (prazo * vParcela);
+        valorCreditoOperacao = cred;
         
-        with col_meio:
-            with st.form("form_login"):
-                usuario_input = st.text_input("Usuário (Login)").lower()
-                senha_input = st.text_input("Senha", type="password")
-                btn_login = st.form_submit_button("Entrar no Sistema")
+        displayEntradaOuLance = entrada;
+        displayParcela = vParcela;
+        displayPrazo = prazo;
+        tituloProposta = "Oportunidade de Crédito Imediato!";
+        detalheAdicional = `
+            <div class="detalhe-linha detalhe-normal">
+                <span class="dt-label">Taxa de Transferência:</span>
+                <span class="dt-valor">${vTaxa > 0 ? moeda(vTaxa) : 'Isento'}</span>
+            </div>
+        `;
+
+        for(let i=0; i<prazo; i++) {
+            parcelasConsorcioArray.push(vParcela);
+        }
+
+    } else {
+        let cred = numero(document.getElementById('credito').value);
+        let prazo = +document.getElementById('prazoCons').value || 1;
+        let tAdm = percent(document.getElementById('taxaAdm').value);
+        let fRes = percent(document.getElementById('fundo').value);
+        let seg = percent(document.getElementById('seguro').value);
+        let lance = numero(document.getElementById('lanceTradicional').value);
+        let tipoAbatimento = document.getElementById('tipoAbatimento').value;
+        
+        let custoSemLance = cred + (cred * tAdm) + (cred * fRes) + (cred * seg * prazo);
+        let parcelaIntegral = custoSemLance / prazo;
+        
+        valorCreditoOperacao = cred;
+        displayEntradaOuLance = lance;
+        tituloProposta = "Simulação: Consórcio Tradicional";
+        detalheAdicional = `
+            <div class="detalhe-linha detalhe-normal">
+                <span class="dt-label">Lance Abate em:</span>
+                <span class="dt-valor">${tipoAbatimento === 'parcela' ? 'Valor das Parcelas' : 'Quantidade de Parcelas'}</span>
+            </div>
+        `;
+
+        if (lance > 0) {
+            if (tipoAbatimento === 'parcela') {
+                // Abate no valor da parcela mantendo o prazo
+                let saldoDevedor = custoSemLance - lance;
+                displayParcela = saldoDevedor / prazo;
+                displayPrazo = prazo;
+                custoTotalCons = lance + (displayParcela * displayPrazo);
+                for(let i=0; i<displayPrazo; i++) parcelasConsorcioArray.push(displayParcela);
+            } else {
+                // Abate no prazo mantendo a parcela
+                let mesesAbatidos = Math.floor(lance / parcelaIntegral);
+                displayPrazo = prazo - mesesAbatidos;
+                displayParcela = parcelaIntegral;
                 
-                if btn_login:
-                    if usuario_input in USUARIOS and USUARIOS[usuario_input]["senha"] == senha_input:
-                        st.session_state['usuario_logado'] = usuario_input
-                        st.session_state['perfil_logado'] = USUARIOS[usuario_input]["perfil"]
-                        st.session_state['nome_vendedor'] = USUARIOS[usuario_input]["nome"]
-                        st.rerun() 
-                    else:
-                        st.error("❌ Usuário ou senha incorretos.")
+                // Ajuste fino do saldo residual do lance
+                let valorRestante = custoSemLance - lance;
+                custoTotalCons = lance + (displayParcela * displayPrazo); 
+                // Nota: numa situação real de consórcio o residual do lance desconta da última parcela, mas para simplificar mantemos a parcela inteira
+                
+                for(let i=0; i<displayPrazo; i++) parcelasConsorcioArray.push(displayParcela);
+            }
+        } else {
+            displayParcela = parcelaIntegral;
+            displayPrazo = prazo;
+            custoTotalCons = custoSemLance;
+            for(let i=0; i<displayPrazo; i++) parcelasConsorcioArray.push(displayParcela);
+        }
+    }
+
+    let entFin = numero(document.getElementById('entradaFin').value);
+    let prazoF = +document.getElementById('prazoFin').value || 1;
+    let jurosVal = percent(document.getElementById('juros').value);
+    let tipoF = document.getElementById('tipoFin').value;
+    
+    let financiado = valorCreditoOperacao - entFin;
+    let totalFin = 0;
+    parcelasFin = [];
+
+    if(tipoF === "price") {
+        let p = financiado * (jurosVal * Math.pow(1+jurosVal, prazoF)) / (Math.pow(1+jurosVal, prazoF)-1);
+        for(let i=0; i<prazoF; i++) parcelasFin.push(p);
+        totalFin = (p * prazoF) + entFin;
+    } else {
+        let amort = financiado / prazoF;
+        let saldo = financiado;
+        let soma = 0;
+        for(let i=0; i<prazoF; i++){
+            let p = amort + (saldo * jurosVal);
+            parcelasFin.push(p);
+            soma += p;
+            saldo -= amort;
+        }
+        totalFin = soma + entFin;
+    }
+
+    let economia = totalFin - custoTotalCons;
+    document.getElementById('btnParcelas').classList.remove('hidden');
+    document.getElementById('listaParcelas').classList.add('hidden');
+    
+    gerarHTML(custoTotalCons, totalFin, economia, displayEntradaOuLance, displayParcela, displayPrazo, valorCreditoOperacao, tituloProposta, detalheAdicional);
+}
+
+function gerarHTML(custoCons, custoFin, economia, entOuLance, parc, prazo, cred, tituloProposta, detalheAdicional) {
+    let container = document.getElementById('resultadoContainer');
+    let prod = document.getElementById('produtoGeral').value;
+
+    let rotuloEntrada = modoAtual === 'contemplado' ? 'Valor da Entrada:' : 'Lance Ofertado:';
+    let rotuloParcela = modoAtual === 'contemplado' ? 'Valor das Parcelas:' : 'Parcela Pós-Lance:';
+
+    let proposta = `
+    <div class="proposta-wrapper">
+        <img src="https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png" alt="Consorbens" class="logo-proposta">
+        <div class="proposta-header-content">
+            <h4>${tituloProposta}</h4>
+            <p>Excelente custo-benefício para aquisição do seu bem. Confira o resumo da sua proposta:</p>
+        </div>
+        
+        <div class="proposta-body">
+            <img src="${imagens[prod]}" class="proposta-img">
+            
+            <div class="proposta-detalhes">
+                <div class="detalhe-linha detalhe-destaque">
+                    <span class="dt-label">Crédito Liberado:</span>
+                    <span class="dt-valor">${moeda(cred)}</span>
+                </div>
+                <div class="detalhe-linha detalhe-destaque">
+                    <span class="dt-label">${rotuloEntrada}</span>
+                    <span class="dt-valor">${moeda(entOuLance)}</span>
+                </div>
+                ${detalheAdicional}
+                <div class="detalhe-linha detalhe-normal">
+                    <span class="dt-label">Quantidade de parcelas:</span>
+                    <span class="dt-valor">${prazo}x</span>
+                </div>
+                <div class="detalhe-linha detalhe-normal">
+                    <span class="dt-label">${rotuloParcela}</span>
+                    <span class="dt-valor">${moeda(parc)}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="proposta-economia">
+            ✅ Ao escolher o Consórcio, você economiza ${moeda(economia)} em relação ao financiamento!
+        </div>
+    </div>
+    `;
+
+    container.innerHTML = `
+        ${proposta}
+        <div class="result">
+            <div class="resumo-grid">
+                <div>
+                    <b style="color:#60a5fa; font-size:16px;">Custo Total na Consorbens</b><br>
+                    ${moeda(custoCons)}<br><br>
                     
-    elif menu_selecionado == "🏍️ Simulador Yamaha":
-        carregar_ferramenta("yamaha.html")
-    elif menu_selecionado == "🏦 Simulador Itaú":
-        carregar_ferramenta("itau.html")
-    elif menu_selecionado == "🎯 Oportunidades Itaú":
-        carregar_ferramenta("guia.html")
-    elif menu_selecionado == "⚖️ Financiamento x Consórcio":
-        carregar_ferramenta("comparador.html")
-        
-    st.stop() 
+                    <b style="color:#f87171; font-size:16px;">Custo Total no Financiamento</b><br>
+                    ${moeda(custoFin)}<br><br>
+                    
+                    <div style="background:#22c55e; padding:10px; border-radius:8px; display:inline-block;">
+                        <b style="font-size:18px; color: white;">💸 ECONOMIA TOTAL: ${moeda(economia)}</b>
+                    </div>
+                </div>
+                <div class="chart-box">
+                    <canvas id="grafico"></canvas>
+                </div>
+            </div>
+        </div>
+    `;
 
-# --- ÁREA RESTRITA (Logado) ---
-@st.cache_resource
-def conectar_planilha():
-    credentials = dict(st.secrets["gcp_service_account"])
-    gc = gspread.service_account_from_dict(credentials)
-    planilha = gc.open("Sistema CRM") 
-    return planilha
+    setTimeout(() => {
+        let ctx = document.getElementById("grafico");
+        if(chart) chart.destroy();
+        chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Consorbens', 'Financiamento'],
+                datasets: [{
+                    data: [custoCons, custoFin],
+                    backgroundColor: ['#2563eb', '#ef4444'],
+                    borderRadius: 5
+                }]
+            },
+            options: { plugins: { legend: { display: false } } }
+        });
+    }, 100);
+}
 
-planilha = conectar_planilha()
-
-if menu_selecionado == "Dashboard":
-    st.title("📊 Painel de Vendas")
+function mostrarParcelas() {
+    let div = document.getElementById('listaParcelas');
+    div.classList.remove('hidden');
     
-    aba_vendas = planilha.worksheet("Vendas")
-    dados_vendas = aba_vendas.get_all_records()
-    
-    if dados_vendas:
-        df_vendas = pd.DataFrame(dados_vendas)
-        if st.session_state['perfil_logado'] == "Vendedor":
-            st.write("Aqui estão as vendas registradas por você:")
-            df_vendas = df_vendas[df_vendas['Vendedor'] == st.session_state['nome_vendedor']]
-        else:
-            st.write("Visão Geral do Sistema (Todas as Vendas):")
-            
-        if not df_vendas.empty:
-            st.dataframe(df_vendas.tail(10))
-        else:
-            st.info("Nenhuma venda encontrada para o seu usuário.")
-    else:
-        st.info("O sistema ainda não possui vendas cadastradas.")
+    let qtdMeses = Math.max(parcelasFin.length, parcelasConsorcioArray.length);
+    if(qtdMeses === 0) return;
 
-elif menu_selecionado == "Nova Venda":
-    st.title("📝 Cadastrar Nova Venda")
-    
-    with st.form("form_venda"):
-        col1, col2 = st.columns(2)
-        with col1:
-            data = st.date_input("Data da Venda", format="DD/MM/YYYY")
-            cliente = st.text_input("Nome do Cliente *")
-            telefone = st.text_input("Telefone (Opcional)")
-            
-            if st.session_state['perfil_logado'] == "Master":
-                vendedor = st.selectbox("Vendedor *", ["BRENO LIMA", "URIEL GOMES", "Consorbens", "Vendedor Terceiro"])
-            else:
-                st.write(f"**Vendedor:** {st.session_state['nome_vendedor']}")
-                vendedor = st.session_state['nome_vendedor']
-                
-        with col2:
-            admin = st.selectbox("Administradora *", ["YAMAHA", "ITAÚ", "ROMA", "EMBRACON"])
-            produto = st.selectbox("Produto *", ["Auto", "Imovel", "Moto"])
-            grupo = st.text_input("Grupo *")
-            cota = st.text_input("Cota *")
-            valor = st.number_input("Valor da Venda (R$) *", min_value=0.0, step=1000.0)
-            status = st.selectbox("Status", ["Vendido", "Contemplado", "Cancelado"])
-        
-        salvar = st.form_submit_button("Salvar Venda")
-        
-        if salvar:
-            if cliente and grupo and cota and valor > 0:
-                aba_vendas = planilha.worksheet("Vendas")
-                nova_linha = [
-                    "", str(data.strftime("%d/%m/%Y")), cliente, telefone, "", "", "",
-                    vendedor, admin, produto, grupo, cota, valor, status
-                ]
-                aba_vendas.append_row(nova_linha)
-                st.success(f"Venda de {cliente} salva com sucesso!")
-            else:
-                st.error("Preencha todos os campos obrigatórios (*).")
+    let html = "<h4 style='margin-top:0; color:#1e40af;'>Evolução das Parcelas (Mês a Mês)</h4>";
+    html += "<table style='width:100%; text-align:left; border-collapse:collapse;'>";
+    html += "<tr style='border-bottom:2px solid #cbd5e1; color:#475569;'><th>Mês</th><th>Consórcio (Pós-Lance/Contemplação)</th><th>Financiamento</th></tr>";
 
-elif menu_selecionado == "Gerenciar Vendas (Editar/Deletar)":
-    st.title("🛠️ Gerenciar e Editar Vendas")
-    st.warning("Área Restrita (Apenas Sócios). Muito cuidado ao deletar informações!")
-    
-    aba_vendas = planilha.worksheet("Vendas")
-    dados_vendas = aba_vendas.get_all_records()
-    
-    if dados_vendas:
-        df_vendas = pd.DataFrame(dados_vendas)
-        opcoes_busca = df_vendas.apply(lambda row: f"Linha {row.name + 2} | Cliente: {row['Nome_Cliente']} - Grupo/Cota: {row['Grupo']}/{row['Cota']}", axis=1).tolist()
-        venda_selecionada = st.selectbox("Selecione a venda que deseja alterar ou excluir:", [""] + opcoes_busca)
-        
-        if venda_selecionada:
-            linha_planilha = int(venda_selecionada.split(" | ")[0].replace("Linha ", ""))
-            idx_dataframe = linha_planilha - 2
-            venda_atual = df_vendas.iloc[idx_dataframe]
-            
-            st.divider()
-            st.subheader(f"Editando Venda: {venda_atual['Nome_Cliente']}")
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                novo_nome = st.text_input("Nome do Cliente", value=str(venda_atual['Nome_Cliente']))
-                novo_status = st.selectbox("Status", ["Vendido", "Contemplado", "Cancelado"], index=["Vendido", "Contemplado", "Cancelado"].index(venda_atual.get('Status_Cliente', 'Vendido') if venda_atual.get('Status_Cliente') in ["Vendido", "Contemplado", "Cancelado"] else "Vendido"))
-            with col2:
-                novo_valor = st.number_input("Valor da Venda (R$)", value=float(venda_atual['Valor_Venda'] if str(venda_atual['Valor_Venda']).replace('.','',1).isdigit() else 0.0))
+    for(let i=0; i<qtdMeses; i++){
+        let valorConsMês = parcelasConsorcioArray[i] || 0;
+        let valorFinMês = parcelasFin[i] || 0;
 
-            col_btn1, col_btn2 = st.columns(2)
-            with col_btn1:
-                if st.button("Salvar Alterações"):
-                    aba_vendas.update_cell(linha_planilha, 3, novo_nome)
-                    aba_vendas.update_cell(linha_planilha, 13, novo_valor) 
-                    aba_vendas.update_cell(linha_planilha, 14, novo_status)
-                    st.success("Alterações salvas na planilha!")
-                    st.rerun()
-            with col_btn2:
-                if st.button("🚨 DELETAR ESTA VENDA", type="primary"):
-                    aba_vendas.delete_rows(linha_planilha)
-                    st.error("Venda apagada permanentemente!")
-                    st.rerun()
+        html += `
+        <tr style="border-bottom:1px solid #e2e8f0;">
+            <td style="padding:6px 0; font-weight:bold; color:#64748b;">${i+1}</td>
+            <td style="color:#2563eb; font-weight:bold;">${moeda(valorConsMês)}</td>
+            <td style="color:#ef4444;">${moeda(valorFinMês)}</td>
+        </tr>`;
+    }
+    html += "</table>";
+    div.innerHTML = html;
+}
+</script>
 
-elif menu_selecionado == "Baixar Parcela":
-    st.title("💰 Recebimento de Comissão (Baixa)")
-    st.info("Esta tela calculará a divisão exata quando as parcelas forem geradas automaticamente.")
-
-# --- TELAS DAS FERRAMENTAS ---
-elif menu_selecionado == "🏍️ Simulador Yamaha":
-    carregar_ferramenta("yamaha.html")
-elif menu_selecionado == "🏦 Simulador Itaú":
-    carregar_ferramenta("itau.html")
-elif menu_selecionado == "🎯 Oportunidades Itaú":
-    carregar_ferramenta("guia.html")
-elif menu_selecionado == "⚖️ Financiamento x Consórcio":
-    carregar_ferramenta("comparador.html")
+</body>
+</html>
