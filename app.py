@@ -77,7 +77,7 @@ def normalizar_produto(p):
     if p in ["IMOVEL", "IMOVEIS"]: return "IMOVEL"
     if p in ["MOTO", "MOTOS", "MOTOCICLETA"]: return "MOTO"
     if p in ["CAMINHAO", "CAMINHOES"]: return "CAMINHAO"
-    if p in ["SERVICO", "SERVICOS"]: return "SERVICOS"
+    if p in ["SERVICO", "SERVICOS"]: return "SERVICO"
     return p
 
 def obter_index_produto(p_str):
@@ -113,8 +113,6 @@ def carregar_df_admin_seguro(aba):
 def mascara_tel_nv(): st.session_state['tel_nv'] = formatar_telefone(st.session_state.get('tel_nv', ''))
 def mascara_aniv_nv(): st.session_state['aniv_nv'] = formatar_data(st.session_state.get('aniv_nv', ''))
 def mascara_renda_nv(): st.session_state['renda_nv'] = formatar_moeda(st.session_state.get('renda_nv', ''))
-def mascara_t1_max(): st.session_state['t1_max_in'] = formatar_moeda(st.session_state.get('t1_max_in', ''))
-def mascara_t2_max(): st.session_state['t2_max_in'] = formatar_moeda(st.session_state.get('t2_max_in', ''))
 
 # === MOTOR DE CÁLCULO DE COMISSÃO ===
 def calcular_comissao_vendedor(df_vendas_global, vendedor_nome, data_venda_dt, cfg):
@@ -230,73 +228,85 @@ else: css += """ <style>.stApp { background-color: #ffffff !important; }</style>
 
 st.markdown(css, unsafe_allow_html=True)
 
-# === 4. CONEXÃO PLANILHA E CONFIGURAÇÕES ===
+# === 4. CONEXÃO PLANILHA E CONFIGURAÇÕES OTIMIZADA ===
 @st.cache_resource
 def conectar_planilha():
     credentials = dict(st.secrets["gcp_service_account"])
     gc = gspread.service_account_from_dict(credentials)
     return gc.open("Sistema CRM")
 
-planilha = conectar_planilha()
-aba_vendas = planilha.worksheet("Vendas")
-try: aba_clientes = planilha.worksheet("Clientes")
-except: 
-    aba_clientes = planilha.add_worksheet("Clientes", 1000, 10)
-    aba_clientes.append_row(["Nome", "Telefone", "Email", "Endereco", "Aniversario", "Profissao", "Renda", "Data_Cadastro"])
-
-# Banco de Dados Master das Administradoras
-try: 
-    aba_admin_cad = planilha.worksheet("Cad_Administradoras")
-except: 
-    aba_admin_cad = planilha.add_worksheet("Cad_Administradoras", 100, 3)
-    aba_admin_cad.append_row(["Administradora", "CNPJ", "Endereço"])
-
-try: 
-    aba_admin = planilha.worksheet("Administradoras")
-except: 
-    aba_admin = planilha.add_worksheet("Administradoras", 100, 27)
-    cabecalho_admin = ["Administradora", "Produto"] + [f"P{i}" for i in range(1, 26)]
-    aba_admin.append_row(cabecalho_admin)
-
-cols_cfg = ["Breno_Breno", "Breno_Uriel", "Uriel_Uriel", "Uriel_Breno", "Cons_Breno", "Cons_Uriel", "T1_Max", "T1_Pct", "T1_Parc", "T2_Max", "T2_Pct", "T2_Parc", "T3_Pct", "T3_Parc"]
 try:
-    aba_cfg = planilha.worksheet("Config_Interna")
-    cfg_data = aba_cfg.get_all_values()
-    if len(cfg_data) < 2:
-        aba_cfg.clear()
+    planilha = conectar_planilha()
+    
+    # 1. Pega todas as abas de uma vez só (1 requisição)
+    todas_abas = [aba.title for aba in planilha.worksheets()]
+    
+    # 2. Cria as abas faltantes somente se necessário
+    if "Vendas" not in todas_abas:
+        planilha.add_worksheet("Vendas", 1000, 10)
+    aba_vendas = planilha.worksheet("Vendas")
+
+    if "Clientes" not in todas_abas:
+        aba_clientes = planilha.add_worksheet("Clientes", 1000, 10)
+        aba_clientes.append_row(["Nome", "Telefone", "Email", "Endereco", "Aniversario", "Profissao", "Renda", "Data_Cadastro"])
+    else:
+        aba_clientes = planilha.worksheet("Clientes")
+
+    if "Cad_Administradoras" not in todas_abas:
+        aba_admin_cad = planilha.add_worksheet("Cad_Administradoras", 100, 3)
+        aba_admin_cad.append_row(["Administradora", "CNPJ", "Endereço"])
+    else:
+        aba_admin_cad = planilha.worksheet("Cad_Administradoras")
+
+    if "Administradoras" not in todas_abas:
+        aba_admin = planilha.add_worksheet("Administradoras", 100, 27)
+        cabecalho_admin = ["Administradora", "Produto"] + [f"P{i}" for i in range(1, 26)]
+        aba_admin.append_row(cabecalho_admin)
+    else:
+        aba_admin = planilha.worksheet("Administradoras")
+
+    cols_cfg = ["Breno_Breno", "Breno_Uriel", "Uriel_Uriel", "Uriel_Breno", "Cons_Breno", "Cons_Uriel", "T1_Max", "T1_Pct", "T1_Parc", "T2_Max", "T2_Pct", "T2_Parc", "T3_Pct", "T3_Parc"]
+    if "Config_Interna" not in todas_abas:
+        aba_cfg = planilha.add_worksheet("Config_Interna", 10, 20)
         vals_cfg = [70, 30, 70, 30, 50, 50, 500000, 1.0, 4, 1500000, 1.5, 5, 2.0, 5]
         aba_cfg.append_row(cols_cfg)
         aba_cfg.append_row(vals_cfg)
         cfg_data = [cols_cfg, vals_cfg]
-except:
-    aba_cfg = planilha.add_worksheet("Config_Interna", 10, 20)
-    vals_cfg = [70, 30, 70, 30, 50, 50, 500000, 1.0, 4, 1500000, 1.5, 5, 2.0, 5]
-    aba_cfg.append_row(cols_cfg)
-    aba_cfg.append_row(vals_cfg)
-    cfg_data = [cols_cfg, vals_cfg]
+    else:
+        aba_cfg = planilha.worksheet("Config_Interna")
+        cfg_data = aba_cfg.get_all_values()
+        if len(cfg_data) < 2:
+            aba_cfg.clear()
+            vals_cfg = [70, 30, 70, 30, 50, 50, 500000, 1.0, 4, 1500000, 1.5, 5, 2.0, 5]
+            aba_cfg.append_row(cols_cfg)
+            aba_cfg.append_row(vals_cfg)
+            cfg_data = [cols_cfg, vals_cfg]
 
-cfg = {k: parse_float_safe(v) for k, v in zip(cfg_data[0], cfg_data[1])}
+    cfg = {k: parse_float_safe(v) for k, v in zip(cfg_data[0], cfg_data[1])}
 
-# Lista atualizada de Administradoras cadastradas
-lista_admin_bd = aba_admin_cad.col_values(1)[1:]
-if not lista_admin_bd: lista_admin_bd = ["Nenhuma administradora cadastrada"]
+    # Carrega Base de Vendas Global apenas quando logado e em telas que precisam
+    if is_logado and menu_selecionado in ["Dashboard", "Relatórios"]:
+        dados_brutos = aba_vendas.get_all_values()
+        if len(dados_brutos) > 1:
+            df_vendas_global = pd.DataFrame(dados_brutos[1:]).iloc[:, :10]
+            df_vendas_global.columns = ["ID_cliente", "Nome do cliente", "DATA", "PRODUTO", "VENDEDOR", "GRUPO", "COTA", "ADMINISTRADORA", "STATUS", "VALOR"]
+            df_vendas_global['Data_Real'] = pd.to_datetime(df_vendas_global['DATA'], format="%d/%m/%Y", errors='coerce')
+            df_vendas_global['Valor_Numerico'] = df_vendas_global['VALOR'].astype(str).str.replace('R$', '', regex=False).str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.strip().apply(pd.to_numeric, errors='coerce').fillna(0.0)
+        else:
+            df_vendas_global = pd.DataFrame()
+    else:
+        df_vendas_global = pd.DataFrame()
 
-# Carrega Base de Vendas Global
-dados_brutos = aba_vendas.get_all_values()
-if len(dados_brutos) > 1:
-    df_vendas_global = pd.DataFrame(dados_brutos[1:]).iloc[:, :10]
-    df_vendas_global.columns = ["ID_cliente", "Nome do cliente", "DATA", "PRODUTO", "VENDEDOR", "GRUPO", "COTA", "ADMINISTRADORA", "STATUS", "VALOR"]
-    df_vendas_global['Data_Real'] = pd.to_datetime(df_vendas_global['DATA'], format="%d/%m/%Y", errors='coerce')
-    df_vendas_global['Valor_Numerico'] = df_vendas_global['VALOR'].astype(str).str.replace('R$', '', regex=False).str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.strip().apply(pd.to_numeric, errors='coerce').fillna(0.0)
-else:
-    df_vendas_global = pd.DataFrame()
+except gspread.exceptions.APIError as e:
+    st.error("⚠️ O Google Sheets limitou o acesso temporariamente por excesso de requisições. Por favor, aguarde cerca de 1 minuto e recarregue a página.")
+    st.stop()
 
 
 # === RENDERIZAÇÃO ===
 if not is_logado:
     if menu_selecionado == "🔐 Login (Área Restrita)":
-        st.markdown("<br><br><br><br>", unsafe_allow_html=True)
-        col_esq, col_meio, col_dir = st.columns([1, 1.2, 1])
+        st.markdown("<br><br><br>", unsafe_allow_html=True)
+        _, col_meio, _ = st.columns([1, 1.2, 1])
         with col_meio:
             with st.form("form_login"):
                 usuario_input = st.text_input("Usuário (Login)").lower()
@@ -304,7 +314,7 @@ if not is_logado:
                 
                 st.write("") 
                 
-                c_btn1, c_btn2, c_btn3 = st.columns([1, 1.5, 1])
+                _, c_btn2, _ = st.columns([1, 1.5, 1])
                 with c_btn2:
                     btn_login = st.form_submit_button("ENTRAR", type="primary", use_container_width=True)
                 
@@ -323,7 +333,6 @@ if not is_logado:
     st.stop() 
 
 if menu_selecionado == "Dashboard":
-    
     if st.session_state['cliente_visualizado'] is not None:
         cliente_nome = st.session_state['cliente_visualizado']
         
@@ -435,7 +444,7 @@ if menu_selecionado == "Dashboard":
                 estilo_ficha = ficha_display.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}])
                 st.dataframe(estilo_ficha, use_container_width=True, hide_index=True)
                 
-                # --- ÁREA DE GERENCIAMENTO DE STATUS LOGO ABAIXO DA TABELA ---
+                # --- ÁREA DE GERENCIAMENTO DE STATUS ---
                 st.write("")
                 with st.expander("⚙️ Atualizar Status e Gerenciar Cota", expanded=False):
                     st.info("Atualize o status da cota. Apenas usuários Master podem alterar o vendedor ou apagar a cota do sistema.")
@@ -551,10 +560,9 @@ if menu_selecionado == "Dashboard":
                                         'uriel_recebe': uriel_recebe
                                     })
                                     
-                            # === LÓGICA DE STATUS APLICADA AQUI ===
+                            # Lógica de Status
                             if status_cota == 'Cancelada':
                                 parcelas_cota = [p for p in parcelas_cota if p['data_pagamento'] <= hoje]
-                                
                             elif status_cota == 'Contemplada':
                                 past_parcels = [p for p in parcelas_cota if p['data_pagamento'] <= hoje]
                                 future_parcels = [p for p in parcelas_cota if p['data_pagamento'] > hoje]
@@ -570,7 +578,7 @@ if menu_selecionado == "Dashboard":
                                     })
                                 parcelas_cota = past_parcels
 
-                            # Montando a tabela visual
+                            # Montagem Tabela
                             for p in parcelas_cota:
                                 data_str = p['data_pagamento'].strftime("%d/%m/%Y")
                                 if status_cota == 'Em Atraso':
@@ -594,14 +602,7 @@ if menu_selecionado == "Dashboard":
 
                                 previsoes.append(row_dict)
                     else:
-                        admin_cadastradas = df_admin['Administradora'].unique().tolist() if not df_admin.empty else ["Nenhuma"]
-                        prod_cadastrados = df_admin['Produto'].unique().tolist() if not df_admin.empty else ["Nenhum"]
-                        st.warning(f"⚠️ **Atenção:** Regra não encontrada para a cota **{r['GRUPO']}/{r['COTA']}**.\n\n"
-                                   f"🔍 **O sistema buscou por:** Administradora `{admin_venda}` e Produto `{prod_venda}`\n\n"
-                                   f"📋 **O que o sistema achou no Banco de Dados:** \n"
-                                   f"- Administradoras salvas: `{admin_cadastradas}` \n"
-                                   f"- Produtos salvos: `{prod_cadastrados}` \n\n"
-                                   f"💡 **Solução:** Vá no menu 'Regras de Comissão' e edite a regra para que o nome da Administradora fique idêntico ao que está na venda.")
+                        st.warning(f"⚠️ Regra não cadastrada para: '{r['ADMINISTRADORA']}' - '{r['PRODUTO']}'.")
                         
                 if previsoes:
                     df_prev = pd.DataFrame(previsoes)
@@ -616,6 +617,7 @@ if menu_selecionado == "Dashboard":
             else: st.warning("Nenhuma cota encontrada para este cliente.")
 
     else:
+        st.markdown("### 📊 Dashboard de Vendas")
         if not df_vendas_global.empty:
             df_vendas = df_vendas_global.copy()
             if st.session_state['perfil_logado'] == "Vendedor": df_vendas = df_vendas[df_vendas['VENDEDOR'] == st.session_state['nome_vendedor']]
@@ -663,9 +665,9 @@ if menu_selecionado == "Dashboard":
                 
                 st.markdown(f"""<div style="text-align: right; padding-top: 10px;"><h4 style="color: #239b56; font-weight: bold; margin: 0;">TOTAL: R$ {df_clientes['Valor_Numerico'].sum():,.2f}</h4></div>""".replace(",", "X").replace(".", ",").replace("X", "."), unsafe_allow_html=True)
                 
-                sel = tabela_interativa.selection.rows
-                if len(sel) > 0:
-                    st.session_state['cliente_visualizado'] = df_display.iloc[sel[0]]['Nome']
+                if hasattr(tabela_interativa, 'selection') and tabela_interativa.selection.rows:
+                    idx_sel = tabela_interativa.selection.rows[0]
+                    st.session_state['cliente_visualizado'] = df_display.iloc[idx_sel]['Nome']
                     st.rerun()
             else: st.warning("Nenhum cliente encontrado com esses filtros ou termos de busca.")
 
@@ -710,6 +712,12 @@ if menu_selecionado == "Dashboard":
 
 elif menu_selecionado == "Nova Venda":
     st.markdown("### 📝 Cadastrar Nova Venda")
+    
+    # Carrega a lista de administradoras logo no início da página
+    try: 
+        lista_admin_bd = aba_admin_cad.col_values(1)[1:]
+    except: 
+        lista_admin_bd = []
     
     col_c1, col_c2 = st.columns(2)
     with col_c1:
@@ -919,8 +927,6 @@ elif menu_selecionado == "Regras de Comissão":
     with t_regras:
         st.subheader("Regras Cadastradas")
         if not df_admin.empty:
-            
-            # --- ADICIONANDO A SOMA VISUAL DA COMISSÃO ---
             df_mostrar = df_admin.drop(columns=['Admin_Norm', 'Prod_Norm'], errors='ignore').copy()
             
             def calc_total(row):
@@ -929,13 +935,9 @@ elif menu_selecionado == "Regras de Comissão":
                     v_str = str(row.get(f"P{i}", "0")).replace('%', '').strip()
                     try: t += float(v_str)
                     except: pass
-                # Retorna em formato brasileiro
                 return f"{t:.2f}%".replace('.', ',')
             
-            # Insere a coluna logo depois de "Produto" (posição 2)
             df_mostrar.insert(2, 'Total Comissão', df_mostrar.apply(calc_total, axis=1))
-            # ----------------------------------------------
-            
             st.dataframe(df_mostrar.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}]), use_container_width=True, hide_index=True)
         else: st.info("Nenhuma regra de comissionamento de administradora.")
         
