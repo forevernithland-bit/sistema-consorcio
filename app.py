@@ -32,7 +32,6 @@ if 'key_tabela' not in st.session_state:
 if 'tela_cheia_relatorio' not in st.session_state:
     st.session_state['tela_cheia_relatorio'] = False
 
-# === CORREÇÃO: Definir is_logado AQUI, antes de usar ===
 is_logado = st.session_state['usuario_logado'] is not None
 
 def carregar_ferramenta(nome_arquivo):
@@ -196,7 +195,7 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, aba_status):
                 'liquido': corretora_liq, 'vend': vend_rec, 'breno': breno_rec, 'uriel': uriel_rec
             })
             
-        # Regras de Status da Cota (Cancelada / Contemplada)
+        # Regras de Status da Cota
         if status_cota == 'Cancelada':
             temp_parcels = [p for p in temp_parcels if p['data_pagamento'] <= hoje]
         elif status_cota == 'Contemplada':
@@ -228,6 +227,7 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, aba_status):
                 "Cota": cota,
                 "Admin": admin,
                 "Parcela": nome_parcela,
+                "data_pagamento_dt": p['data_pagamento'], # Usado para filtro de data
                 "Data Prevista": data_str,
                 "Comissão (Bruta)": p['bruto'],
                 "Comissão (s/ Imposto)": p['liquido'],
@@ -326,78 +326,109 @@ try:
     else: df_vendas_global = pd.DataFrame()
 
 except gspread.exceptions.APIError as e:
-    st.error("⚠️ O Google Sheets limitou o acesso. Aguarde 1 minuto e recarregue a página.")
+    st.error("⚠️ O Google Sheets limitou o acesso temporariamente por excesso de requisições. Por favor, aguarde cerca de 1 minuto e recarregue a página.")
     st.stop()
 
 
-# === LÓGICA DE TELA CHEIA (RELATÓRIO) ===
+# === LÓGICA DE TELA CHEIA (RELATÓRIO DE COMISSÃO) ===
 if st.session_state['tela_cheia_relatorio']:
     st.markdown("## 💰 Relatório de Comissionamento Detalhado")
-    if st.button("⬅️ Voltar aos Filtros"):
-        st.session_state['tela_cheia_relatorio'] = False
-        st.rerun()
+    
+    col_bt, col_chk = st.columns([1, 3])
+    with col_bt:
+        if st.button("⬅️ Voltar aos Filtros", type="secondary"):
+            st.session_state['tela_cheia_relatorio'] = False
+            st.rerun()
+    with col_chk:
+        mostrar_pagos = st.checkbox("Mostrar parcelas já pagas (PAGO)", value=False)
         
-    df_filtrado = st.session_state.get('df_relatorio_filtrado', pd.DataFrame())
-    if not df_filtrado.empty:
-        df_admin_regras = carregar_df_admin_seguro(aba_admin)
-        df_parcelas = gerar_tabela_parcelas(df_filtrado, df_vendas_global, df_admin_regras, cfg, aba_status)
+    df_admin_regras = carregar_df_admin_seguro(aba_admin)
+    
+    # 1. Gera TODAS as parcelas de TODAS as vendas
+    df_parcelas_todas = gerar_tabela_parcelas(df_vendas_global, df_vendas_global, df_admin_regras, cfg, aba_status)
+    
+    if not df_parcelas_todas.empty:
+        hoje = pd.Timestamp.today().normalize()
+        mask = df_parcelas_todas['data_pagamento_dt'].notna()
+        df_view = df_parcelas_todas.copy()
         
-        if not df_parcelas.empty:
-            mostrar_pagos = st.checkbox("Mostrar parcelas já pagas (PAGO)")
-            df_view = df_parcelas if mostrar_pagos else df_parcelas[df_parcelas['Status'] == 'Pendente']
+        # Filtro de Vendedor (Segurança)
+        if st.session_state['perfil_logado'] == "Vendedor":
+            df_view = df_view[df_view['Vendedor'] == st.session_state['nome_vendedor']]
+        
+        # Filtro de Data (Aplicado na Data Prevista da Parcela, e não na data da venda)
+        ft_rel = st.session_state.get('rel_periodo', 'Todas as Vendas')
+        
+        if ft_rel == "Mês Atual":
+            df_view = df_view[mask & (df_view['data_pagamento_dt'].dt.month == hoje.month) & (df_view['data_pagamento_dt'].dt.year == hoje.year)]
+        elif ft_rel == "Quinzena Atual":
+            if hoje.day <= 15: 
+                q_ini, q_fim = hoje.replace(day=1), hoje.replace(day=15)
+            else: 
+                q_ini, q_fim = hoje.replace(day=16), hoje.replace(day=calendar.monthrange(hoje.year, hoje.month)[1])
+            df_view = df_view[mask & (df_view['data_pagamento_dt'].dt.date >= q_ini.date()) & (df_view['data_pagamento_dt'].dt.date <= q_fim.date())]
+        elif ft_rel == "Mês Anterior":
+            ma, aa = (hoje.month - 1, hoje.year) if hoje.month > 1 else (12, hoje.year - 1)
+            df_view = df_view[mask & (df_view['data_pagamento_dt'].dt.month == ma) & (df_view['data_pagamento_dt'].dt.year == aa)]
+        elif ft_rel == "Ano Atual":
+            df_view = df_view[mask & (df_view['data_pagamento_dt'].dt.year == hoje.year)]
+        elif ft_rel == "Período Personalizado":
+            ri = st.session_state['rel_dt_ini']
+            rf = st.session_state['rel_dt_fim']
+            df_view = df_view[mask & (df_view['data_pagamento_dt'].dt.date >= ri) & (df_view['data_pagamento_dt'].dt.date <= rf)]
             
-            if not df_view.empty:
-                # Ordenação e Formatação de Exibição
-                df_view = df_view[['Chave', 'Cliente', 'Produto', 'Vendedor', 'Grupo', 'Cota', 'Parcela', 'Comissão (Bruta)', 'Comissão (s/ Imposto)', 'Breno', 'Uriel', 'Vendedor Recebe', 'Status', 'Data Prevista']]
-                
-                is_master = st.session_state['perfil_logado'] == "Master"
-                
-                # Configura a edição da tabela
-                col_config = {
-                    "Chave": None, # Oculta a chave do usuário
-                    "Comissão (Bruta)": st.column_config.NumberColumn(format="R$ %.2f"),
-                    "Comissão (s/ Imposto)": st.column_config.NumberColumn(format="R$ %.2f"),
-                    "Breno": st.column_config.NumberColumn(format="R$ %.2f"),
-                    "Uriel": st.column_config.NumberColumn(format="R$ %.2f"),
-                    "Vendedor Recebe": st.column_config.NumberColumn(format="R$ %.2f"),
-                    "Status": st.column_config.SelectboxColumn("Status", options=["Pendente", "PAGO"], required=True) if is_master else st.column_config.TextColumn("Status", disabled=True)
-                }
-                
-                cols_to_hide = []
-                if not is_master:
-                    cols_to_hide = ["Comissão (Bruta)", "Comissão (s/ Imposto)", "Breno", "Uriel"]
-                
-                df_final = df_view.drop(columns=cols_to_hide)
-                disabled_cols = [c for c in df_final.columns if c != "Status"]
-                
-                edited_df = st.data_editor(
-                    df_final,
-                    disabled=disabled_cols,
-                    column_config=col_config,
-                    use_container_width=True,
-                    hide_index=True,
-                    key="editor_relatorio_full"
-                )
-                
-                if is_master and st.button("💾 Salvar Status de Pagamento", type="primary"):
+        # Filtro de Pagos
+        if not mostrar_pagos:
+            df_view = df_view[df_view['Status'] != 'PAGO']
+            
+        if not df_view.empty:
+            df_view = df_view[['Chave', 'Cliente', 'Produto', 'Vendedor', 'Grupo', 'Cota', 'Parcela', 'Comissão (Bruta)', 'Comissão (s/ Imposto)', 'Breno', 'Uriel', 'Vendedor Recebe', 'Status', 'Data Prevista']]
+            is_master = st.session_state['perfil_logado'] == "Master"
+            
+            col_config = {
+                "Chave": None, # Oculta do usuário final
+                "Comissão (Bruta)": st.column_config.NumberColumn(format="R$ %.2f"),
+                "Comissão (s/ Imposto)": st.column_config.NumberColumn(format="R$ %.2f"),
+                "Breno": st.column_config.NumberColumn(format="R$ %.2f"),
+                "Uriel": st.column_config.NumberColumn(format="R$ %.2f"),
+                "Vendedor Recebe": st.column_config.NumberColumn(format="R$ %.2f"),
+                "Status": st.column_config.SelectboxColumn("Status", options=["Pendente", "PAGO"], required=True) if is_master else st.column_config.TextColumn("Status", disabled=True)
+            }
+            
+            cols_to_hide = []
+            if not is_master: cols_to_hide = ["Comissão (Bruta)", "Comissão (s/ Imposto)", "Breno", "Uriel"]
+            
+            df_final = df_view.drop(columns=cols_to_hide).reset_index(drop=True)
+            disabled_cols = [c for c in df_final.columns if c != "Status"]
+            
+            st.caption("Dica: Clique na coluna 'Status' para alterar. Em seguida, salve as alterações.")
+            edited_df = st.data_editor(
+                df_final,
+                disabled=disabled_cols,
+                column_config=col_config,
+                use_container_width=True,
+                hide_index=True,
+                key="editor_relatorio_full"
+            )
+            
+            if is_master:
+                if st.button("💾 Salvar Status de Pagamento", type="primary"):
                     if salvar_status_comissoes(edited_df, df_final, aba_status):
                         st.success("Status atualizados no banco de dados!")
                         st.rerun()
-                    else:
-                        st.info("Nenhuma alteração detectada.")
+                    else: st.info("Nenhuma alteração detectada.")
                         
-                # Totais
-                if is_master:
-                    st.divider()
-                    st.markdown("#### 💵 Total do Período (Visualizado Acima)")
-                    mt1, mt2, mt3 = st.columns(3)
-                    mt1.metric("Breno (Sócios)", formatar_brl_puro(df_view['Breno'].sum()))
-                    mt2.metric("Uriel (Sócios)", formatar_brl_puro(df_view['Uriel'].sum()))
-                    mt3.metric("Vendedores", formatar_brl_puro(df_view['Vendedor Recebe'].sum()))
-            else:
-                st.success("Nenhuma comissão pendente para este período!")
+                st.divider()
+                st.markdown("#### 💵 Total do Período (Apenas o visualizado acima)")
+                mt1, mt2, mt3 = st.columns(3)
+                mt1.metric("Breno (Sócios)", formatar_brl_puro(df_view['Breno'].sum()))
+                mt2.metric("Uriel (Sócios)", formatar_brl_puro(df_view['Uriel'].sum()))
+                mt3.metric("Vendedores", formatar_brl_puro(df_view['Vendedor Recebe'].sum()))
         else:
-            st.info("Nenhuma regra ou comissão gerada para estas vendas.")
+            st.success("Nenhuma comissão pendente (ou com os filtros atuais) para exibir!")
+    else:
+        st.info("O sistema ainda não possui vendas para calcular a comissão.")
+        
     st.stop() # Bloqueia renderização do resto do app
 
 # === CSS CUSTOMIZADO ===
@@ -423,11 +454,7 @@ css = """
 </style>
 """
 
-# === 2. LÓGICA DO MENU LATERAL (NORMAL) ===
-if is_logado:
-    st.sidebar.markdown(f"<div style='color: #0f172a; font-weight: bold; font-size: 14px; margin-bottom: 10px;'>👤 {st.session_state['nome_vendedor'].upper()}</div>", unsafe_allow_html=True)
-st.sidebar.image("https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png", use_column_width=True)
-
+# === ROTEADOR DE MENU LATERAL ===
 simuladores_dict = {
     "🏍️ Simulador Yamaha": "yamaha.html",
     "🏦 Simulador Itaú": "itau.html",
@@ -658,9 +685,10 @@ if menu_selecionado == "Dashboard":
                                     st.rerun()
                             else: st.button("🚨 Apagar Esta Cota", disabled=True, use_container_width=True, help="Apenas Masters podem excluir cotas.")
 
-                # --- PREVISÃO DE COMISSIONAMENTO ---
+                # --- PREVISÃO DE COMISSIONAMENTO (COM INTELIGÊNCIA DE STATUS) ---
                 st.write("")
                 st.subheader("📈 Previsão de Comissionamento")
+                
                 df_admin_regras = carregar_df_admin_seguro(aba_admin)
                 df_parcelas = gerar_tabela_parcelas(cotas_cliente, df_vendas_global, df_admin_regras, cfg, aba_status)
                 
@@ -681,10 +709,10 @@ if menu_selecionado == "Dashboard":
                             "Status": st.column_config.SelectboxColumn("Status", options=["Pendente", "PAGO"], required=True) if is_master else st.column_config.TextColumn("Status", disabled=True)
                         }
                         
-                        cols_to_hide = ['Cliente', 'Produto', 'Vendedor']
+                        cols_to_hide = ['Cliente', 'Produto', 'Vendedor', 'data_pagamento_dt']
                         if not is_master: cols_to_hide += ["Comissão (Bruta)", "Comissão (s/ Imposto)", "Breno", "Uriel"]
                         
-                        df_final_cli = df_view_cli.drop(columns=cols_to_hide)
+                        df_final_cli = df_view_cli.drop(columns=cols_to_hide).reset_index(drop=True)
                         disabled_cols = [c for c in df_final_cli.columns if c != "Status"]
                         
                         edited_df_cli = st.data_editor(
@@ -754,8 +782,8 @@ if menu_selecionado == "Dashboard":
                 df_tab['Grupo e Cota'] = df_tab.apply(lambda x: f"{x['GRUPO']}/{x['COTA']}", axis=1)
                 df_tab['Valor Formatado'] = df_tab['Valor_Numerico'].apply(formatar_brl_puro)
                 
-                df_tab = df_tab[['DATA', 'Nome do cliente', 'PRODUTO', 'ADMINISTRADORA', 'Grupo e Cota', 'VENDEDOR', 'Valor Formatado']]
-                df_tab.columns = ['Data da Venda', 'Cliente', 'Produto', 'Administradora', 'Grupo/Cota', 'Vendedor', 'Valor']
+                df_tab = df_tab[['Nome do cliente', 'PRODUTO', 'ADMINISTRADORA', 'Grupo e Cota', 'VENDEDOR', 'Valor Formatado', 'DATA']]
+                df_tab.columns = ['Cliente', 'Produto', 'Administradora', 'Grupo/Cota', 'Vendedor', 'Valor', 'Data da Venda']
                 
                 tabela = st.dataframe(df_tab, on_select="rerun", selection_mode="single-row", use_container_width=True, hide_index=True)
                 
@@ -943,7 +971,7 @@ elif menu_selecionado == "Relatórios":
         
         c1, c2 = st.columns([1, 2])
         with c1:
-            ft_rel = st.selectbox("⏳ Período:", ["Mês Atual", "Quinzena Atual", "Mês Anterior", "Ano Atual", "Todas as Vendas", "Período Personalizado"])
+            ft_rel = st.selectbox("⏳ Período de Análise:", ["Mês Atual", "Quinzena Atual", "Mês Anterior", "Ano Atual", "Todas as Vendas", "Período Personalizado"])
             if ft_rel == "Período Personalizado":
                 rd1, rd2 = st.columns(2)
                 with rd1: ri = st.date_input("Data Inicial", format="DD/MM/YYYY")
@@ -969,9 +997,9 @@ elif menu_selecionado == "Relatórios":
         if st.session_state['perfil_logado'] == "Vendedor": df_f = df_f[df_f['VENDEDOR'] == st.session_state['nome_vendedor']]
         st.divider()
 
-        if df_f.empty: st.warning("Nenhuma venda no período selecionado.")
+        if df_f.empty: st.warning("Nenhuma venda realizada neste período.")
         else:
-            t1, t2, t3 = st.tabs(["👤 Por Usuário", "🏢 Por Administradora", "💰 Comissionamento"])
+            t1, t2, t3 = st.tabs(["👤 Vendas Por Usuário", "🏢 Vendas Por Administradora", "💰 Comissionamento (Gerar)"])
             with t1:
                 rv = df_f.groupby('VENDEDOR').agg(Qtde=('Nome do cliente', 'count'), Vol=('Valor_Numerico', 'sum')).reset_index()
                 rv['Vol'] = rv['Vol'].apply(formatar_brl_puro)
@@ -982,10 +1010,13 @@ elif menu_selecionado == "Relatórios":
                 st.dataframe(ra.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}]), use_container_width=True, hide_index=True)
             with t3:
                 st.markdown("#### Detalhamento de Comissionamento")
-                st.info("Para visualizar as parcelas, dedução de impostos e dar baixa de pagamentos, expanda o relatório.")
+                st.info("Para visualizar as parcelas devidas neste período, com dedução de impostos e dar baixa de pagamentos, expanda o relatório.")
                 if st.button("Gerar Relatório Detalhado (Tela Cheia)", type="primary"):
                     st.session_state['tela_cheia_relatorio'] = True
-                    st.session_state['df_relatorio_filtrado'] = df_f
+                    st.session_state['rel_periodo'] = ft_rel
+                    if ft_rel == "Período Personalizado":
+                        st.session_state['rel_dt_ini'] = ri
+                        st.session_state['rel_dt_fim'] = rf
                     st.rerun()
 
     else: st.info("Não possui vendas.")
