@@ -38,7 +38,7 @@ def carregar_ferramenta(nome_arquivo):
     except FileNotFoundError:
         st.error(f"⚠️ O arquivo {nome_arquivo} não foi encontrado!")
 
-# === MÁSCARAS INTELIGENTES E FILTROS UNIVERSAIS ===
+# === MÁSCARAS INTELIGENTES E NORMALIZADORES ===
 def formatar_telefone(tel):
     if not tel: return ""
     nums = ''.join(filter(str.isdigit, str(tel)))
@@ -64,14 +64,15 @@ def formatar_moeda(valor):
 def formatar_brl_puro(val):
     return f"R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-def clean_str(s):
-    """Remove acentos, espaços ocultos e padroniza para cruzar dados sem erros"""
+def normalizar_string(s):
+    """Filtro Universal: Remove acentos e espaços invisíveis para não quebrar a busca de regras"""
     if pd.isna(s): return ""
     s = str(s).strip().upper()
-    return ''.join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
+    s = ''.join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
+    return s
 
 def normalizar_produto(p):
-    p = clean_str(p)
+    p = normalizar_string(p)
     if p in ["AUTO", "AUTOMOVEL", "VEICULO"]: return "AUTOMOVEL"
     if p in ["IMOVEL", "IMOVEIS"]: return "IMOVEL"
     if p in ["MOTO", "MOTOS", "MOTOCICLETA"]: return "MOTO"
@@ -89,24 +90,21 @@ def mascara_tel_nv(): st.session_state['tel_nv'] = formatar_telefone(st.session_
 def mascara_aniv_nv(): st.session_state['aniv_nv'] = formatar_data(st.session_state.get('aniv_nv', ''))
 def mascara_renda_nv(): st.session_state['renda_nv'] = formatar_moeda(st.session_state.get('renda_nv', ''))
 
-# === REGRAS DE NEGÓCIO INTERNAS (CÉREBRO DO SISTEMA) ===
-def calcular_comissao_vendedor(df_vendas_global, vendedor_nome, data_venda_dt):
-    """Lê todas as vendas do mês, soma o volume e devolve o % de comissão e as parcelas"""
-    if pd.isna(data_venda_dt): return 0.01, 4
-    
+# === MOTOR DE CÁLCULO DE COMISSÃO ===
+def calcular_comissao_vendedor(df_vendas_global, vendedor_nome, data_venda_dt, cfg):
+    """Calcula a faixa do vendedor baseada no volume do mês"""
+    if pd.isna(data_venda_dt): return cfg['T1_Pct'], int(cfg['T1_Parc'])
     mes = data_venda_dt.month
     ano = data_venda_dt.year
+    
     df_mes = df_vendas_global[(df_vendas_global['VENDEDOR'] == vendedor_nome) &
                               (df_vendas_global['Data_Real'].dt.month == mes) &
                               (df_vendas_global['Data_Real'].dt.year == ano)]
     vol_total = df_mes['Valor_Numerico'].sum()
 
-    if vol_total <= 500000:
-        return 0.01, 4      # 1% em 4x
-    elif vol_total <= 1500000:
-        return 0.015, 5     # 1.5% em 5x
-    else:
-        return 0.02, 5      # 2% em 5x
+    if vol_total <= cfg['T1_Max']: return cfg['T1_Pct'], int(cfg['T1_Parc'])
+    elif vol_total <= cfg['T2_Max']: return cfg['T2_Pct'], int(cfg['T2_Parc'])
+    else: return cfg['T3_Pct'], int(cfg['T3_Parc'])
 
 # === 2. LÓGICA DO MENU LATERAL ===
 is_logado = st.session_state['usuario_logado'] is not None
@@ -207,7 +205,7 @@ else: css += """ <style>.stApp { background-color: #ffffff !important; }</style>
 
 st.markdown(css, unsafe_allow_html=True)
 
-# === 4. CONEXÃO PLANILHA ===
+# === 4. CONEXÃO PLANILHA E CONFIGURAÇÕES ===
 @st.cache_resource
 def conectar_planilha():
     credentials = dict(st.secrets["gcp_service_account"])
@@ -233,6 +231,26 @@ except:
     cabecalho_admin = ["Administradora", "Produto"] + [f"P{i}" for i in range(1, 26)]
     aba_admin.append_row(cabecalho_admin)
 
+# Carrega e configura Configurações Internas (Sócios e Vendedores)
+cols_cfg = ["Breno_Breno", "Breno_Uriel", "Uriel_Uriel", "Uriel_Breno", "Cons_Breno", "Cons_Uriel", "T1_Max", "T1_Pct", "T1_Parc", "T2_Max", "T2_Pct", "T2_Parc", "T3_Pct", "T3_Parc"]
+try:
+    aba_cfg = planilha.worksheet("Config_Interna")
+    cfg_data = aba_cfg.get_all_values()
+    if len(cfg_data) < 2:
+        aba_cfg.clear()
+        vals_cfg = [70, 30, 70, 30, 50, 50, 500000, 1.0, 4, 1500000, 1.5, 5, 2.0, 5]
+        aba_cfg.append_row(cols_cfg)
+        aba_cfg.append_row(vals_cfg)
+        cfg_data = [cols_cfg, vals_cfg]
+except:
+    aba_cfg = planilha.add_worksheet("Config_Interna", 10, 20)
+    vals_cfg = [70, 30, 70, 30, 50, 50, 500000, 1.0, 4, 1500000, 1.5, 5, 2.0, 5]
+    aba_cfg.append_row(cols_cfg)
+    aba_cfg.append_row(vals_cfg)
+    cfg_data = [cols_cfg, vals_cfg]
+
+cfg = {k: float(v) for k, v in zip(cfg_data[0], cfg_data[1])}
+
 # Carrega Base de Vendas Global para cálculos retroativos
 dados_brutos = aba_vendas.get_all_values()
 if len(dados_brutos) > 1:
@@ -242,6 +260,7 @@ if len(dados_brutos) > 1:
     df_vendas_global['Valor_Numerico'] = df_vendas_global['VALOR'].astype(str).str.replace('R$', '', regex=False).str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.strip().apply(pd.to_numeric, errors='coerce').fillna(0.0)
 else:
     df_vendas_global = pd.DataFrame()
+
 
 # === RENDERIZAÇÃO ===
 if not is_logado:
@@ -274,6 +293,7 @@ if not is_logado:
     st.stop() 
 
 if menu_selecionado == "Dashboard":
+    
     # -------------------------------------------------------------
     # PERFIL DO CLIENTE
     # -------------------------------------------------------------
@@ -390,34 +410,31 @@ if menu_selecionado == "Dashboard":
                 estilo_ficha = ficha_display.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}])
                 st.dataframe(estilo_ficha, use_container_width=True, hide_index=True)
                 
-                # --- PREVISÃO DE COMISSIONAMENTO (A MÁGICA ACONTECE AQUI) ---
+                # --- PREVISÃO DE COMISSIONAMENTO (MÁGICA RETROATIVA) ---
                 st.write("")
                 st.subheader("📈 Previsão de Comissionamento")
                 
                 dados_admin = aba_admin.get_all_values()
-                if len(dados_admin) > 1:
-                    df_admin = pd.DataFrame(dados_admin[1:], columns=dados_admin[0])
-                    df_admin['Admin_Norm'] = df_admin['Administradora'].apply(clean_str)
-                    df_admin['Prod_Norm'] = df_admin['Produto'].apply(normalizar_produto)
-                else: 
-                    df_admin = pd.DataFrame()
+                if len(dados_admin) > 1: df_admin = pd.DataFrame(dados_admin[1:], columns=dados_admin[0])
+                else: df_admin = pd.DataFrame(columns=["Administradora", "Produto"] + [f"P{i}" for i in range(1, 26)])
                     
                 previsoes = []
                 for idx, r in cotas_cliente.iterrows():
-                    admin_venda = clean_str(r['ADMINISTRADORA'])
+                    admin_venda = normalizar_string(r['ADMINISTRADORA'])
                     prod_venda = normalizar_produto(r['PRODUTO'])
                     vendedor_nome = r['VENDEDOR']
                     
                     regra_encontrada = None
                     if not df_admin.empty:
-                        reg_match = df_admin[(df_admin['Admin_Norm'] == admin_venda) & (df_admin['Prod_Norm'] == prod_venda)]
-                        if not reg_match.empty: regra_encontrada = reg_match.iloc[0]
+                        for _, reg_row in df_admin.iterrows():
+                            if normalizar_string(reg_row['Administradora']) == admin_venda and normalizar_produto(reg_row['Produto']) == prod_venda:
+                                regra_encontrada = reg_row
+                                break
                             
                     if regra_encontrada is not None:
                         data_venda = r['Data_Real']
                         if pd.notna(data_venda):
-                            # Calcula metas e comissão do vendedor automaticamente
-                            tier_pct, tier_parc = calcular_comissao_vendedor(df_vendas_global, vendedor_nome, data_venda)
+                            tier_pct, tier_parc = calcular_comissao_vendedor(df_vendas_global, vendedor_nome, data_venda, cfg)
                             
                             for i in range(1, 26):
                                 p_str = str(regra_encontrada.get(f"P{i}", "0")).replace('%', '').strip()
@@ -429,35 +446,31 @@ if menu_selecionado == "Dashboard":
                                 breno_recebe = 0.0
                                 uriel_recebe = 0.0
                                 
-                                # Aplicando as regras societárias padronizadas
+                                # Aplicando Configurações do Master (Divisão e Metas)
                                 if vendedor_nome == "BRENO LIMA":
-                                    breno_recebe = admin_recebe * 0.70
-                                    uriel_recebe = admin_recebe * 0.30
+                                    breno_recebe = admin_recebe * (cfg['Breno_Breno']/100)
+                                    uriel_recebe = admin_recebe * (cfg['Breno_Uriel']/100)
                                     vend_recebe = breno_recebe
                                 elif vendedor_nome == "URIEL GOMES":
-                                    uriel_recebe = admin_recebe * 0.70
-                                    breno_recebe = admin_recebe * 0.30
+                                    uriel_recebe = admin_recebe * (cfg['Uriel_Uriel']/100)
+                                    breno_recebe = admin_recebe * (cfg['Uriel_Breno']/100)
                                     vend_recebe = uriel_recebe
                                 elif vendedor_nome == "Consorbens":
-                                    breno_recebe = admin_recebe * 0.50
-                                    uriel_recebe = admin_recebe * 0.50
+                                    breno_recebe = admin_recebe * (cfg['Cons_Breno']/100)
+                                    uriel_recebe = admin_recebe * (cfg['Cons_Uriel']/100)
                                 else:
-                                    # Vendedor Terceiro
-                                    if i <= tier_parc:
-                                        vend_recebe = (r['Valor_Numerico'] * tier_pct) / tier_parc
+                                    if i <= tier_parc: vend_recebe = (r['Valor_Numerico'] * (tier_pct/100)) / tier_parc
                                     sobra = admin_recebe - vend_recebe
                                     breno_recebe = sobra * 0.50
                                     uriel_recebe = sobra * 0.50
 
                                 if admin_recebe > 0 or vend_recebe > 0:
                                     data_pagamento = data_venda + pd.Timedelta(days=7) + pd.DateOffset(months=i-1)
-                                    
                                     row_dict = {
                                         "Cota / Admin": f"{r['GRUPO']}/{r['COTA']} ({r['ADMINISTRADORA']})",
                                         "Mês/Parcela": f"{i}ª Parcela",
                                         "Data Prevista": data_pagamento.strftime("%d/%m/%Y"),
                                     }
-                                    
                                     if is_master:
                                         row_dict["Corretora Recebe"] = formatar_brl_puro(admin_recebe)
                                         row_dict[f"Vendedor Recebe"] = formatar_brl_puro(vend_recebe)
@@ -468,7 +481,7 @@ if menu_selecionado == "Dashboard":
 
                                     previsoes.append(row_dict)
                     else:
-                        st.warning(f"⚠️ Regra não cadastrada para: {r['ADMINISTRADORA']} - {r['PRODUTO']} (Cota {r['GRUPO']}/{r['COTA']})")
+                        st.warning(f"⚠️ Regra não cadastrada para: '{r['ADMINISTRADORA']}' - '{r['PRODUTO']}' (Verifique se o nome na aba 'Regras de Comissão' está escrito igualzinho a este).")
                         
                 if previsoes:
                     df_prev = pd.DataFrame(previsoes)
@@ -768,7 +781,6 @@ elif menu_selecionado == "Relatórios":
 
 elif menu_selecionado == "Regras de Comissão":
     st.markdown("### 🏢 Regras de Comissão")
-    st.info("As comissões dos Sócios e Vendedores Terceiros já estão embutidas e automatizadas no motor financeiro do sistema, não sendo necessário configurá-las manualmente.")
     
     dados_admin = aba_admin.get_all_values()
     if len(dados_admin) > 1:
@@ -778,7 +790,7 @@ elif menu_selecionado == "Regras de Comissão":
     else: 
         df_admin = pd.DataFrame(columns=["Administradora", "Produto"] + [f"P{i}" for i in range(1, 26)])
 
-    t1, t2, t3 = st.tabs(["📋 Regras das Administradoras", "➕ Nova Regra", "✏️ Editar/Excluir"])
+    t1, t2, t3, t4 = st.tabs(["📋 Adm Cadastradas", "➕ Nova Regra Adm", "✏️ Editar/Excluir Adm", "👥 Comissões Internas"])
     
     with t1:
         if not df_admin.empty:
@@ -855,6 +867,56 @@ elif menu_selecionado == "Regras de Comissão":
                         aba_admin.delete_rows(l_plan)
                         st.error("Regra deletada!")
                         st.rerun()
+
+    # --- ABA DE COMISSÕES INTERNAS ---
+    with t4:
+        st.subheader("Configurações de Recebimento (Sócios e Vendedores)")
+        st.info("Estas regras alimentam o cálculo automático de comissionamento de cada vendedor da equipe e o rateio entre os sócios.")
+        
+        with st.form("form_cfg_interna"):
+            st.markdown("#### Distribuição Direta (Sócios e PJ)")
+            cc1, cc2, cc3 = st.columns(3)
+            with cc1:
+                st.markdown("**Breno Lima**")
+                b_b = st.number_input("Para Breno (%)", value=cfg["Breno_Breno"], step=1.0)
+                b_u = st.number_input("Para Uriel (%)", value=cfg["Breno_Uriel"], step=1.0)
+            with cc2:
+                st.markdown("**Uriel Gomes**")
+                u_u = st.number_input("Para Uriel (%) ", value=cfg["Uriel_Uriel"], step=1.0)
+                u_b = st.number_input("Para Breno (%) ", value=cfg["Uriel_Breno"], step=1.0)
+            with cc3:
+                st.markdown("**Consorbens (PJ)**")
+                c_b = st.number_input("Para Breno (%)  ", value=cfg["Cons_Breno"], step=1.0)
+                c_u = st.number_input("Para Uriel (%)  ", value=cfg["Cons_Uriel"], step=1.0)
+                
+            st.divider()
+            st.markdown("#### Regra Vendedor Terceiro (Escalonado por Volume Mensal)")
+            st.caption("O valor excedente desta regra é sempre rateado 50% Breno / 50% Uriel.")
+            
+            ct1, ct2, ct3 = st.columns(3)
+            with ct1:
+                st.markdown("**Faixa 1**")
+                t1_max = st.number_input("Até (Volume R$)", value=cfg["T1_Max"], step=10000.0)
+                t1_pct = st.number_input("Comissão (%)", value=cfg["T1_Pct"], step=0.1)
+                t1_parc = st.number_input("Qtd. Parcelas", value=int(cfg["T1_Parc"]), step=1)
+            with ct2:
+                st.markdown("**Faixa 2**")
+                t2_max = st.number_input("Até (Volume R$) ", value=cfg["T2_Max"], step=10000.0)
+                t2_pct = st.number_input("Comissão (%) ", value=cfg["T2_Pct"], step=0.1)
+                t2_parc = st.number_input("Qtd. Parcelas ", value=int(cfg["T2_Parc"]), step=1)
+            with ct3:
+                st.markdown("**Faixa 3 (Teto)**")
+                st.markdown("*Qualquer valor acima da Faixa 2*")
+                t3_pct = st.number_input("Comissão (%)  ", value=cfg["T3_Pct"], step=0.1)
+                t3_parc = st.number_input("Qtd. Parcelas  ", value=int(cfg["T3_Parc"]), step=1)
+
+            if st.form_submit_button("Salvar Todas as Regras", type="primary", use_container_width=True):
+                new_vals = [b_b, b_u, u_u, u_b, c_b, c_u, t1_max, t1_pct, t1_parc, t2_max, t2_pct, t2_parc, t3_pct, t3_parc]
+                aba_cfg.clear()
+                aba_cfg.append_row(cols_cfg)
+                aba_cfg.append_row(new_vals)
+                st.success("Regras atualizadas com sucesso! O sistema fará os cálculos baseados nesses novos números.")
+                st.rerun()
 
 elif menu_selecionado == "Baixar Parcela":
     st.markdown("### 💰 Baixa de Comissão")
