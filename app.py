@@ -5,6 +5,7 @@ from datetime import datetime
 import requests 
 import streamlit.components.v1 as components
 import altair as alt
+import unicodedata
 
 # Configuração da página
 st.set_page_config(page_title="Portal Consorbens", layout="wide", initial_sidebar_state="expanded")
@@ -37,7 +38,7 @@ def carregar_ferramenta(nome_arquivo):
     except FileNotFoundError:
         st.error(f"⚠️ O arquivo {nome_arquivo} não foi encontrado!")
 
-# === MÁSCARAS INTELIGENTES E NORMALIZADORES ===
+# === MÁSCARAS INTELIGENTES E FILTROS UNIVERSAIS ===
 def formatar_telefone(tel):
     if not tel: return ""
     nums = ''.join(filter(str.isdigit, str(tel)))
@@ -60,29 +61,52 @@ def formatar_moeda(valor):
     val_float = float(nums) / 100
     return f"R$ {val_float:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-def normalizar_produto(p):
-    p = str(p).strip().upper()
-    if p in ["AUTO", "AUTOMOVEL", "AUTOMÓVEL"]: return "AUTOMÓVEL"
-    if p in ["IMOVEL", "IMÓVEL", "IMÓVEIS", "IMOVEIS"]: return "IMÓVEL"
-    if p in ["MOTO", "MOTOS", "MOTOCICLETA"]: return "MOTO"
-    if p in ["CAMINHAO", "CAMINHÃO", "CAMINHÕES"]: return "CAMINHÃO"
-    if p in ["SERVIÇO", "SERVIÇOS", "SERVICO", "SERVICOS"]: return "SERVIÇOS"
-    return p
+def formatar_brl_puro(val):
+    return f"R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-def normalizar_admin(a):
-    a = str(a).strip().upper()
-    if a == "ITAU": return "ITAÚ"
-    return a
+def clean_str(s):
+    """Remove acentos, espaços ocultos e padroniza para cruzar dados sem erros"""
+    if pd.isna(s): return ""
+    s = str(s).strip().upper()
+    return ''.join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
+
+def normalizar_produto(p):
+    p = clean_str(p)
+    if p in ["AUTO", "AUTOMOVEL", "VEICULO"]: return "AUTOMOVEL"
+    if p in ["IMOVEL", "IMOVEIS"]: return "IMOVEL"
+    if p in ["MOTO", "MOTOS", "MOTOCICLETA"]: return "MOTO"
+    if p in ["CAMINHAO", "CAMINHOES"]: return "CAMINHAO"
+    if p in ["SERVICO", "SERVICOS"]: return "SERVICO"
+    return p
 
 def obter_index_produto(p_str):
     norm = normalizar_produto(p_str)
-    mapping = {"AUTOMÓVEL": 0, "IMÓVEL": 1, "MOTO": 2, "CAMINHÃO": 3, "SERVIÇOS": 4}
+    mapping = {"AUTOMOVEL": 0, "IMOVEL": 1, "MOTO": 2, "CAMINHAO": 3, "SERVICO": 4}
     return mapping.get(norm, 0)
 
 # Callbacks
 def mascara_tel_nv(): st.session_state['tel_nv'] = formatar_telefone(st.session_state.get('tel_nv', ''))
 def mascara_aniv_nv(): st.session_state['aniv_nv'] = formatar_data(st.session_state.get('aniv_nv', ''))
 def mascara_renda_nv(): st.session_state['renda_nv'] = formatar_moeda(st.session_state.get('renda_nv', ''))
+
+# === REGRAS DE NEGÓCIO INTERNAS (CÉREBRO DO SISTEMA) ===
+def calcular_comissao_vendedor(df_vendas_global, vendedor_nome, data_venda_dt):
+    """Lê todas as vendas do mês, soma o volume e devolve o % de comissão e as parcelas"""
+    if pd.isna(data_venda_dt): return 0.01, 4
+    
+    mes = data_venda_dt.month
+    ano = data_venda_dt.year
+    df_mes = df_vendas_global[(df_vendas_global['VENDEDOR'] == vendedor_nome) &
+                              (df_vendas_global['Data_Real'].dt.month == mes) &
+                              (df_vendas_global['Data_Real'].dt.year == ano)]
+    vol_total = df_mes['Valor_Numerico'].sum()
+
+    if vol_total <= 500000:
+        return 0.01, 4      # 1% em 4x
+    elif vol_total <= 1500000:
+        return 0.015, 5     # 1.5% em 5x
+    else:
+        return 0.02, 5      # 2% em 5x
 
 # === 2. LÓGICA DO MENU LATERAL ===
 is_logado = st.session_state['usuario_logado'] is not None
@@ -105,7 +129,6 @@ if not is_logado:
 
 else:
     st.sidebar.divider() 
-    
     ferramentas_logadas = ["🏍️ Simulador Yamaha", "🏦 Simulador Itaú", "🎯 Oportunidades Itaú", "⚖️ Financiamento x Consórcio"]
     
     if st.session_state['perfil_logado'] == "Master":
@@ -210,12 +233,15 @@ except:
     cabecalho_admin = ["Administradora", "Produto"] + [f"P{i}" for i in range(1, 26)]
     aba_admin.append_row(cabecalho_admin)
 
-# Criando a nova aba para Comissões dos Vendedores
-try: 
-    aba_com_int = planilha.worksheet("Comissoes_Internas")
-except: 
-    aba_com_int = planilha.add_worksheet("Comissoes_Internas", 100, 3)
-    aba_com_int.append_row(["Alvo (Usuário/Perfil)", "Base de Cálculo", "Percentual (%)"])
+# Carrega Base de Vendas Global para cálculos retroativos
+dados_brutos = aba_vendas.get_all_values()
+if len(dados_brutos) > 1:
+    df_vendas_global = pd.DataFrame(dados_brutos[1:]).iloc[:, :10]
+    df_vendas_global.columns = ["ID_cliente", "Nome do cliente", "DATA", "PRODUTO", "VENDEDOR", "GRUPO", "COTA", "ADMINISTRADORA", "STATUS", "VALOR"]
+    df_vendas_global['Data_Real'] = pd.to_datetime(df_vendas_global['DATA'], format="%d/%m/%Y", errors='coerce')
+    df_vendas_global['Valor_Numerico'] = df_vendas_global['VALOR'].astype(str).str.replace('R$', '', regex=False).str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.strip().apply(pd.to_numeric, errors='coerce').fillna(0.0)
+else:
+    df_vendas_global = pd.DataFrame()
 
 # === RENDERIZAÇÃO ===
 if not is_logado:
@@ -248,15 +274,13 @@ if not is_logado:
     st.stop() 
 
 if menu_selecionado == "Dashboard":
-    dados_brutos = aba_vendas.get_all_values()
-    
     # -------------------------------------------------------------
     # PERFIL DO CLIENTE
     # -------------------------------------------------------------
     if st.session_state['cliente_visualizado'] is not None:
         cliente_nome = st.session_state['cliente_visualizado']
         
-        st.markdown(f"## 👤 Perfil: {cliente_nome}")
+        st.markdown(f"### 👤 Perfil do Cliente: {cliente_nome}")
         
         if st.button("⬅️ Voltar ao Dashboard", type="primary"):
             st.session_state['cliente_visualizado'] = None
@@ -354,65 +378,101 @@ if menu_selecionado == "Dashboard":
 
         st.divider()
         st.subheader("📦 Cotas do Cliente")
-        if len(dados_brutos) > 1:
-            df_vendas = pd.DataFrame(dados_brutos[1:]).iloc[:, :10]
-            df_vendas.columns = ["ID_cliente", "Nome do cliente", "DATA", "PRODUTO", "VENDEDOR", "GRUPO", "COTA", "ADMINISTRADORA", "STATUS", "VALOR"]
-            cotas_cliente = df_vendas[df_vendas['Nome do cliente'] == cliente_nome].copy()
+        if not df_vendas_global.empty:
+            cotas_cliente = df_vendas_global[df_vendas_global['Nome do cliente'] == cliente_nome].copy()
             if not cotas_cliente.empty:
-                cotas_cliente['Valor_Numerico'] = cotas_cliente['VALOR'].astype(str).str.replace('R$', '', regex=False).str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.strip().apply(pd.to_numeric, errors='coerce').fillna(0.0)
                 info_a, info_b = st.columns(2)
                 info_a.metric("Total de Cotas Adquiridas", len(cotas_cliente))
-                info_b.metric("Volume Total Investido", f"R$ {cotas_cliente['Valor_Numerico'].sum():,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-                cotas_cliente['Valor Formatado'] = cotas_cliente['Valor_Numerico'].apply(lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+                info_b.metric("Volume Total Investido", formatar_brl_puro(cotas_cliente['Valor_Numerico'].sum()))
+                cotas_cliente['Valor Formatado'] = cotas_cliente['Valor_Numerico'].apply(formatar_brl_puro)
                 
                 ficha_display = cotas_cliente[['DATA', 'ADMINISTRADORA', 'PRODUTO', 'GRUPO', 'COTA', 'VENDEDOR', 'Valor Formatado']].rename(columns={'DATA': 'Data da Venda', 'ADMINISTRADORA': 'Administradora', 'PRODUTO': 'Produto', 'GRUPO': 'Grupo', 'COTA': 'Cota', 'VENDEDOR': 'Vendedor', 'Valor Formatado': 'Valor (R$)'})
                 estilo_ficha = ficha_display.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}])
                 st.dataframe(estilo_ficha, use_container_width=True, hide_index=True)
                 
-                # --- PREVISÃO DE COMISSIONAMENTO ---
+                # --- PREVISÃO DE COMISSIONAMENTO (A MÁGICA ACONTECE AQUI) ---
                 st.write("")
                 st.subheader("📈 Previsão de Comissionamento")
                 
                 dados_admin = aba_admin.get_all_values()
-                if len(dados_admin) > 1: df_admin = pd.DataFrame(dados_admin[1:], columns=dados_admin[0])
-                else: df_admin = pd.DataFrame(columns=["Administradora", "Produto"] + [f"P{i}" for i in range(1, 26)])
+                if len(dados_admin) > 1:
+                    df_admin = pd.DataFrame(dados_admin[1:], columns=dados_admin[0])
+                    df_admin['Admin_Norm'] = df_admin['Administradora'].apply(clean_str)
+                    df_admin['Prod_Norm'] = df_admin['Produto'].apply(normalizar_produto)
+                else: 
+                    df_admin = pd.DataFrame()
                     
                 previsoes = []
                 for idx, r in cotas_cliente.iterrows():
-                    admin_venda = normalizar_admin(r['ADMINISTRADORA'])
+                    admin_venda = clean_str(r['ADMINISTRADORA'])
                     prod_venda = normalizar_produto(r['PRODUTO'])
+                    vendedor_nome = r['VENDEDOR']
                     
                     regra_encontrada = None
-                    for _, regra_row in df_admin.iterrows():
-                        if normalizar_admin(regra_row['Administradora']) == admin_venda and normalizar_produto(regra_row['Produto']) == prod_venda:
-                            regra_encontrada = regra_row
-                            break
+                    if not df_admin.empty:
+                        reg_match = df_admin[(df_admin['Admin_Norm'] == admin_venda) & (df_admin['Prod_Norm'] == prod_venda)]
+                        if not reg_match.empty: regra_encontrada = reg_match.iloc[0]
                             
                     if regra_encontrada is not None:
-                        data_venda = pd.to_datetime(r['DATA'], format="%d/%m/%Y", errors='coerce')
+                        data_venda = r['Data_Real']
                         if pd.notna(data_venda):
+                            # Calcula metas e comissão do vendedor automaticamente
+                            tier_pct, tier_parc = calcular_comissao_vendedor(df_vendas_global, vendedor_nome, data_venda)
+                            
                             for i in range(1, 26):
-                                p_str = str(regra_encontrada[f"P{i}"]).replace('%', '').strip()
-                                try: p_val = float(p_str)
-                                except: p_val = 0.0
+                                p_str = str(regra_encontrada.get(f"P{i}", "0")).replace('%', '').strip()
+                                try: p_val_admin = float(p_str) / 100.0
+                                except: p_val_admin = 0.0
                                 
-                                if p_val > 0:
+                                admin_recebe = r['Valor_Numerico'] * p_val_admin
+                                vend_recebe = 0.0
+                                breno_recebe = 0.0
+                                uriel_recebe = 0.0
+                                
+                                # Aplicando as regras societárias padronizadas
+                                if vendedor_nome == "BRENO LIMA":
+                                    breno_recebe = admin_recebe * 0.70
+                                    uriel_recebe = admin_recebe * 0.30
+                                    vend_recebe = breno_recebe
+                                elif vendedor_nome == "URIEL GOMES":
+                                    uriel_recebe = admin_recebe * 0.70
+                                    breno_recebe = admin_recebe * 0.30
+                                    vend_recebe = uriel_recebe
+                                elif vendedor_nome == "Consorbens":
+                                    breno_recebe = admin_recebe * 0.50
+                                    uriel_recebe = admin_recebe * 0.50
+                                else:
+                                    # Vendedor Terceiro
+                                    if i <= tier_parc:
+                                        vend_recebe = (r['Valor_Numerico'] * tier_pct) / tier_parc
+                                    sobra = admin_recebe - vend_recebe
+                                    breno_recebe = sobra * 0.50
+                                    uriel_recebe = sobra * 0.50
+
+                                if admin_recebe > 0 or vend_recebe > 0:
                                     data_pagamento = data_venda + pd.Timedelta(days=7) + pd.DateOffset(months=i-1)
-                                    valor_pagamento = r['Valor_Numerico'] * (p_val / 100)
-                                    previsoes.append({
-                                        "Cota": f"{r['GRUPO']}/{r['COTA']} ({r['ADMINISTRADORA']})",
-                                        "Vendedor": r['VENDEDOR'],
-                                        "Parcela": f"{i}ª Parcela",
+                                    
+                                    row_dict = {
+                                        "Cota / Admin": f"{r['GRUPO']}/{r['COTA']} ({r['ADMINISTRADORA']})",
+                                        "Mês/Parcela": f"{i}ª Parcela",
                                         "Data Prevista": data_pagamento.strftime("%d/%m/%Y"),
-                                        "%": f"{p_val}%",
-                                        "Valor Previsto": f"R$ {valor_pagamento:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-                                    })
+                                    }
+                                    
+                                    if is_master:
+                                        row_dict["Corretora Recebe"] = formatar_brl_puro(admin_recebe)
+                                        row_dict[f"Vendedor Recebe"] = formatar_brl_puro(vend_recebe)
+                                        row_dict["Breno Recebe"] = formatar_brl_puro(breno_recebe)
+                                        row_dict["Uriel Recebe"] = formatar_brl_puro(uriel_recebe)
+                                    else:
+                                        row_dict["Sua Comissão"] = formatar_brl_puro(vend_recebe)
+
+                                    previsoes.append(row_dict)
                     else:
                         st.warning(f"⚠️ Regra não cadastrada para: {r['ADMINISTRADORA']} - {r['PRODUTO']} (Cota {r['GRUPO']}/{r['COTA']})")
                         
                 if previsoes:
                     df_prev = pd.DataFrame(previsoes)
-                    if not is_master: df_prev = df_prev[df_prev['Vendedor'] == st.session_state['nome_vendedor']]
+                    if not is_master: df_prev = df_prev[df_prev['Sua Comissão'] != "R$ 0,00"]
                         
                     if not df_prev.empty:
                         st.dataframe(df_prev.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}]), use_container_width=True, hide_index=True)
@@ -444,12 +504,8 @@ if menu_selecionado == "Dashboard":
     # DASHBOARD PADRÃO
     # -------------------------------------------------------------
     else:
-        if len(dados_brutos) > 1:
-            df_vendas = pd.DataFrame(dados_brutos[1:]).iloc[:, :10]
-            df_vendas.columns = ["ID_cliente", "Nome do cliente", "DATA", "PRODUTO", "VENDEDOR", "GRUPO", "COTA", "ADMINISTRADORA", "STATUS", "VALOR"]
-            df_vendas['Data_Real'] = pd.to_datetime(df_vendas['DATA'], dayfirst=True, errors='coerce')
-            df_vendas['Valor_Numerico'] = df_vendas['VALOR'].astype(str).str.replace('R$', '', regex=False).str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.strip().apply(pd.to_numeric, errors='coerce').fillna(0.0)
-
+        if not df_vendas_global.empty:
+            df_vendas = df_vendas_global.copy()
             if st.session_state['perfil_logado'] == "Vendedor": df_vendas = df_vendas[df_vendas['VENDEDOR'] == st.session_state['nome_vendedor']]
                 
             col_t1, col_t2 = st.columns([4, 1])
@@ -541,7 +597,7 @@ if menu_selecionado == "Dashboard":
         else: st.info("O sistema ainda não possui vendas cadastradas na planilha.")
 
 elif menu_selecionado == "Nova Venda":
-    st.markdown("## 📝 Cadastrar Nova Venda")
+    st.markdown("### 📝 Cadastrar Nova Venda")
     
     col_c1, col_c2 = st.columns(2)
     with col_c1:
@@ -670,56 +726,11 @@ elif menu_selecionado == "Nova Venda":
                     if k in st.session_state: del st.session_state[k]
                 st.session_state['qtd_cotas'] = 1 
 
-elif menu_selecionado == "Gerenciar Vendas (Editar/Deletar)":
-    st.markdown("## 🛠️ Gerenciar e Editar Vendas")
-    st.warning("Área Restrita (Apenas Sócios). Muito cuidado ao deletar informações!")
-    
-    aba_vendas = planilha.worksheet("Vendas")
-    dados_brutos = aba_vendas.get_all_values()
-    if len(dados_brutos) > 1:
-        df_vendas = pd.DataFrame(dados_brutos[1:]).iloc[:, :10]
-        df_vendas.columns = ["ID_cliente", "Nome do cliente", "DATA", "PRODUTO", "VENDEDOR", "GRUPO", "COTA", "ADMINISTRADORA", "STATUS", "VALOR"]
-        opcoes_busca = df_vendas.apply(lambda r: f"Linha {r.name + 2} | Cliente: {r['Nome do cliente']} - Grupo/Cota: {r['GRUPO']}/{r['COTA']}", axis=1).tolist()
-        venda_selecionada = st.selectbox("Selecione a venda para alterar/excluir:", [""] + opcoes_busca)
-        
-        if venda_selecionada:
-            linha_planilha = int(venda_selecionada.split(" | ")[0].replace("Linha ", ""))
-            venda_atual = df_vendas.iloc[linha_planilha - 2]
-            st.divider()
-            st.subheader(f"Editando Venda: {venda_atual['Nome do cliente']}")
-            col1, col2 = st.columns(2)
-            with col1:
-                novo_nome = st.text_input("Nome do Cliente", value=str(venda_atual['Nome do cliente']))
-                novo_status = st.selectbox("Status", ["Vendido", "Contemplado", "Cancelado"], index=["Vendido", "Contemplado", "Cancelado"].index(venda_atual['STATUS'] if venda_atual['STATUS'] in ["Vendido", "Contemplado", "Cancelado"] else "Vendido"))
-            with col2:
-                val_float = pd.to_numeric(str(venda_atual['VALOR']).replace('R$', '').replace('.','').replace(',', '.').strip(), errors='coerce')
-                novo_valor = st.number_input("Valor da Venda (R$)", value=float(val_float) if not pd.isna(val_float) else 0.0)
-
-            col_btn1, col_btn2 = st.columns(2)
-            with col_btn1:
-                if st.button("Salvar Alterações", type="primary"):
-                    aba_vendas.update_cell(linha_planilha, 2, novo_nome)   
-                    aba_vendas.update_cell(linha_planilha, 10, novo_valor) 
-                    aba_vendas.update_cell(linha_planilha, 9, novo_status) 
-                    st.success("Alterações salvas na planilha!")
-                    st.rerun()
-            with col_btn2:
-                if st.button("🚨 DELETAR ESTA VENDA"):
-                    aba_vendas.delete_rows(linha_planilha)
-                    st.error("Venda apagada permanentemente!")
-                    st.rerun()
-    else: st.info("Nenhuma venda para gerenciar.")
-
 elif menu_selecionado == "Relatórios":
-    st.markdown("## 📑 Relatórios Gerenciais")
-    aba_vendas = planilha.worksheet("Vendas")
-    dados_brutos = aba_vendas.get_all_values()
-    if len(dados_brutos) > 1:
-        df_vendas = pd.DataFrame(dados_brutos[1:]).iloc[:, :10]
-        df_vendas.columns = ["ID_cliente", "Nome do cliente", "DATA", "PRODUTO", "VENDEDOR", "GRUPO", "COTA", "ADMINISTRADORA", "STATUS", "VALOR"]
-        df_vendas['Data_Real'] = pd.to_datetime(df_vendas['DATA'], dayfirst=True, errors='coerce')
-        df_vendas['Valor_Numerico'] = df_vendas['VALOR'].astype(str).str.replace('R$', '', regex=False).str.replace('.', '', regex=False).str.replace(',', '.', regex=False).str.strip().apply(pd.to_numeric, errors='coerce').fillna(0.0)
-
+    st.markdown("### 📑 Relatórios Gerenciais")
+    if not df_vendas_global.empty:
+        df_f = df_vendas_global.copy()
+        
         c1, c2 = st.columns([1, 2])
         with c1:
             ft_rel = st.selectbox("⏳ Período:", ["Mês Atual", "Mês Anterior", "Ano Atual", "Todas as Vendas", "Período Personalizado"])
@@ -729,7 +740,6 @@ elif menu_selecionado == "Relatórios":
                 with rd2: rf = st.date_input("Data Final", format="DD/MM/YYYY")
         
         hoje = datetime.today()
-        df_f = df_vendas.copy()
         
         if ft_rel != "Todas as Vendas":
             m = df_f['Data_Real'].notna()
@@ -745,29 +755,21 @@ elif menu_selecionado == "Relatórios":
 
         if df_f.empty: st.warning("Nenhuma venda no período selecionado.")
         else:
-            t1, t2, t3 = st.tabs(["👤 Por Usuário", "🏢 Por Administradora", "💰 Comissões"])
+            t1, t2 = st.tabs(["👤 Por Usuário", "🏢 Por Administradora"])
             with t1:
                 rv = df_f.groupby('VENDEDOR').agg(Qtde=('Nome do cliente', 'count'), Vol=('Valor_Numerico', 'sum')).reset_index()
-                rv['Vol'] = rv['Vol'].apply(lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+                rv['Vol'] = rv['Vol'].apply(formatar_brl_puro)
                 st.dataframe(rv.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}]), use_container_width=True, hide_index=True)
             with t2:
                 ra = df_f.groupby('ADMINISTRADORA').agg(Qtde=('Nome do cliente', 'count'), Vol=('Valor_Numerico', 'sum')).reset_index()
-                ra['Vol'] = ra['Vol'].apply(lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+                ra['Vol'] = ra['Vol'].apply(formatar_brl_puro)
                 st.dataframe(ra.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}]), use_container_width=True, hide_index=True)
-            with t3:
-                pct = st.number_input("Comissão Média (%)", min_value=0.0, value=1.0, step=0.1)
-                dc = df_f.groupby('VENDEDOR').agg(Vol=('Valor_Numerico', 'sum')).reset_index()
-                dc['Comissão'] = dc['Vol'] * (pct / 100)
-                st.metric("Comissão Total", f"R$ {dc['Comissão'].sum():,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-                dc['Vol'] = dc['Vol'].apply(lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-                dc['Comissão'] = dc['Comissão'].apply(lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-                st.dataframe(dc.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}]), use_container_width=True, hide_index=True)
     else: st.info("Não possui vendas.")
 
 elif menu_selecionado == "Regras de Comissão":
-    st.markdown("## 🏢 Regras de Comissão")
+    st.markdown("### 🏢 Regras de Comissão")
+    st.info("As comissões dos Sócios e Vendedores Terceiros já estão embutidas e automatizadas no motor financeiro do sistema, não sendo necessário configurá-las manualmente.")
     
-    # DF Administradoras
     dados_admin = aba_admin.get_all_values()
     if len(dados_admin) > 1:
         df_admin = pd.DataFrame(dados_admin[1:])
@@ -776,14 +778,7 @@ elif menu_selecionado == "Regras de Comissão":
     else: 
         df_admin = pd.DataFrame(columns=["Administradora", "Produto"] + [f"P{i}" for i in range(1, 26)])
 
-    # DF Comissões Internas
-    dados_com_int = aba_com_int.get_all_values()
-    if len(dados_com_int) > 1:
-        df_com_int = pd.DataFrame(dados_com_int[1:], columns=dados_com_int[0])
-    else:
-        df_com_int = pd.DataFrame(columns=["Alvo (Usuário/Perfil)", "Base de Cálculo", "Percentual (%)"])
-
-    t1, t2, t3, t4 = st.tabs(["📋 Adm Cadastradas", "➕ Nova Regra Adm", "✏️ Editar/Excluir Adm", "👥 Comissões Internas"])
+    t1, t2, t3 = st.tabs(["📋 Regras das Administradoras", "➕ Nova Regra", "✏️ Editar/Excluir"])
     
     with t1:
         if not df_admin.empty:
@@ -861,40 +856,6 @@ elif menu_selecionado == "Regras de Comissão":
                         st.error("Regra deletada!")
                         st.rerun()
 
-    # --- ABA DE COMISSÕES INTERNAS ---
-    with t4:
-        st.subheader("Configurar Repasses (Vendedores e Masters)")
-        if not df_com_int.empty:
-            st.dataframe(df_com_int.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}]), use_container_width=True, hide_index=True)
-        else: st.info("Nenhuma regra interna configurada.")
-        
-        with st.form("f_com_int"):
-            st.write("Criar Nova Regra Interna")
-            c_int1, c_int2, c_int3 = st.columns(3)
-            with c_int1:
-                opcoes_alvo = ["Perfil: Vendedor", "Perfil: Master"] + [u["nome"] for u in USUARIOS.values()]
-                alvo = st.selectbox("Usuário ou Perfil Alvo *", list(dict.fromkeys(opcoes_alvo)))
-            with c_int2:
-                base_calc = st.selectbox("Base de Cálculo *", ["% sobre a Comissão da Corretora", "% sobre o Valor da Venda"])
-            with c_int3:
-                pct_int = st.number_input("Percentual de Repasse (%) *", min_value=0.0, step=0.1)
-                
-            if st.form_submit_button("Salvar Regra Interna", type="primary"):
-                aba_com_int.append_row([alvo, base_calc, f"{pct_int}%"])
-                st.success("Regra salva com sucesso!")
-                st.rerun()
-
-        if not df_com_int.empty:
-            st.write("---")
-            opts_del = df_com_int.apply(lambda x: f"Linha {x.name + 2} | {x['Alvo (Usuário/Perfil)']} - {x['Base de Cálculo']} - {x['Percentual (%)']}", axis=1).tolist()
-            del_sel = st.selectbox("Selecione a Regra Interna para excluir:", [""] + opts_del)
-            if st.button("🚨 Apagar Regra Interna Selecionada"):
-                if del_sel:
-                    l_del = int(del_sel.split(" | ")[0].replace("Linha ", ""))
-                    aba_com_int.delete_rows(l_del)
-                    st.success("Regra excluída!")
-                    st.rerun()
-
 elif menu_selecionado == "Baixar Parcela":
-    st.markdown("## 💰 Baixa de Comissão")
+    st.markdown("### 💰 Baixa de Comissão")
     st.info("A integração de baixa com o sistema de previsão será habilitada na próxima etapa!")
