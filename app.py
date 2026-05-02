@@ -73,30 +73,28 @@ def normalizar_string(s):
 
 def normalizar_produto(p):
     p = normalizar_string(p)
-    if p in ["AUTO", "AUTOMOVEL", "VEICULO"]: return "AUTOMOVEL"
+    if p in ["AUTO", "AUTOMOVEL", "VEICULO"]: return "AUTO"
     if p in ["IMOVEL", "IMOVEIS"]: return "IMOVEL"
     if p in ["MOTO", "MOTOS", "MOTOCICLETA"]: return "MOTO"
     if p in ["CAMINHAO", "CAMINHOES"]: return "CAMINHAO"
-    if p in ["SERVICO", "SERVICOS"]: return "SERVICO"
+    if p in ["SERVICO", "SERVICOS"]: return "SERVICOS"
     return p
 
 def obter_index_produto(p_str):
     norm = normalizar_produto(p_str)
-    mapping = {"AUTOMOVEL": 0, "IMOVEL": 1, "MOTO": 2, "CAMINHAO": 3, "SERVICO": 4}
+    mapping = {"AUTO": 0, "IMOVEL": 1, "MOTO": 2, "CAMINHAO": 3, "SERVICOS": 4}
     return mapping.get(norm, 0)
 
 def parse_float_safe(v):
-    """Limpador universal de números do Google Sheets (converte vírgulas para pontos com segurança)"""
+    """Limpador universal de números (converte vírgulas para pontos com segurança)"""
     try:
         v_str = str(v).replace('%', '').replace('R$', '').replace(' ', '').strip()
         if not v_str: return 0.0
-        # Se tem ponto de milhar e vírgula decimal (ex: 1.500,50)
         if '.' in v_str and ',' in v_str:
             if v_str.rfind(',') > v_str.rfind('.'):
                 v_str = v_str.replace('.', '').replace(',', '.')
             else:
                 v_str = v_str.replace(',', '')
-        # Se tem só vírgula (ex: 1,5)
         elif ',' in v_str:
             v_str = v_str.replace(',', '.')
         return float(v_str)
@@ -107,6 +105,9 @@ def parse_float_safe(v):
 def mascara_tel_nv(): st.session_state['tel_nv'] = formatar_telefone(st.session_state.get('tel_nv', ''))
 def mascara_aniv_nv(): st.session_state['aniv_nv'] = formatar_data(st.session_state.get('aniv_nv', ''))
 def mascara_renda_nv(): st.session_state['renda_nv'] = formatar_moeda(st.session_state.get('renda_nv', ''))
+
+def mascara_t1_max(): st.session_state['t1_max_in'] = formatar_moeda(st.session_state.get('t1_max_in', ''))
+def mascara_t2_max(): st.session_state['t2_max_in'] = formatar_moeda(st.session_state.get('t2_max_in', ''))
 
 # === MOTOR DE CÁLCULO DE COMISSÃO ===
 def calcular_comissao_vendedor(df_vendas_global, vendedor_nome, data_venda_dt, cfg):
@@ -267,10 +268,9 @@ except:
     aba_cfg.append_row(vals_cfg)
     cfg_data = [cols_cfg, vals_cfg]
 
-# Agora usando a função segura para garantir que vírgulas/formatos do Sheets não quebrem o código
 cfg = {k: parse_float_safe(v) for k, v in zip(cfg_data[0], cfg_data[1])}
 
-# Carrega Base de Vendas Global para cálculos retroativos
+# Carrega Base de Vendas Global
 dados_brutos = aba_vendas.get_all_values()
 if len(dados_brutos) > 1:
     df_vendas_global = pd.DataFrame(dados_brutos[1:]).iloc[:, :10]
@@ -312,7 +312,6 @@ if not is_logado:
     st.stop() 
 
 if menu_selecionado == "Dashboard":
-    
     # -------------------------------------------------------------
     # PERFIL DO CLIENTE
     # -------------------------------------------------------------
@@ -435,7 +434,9 @@ if menu_selecionado == "Dashboard":
                 
                 dados_admin = aba_admin.get_all_values()
                 if len(dados_admin) > 1:
-                    df_admin = pd.DataFrame(dados_admin[1:], columns=dados_admin[0])
+                    df_admin = pd.DataFrame(dados_admin[1:])
+                    df_admin = df_admin.iloc[:, :27]
+                    df_admin.columns = ["Administradora", "Produto"] + [f"P{i}" for i in range(1, 26)]
                     df_admin['Admin_Norm'] = df_admin['Administradora'].apply(normalizar_string)
                     df_admin['Prod_Norm'] = df_admin['Produto'].apply(normalizar_produto)
                 else: 
@@ -506,7 +507,7 @@ if menu_selecionado == "Dashboard":
 
                                     previsoes.append(row_dict)
                     else:
-                        st.warning(f"⚠️ Regra não cadastrada para: '{r['ADMINISTRADORA']}' - '{r['PRODUTO']}'")
+                        st.warning(f"⚠️ Regra não cadastrada para: '{r['ADMINISTRADORA']}' - '{r['PRODUTO']}'. Verifique o menu 'Regras de Comissão'.")
                         
                 if previsoes:
                     df_prev = pd.DataFrame(previsoes)
@@ -581,7 +582,7 @@ if menu_selecionado == "Dashboard":
                 df_display = df_clientes.copy()
                 df_display['Grupo e cota'] = df_display.apply(lambda x: f"{x['GRUPO']} / {x['COTA']}" if str(x['GRUPO']).strip() or str(x['COTA']).strip() else "N/A", axis=1)
                 df_display['valor da venda'] = df_display['Valor_Numerico'].apply(lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-                df_display['Prod_Norm'] = df_display['PRODUTO'].apply(normalizar_produto)
+                df_display['Prod_Norm'] = df_display['PRODUTO'].apply(normalizar_produto).apply(lambda p: p.capitalize())
                 df_display = df_display[['Nome do cliente', 'Grupo e cota', 'Prod_Norm', 'ADMINISTRADORA', 'valor da venda', 'VENDEDOR', 'DATA']].rename(columns={ 'Nome do cliente': 'Nome', 'Prod_Norm': 'Tipo de Produto', 'ADMINISTRADORA': 'Administradora', 'VENDEDOR': 'Vendedor', 'DATA': 'Data da Venda' })
                 
                 estilo_tabela = df_display.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}])
@@ -604,7 +605,7 @@ if menu_selecionado == "Dashboard":
                     cg1, cg2 = st.columns(2)
                     with cg1: gi = st.date_input("Data Inicial", format="DD/MM/YYYY", key="g_inicio")
                     with cg2: gf = st.date_input("Data Final", format="DD/MM/YYYY", key="g_fim")
-            with g_filtro2: fp_graf = st.selectbox("📦 Produto:", ["Todos", "Automóvel", "Imóvel", "Moto", "Caminhão", "Serviços"])
+            with g_filtro2: fp_graf = st.selectbox("📦 Produto:", ["Todos", "Auto", "Imóvel", "Moto", "Caminhão", "Serviços"])
                 
             df_g = df_vendas.copy()
             if ft_graf != "Todas as Vendas" and not df_g['Data_Real'].isna().all():
@@ -695,7 +696,8 @@ elif menu_selecionado == "Nova Venda":
             vendedor = st.session_state['nome_vendedor']
     with col_v2:
         admin = st.selectbox("Administradora *", ["YAMAHA", "ITAÚ", "ROMA", "EMBRACON"])
-        produto = st.selectbox("Produto *", ["Automóvel", "Imóvel", "Moto", "Caminhão", "Serviços"])
+        # Unificamos o dropdown para "Auto" para não gerar mais conflitos!
+        produto = st.selectbox("Produto *", ["Auto", "Imóvel", "Moto", "Caminhão", "Serviços"])
         
     st.markdown("##### Cotas Adquiridas")
     if 'qtd_cotas' not in st.session_state: st.session_state['qtd_cotas'] = 1
@@ -828,7 +830,7 @@ elif menu_selecionado == "Regras de Comissão":
             st.subheader("Dados da Regra")
             c1, c2 = st.columns(2)
             with c1: n = st.text_input("Administradora *")
-            with c2: p = st.selectbox("Produto *", ["Automóvel", "Imóvel", "Moto", "Caminhão", "Serviços"])
+            with c2: p = st.selectbox("Produto *", ["Auto", "Imóvel", "Moto", "Caminhão", "Serviços"])
             
             st.divider()
             st.subheader("Percentual de Comissão por Parcela (%)")
@@ -862,7 +864,7 @@ elif menu_selecionado == "Regras de Comissão":
                 st.subheader("Editando Regra")
                 c1, c2 = st.columns(2)
                 with c1: e_n = st.text_input("Administradora", value=reg_at['Administradora'])
-                with c2: e_p = st.selectbox("Produto", ["Automóvel", "Imóvel", "Moto", "Caminhão", "Serviços"], index=obter_index_produto(reg_at['Produto']))
+                with c2: e_p = st.selectbox("Produto", ["Auto", "Imóvel", "Moto", "Caminhão", "Serviços"], index=obter_index_produto(reg_at['Produto']))
                 
                 st.write("Percentuais (%)")
                 edit_inputs_p = []
@@ -893,10 +895,14 @@ elif menu_selecionado == "Regras de Comissão":
                         st.error("Regra deletada!")
                         st.rerun()
 
-    # --- ABA DE COMISSÕES INTERNAS (EDITÁVEL) ---
+    # --- ABA DE COMISSÕES INTERNAS (EDITÁVEL COM MÁSCARA FINANCEIRA) ---
     with t4:
         st.subheader("Configurações de Recebimento (Sócios e Vendedores)")
         st.info("Estas regras alimentam o cálculo automático de comissionamento da equipe e o rateio de lucro da corretora.")
+        
+        # Carregando com a máscara para exibição bonita
+        if 't1_max_in' not in st.session_state: st.session_state['t1_max_in'] = formatar_brl_puro(cfg["T1_Max"])
+        if 't2_max_in' not in st.session_state: st.session_state['t2_max_in'] = formatar_brl_puro(cfg["T2_Max"])
         
         with st.form("form_cfg_interna"):
             st.markdown("#### Rateio Direto na Fonte (Comissão da Corretora)")
@@ -921,12 +927,12 @@ elif menu_selecionado == "Regras de Comissão":
             ct1, ct2, ct3 = st.columns(3)
             with ct1:
                 st.markdown("**Metas - Nível 1**")
-                t1_max = st.number_input("Até (Volume R$)", value=cfg["T1_Max"], step=10000.0)
+                t1_max_str = st.text_input("Até (Volume R$)", key="t1_max_in", on_change=mascara_t1_max)
                 t1_pct = st.number_input("Comissão (%)", value=cfg["T1_Pct"], step=0.1)
                 t1_parc = st.number_input("Dividido em (Qtd. Parcelas)", value=int(cfg["T1_Parc"]), step=1)
             with ct2:
                 st.markdown("**Metas - Nível 2**")
-                t2_max = st.number_input("Até (Volume R$) ", value=cfg["T2_Max"], step=10000.0)
+                t2_max_str = st.text_input("Até (Volume R$)", key="t2_max_in", on_change=mascara_t2_max)
                 t2_pct = st.number_input("Comissão (%) ", value=cfg["T2_Pct"], step=0.1)
                 t2_parc = st.number_input("Dividido em (Qtd. Parcelas) ", value=int(cfg["T2_Parc"]), step=1)
             with ct3:
@@ -936,7 +942,11 @@ elif menu_selecionado == "Regras de Comissão":
                 t3_parc = st.number_input("Dividido em (Qtd. Parcelas)  ", value=int(cfg["T3_Parc"]), step=1)
 
             if st.form_submit_button("Salvar Regras de Pagamento", type="primary", use_container_width=True):
-                new_vals = [b_b, b_u, u_u, u_b, c_b, c_u, t1_max, t1_pct, t1_parc, t2_max, t2_pct, t2_parc, t3_pct, t3_parc]
+                # Conversão segura do formato "R$ 500.000,00" para float do Python
+                t1_val = parse_float_safe(t1_max_str)
+                t2_val = parse_float_safe(t2_max_str)
+                
+                new_vals = [b_b, b_u, u_u, u_b, c_b, c_u, t1_val, t1_pct, t1_parc, t2_val, t2_pct, t2_parc, t3_pct, t3_parc]
                 aba_cfg.clear()
                 aba_cfg.append_row(cols_cfg)
                 aba_cfg.append_row(new_vals)
