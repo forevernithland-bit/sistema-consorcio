@@ -68,7 +68,6 @@ def mascara_renda_nv(): st.session_state['renda_nv'] = formatar_moeda(st.session
 # === 2. LÓGICA DO MENU LATERAL ===
 is_logado = st.session_state['usuario_logado'] is not None
 
-# Usuário lá em cima, antes da Logo!
 if is_logado:
     st.sidebar.markdown(f"<div style='color: #0f172a; font-weight: bold; font-size: 14px; margin-bottom: 10px;'>👤 {st.session_state['nome_vendedor'].upper()}</div>", unsafe_allow_html=True)
 
@@ -86,7 +85,7 @@ if not is_logado:
         st.rerun()
 
 else:
-    st.sidebar.divider() # Linha elegante separando a logo do menu
+    st.sidebar.divider() 
     
     ferramentas_logadas = ["🏍️ Simulador Yamaha", "🏦 Simulador Itaú", "🎯 Oportunidades Itaú", "⚖️ Financiamento x Consórcio"]
     
@@ -179,6 +178,19 @@ try: aba_clientes = planilha.worksheet("Clientes")
 except: 
     aba_clientes = planilha.add_worksheet("Clientes", 1000, 10)
     aba_clientes.append_row(["Nome", "Telefone", "Email", "Endereco", "Aniversario", "Profissao", "Renda", "Data_Cadastro"])
+
+# Estrutura robusta para Administradoras (25 Parcelas)
+try: 
+    aba_admin = planilha.worksheet("Administradoras")
+    d_admin_temp = aba_admin.get_all_values()
+    if not d_admin_temp or len(d_admin_temp[0]) < 27:
+        aba_admin.clear()
+        cabecalho_admin = ["Administradora", "Produto"] + [f"P{i}" for i in range(1, 26)]
+        aba_admin.append_row(cabecalho_admin)
+except: 
+    aba_admin = planilha.add_worksheet("Administradoras", 100, 27)
+    cabecalho_admin = ["Administradora", "Produto"] + [f"P{i}" for i in range(1, 26)]
+    aba_admin.append_row(cabecalho_admin)
 
 # === RENDERIZAÇÃO ===
 if not is_logado:
@@ -329,6 +341,55 @@ if menu_selecionado == "Dashboard":
                 estilo_ficha = ficha_display.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}])
                 st.dataframe(estilo_ficha, use_container_width=True, hide_index=True)
                 
+                # --- PREVISÃO DE COMISSIONAMENTO (NOVO) ---
+                st.write("")
+                st.subheader("📈 Previsão de Comissionamento")
+                
+                dados_admin = aba_admin.get_all_values()
+                if len(dados_admin) > 1:
+                    df_admin = pd.DataFrame(dados_admin[1:], columns=dados_admin[0])
+                else:
+                    df_admin = pd.DataFrame(columns=["Administradora", "Produto"] + [f"P{i}" for i in range(1, 26)])
+                    
+                previsoes = []
+                for idx, r in cotas_cliente.iterrows():
+                    regra = df_admin[(df_admin['Administradora'] == r['ADMINISTRADORA']) & (df_admin['Produto'] == r['PRODUTO'])]
+                    if not regra.empty:
+                        regra = regra.iloc[0]
+                        data_venda = pd.to_datetime(r['DATA'], format="%d/%m/%Y", errors='coerce')
+                        if pd.notna(data_venda):
+                            for i in range(1, 26):
+                                p_str = str(regra[f"P{i}"]).replace('%', '').strip()
+                                try: p_val = float(p_val_str)
+                                except: p_val = 0.0
+                                
+                                if p_val > 0:
+                                    # Lógica: P1 é 7 dias após a venda. As demais adicionam meses exatos.
+                                    data_pagamento = data_venda + pd.Timedelta(days=7) + pd.DateOffset(months=i-1)
+                                    valor_pagamento = r['Valor_Numerico'] * (p_val / 100)
+                                    previsoes.append({
+                                        "Cota": f"{r['GRUPO']}/{r['COTA']} ({r['ADMINISTRADORA']})",
+                                        "Vendedor": r['VENDEDOR'],
+                                        "Parcela": f"{i}ª Parcela",
+                                        "Data Prevista": data_pagamento.strftime("%d/%m/%Y"),
+                                        "%": f"{p_val}%",
+                                        "Valor Previsto": f"R$ {valor_pagamento:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                                    })
+                    else:
+                        st.warning(f"⚠️ Regra não cadastrada para: {r['ADMINISTRADORA']} - {r['PRODUTO']} (Cota {r['GRUPO']}/{r['COTA']})")
+                        
+                if previsoes:
+                    df_prev = pd.DataFrame(previsoes)
+                    if not is_master:
+                        df_prev = df_prev[df_prev['Vendedor'] == st.session_state['nome_vendedor']]
+                        
+                    if not df_prev.empty:
+                        st.dataframe(df_prev.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}]), use_container_width=True, hide_index=True)
+                    else:
+                        st.info("Nenhuma previsão de comissão vinculada a você para este cliente.")
+                else:
+                    st.info("Aguardando configurações de regras para gerar a previsão.")
+
                 if is_master:
                     st.write("")
                     with st.expander("⚙️ Gerenciar / Excluir Cota Específica"):
@@ -627,73 +688,96 @@ elif menu_selecionado == "Relatórios":
     else: st.info("Não possui vendas.")
 
 elif menu_selecionado == "Administradoras":
-    st.title("🏢 Gestão de Administradoras")
-    try: aba_admin = planilha.worksheet("Administradoras")
-    except:
-        aba_admin = planilha.add_worksheet("Administradoras", 100, 10)
-        aba_admin.append_row(["Administradora", "Produto", "Comissão Total (%)", "Regra de Pagamento (Parcelas)"])
-        st.rerun()
-
+    st.title("🏢 Gestão de Administradoras e Regras de Comissão")
+    
     dados_admin = aba_admin.get_all_values()
     if len(dados_admin) > 1:
         df_admin = pd.DataFrame(dados_admin[1:])
-        col_count = len(df_admin.columns)
-        if col_count < 4:
-            for i in range(col_count, 4): df_admin[i] = ""
-        df_admin = df_admin.iloc[:, :4]
-        df_admin.columns = ["Administradora", "Produto", "Comissão Total (%)", "Regra de Pagamento (Parcelas)"]
+        df_admin = df_admin.iloc[:, :27]
+        df_admin.columns = ["Administradora", "Produto"] + [f"P{i}" for i in range(1, 26)]
     else: 
-        df_admin = pd.DataFrame(columns=["Administradora", "Produto", "Comissão Total (%)", "Regra de Pagamento (Parcelas)"])
+        df_admin = pd.DataFrame(columns=["Administradora", "Produto"] + [f"P{i}" for i in range(1, 26)])
 
-    t1, t2, t3 = st.tabs(["📋 Regras", "➕ Nova", "✏️ Editar/Excluir"])
+    t1, t2, t3 = st.tabs(["📋 Regras Cadastradas", "➕ Nova Regra", "✏️ Editar/Excluir"])
+    
     with t1:
-        if not df_admin.empty: st.dataframe(df_admin.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}]), use_container_width=True, hide_index=True)
-        else: st.info("Nenhuma regra.")
+        if not df_admin.empty:
+            # Mostra apenas as colunas que têm algum valor para não ficar gigante
+            df_mostrar = df_admin.copy()
+            st.dataframe(df_mostrar.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}]), use_container_width=True, hide_index=True)
+        else: st.info("Nenhuma regra de comissionamento.")
+        
     with t2:
         with st.form("f_adm"):
+            st.subheader("Dados da Regra")
             c1, c2 = st.columns(2)
-            with c1:
-                n = st.text_input("Administradora *")
-                p = st.selectbox("Produto *", ["Automóvel", "Caminhão", "Serviços", "Motos", "Imóveis"])
-            with c2:
-                com = st.number_input("Comissão (%) *", min_value=0.0, step=0.1)
-                r = st.text_area("Regras *")
-            if st.form_submit_button("Salvar", type="primary"):
-                if n and p and r:
-                    aba_admin.append_row([n.upper(), p, f"{com}%", r])
-                    st.success("Salvo!")
+            with c1: n = st.text_input("Administradora *")
+            with c2: p = st.selectbox("Produto *", ["Automóvel", "Caminhão", "Serviços", "Motos", "Imóveis"])
+            
+            st.divider()
+            st.subheader("Percentual de Comissão por Parcela (%)")
+            st.caption("Preencha apenas as parcelas que geram comissionamento. Deixe 0.0 nas demais.")
+            
+            # Matriz de 5 colunas x 5 linhas para as 25 parcelas
+            inputs_p = []
+            for linha in range(5):
+                cols_p = st.columns(5)
+                for col in range(5):
+                    num_p = (linha * 5) + col + 1
+                    with cols_p[col]:
+                        v = st.number_input(f"Parcela {num_p}", min_value=0.0, step=0.1, key=f"nova_p{num_p}")
+                        inputs_p.append(v)
+
+            if st.form_submit_button("Salvar Regra de Comissionamento", type="primary"):
+                if n and p:
+                    nova_linha = [n.upper(), p] + [f"{v}%" if v > 0 else "" for v in inputs_p]
+                    aba_admin.append_row(nova_linha)
+                    st.success("Regra cadastrada com sucesso!")
                     st.rerun()
-                else: st.error("Preencha tudo.")
+                else: st.error("Preencha a Administradora e o Produto.")
+                
     with t3:
         if not df_admin.empty:
             opts = df_admin.apply(lambda x: f"Linha {x.name + 2} | {x['Administradora']} - {x['Produto']}", axis=1).tolist()
-            sel = st.selectbox("Editar:", [""] + opts)
+            sel = st.selectbox("Selecione a regra para editar:", [""] + opts)
             if sel:
                 l_plan = int(sel.split(" | ")[0].replace("Linha ", ""))
                 reg_at = df_admin.iloc[l_plan - 2]
+                
+                st.subheader("Editando Regra")
                 c1, c2 = st.columns(2)
-                with c1:
-                    e_n = st.text_input("Administradora", value=reg_at['Administradora'])
-                    e_p = st.selectbox("Produto", ["Automóvel", "Caminhão", "Serviços", "Motos", "Imóveis"], index=["Automóvel", "Caminhão", "Serviços", "Motos", "Imóveis"].index(reg_at['Produto']) if reg_at['Produto'] in ["Automóvel", "Caminhão", "Serviços", "Motos", "Imóveis"] else 0)
-                with c2:
-                    vc = float(str(reg_at['Comissão Total (%)']).replace('%', '').strip() or 0)
-                    e_c = st.number_input("Comissão (%)", value=vc)
-                    e_r = st.text_area("Regras", value=reg_at['Regra de Pagamento (Parcelas)'])
+                with c1: e_n = st.text_input("Administradora", value=reg_at['Administradora'])
+                with c2: e_p = st.selectbox("Produto", ["Automóvel", "Caminhão", "Serviços", "Motos", "Imóveis"], index=["Automóvel", "Caminhão", "Serviços", "Motos", "Imóveis"].index(reg_at['Produto']) if reg_at['Produto'] in ["Automóvel", "Caminhão", "Serviços", "Motos", "Imóveis"] else 0)
+                
+                st.write("Percentuais (%)")
+                edit_inputs_p = []
+                for linha in range(5):
+                    cols_p = st.columns(5)
+                    for col in range(5):
+                        num_p = (linha * 5) + col + 1
+                        val_str = str(reg_at[f'P{num_p}']).replace('%', '').strip()
+                        try: val_float = float(val_str)
+                        except: val_float = 0.0
+                        
+                        with cols_p[col]:
+                            v = st.number_input(f"Parcela {num_p}", min_value=0.0, step=0.1, value=val_float, key=f"edit_p{num_p}")
+                            edit_inputs_p.append(v)
+                            
                 b1, b2 = st.columns(2)
                 with b1:
-                    if st.button("Salvar", type="primary"):
+                    if st.button("Salvar Alterações", type="primary"):
                         aba_admin.update_cell(l_plan, 1, e_n.upper())
                         aba_admin.update_cell(l_plan, 2, e_p)
-                        aba_admin.update_cell(l_plan, 3, f"{e_c}%")
-                        aba_admin.update_cell(l_plan, 4, e_r)
-                        st.success("Alterado!")
+                        for i, v in enumerate(edit_inputs_p):
+                            aba_admin.update_cell(l_plan, i+3, f"{v}%" if v > 0 else "")
+                        st.success("Regra alterada!")
                         st.rerun()
                 with b2:
-                    if st.button("🚨 EXCLUIR"):
+                    if st.button("🚨 EXCLUIR REGRA"):
                         aba_admin.delete_rows(l_plan)
-                        st.error("Deletado!")
+                        st.error("Regra deletada!")
                         st.rerun()
 
 elif menu_selecionado == "Baixar Parcela":
     st.title("💰 Baixa de Comissão")
-    st.info("Em breve...")
+    st.info("A integração de baixa com o sistema de previsão será habilitada na próxima etapa!")
