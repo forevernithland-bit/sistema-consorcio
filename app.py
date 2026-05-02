@@ -7,6 +7,7 @@ import requests
 import streamlit.components.v1 as components
 import altair as alt
 import unicodedata
+import os # Novo import para verificar se a logo existe
 
 # Configuração da página
 st.set_page_config(page_title="Portal Consorbens", layout="wide", initial_sidebar_state="expanded")
@@ -113,7 +114,7 @@ def mascara_renda_nv(): st.session_state['renda_nv'] = formatar_moeda(st.session
 
 # === MOTORES DE CÁLCULO DE COMISSÃO ===
 def calcular_comissao_vendedor(df_vendas_global, vendedor_nome, data_venda_dt, cfg):
-    if pd.isna(data_venda_dt): return cfg['T1_Pct'], int(cfg['T1_Parc'])
+    if pd.isna(data_venda_dt): return cfg.get('T1_Pct', 1.0), int(cfg.get('T1_Parc', 4))
     mes = data_venda_dt.month
     ano = data_venda_dt.year
     df_mes = df_vendas_global[(df_vendas_global['VENDEDOR'] == vendedor_nome) &
@@ -121,9 +122,9 @@ def calcular_comissao_vendedor(df_vendas_global, vendedor_nome, data_venda_dt, c
                               (df_vendas_global['Data_Real'].dt.year == ano)]
     vol_total = df_mes['Valor_Numerico'].sum()
 
-    if vol_total <= cfg['T1_Max']: return cfg['T1_Pct'], int(cfg['T1_Parc'])
-    elif vol_total <= cfg['T2_Max']: return cfg['T2_Pct'], int(cfg['T2_Parc'])
-    else: return cfg['T3_Pct'], int(cfg['T3_Parc'])
+    if vol_total <= cfg.get('T1_Max', 500000): return cfg.get('T1_Pct', 1.0), int(cfg.get('T1_Parc', 4))
+    elif vol_total <= cfg.get('T2_Max', 1500000): return cfg.get('T2_Pct', 1.5), int(cfg.get('T2_Parc', 5))
+    else: return cfg.get('T3_Pct', 2.0), int(cfg.get('T3_Parc', 5))
 
 def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict):
     """Motor central que calcula as comissões, impostos e o status de pagamento de todas as parcelas"""
@@ -163,7 +164,7 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict):
             if p_val <= 0: continue
             
             comissao_bruta = val_venda * p_val
-            imposto_val = comissao_bruta * (cfg.get('Imposto', 7.16) / 100.0)
+            imposto_val = comissao_bruta * (parse_float_safe(cfg.get('Imposto', 7.16)) / 100.0)
             corretora_liq = comissao_bruta - imposto_val
             
             vend_rec = 0.0
@@ -171,14 +172,14 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict):
             uriel_rec = 0.0
             
             if vendedor == "BRENO LIMA":
-                breno_rec = corretora_liq * (cfg['Breno_Breno']/100.0)
-                uriel_rec = corretora_liq * (cfg['Breno_Uriel']/100.0)
+                breno_rec = corretora_liq * (parse_float_safe(cfg.get('Breno_Breno', 70))/100.0)
+                uriel_rec = corretora_liq * (parse_float_safe(cfg.get('Breno_Uriel', 30))/100.0)
             elif vendedor == "URIEL GOMES":
-                uriel_rec = corretora_liq * (cfg['Uriel_Uriel']/100.0)
-                breno_rec = corretora_liq * (cfg['Uriel_Breno']/100.0)
+                uriel_rec = corretora_liq * (parse_float_safe(cfg.get('Uriel_Uriel', 70))/100.0)
+                breno_rec = corretora_liq * (parse_float_safe(cfg.get('Uriel_Breno', 30))/100.0)
             elif vendedor == "Consorbens":
-                breno_rec = corretora_liq * (cfg['Cons_Breno']/100.0)
-                uriel_rec = corretora_liq * (cfg['Cons_Uriel']/100.0)
+                breno_rec = corretora_liq * (parse_float_safe(cfg.get('Cons_Breno', 50))/100.0)
+                uriel_rec = corretora_liq * (parse_float_safe(cfg.get('Cons_Uriel', 50))/100.0)
             else:
                 if i <= tier_parc: vend_rec = val_venda * (tier_pct/100.0) / tier_parc
                 sobra = corretora_liq - vend_rec
@@ -452,6 +453,11 @@ simuladores_dict = {
     "🎯 Oportunidades Itaú": "guia.html",
     "⚖️ Financiamento x Consórcio": "comparador.html"
 }
+
+# --- INSERINDO A LOGO NO MENU LATERAL ---
+if os.path.exists("logo.png"):
+    st.sidebar.image("logo.png", use_container_width=True)
+st.sidebar.markdown("<br>", unsafe_allow_html=True) # Espacinho maroto abaixo da logo
 
 if not is_logado:
     opcoes_menu = ["🔐 Login (Área Restrita)"] + list(simuladores_dict.keys())
@@ -1155,37 +1161,37 @@ elif menu_selecionado == "Regras de Comissão":
         cc1, cc2, cc3 = st.columns(3)
         with cc1:
             st.markdown("**Vendas do Breno Lima**")
-            b_b = st.number_input("Para Breno (%)", value=float(cfg["Breno_Breno"]), step=1.0)
-            b_u = st.number_input("Para Uriel (%)", value=float(cfg["Breno_Uriel"]), step=1.0)
+            b_b = st.number_input("Para Breno (%)", value=parse_float_safe(cfg.get("Breno_Breno", 70.0)), step=1.0)
+            b_u = st.number_input("Para Uriel (%)", value=parse_float_safe(cfg.get("Breno_Uriel", 30.0)), step=1.0)
         with cc2:
             st.markdown("**Vendas do Uriel Gomes**")
-            u_u = st.number_input("Para Uriel (%) ", value=float(cfg["Uriel_Uriel"]), step=1.0)
-            u_b = st.number_input("Para Breno (%) ", value=float(cfg["Uriel_Breno"]), step=1.0)
+            u_u = st.number_input("Para Uriel (%) ", value=parse_float_safe(cfg.get("Uriel_Uriel", 70.0)), step=1.0)
+            u_b = st.number_input("Para Breno (%) ", value=parse_float_safe(cfg.get("Uriel_Breno", 30.0)), step=1.0)
         with cc3:
             st.markdown("**Vendas da Consorbens (PJ)**")
-            c_b = st.number_input("Para Breno (%)  ", value=float(cfg["Cons_Breno"]), step=1.0)
-            c_u = st.number_input("Para Uriel (%)  ", value=float(cfg["Cons_Uriel"]), step=1.0)
+            c_b = st.number_input("Para Breno (%)  ", value=parse_float_safe(cfg.get("Cons_Breno", 50.0)), step=1.0)
+            c_u = st.number_input("Para Uriel (%)  ", value=parse_float_safe(cfg.get("Cons_Uriel", 50.0)), step=1.0)
             
         st.divider()
         st.markdown("#### Regra Vendedor Terceiro")
         ct1, ct2, ct3 = st.columns(3)
         with ct1:
-            t1_max_str = st.text_input("Nível 1: Até (Volume R$)", value=str(int(cfg["T1_Max"])))
-            t1_pct = st.number_input("Comissão (%)", value=float(cfg["T1_Pct"]), step=0.1)
-            t1_parc = st.number_input("Qtd. Parcelas", value=int(cfg["T1_Parc"]), step=1)
+            t1_max_str = st.text_input("Nível 1: Até (Volume R$)", value=str(int(parse_float_safe(cfg.get("T1_Max", 500000)))))
+            t1_pct = st.number_input("Comissão (%)", value=parse_float_safe(cfg.get("T1_Pct", 1.0)), step=0.1)
+            t1_parc = st.number_input("Qtd. Parcelas", value=int(parse_float_safe(cfg.get("T1_Parc", 4))), step=1)
         with ct2:
-            t2_max_str = st.text_input("Nível 2: Até (Volume R$) ", value=str(int(cfg["T2_Max"])))
-            t2_pct = st.number_input("Comissão (%) ", value=float(cfg["T2_Pct"]), step=0.1)
-            t2_parc = st.number_input("Qtd. Parcelas ", value=int(cfg["T2_Parc"]), step=1)
+            t2_max_str = st.text_input("Nível 2: Até (Volume R$) ", value=str(int(parse_float_safe(cfg.get("T2_Max", 1500000)))))
+            t2_pct = st.number_input("Comissão (%) ", value=parse_float_safe(cfg.get("T2_Pct", 1.5)), step=0.1)
+            t2_parc = st.number_input("Qtd. Parcelas ", value=int(parse_float_safe(cfg.get("T2_Parc", 5))), step=1)
         with ct3:
             st.markdown("**Teto (Nível 3)**")
-            t3_pct = st.number_input("Comissão (%)  ", value=float(cfg["T3_Pct"]), step=0.1)
-            t3_parc = st.number_input("Qtd. Parcelas  ", value=int(cfg["T3_Parc"]), step=1)
+            t3_pct = st.number_input("Comissão (%)  ", value=parse_float_safe(cfg.get("T3_Pct", 2.0)), step=0.1)
+            t3_parc = st.number_input("Qtd. Parcelas  ", value=int(parse_float_safe(cfg.get("T3_Parc", 5))), step=1)
 
         st.divider()
         st.markdown("#### Imposto sobre Nota Fiscal")
         st.caption("Este imposto é abatido apenas da parte que cabe à Corretora (Sócios), antes da divisão dos lucros.")
-        imposto_in = st.number_input("Imposto (%)", value=float(cfg.get("Imposto", 7.16)), step=0.01)
+        imposto_in = st.number_input("Imposto (%)", value=parse_float_safe(cfg.get("Imposto", 7.16)), step=0.01)
 
         st.write("")
         if st.button("Salvar Regras de Pagamento", type="primary", use_container_width=True):
