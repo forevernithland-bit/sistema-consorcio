@@ -7,10 +7,13 @@ import requests
 import streamlit.components.v1 as components
 import altair as alt
 import unicodedata
-import os # Novo import para verificar se a logo existe
+import os 
 
 # Configuração da página
 st.set_page_config(page_title="Portal Consorbens", layout="wide", initial_sidebar_state="expanded")
+
+# --- SEGURANÇA DE CAMINHOS DE ARQUIVOS (Evita erro de arquivo não encontrado) ---
+PASTA_ATUAL = os.path.dirname(os.path.abspath(__file__))
 
 # === 1. CONFIGURAÇÃO DE USUÁRIOS E SENHAS ===
 USUARIOS = {
@@ -36,12 +39,13 @@ if 'tela_cheia_relatorio' not in st.session_state:
 is_logado = st.session_state['usuario_logado'] is not None
 
 def carregar_ferramenta(nome_arquivo):
+    caminho_completo = os.path.join(PASTA_ATUAL, nome_arquivo)
     try:
-        with open(nome_arquivo, 'r', encoding='utf-8') as f:
+        with open(caminho_completo, 'r', encoding='utf-8') as f:
             html_code = f.read()
             components.html(html_code, height=900, scrolling=True)
     except FileNotFoundError:
-        st.error(f"⚠️ O arquivo {nome_arquivo} não foi encontrado!")
+        st.error(f"⚠️ O arquivo {nome_arquivo} não foi encontrado no servidor! Verifique se ele está no GitHub.")
 
 # === MÁSCARAS INTELIGENTES E NORMALIZADORES ===
 def formatar_telefone(tel):
@@ -455,8 +459,9 @@ simuladores_dict = {
 }
 
 # --- INSERINDO A LOGO NO MENU LATERAL ---
-if os.path.exists("logo.png"):
-    st.sidebar.image("logo.png", use_container_width=True)
+logo_path = os.path.join(PASTA_ATUAL, "logo.png")
+if os.path.exists(logo_path):
+    st.sidebar.image(logo_path, use_container_width=True)
 st.sidebar.markdown("<br>", unsafe_allow_html=True) # Espacinho maroto abaixo da logo
 
 if not is_logado:
@@ -470,17 +475,24 @@ if not is_logado:
 else:
     st.sidebar.divider() 
     opcoes_principais = ["Dashboard", "Nova Venda", "Relatórios", "Regras de Comissão", "Baixar Parcela"] if st.session_state['perfil_logado'] == "Master" else ["Dashboard", "Nova Venda", "Relatórios"]
-    try: idx_principal = opcoes_principais.index(st.session_state['menu_lateral'])
-    except ValueError: idx_principal = 0
+    
+    # CORREÇÃO DO LOOP DO MENU: Se for um simulador, o rádio fica sem seleção
+    try:
+        idx_principal = opcoes_principais.index(st.session_state['menu_lateral'])
+    except ValueError:
+        idx_principal = None 
+        
     selecao_principal = st.sidebar.radio(" ", opcoes_principais, index=idx_principal, label_visibility="collapsed")
     
-    if selecao_principal != st.session_state.get('last_radio_selection'):
+    if selecao_principal and selecao_principal != st.session_state.get('last_radio_selection') and selecao_principal in opcoes_principais:
         st.session_state['menu_lateral'] = selecao_principal
         st.session_state['cliente_visualizado'] = None
         st.session_state['last_radio_selection'] = selecao_principal
         st.rerun()
             
-    st.session_state['last_radio_selection'] = selecao_principal
+    if selecao_principal in opcoes_principais:
+        st.session_state['last_radio_selection'] = selecao_principal
+        
     st.sidebar.write("")
     
     with st.sidebar.expander("🛠️ Simuladores", expanded=(st.session_state['menu_lateral'] in simuladores_dict)):
@@ -561,13 +573,19 @@ if menu_selecionado == "Dashboard":
         key_prof = f"prof_ed_{cliente_nome}"
         key_renda = f"renda_ed_{cliente_nome}"
         
-        if key_nome not in st.session_state: st.session_state[key_nome] = info_cliente.get("Nome", cliente_nome)
-        if key_tel not in st.session_state: st.session_state[key_tel] = info_cliente.get("Telefone", "")
-        if key_email not in st.session_state: st.session_state[key_email] = info_cliente.get("Email", "")
-        if key_end not in st.session_state: st.session_state[key_end] = info_cliente.get("Endereco", "")
-        if key_aniv not in st.session_state: st.session_state[key_aniv] = info_cliente.get("Aniversario", "")
-        if key_prof not in st.session_state: st.session_state[key_prof] = info_cliente.get("Profissao", "")
-        if key_renda not in st.session_state: st.session_state[key_renda] = info_cliente.get("Renda", "")
+        # Função para garantir que campos vazios do banco (NULL/NaN) virem texto vazio ("") no Streamlit
+        def safe_str(val, default=""):
+            if pd.isna(val) or val is None or str(val).strip().lower() in ["nan", "nat", "none"]:
+                return default
+            return str(val)
+
+        if key_nome not in st.session_state: st.session_state[key_nome] = safe_str(info_cliente.get("Nome"), cliente_nome)
+        if key_tel not in st.session_state: st.session_state[key_tel] = safe_str(info_cliente.get("Telefone"))
+        if key_email not in st.session_state: st.session_state[key_email] = safe_str(info_cliente.get("Email"))
+        if key_end not in st.session_state: st.session_state[key_end] = safe_str(info_cliente.get("Endereco"))
+        if key_aniv not in st.session_state: st.session_state[key_aniv] = safe_str(info_cliente.get("Aniversario"))
+        if key_prof not in st.session_state: st.session_state[key_prof] = safe_str(info_cliente.get("Profissao"))
+        if key_renda not in st.session_state: st.session_state[key_renda] = safe_str(info_cliente.get("Renda"))
             
         def m_tel_ed(): st.session_state[key_tel] = formatar_telefone(st.session_state.get(key_tel, ''))
         def m_aniv_ed(): st.session_state[key_aniv] = formatar_data(st.session_state.get(key_aniv, ''))
