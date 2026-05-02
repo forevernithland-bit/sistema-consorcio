@@ -90,10 +90,19 @@ def obter_index_produto(p_str):
     mapping = {"AUTO": 0, "IMOVEL": 1, "MOTO": 2, "CAMINHAO": 3, "SERVICOS": 4}
     return mapping.get(norm, 0)
 
+# OTIMIZAÇÃO AQUI: Agora ele respeita 1.5% e 500.000,00
 def parse_float_safe(v):
+    if isinstance(v, (int, float)): return float(v)
     try:
-        v_str = str(v).replace('%', '').replace('R$', '').replace(' ', '').replace('.', '').replace(',', '.').strip()
+        v_str = str(v).replace('%', '').replace('R$', '').strip()
         if not v_str: return 0.0
+        if '.' in v_str and ',' in v_str:
+            if v_str.rfind(',') > v_str.rfind('.'):
+                v_str = v_str.replace('.', '').replace(',', '.')
+            else:
+                v_str = v_str.replace(',', '')
+        elif ',' in v_str:
+            v_str = v_str.replace(',', '.')
         return float(v_str)
     except:
         return 0.0
@@ -111,11 +120,6 @@ def carregar_df_admin_seguro(aba):
             return df
     except Exception as e: pass
     return pd.DataFrame(columns=["Administradora", "Produto"] + [f"P{i}" for i in range(1, 26)])
-
-# Callbacks
-def mascara_tel_nv(): st.session_state['tel_nv'] = formatar_telefone(st.session_state.get('tel_nv', ''))
-def mascara_aniv_nv(): st.session_state['aniv_nv'] = formatar_data(st.session_state.get('aniv_nv', ''))
-def mascara_renda_nv(): st.session_state['renda_nv'] = formatar_moeda(st.session_state.get('renda_nv', ''))
 
 # === MOTORES DE CÁLCULO DE COMISSÃO ===
 def calcular_comissao_vendedor(df_vendas_global, vendedor_nome, data_venda_dt, cfg):
@@ -138,7 +142,7 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, aba_status):
     
     hoje = pd.Timestamp.today().normalize()
     parcelas_finais = []
-    vendas_sem_data = [] # Coletor de vendas com problemas na data
+    vendas_sem_data = [] 
     
     for idx, r in df_alvo.iterrows():
         data_venda = r['Data_Real']
@@ -146,7 +150,6 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, aba_status):
         grupo = r.get('GRUPO', '')
         cota = r.get('COTA', '')
         
-        # === PROTEÇÃO E AVISO CONTRA DATAS EM BRANCO OU INVÁLIDAS ===
         if pd.isna(data_venda):
             vendas_sem_data.append(f"{cliente} (Gr: {grupo}/Cota: {cota})")
             continue 
@@ -172,7 +175,7 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, aba_status):
             p_val = parse_float_safe(regra.get(f"P{i}", 0)) / 100.0
             if p_val <= 0: continue
             
-            # Matemática da Divisão e Imposto
+            # MATEMÁTICA CORRIGIDA (Baseada na regra por parcela)
             comissao_bruta = val_venda * p_val
             imposto_val = comissao_bruta * (cfg.get('Imposto', 7.16) / 100.0)
             corretora_liq = comissao_bruta - imposto_val
@@ -202,7 +205,6 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, aba_status):
                 'liquido': corretora_liq, 'vend': vend_rec, 'breno': breno_rec, 'uriel': uriel_rec
             })
             
-        # Regras de Status da Cota
         if status_cota == 'Cancelada':
             temp_parcels = [p for p in temp_parcels if p['data_pagamento'] <= hoje]
         elif status_cota == 'Contemplada':
@@ -216,7 +218,7 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, aba_status):
                 })
             temp_parcels = past
             
-        # Montagem do Dicionário Final
+        # Montagem do Dicionário Final (Com as colunas na ordem pedida)
         for p in temp_parcels:
             chave_unica = f"{cliente}_{grupo}_{cota}_{admin}_{p['parcela']}"
             status_pagamento = status_dict.get(chave_unica, "Pendente")
@@ -232,23 +234,21 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, aba_status):
                 "Vendedor": vendedor,
                 "Grupo": grupo,
                 "Cota": cota,
-                "Admin": admin,
+                "Valor da Venda": val_venda,
                 "Parcela": nome_parcela,
                 "data_pagamento_dt": p['data_pagamento'], 
-                "Data Prevista": data_str,
                 "Comissão (Bruta)": p['bruto'],
                 "Comissão (s/ Imposto)": p['liquido'],
                 "Breno": p['breno'],
                 "Uriel": p['uriel'],
                 "Vendedor Recebe": p['vend'],
-                "Status": status_pagamento
+                "Status": status_pagamento,
+                "Data Prevista": data_str
             })
             
-    # Retornamos o DataFrame de parcelas e a lista de vendas problemáticas
     return pd.DataFrame(parcelas_finais), vendas_sem_data
 
 def salvar_status_comissoes(df_editado, df_original, aba_status):
-    """Sincroniza os cliques de 'PAGO' e 'Pendente' com o Google Sheets"""
     mudancas = df_editado[df_editado['Status'] != df_original['Status']]
     if not mudancas.empty:
         status_raw = aba_status.get_all_values()
@@ -364,6 +364,7 @@ if st.session_state['tela_cheia_relatorio']:
         if st.session_state['perfil_logado'] == "Vendedor":
             df_view = df_view[df_view['Vendedor'] == st.session_state['nome_vendedor']]
         
+        # Filtra baseado na Data de Vencimento da PARCELA, não da Venda
         ft_rel = st.session_state.get('rel_periodo', 'Todas as Vendas')
         
         if ft_rel == "Mês Atual":
@@ -388,16 +389,19 @@ if st.session_state['tela_cheia_relatorio']:
             df_view = df_view[df_view['Status'] != 'PAGO']
             
         if not df_view.empty:
-            df_view = df_view[['Chave', 'Cliente', 'Produto', 'Vendedor', 'Grupo', 'Cota', 'Parcela', 'Comissão (Bruta)', 'Comissão (s/ Imposto)', 'Breno', 'Uriel', 'Vendedor Recebe', 'Status', 'Data Prevista']]
+            df_view = df_view[['Chave', 'Cliente', 'Produto', 'Vendedor', 'Grupo', 'Cota', 'Valor da Venda', 'Parcela', 'Comissão (Bruta)', 'Comissão (s/ Imposto)', 'Breno', 'Uriel', 'Vendedor Recebe', 'Status', 'Data Prevista']]
             is_master = st.session_state['perfil_logado'] == "Master"
+            
+            # Formatação para o Padrão Brasileiro
+            total_breno = df_view['Breno'].sum()
+            total_uriel = df_view['Uriel'].sum()
+            total_vend = df_view['Vendedor Recebe'].sum()
+            
+            for col in ['Valor da Venda', 'Comissão (Bruta)', 'Comissão (s/ Imposto)', 'Breno', 'Uriel', 'Vendedor Recebe']:
+                df_view[col] = df_view[col].apply(formatar_brl_puro)
             
             col_config = {
                 "Chave": None, 
-                "Comissão (Bruta)": st.column_config.NumberColumn(format="R$ %.2f"),
-                "Comissão (s/ Imposto)": st.column_config.NumberColumn(format="R$ %.2f"),
-                "Breno": st.column_config.NumberColumn(format="R$ %.2f"),
-                "Uriel": st.column_config.NumberColumn(format="R$ %.2f"),
-                "Vendedor Recebe": st.column_config.NumberColumn(format="R$ %.2f"),
                 "Status": st.column_config.SelectboxColumn("Status", options=["Pendente", "PAGO"], required=True) if is_master else st.column_config.TextColumn("Status", disabled=True)
             }
             
@@ -407,7 +411,7 @@ if st.session_state['tela_cheia_relatorio']:
             df_final = df_view.drop(columns=cols_to_hide).reset_index(drop=True)
             disabled_cols = [c for c in df_final.columns if c != "Status"]
             
-            st.caption("Dica: Clique na coluna 'Status' para alterar. Em seguida, salve as alterações.")
+            st.caption("Dica: Clique na coluna 'Status' para alterar. Em seguida, salve as alterações no botão vermelho.")
             edited_df = st.data_editor(
                 df_final,
                 disabled=disabled_cols,
@@ -427,9 +431,9 @@ if st.session_state['tela_cheia_relatorio']:
                 st.divider()
                 st.markdown("#### 💵 Total do Período (Apenas o visualizado acima)")
                 mt1, mt2, mt3 = st.columns(3)
-                mt1.metric("Breno (Sócios)", formatar_brl_puro(df_view['Breno'].sum()))
-                mt2.metric("Uriel (Sócios)", formatar_brl_puro(df_view['Uriel'].sum()))
-                mt3.metric("Vendedores", formatar_brl_puro(df_view['Vendedor Recebe'].sum()))
+                mt1.metric("Breno (Sócios)", formatar_brl_puro(total_breno))
+                mt2.metric("Uriel (Sócios)", formatar_brl_puro(total_uriel))
+                mt3.metric("Vendedores", formatar_brl_puro(total_vend))
         else:
             st.success("Nenhuma comissão pendente (ou com os filtros atuais) para exibir!")
     else:
@@ -707,13 +711,11 @@ if menu_selecionado == "Dashboard":
                         df_view_cli = df_view_cli[df_view_cli['Vendedor Recebe'] > 0]
                         
                     if not df_view_cli.empty:
+                        for col in ['Valor da Venda', 'Comissão (Bruta)', 'Comissão (s/ Imposto)', 'Breno', 'Uriel', 'Vendedor Recebe']:
+                            if col in df_view_cli.columns: df_view_cli[col] = df_view_cli[col].apply(formatar_brl_puro)
+                            
                         col_config = {
                             "Chave": None, 
-                            "Comissão (Bruta)": st.column_config.NumberColumn(format="R$ %.2f"),
-                            "Comissão (s/ Imposto)": st.column_config.NumberColumn(format="R$ %.2f"),
-                            "Breno": st.column_config.NumberColumn(format="R$ %.2f"),
-                            "Uriel": st.column_config.NumberColumn(format="R$ %.2f"),
-                            "Vendedor Recebe": st.column_config.NumberColumn(format="R$ %.2f"),
                             "Status": st.column_config.SelectboxColumn("Status", options=["Pendente", "PAGO"], required=True) if is_master else st.column_config.TextColumn("Status", disabled=True)
                         }
                         
@@ -765,6 +767,8 @@ if menu_selecionado == "Dashboard":
             with c_filtro2: busca = st.text_input("🔍 Buscar Cliente por Nome:")
 
             hoje = datetime.today()
+            
+            # ORDENAÇÃO: Venda mais recente primeiro
             df_view = df_view.sort_values(by="Data_Real", ascending=False)
             
             if filtro_cli == "Últimos 5 Cadastros" and busca.strip() == "":
@@ -790,8 +794,9 @@ if menu_selecionado == "Dashboard":
                 df_tab['Grupo e Cota'] = df_tab.apply(lambda x: f"{x['GRUPO']}/{x['COTA']}", axis=1)
                 df_tab['Valor Formatado'] = df_tab['Valor_Numerico'].apply(formatar_brl_puro)
                 
-                df_tab = df_tab[['DATA', 'Nome do cliente', 'PRODUTO', 'ADMINISTRADORA', 'Grupo e Cota', 'VENDEDOR', 'Valor Formatado']]
-                df_tab.columns = ['Data da Venda', 'Cliente', 'Produto', 'Administradora', 'Grupo/Cota', 'Vendedor', 'Valor']
+                # COLUNAS: Data da venda no final
+                df_tab = df_tab[['Nome do cliente', 'PRODUTO', 'ADMINISTRADORA', 'Grupo e Cota', 'VENDEDOR', 'Valor Formatado', 'DATA']]
+                df_tab.columns = ['Cliente', 'Produto', 'Administradora', 'Grupo/Cota', 'Vendedor', 'Valor', 'Data da Venda']
                 
                 tabela = st.dataframe(df_tab, on_select="rerun", selection_mode="single-row", use_container_width=True, hide_index=True)
                 
@@ -826,7 +831,7 @@ if menu_selecionado == "Dashboard":
                     if ft_graf == "Mês Atual": 
                         df_g = df_g[mask & (df_g['Data_Real'].dt.month == hoje.month) & (df_g['Data_Real'].dt.year == hoje.year)]
                     elif ft_graf == "Mês Anterior":
-                        ma, aa = (hoje.month - 1, hoje.year) if hoje.month > 1 else (12, base.year - 1)
+                        ma, aa = (hoje.month - 1, hoje.year) if hoje.month > 1 else (12, hoje.year - 1)
                         df_g = df_g[mask & (df_g['Data_Real'].dt.month == ma) & (df_g['Data_Real'].dt.year == aa)]
                     elif ft_graf == "Anual": 
                         df_g = df_g[mask & (df_g['Data_Real'].dt.year == hoje.year)]
@@ -986,7 +991,7 @@ elif menu_selecionado == "Relatórios":
                 with rd2: rf = st.date_input("Data Final", format="DD/MM/YYYY")
         
         hoje = datetime.today()
-        # Aqui para a visualização DESSA aba (Vendas), usamos a Data da Venda
+        # Aqui no relatório de vendas a gente filtra pelo que foi vendido (Data_Real)
         if ft_rel != "Todas as Vendas":
             mask = df_f['Data_Real'].notna()
             if ft_rel == "Mês Atual": 
