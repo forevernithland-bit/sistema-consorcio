@@ -236,8 +236,12 @@ if menu_selecionado == "Dashboard":
             st.session_state['key_tabela'] += 1
             st.rerun()
             
-        dados_cli = aba_clientes.get_all_records()
-        df_cli = pd.DataFrame(dados_cli)
+        # BLINDAGEM: Lê a aba clientes como lista e transforma em DataFrame para evitar erros de colunas
+        dados_cli_brutos = aba_clientes.get_all_values()
+        if len(dados_cli_brutos) > 1:
+            df_cli = pd.DataFrame(dados_cli_brutos[1:], columns=dados_cli_brutos[0])
+        else:
+            df_cli = pd.DataFrame(columns=["Nome", "Telefone", "Email", "Endereco", "Aniversario", "Profissao", "Renda", "Data_Cadastro"])
         
         info_cliente = {}
         if not df_cli.empty and 'Nome' in df_cli.columns:
@@ -264,9 +268,9 @@ if menu_selecionado == "Dashboard":
         if key_prof not in st.session_state: st.session_state[key_prof] = info_cliente.get("Profissao", "")
         if key_renda not in st.session_state: st.session_state[key_renda] = info_cliente.get("Renda", "")
             
-        def m_tel_ed(): st.session_state[key_tel] = formatar_telefone(st.session_state[key_tel])
-        def m_aniv_ed(): st.session_state[key_aniv] = formatar_data(st.session_state[key_aniv])
-        def m_renda_ed(): st.session_state[key_renda] = formatar_moeda(st.session_state[key_renda])
+        def m_tel_ed(): st.session_state[key_tel] = formatar_telefone(st.session_state.get(key_tel, ''))
+        def m_aniv_ed(): st.session_state[key_aniv] = formatar_data(st.session_state.get(key_aniv, ''))
+        def m_renda_ed(): st.session_state[key_renda] = formatar_moeda(st.session_state.get(key_renda, ''))
 
         nome_edit = st.text_input("Nome Completo", key=key_nome, disabled=not is_master)
         
@@ -341,7 +345,7 @@ if menu_selecionado == "Dashboard":
                 estilo_ficha = ficha_display.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}])
                 st.dataframe(estilo_ficha, use_container_width=True, hide_index=True)
                 
-                # --- PREVISÃO DE COMISSIONAMENTO (NOVO) ---
+                # --- PREVISÃO DE COMISSIONAMENTO ---
                 st.write("")
                 st.subheader("📈 Previsão de Comissionamento")
                 
@@ -359,12 +363,12 @@ if menu_selecionado == "Dashboard":
                         data_venda = pd.to_datetime(r['DATA'], format="%d/%m/%Y", errors='coerce')
                         if pd.notna(data_venda):
                             for i in range(1, 26):
+                                # CORREÇÃO: Variável corrigida para ler com segurança
                                 p_str = str(regra[f"P{i}"]).replace('%', '').strip()
-                                try: p_val = float(p_val_str)
+                                try: p_val = float(p_str)
                                 except: p_val = 0.0
                                 
                                 if p_val > 0:
-                                    # Lógica: P1 é 7 dias após a venda. As demais adicionam meses exatos.
                                     data_pagamento = data_venda + pd.Timedelta(days=7) + pd.DateOffset(months=i-1)
                                     valor_pagamento = r['Valor_Numerico'] * (p_val / 100)
                                     previsoes.append({
@@ -586,7 +590,11 @@ elif menu_selecionado == "Nova Venda":
         with cq1: grupo = st.text_input(f"Grupo *", key=f"g_{i}")
         with cq2: cota = st.text_input(f"Cota *", key=f"c_{i}")
         with cq3:
-            def m_moeda(idx=i): st.session_state[f"v_in_{idx}"] = formatar_moeda(st.session_state[f"v_in_{idx}"])
+            # BLINDAGEM DO CALLBACK: Lendo via .get() de forma segura
+            def m_moeda(idx=i): 
+                val = st.session_state.get(f"v_in_{idx}", "")
+                st.session_state[f"v_in_{idx}"] = formatar_moeda(val)
+                
             valor_str = st.text_input(f"Valor (R$) *", key=f"v_in_{i}", on_change=m_moeda, placeholder="R$ 0,00")
         with cq4: status = st.selectbox(f"Status", ["Vendido", "Contemplado", "Cancelado"], key=f"s_{i}")
         
@@ -619,14 +627,15 @@ elif menu_selecionado == "Nova Venda":
                     val_float = float(''.join(filter(str.isdigit, str(c['valor_str']))))/100
                     aba_vendas.append_row(["", cliente, str(data.strftime("%d/%m/%Y")), produto, vendedor, c['grupo'], c['cota'], admin, c['status'], val_float])
 
-                try: nomes_cadastrados = aba_clientes.col_values(1)
-                except: nomes_cadastrados = []
+                # Leitura segura para salvar novo cliente
+                dados_cli_brutos = aba_clientes.get_all_values()
+                nomes_cadastrados = [row[0] for row in dados_cli_brutos] if len(dados_cli_brutos) > 0 else []
+                
                 if cliente not in nomes_cadastrados:
                     aba_clientes.append_row([cliente, telefone, email, end_completo, aniversario, profissao, renda, str(datetime.today().strftime("%d/%m/%Y"))])
 
                 st.success(f"✅ {len(cotas_data)} Venda(s) e Cadastro de {cliente} salvos com sucesso!")
                 
-                # Limpa TELA
                 limpar = ['venda_cliente', 'tel_nv', 'venda_email', 'aniv_nv', 'prof_nv', 'renda_nv', 'venda_cep', 'last_cep', 'venda_rua', 'venda_numero', 'venda_complemento', 'venda_bairro', 'venda_cidade', 'venda_uf']
                 for i in range(st.session_state['qtd_cotas']): limpar.extend([f"g_{i}", f"c_{i}", f"v_in_{i}", f"s_{i}"])
                 for k in limpar:
@@ -702,7 +711,6 @@ elif menu_selecionado == "Administradoras":
     
     with t1:
         if not df_admin.empty:
-            # Mostra apenas as colunas que têm algum valor para não ficar gigante
             df_mostrar = df_admin.copy()
             st.dataframe(df_mostrar.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}]), use_container_width=True, hide_index=True)
         else: st.info("Nenhuma regra de comissionamento.")
@@ -718,7 +726,6 @@ elif menu_selecionado == "Administradoras":
             st.subheader("Percentual de Comissão por Parcela (%)")
             st.caption("Preencha apenas as parcelas que geram comissionamento. Deixe 0.0 nas demais.")
             
-            # Matriz de 5 colunas x 5 linhas para as 25 parcelas
             inputs_p = []
             for linha in range(5):
                 cols_p = st.columns(5)
