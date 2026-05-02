@@ -675,7 +675,7 @@ if menu_selecionado == "Dashboard":
                         
                         if status_atual == "Vendido" or not status_atual: status_atual = "Em Andamento"
                         
-                        # Parsing existing date
+                        # Parsing da data atual salva no banco
                         try:
                             data_atual_obj = datetime.strptime(data_atual_str, "%d/%m/%Y").date()
                         except:
@@ -685,26 +685,33 @@ if menu_selecionado == "Dashboard":
                         with c_ed1:
                             status_list = ["Em Andamento", "Em Atraso", "Cancelada", "Contemplada"]
                             idx_status = status_list.index(status_atual) if status_atual in status_list else 0
-                            novo_status = st.selectbox("Status da Cota", status_list, index=idx_status)
+                            # A CHAVE DE SEGURANÇA QUE EVITA O BUG VISUAL AQUI (key=)
+                            novo_status = st.selectbox("Status da Cota", status_list, index=idx_status, key=f"edit_status_{id_cota}")
                         with c_ed2:
                             vendedores_list = ["BRENO LIMA", "URIEL GOMES", "Consorbens", "Vendedor Terceiro"]
                             if is_master:
                                 idx_vend = vendedores_list.index(vendedor_atual) if vendedor_atual in vendedores_list else 0
-                                novo_vendedor = st.selectbox("Vendedor Realizador", vendedores_list, index=idx_vend)
+                                novo_vendedor = st.selectbox("Vendedor Realizador", vendedores_list, index=idx_vend, key=f"edit_vend_{id_cota}")
                             else:
-                                st.text_input("Vendedor Realizador", value=vendedor_atual, disabled=True)
+                                st.text_input("Vendedor Realizador", value=vendedor_atual, disabled=True, key=f"edit_vend_block_{id_cota}")
                                 novo_vendedor = vendedor_atual
                         with c_ed3:
                             if is_master:
-                                nova_data = st.date_input("Data da Venda", value=data_atual_obj, format="DD/MM/YYYY")
+                                # O CAMPO DE EDITAR A DATA DA VENDA AQUI:
+                                nova_data = st.date_input("Nova Data da Venda", value=data_atual_obj, format="DD/MM/YYYY", key=f"edit_data_{id_cota}")
                             else:
-                                st.text_input("Data da Venda", value=data_atual_str, disabled=True)
+                                st.text_input("Data da Venda", value=data_atual_str, disabled=True, key=f"edit_data_block_{id_cota}")
                                 nova_data = data_atual_obj
                                 
                         col_b1, col_b2 = st.columns(2)
                         with col_b1:
-                            if st.button("Salvar Alterações na Cota", type="primary", use_container_width=True):
-                                nova_data_formatada = nova_data.strftime("%d/%m/%Y")
+                            if st.button("💾 Salvar Alterações na Cota", type="primary", use_container_width=True):
+                                # Converte a data de volta para texto para salvar no banco
+                                if isinstance(nova_data, str):
+                                    nova_data_formatada = nova_data
+                                else:
+                                    nova_data_formatada = nova_data.strftime("%d/%m/%Y")
+                                    
                                 supabase.table("vendas").update({
                                     "VENDEDOR": novo_vendedor, 
                                     "STATUS": novo_status,
@@ -1056,7 +1063,7 @@ elif menu_selecionado == "Relatórios":
                 df_f = df_f[mask & (df_f['Data_Real'].dt.month == hoje.month) & (df_f['Data_Real'].dt.year == hoje.year)]
             elif ft_rel == "Quinzena Atual":
                 if hoje.day <= 15: q_ini, q_fim = hoje.replace(day=1), hoje.replace(day=15)
-                else: q_ini, q_fim = hoje.replace(day=16), hoje.replace(day=calendar.monthrange(hoje.year, hoje.month)[1])
+                else: q_ini, q_fim = hoje.replace(day=16), hoje.replace(day=calendar.monthrange(hoje.year, taking)[1])
                 df_f = df_f[mask & (df_f['Data_Real'].dt.date >= q_ini.date()) & (df_f['Data_Real'].dt.date <= q_fim.date())]
             elif ft_rel == "Mês Anterior":
                 ma, aa = (hoje.month - 1, hoje.year) if hoje.month > 1 else (12, hoje.year - 1)
