@@ -113,6 +113,8 @@ def carregar_df_admin_seguro(aba):
 def mascara_tel_nv(): st.session_state['tel_nv'] = formatar_telefone(st.session_state.get('tel_nv', ''))
 def mascara_aniv_nv(): st.session_state['aniv_nv'] = formatar_data(st.session_state.get('aniv_nv', ''))
 def mascara_renda_nv(): st.session_state['renda_nv'] = formatar_moeda(st.session_state.get('renda_nv', ''))
+def mascara_t1_max(): st.session_state['t1_max_in'] = formatar_moeda(st.session_state.get('t1_max_in', ''))
+def mascara_t2_max(): st.session_state['t2_max_in'] = formatar_moeda(st.session_state.get('t2_max_in', ''))
 
 # === MOTOR DE CÁLCULO DE COMISSÃO ===
 def calcular_comissao_vendedor(df_vendas_global, vendedor_nome, data_venda_dt, cfg):
@@ -380,7 +382,7 @@ if menu_selecionado == "Dashboard":
         if is_master:
             col_b1, col_b2 = st.columns(2)
             with col_b1:
-                if st.button("Salvar Alterações", type="primary", use_container_width=True):
+                if st.button("Salvar Alterações Cadastrais", type="primary", use_container_width=True):
                     novo_nome_val = st.session_state[key_nome]
                     nomes_col = aba_clientes.col_values(1)
                     
@@ -436,17 +438,68 @@ if menu_selecionado == "Dashboard":
                 estilo_ficha = ficha_display.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}])
                 st.dataframe(estilo_ficha, use_container_width=True, hide_index=True)
                 
-                # --- PREVISÃO DE COMISSIONAMENTO ---
+                # --- ÁREA DE GERENCIAMENTO DE STATUS LOGO ABAIXO DA TABELA ---
+                st.write("")
+                with st.expander("⚙️ Atualizar Status e Gerenciar Cota", expanded=False):
+                    st.info("Atualize o status da cota. Apenas usuários Master podem alterar o vendedor ou apagar a cota do sistema.")
+                    opcoes_cotas = cotas_cliente.apply(lambda r: f"Linha {r.name + 2} | Grupo: {r['GRUPO']} / Cota: {r['COTA']} - Valor: {r['Valor Formatado']}", axis=1).tolist()
+                    
+                    c_sel, _ = st.columns([3, 1])
+                    with c_sel:
+                        cota_selecionada = st.selectbox("Selecione a cota que deseja gerenciar:", [""] + opcoes_cotas)
+                        
+                    if cota_selecionada:
+                        linha_planilha = int(cota_selecionada.split(" | ")[0].replace("Linha ", ""))
+                        vendedor_atual = cotas_cliente.loc[linha_planilha - 2, 'VENDEDOR']
+                        status_atual = cotas_cliente.loc[linha_planilha - 2, 'STATUS']
+                        if status_atual == "Vendido" or not status_atual: status_atual = "Em Andamento"
+                        
+                        c_ed1, c_ed2 = st.columns(2)
+                        with c_ed1:
+                            status_list = ["Em Andamento", "Em Atraso", "Cancelada", "Contemplada"]
+                            idx_status = status_list.index(status_atual) if status_atual in status_list else 0
+                            novo_status = st.selectbox("Status da Cota", status_list, index=idx_status)
+                            
+                        with c_ed2:
+                            vendedores_list = ["BRENO LIMA", "URIEL GOMES", "Consorbens", "Vendedor Terceiro"]
+                            if is_master:
+                                idx_vend = vendedores_list.index(vendedor_atual) if vendedor_atual in vendedores_list else 0
+                                novo_vendedor = st.selectbox("Vendedor Realizador", vendedores_list, index=idx_vend)
+                            else:
+                                st.text_input("Vendedor Realizador", value=vendedor_atual, disabled=True)
+                                novo_vendedor = vendedor_atual
+                                
+                        col_b1, col_b2 = st.columns(2)
+                        with col_b1:
+                            if st.button("Salvar Alterações na Cota", type="primary", use_container_width=True):
+                                aba_vendas.update_cell(linha_planilha, 5, novo_vendedor)
+                                aba_vendas.update_cell(linha_planilha, 9, novo_status)
+                                st.success("Cota atualizada com sucesso!")
+                                st.rerun()
+                        with col_b2:
+                            if is_master:
+                                if st.button("🚨 Apagar Esta Cota", use_container_width=True):
+                                    aba_vendas.delete_rows(linha_planilha)
+                                    st.success("Cota apagada com sucesso!")
+                                    st.rerun()
+                            else:
+                                st.button("🚨 Apagar Esta Cota", disabled=True, use_container_width=True, help="Apenas Masters podem excluir cotas.")
+
+                # --- PREVISÃO DE COMISSIONAMENTO (COM INTELIGÊNCIA DE STATUS) ---
                 st.write("")
                 st.subheader("📈 Previsão de Comissionamento")
                 
                 df_admin = carregar_df_admin_seguro(aba_admin)
+                hoje = pd.Timestamp.today().normalize()
                     
                 previsoes = []
                 for idx, r in cotas_cliente.iterrows():
                     admin_venda = normalizar_string(r['ADMINISTRADORA'])
                     prod_venda = normalizar_produto(r['PRODUTO'])
                     vendedor_nome = r['VENDEDOR']
+                    
+                    status_cota = r.get('STATUS', 'Em Andamento')
+                    if status_cota in ["Vendido", ""]: status_cota = "Em Andamento"
                     
                     regra_encontrada = None
                     if not df_admin.empty:
@@ -460,6 +513,7 @@ if menu_selecionado == "Dashboard":
                         if pd.notna(data_venda):
                             tier_pct, tier_parc = calcular_comissao_vendedor(df_vendas_global, vendedor_nome, data_venda, cfg)
                             
+                            parcelas_cota = []
                             for i in range(1, 26):
                                 p_str = str(regra_encontrada.get(f"P{i}", "0")).replace('%', '').strip()
                                 try: p_val_admin = float(p_str) / 100.0
@@ -491,21 +545,59 @@ if menu_selecionado == "Dashboard":
                                 if admin_recebe > 0 or vend_recebe > 0:
                                     data_pagamento = data_venda + pd.Timedelta(days=7) + pd.DateOffset(months=i-1)
                                     
-                                    row_dict = {
-                                        "Cota / Admin": f"{r['GRUPO']}/{r['COTA']} ({r['ADMINISTRADORA']})",
-                                        "Mês/Parcela": f"{i}ª Parcela",
-                                        "Data Prevista": data_pagamento.strftime("%d/%m/%Y"),
-                                    }
+                                    parcelas_cota.append({
+                                        'i': i,
+                                        'data_pagamento': data_pagamento,
+                                        'admin_recebe': admin_recebe,
+                                        'vend_recebe': vend_recebe,
+                                        'breno_recebe': breno_recebe,
+                                        'uriel_recebe': uriel_recebe
+                                    })
                                     
-                                    if is_master:
-                                        row_dict["Corretora Recebe"] = formatar_brl_puro(admin_recebe)
-                                        row_dict[f"Vendedor Recebe"] = formatar_brl_puro(vend_recebe)
-                                        row_dict["Breno Recebe"] = formatar_brl_puro(breno_recebe)
-                                        row_dict["Uriel Recebe"] = formatar_brl_puro(uriel_recebe)
-                                    else:
-                                        row_dict["Sua Comissão"] = formatar_brl_puro(vend_recebe)
+                            # === LÓGICA DE STATUS APLICADA AQUI ===
+                            if status_cota == 'Cancelada':
+                                # Se cancelada, corta qualquer parcela que seja pro futuro. Mantém só o que já devia ter sido pago.
+                                parcelas_cota = [p for p in parcelas_cota if p['data_pagamento'] <= hoje]
+                                
+                            elif status_cota == 'Contemplada':
+                                # Se contemplada, acumula todo o futuro num bolão só.
+                                past_parcels = [p for p in parcelas_cota if p['data_pagamento'] <= hoje]
+                                future_parcels = [p for p in parcelas_cota if p['data_pagamento'] > hoje]
+                                
+                                if future_parcels:
+                                    past_parcels.append({
+                                        'i': 'Antecipação',
+                                        'data_pagamento': hoje,
+                                        'admin_recebe': sum(p['admin_recebe'] for p in future_parcels),
+                                        'vend_recebe': sum(p['vend_recebe'] for p in future_parcels),
+                                        'breno_recebe': sum(p['breno_recebe'] for p in future_parcels),
+                                        'uriel_recebe': sum(p['uriel_recebe'] for p in future_parcels)
+                                    })
+                                parcelas_cota = past_parcels
 
-                                    previsoes.append(row_dict)
+                            # Montando a tabela visual
+                            for p in parcelas_cota:
+                                data_str = p['data_pagamento'].strftime("%d/%m/%Y")
+                                if status_cota == 'Em Atraso':
+                                    data_str = "⚠️ Travada (Atraso)"
+                                    
+                                nome_parcela = f"{p['i']}ª Parcela" if isinstance(p['i'], int) else "Antecipação (Contemplada)"
+                                
+                                row_dict = {
+                                    "Cota / Admin": f"{r['GRUPO']}/{r['COTA']} ({r['ADMINISTRADORA']})",
+                                    "Mês/Parcela": nome_parcela,
+                                    "Data Prevista": data_str,
+                                }
+                                
+                                if is_master:
+                                    row_dict["Corretora Recebe"] = formatar_brl_puro(p['admin_recebe'])
+                                    row_dict[f"Vendedor Recebe"] = formatar_brl_puro(p['vend_recebe'])
+                                    row_dict["Breno Recebe"] = formatar_brl_puro(p['breno_recebe'])
+                                    row_dict["Uriel Recebe"] = formatar_brl_puro(p['uriel_recebe'])
+                                else:
+                                    row_dict["Sua Comissão"] = formatar_brl_puro(p['vend_recebe'])
+
+                                previsoes.append(row_dict)
                     else:
                         admin_cadastradas = df_admin['Administradora'].unique().tolist() if not df_admin.empty else ["Nenhuma"]
                         prod_cadastrados = df_admin['Produto'].unique().tolist() if not df_admin.empty else ["Nenhum"]
@@ -525,51 +617,6 @@ if menu_selecionado == "Dashboard":
                     else: st.info("Nenhuma previsão de comissão vinculada a você para este cliente.")
                 else:
                     if len(df_admin) == 0: st.info("Aguardando configurações de regras para gerar a previsão.")
-
-                st.write("")
-                with st.expander("⚙️ Atualizar Status e Gerenciar Cota"):
-                    st.info("Atualize o status da cota. Apenas usuários Master podem alterar o vendedor ou apagar a venda.")
-                    opcoes_cotas = cotas_cliente.apply(lambda r: f"Linha {r.name + 2} | Grupo: {r['GRUPO']} / Cota: {r['COTA']} - Valor: {r['Valor Formatado']}", axis=1).tolist()
-                    
-                    c_sel, _ = st.columns([3, 1])
-                    with c_sel:
-                        cota_selecionada = st.selectbox("Selecione a cota que deseja gerenciar:", [""] + opcoes_cotas)
-                        
-                    if cota_selecionada:
-                        linha_planilha = int(cota_selecionada.split(" | ")[0].replace("Linha ", ""))
-                        vendedor_atual = cotas_cliente.loc[linha_planilha - 2, 'VENDEDOR']
-                        status_atual = cotas_cliente.loc[linha_planilha - 2, 'STATUS']
-                        
-                        c_ed1, c_ed2 = st.columns(2)
-                        with c_ed1:
-                            status_list = ["Vendido", "Contemplado", "Cancelado"]
-                            idx_status = status_list.index(status_atual) if status_atual in status_list else 0
-                            novo_status = st.selectbox("Status da Cota", status_list, index=idx_status)
-                            
-                        with c_ed2:
-                            vendedores_list = ["BRENO LIMA", "URIEL GOMES", "Consorbens", "Vendedor Terceiro"]
-                            if is_master:
-                                idx_vend = vendedores_list.index(vendedor_atual) if vendedor_atual in vendedores_list else 0
-                                novo_vendedor = st.selectbox("Vendedor Realizador", vendedores_list, index=idx_vend)
-                            else:
-                                st.text_input("Vendedor Realizador", value=vendedor_atual, disabled=True)
-                                novo_vendedor = vendedor_atual
-                                
-                        col_b1, col_b2 = st.columns(2)
-                        with col_b1:
-                            if st.button("Salvar Alterações na Cota", type="primary", use_container_width=True):
-                                aba_vendas.update_cell(linha_planilha, 5, novo_vendedor)
-                                aba_vendas.update_cell(linha_planilha, 9, novo_status)
-                                st.success("Cota atualizada com sucesso!")
-                                st.rerun()
-                        with col_b2:
-                            if is_master:
-                                if st.button("🚨 Apagar Esta Cota", use_container_width=True):
-                                    aba_vendas.delete_rows(linha_planilha)
-                                    st.success("Cota apagada com sucesso!")
-                                    st.rerun()
-                            else:
-                                st.button("🚨 Apagar Esta Cota", disabled=True, use_container_width=True, help="Apenas Masters podem excluir cotas.")
 
             else: st.warning("Nenhuma cota encontrada para este cliente.")
 
@@ -753,7 +800,7 @@ elif menu_selecionado == "Nova Venda":
                 
             valor_str = st.text_input(f"Valor (R$) *", key=f"v_in_{i}", on_change=m_moeda, placeholder="R$ 0,00")
         
-        cotas_data.append({"grupo": grupo, "cota": cota, "valor_str": valor_str, "status": "Vendido"})
+        cotas_data.append({"grupo": grupo, "cota": cota, "valor_str": valor_str, "status": "Em Andamento"})
 
     if st.button("➕ Adicionar mais uma Cota"):
         st.session_state['qtd_cotas'] += 1
