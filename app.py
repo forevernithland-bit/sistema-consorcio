@@ -67,10 +67,15 @@ def mascara_renda_nv(): st.session_state['renda_nv'] = formatar_moeda(st.session
 
 # === 2. LÓGICA DO MENU LATERAL ===
 is_logado = st.session_state['usuario_logado'] is not None
+
+# Usuário lá em cima, antes da Logo!
+if is_logado:
+    st.sidebar.markdown(f"<div style='color: #0f172a; font-weight: bold; font-size: 14px; margin-bottom: 10px;'>👤 {st.session_state['nome_vendedor'].upper()}</div>", unsafe_allow_html=True)
+
 st.sidebar.image("https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png", use_column_width=True)
-st.sidebar.write("") 
 
 if not is_logado:
+    st.sidebar.write("")
     opcoes_menu = ["🔐 Login (Área Restrita)", "🏍️ Simulador Yamaha", "🏦 Simulador Itaú", "🎯 Oportunidades Itaú", "⚖️ Financiamento x Consórcio"]
     try: idx_menu = opcoes_menu.index(st.session_state['menu_lateral'])
     except ValueError: idx_menu = 0
@@ -81,8 +86,7 @@ if not is_logado:
         st.rerun()
 
 else:
-    st.sidebar.write(f"👤 **{st.session_state['nome_vendedor']}**")
-    st.sidebar.divider()
+    st.sidebar.divider() # Linha elegante separando a logo do menu
     
     ferramentas_logadas = ["🏍️ Simulador Yamaha", "🏦 Simulador Itaú", "🎯 Oportunidades Itaú", "⚖️ Financiamento x Consórcio"]
     
@@ -142,7 +146,7 @@ css = """
     .block-container { padding-top: 1rem; padding-bottom: 0rem; padding-left: 1rem; padding-right: 1rem; }
     [data-testid="stSidebar"] { background-color: #ffffff !important; border-right: 2px solid #e2e8f0 !important; }
     [data-testid="stSidebar"] p, [data-testid="stSidebar"] span, [data-testid="stSidebar"] div { color: #0f172a !important; }
-    [data-testid="stSidebar"] hr { border-bottom-color: #e2e8f0 !important; }
+    [data-testid="stSidebar"] hr { border-bottom-color: #e2e8f0 !important; margin-top: 0.5rem !important; margin-bottom: 0.5rem !important; }
     [data-testid="stSidebar"] button { border: 1px solid #cbd5e1 !important; background-color: #f8fafc !important; }
     [data-testid="collapsedControl"] { background-color: #ff6600 !important; border-radius: 8px !important; box-shadow: 0px 4px 10px rgba(255, 102, 0, 0.6) !important; padding: 8px !important; margin-top: 15px !important; margin-left: 15px !important; opacity: 1 !important; z-index: 999999 !important; }
     [data-testid="collapsedControl"] svg { fill: #ffffff !important; color: #ffffff !important; stroke: #ffffff !important; width: 20px !important; height: 20px !important; }
@@ -185,7 +189,13 @@ if not is_logado:
             with st.form("form_login"):
                 usuario_input = st.text_input("Usuário (Login)").lower()
                 senha_input = st.text_input("Senha", type="password")
-                btn_login = st.form_submit_button("Entrar no Sistema", type="primary")
+                
+                st.write("") 
+                
+                c_btn1, c_btn2, c_btn3 = st.columns([1, 1.5, 1])
+                with c_btn2:
+                    btn_login = st.form_submit_button("Entrar no Sistema", type="primary", use_container_width=True)
+                
                 if btn_login:
                     if usuario_input in USUARIOS and USUARIOS[usuario_input]["senha"] == senha_input:
                         st.session_state['usuario_logado'] = usuario_input
@@ -616,7 +626,6 @@ elif menu_selecionado == "Relatórios":
                 st.dataframe(dc.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}]), use_container_width=True, hide_index=True)
     else: st.info("Não possui vendas.")
 
-# === ABA ADMINISTRADORAS (COM BLINDAGEM DE COLUNAS) ===
 elif menu_selecionado == "Administradoras":
     st.title("🏢 Gestão de Administradoras")
     try: aba_admin = planilha.worksheet("Administradoras")
@@ -626,11 +635,9 @@ elif menu_selecionado == "Administradoras":
         st.rerun()
 
     dados_admin = aba_admin.get_all_values()
-    
     if len(dados_admin) > 1:
         df_admin = pd.DataFrame(dados_admin[1:])
         col_count = len(df_admin.columns)
-        # Preenche colunas vazias se a planilha foi bagunçada manualmente
         if col_count < 4:
             for i in range(col_count, 4): df_admin[i] = ""
         df_admin = df_admin.iloc[:, :4]
