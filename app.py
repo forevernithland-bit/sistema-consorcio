@@ -284,7 +284,7 @@ except:
 
 cfg = {k: parse_float_safe(v) for k, v in zip(cfg_data[0], cfg_data[1])}
 
-# Lista atualizada de Administradoras cadastradas (Para dropdowns)
+# Lista atualizada de Administradoras cadastradas
 lista_admin_bd = aba_admin_cad.col_values(1)[1:]
 if not lista_admin_bd: lista_admin_bd = ["Nenhuma administradora cadastrada"]
 
@@ -478,17 +478,19 @@ if menu_selecionado == "Dashboard":
                                 breno_recebe = 0.0
                                 uriel_recebe = 0.0
                                 
+                                # APLICANDO A CORREÇÃO DE LÓGICA DE PAGAMENTO DOS SÓCIOS
                                 if vendedor_nome == "BRENO LIMA":
                                     breno_recebe = admin_recebe * (cfg['Breno_Breno']/100)
                                     uriel_recebe = admin_recebe * (cfg['Breno_Uriel']/100)
-                                    vend_recebe = breno_recebe
+                                    vend_recebe = 0.0 # Sócios não preenchem a coluna "Vendedor"
                                 elif vendedor_nome == "URIEL GOMES":
                                     uriel_recebe = admin_recebe * (cfg['Uriel_Uriel']/100)
                                     breno_recebe = admin_recebe * (cfg['Uriel_Breno']/100)
-                                    vend_recebe = uriel_recebe
+                                    vend_recebe = 0.0
                                 elif vendedor_nome == "Consorbens":
                                     breno_recebe = admin_recebe * (cfg['Cons_Breno']/100)
                                     uriel_recebe = admin_recebe * (cfg['Cons_Uriel']/100)
+                                    vend_recebe = 0.0
                                 else:
                                     if i <= tier_parc: vend_recebe = (r['Valor_Numerico'] * (tier_pct/100)) / tier_parc
                                     sobra = admin_recebe - vend_recebe
@@ -514,14 +516,7 @@ if menu_selecionado == "Dashboard":
 
                                     previsoes.append(row_dict)
                     else:
-                        admin_cadastradas = df_admin['Administradora'].unique().tolist() if not df_admin.empty else ["Nenhuma"]
-                        prod_cadastrados = df_admin['Produto'].unique().tolist() if not df_admin.empty else ["Nenhum"]
-                        st.warning(f"⚠️ **Atenção:** Regra não encontrada para a cota **{r['GRUPO']}/{r['COTA']}**.\n\n"
-                                   f"🔍 **O sistema tentou buscar por:** Administradora `{admin_venda}` e Produto `{prod_venda}`\n\n"
-                                   f"📋 **O que o sistema achou no Banco de Dados:** \n"
-                                   f"- Administradoras salvas: `{admin_cadastradas}` \n"
-                                   f"- Produtos salvos: `{prod_cadastrados}` \n\n"
-                                   f"💡 **Solução:** Vá no menu 'Regras de Comissão' e edite a regra para que o nome da Administradora fique **idêntico** ao que está na venda.")
+                        st.warning(f"⚠️ Regra não cadastrada para: '{r['ADMINISTRADORA']}' - '{r['PRODUTO']}'. Verifique o menu 'Regras de Comissão'.")
                         
                 if previsoes:
                     df_prev = pd.DataFrame(previsoes)
@@ -706,7 +701,6 @@ elif menu_selecionado == "Nova Venda":
             st.write(f"**Vendedor:** {st.session_state['nome_vendedor']}")
             vendedor = st.session_state['nome_vendedor']
     with col_v2:
-        # Traz as administradoras do BD, ou usa padrão se vazio
         if not lista_admin_bd or lista_admin_bd[0] == "Nenhuma administradora cadastrada":
             opcoes_admin = ["YAMAHA", "ITAÚ", "ROMA", "EMBRACON"]
         else:
@@ -866,7 +860,7 @@ elif menu_selecionado == "Regras de Comissão":
         else: st.info("Nenhuma regra de comissionamento de administradora.")
         
     with t_nova_regra:
-        with st.form("f_adm"):
+        with st.form("f_adm_nova"):
             st.subheader("Dados da Regra")
             st.info("💡 A Administradora deve ser cadastrada primeiro na aba 'Cadastro Admin.' para aparecer aqui.")
             c1, c2 = st.columns(2)
@@ -885,7 +879,7 @@ elif menu_selecionado == "Regras de Comissão":
                 for col in range(5):
                     num_p = (linha * 5) + col + 1
                     with cols_p[col]:
-                        v = st.number_input(f"Parcela {num_p}", min_value=0.0, step=0.1, key=f"nova_p{num_p}")
+                        v = st.number_input(f"Parcela {num_p}", min_value=0.0, step=0.1, key=f"n_regra_p{num_p}")
                         inputs_p.append(v)
 
             if st.form_submit_button("Salvar Regra da Administradora", type="primary"):
@@ -907,7 +901,6 @@ elif menu_selecionado == "Regras de Comissão":
                 st.subheader("Editando Regra")
                 c1, c2 = st.columns(2)
                 with c1: 
-                    # Tenta achar o index da admin, senao deixa o texto livre antigo pra nao bugar regras velhas
                     idx_admin = lista_admin_bd.index(reg_at['Administradora']) if reg_at['Administradora'] in lista_admin_bd else 0
                     if reg_at['Administradora'] in lista_admin_bd:
                         e_n = st.selectbox("Administradora", lista_admin_bd, index=idx_admin)
@@ -927,7 +920,7 @@ elif menu_selecionado == "Regras de Comissão":
                         except: val_float = 0.0
                         
                         with cols_p[col]:
-                            v = st.number_input(f"Parcela {num_p}", min_value=0.0, step=0.1, value=val_float, key=f"edit_p{num_p}")
+                            v = st.number_input(f"Parcela {num_p}", min_value=0.0, step=0.1, value=val_float, key=f"e_regra_p{num_p}")
                             edit_inputs_p.append(v)
                             
                 b1, b2 = st.columns(2)
@@ -945,7 +938,7 @@ elif menu_selecionado == "Regras de Comissão":
                         st.error("Regra deletada!")
                         st.rerun()
 
-    # --- ABA DE COMISSÕES INTERNAS (LIVRE DE ON_CHANGE) ---
+    # --- ABA DE COMISSÕES INTERNAS (LIVRE DE ON_CHANGE E FORMS) ---
     with t_com_int:
         st.subheader("Configurações de Recebimento (Sócios e Vendedores)")
         st.info("Estas regras alimentam o cálculo automático de comissionamento da equipe e o rateio de lucro da corretora.")
@@ -972,13 +965,14 @@ elif menu_selecionado == "Regras de Comissão":
         ct1, ct2, ct3 = st.columns(3)
         with ct1:
             st.markdown("**Metas - Nível 1**")
-            # Texto livre para evitar conflitos de callback
-            t1_max_str = st.text_input("Até (Volume R$) - Digite apenas os números", value=str(cfg["T1_Max"]), help="Ex: 500000 para R$ 500.000,00")
+            # SEM CALLBACK ON_CHANGE AQUI!
+            t1_max_str = st.text_input("Até (Volume R$) - Digite apenas os números", value=str(int(cfg["T1_Max"])), help="Ex: Digite 500000 para R$ 500.000,00", key="t1_max_input_safe")
             t1_pct = st.number_input("Comissão (%)", value=cfg["T1_Pct"], step=0.1)
             t1_parc = st.number_input("Dividido em (Qtd. Parcelas)", value=int(cfg["T1_Parc"]), step=1)
         with ct2:
             st.markdown("**Metas - Nível 2**")
-            t2_max_str = st.text_input("Até (Volume R$) - Digite apenas os números ", value=str(cfg["T2_Max"]), help="Ex: 1500000 para R$ 1.500.000,00")
+            # SEM CALLBACK ON_CHANGE AQUI!
+            t2_max_str = st.text_input("Até (Volume R$) - Digite apenas os números ", value=str(int(cfg["T2_Max"])), help="Ex: Digite 1500000 para R$ 1.500.000,00", key="t2_max_input_safe")
             t2_pct = st.number_input("Comissão (%) ", value=cfg["T2_Pct"], step=0.1)
             t2_parc = st.number_input("Dividido em (Qtd. Parcelas) ", value=int(cfg["T2_Parc"]), step=1)
         with ct3:
