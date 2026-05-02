@@ -324,7 +324,6 @@ try:
     if 'Imposto' not in cfg_dic: cfg_dic['Imposto'] = 7.16
     cfg = cfg_dic
 
-    # Carrega Base Global só quando precisa e Logado
     if is_logado and st.session_state.get('menu_lateral') in ["Dashboard", "Relatórios"]:
         dados_brutos = aba_vendas.get_all_values()
         if len(dados_brutos) > 1:
@@ -366,7 +365,6 @@ if st.session_state['tela_cheia_relatorio']:
         if st.session_state['perfil_logado'] == "Vendedor":
             df_view = df_view[df_view['Vendedor'] == st.session_state['nome_vendedor']]
         
-        # Filtra baseado na Data de Vencimento da PARCELA, não da Venda
         ft_rel = st.session_state.get('rel_periodo', 'Todas as Vendas')
         
         if ft_rel == "Mês Atual":
@@ -394,7 +392,6 @@ if st.session_state['tela_cheia_relatorio']:
             df_view = df_view[['Chave', 'Cliente', 'Produto', 'Vendedor', 'Grupo', 'Cota', 'Valor da Venda', 'Parcela', 'Comissão (Bruta)', 'Comissão (s/ Imposto)', 'Breno', 'Uriel', 'Vendedor Recebe', 'Status', 'Data Prevista']]
             is_master = st.session_state['perfil_logado'] == "Master"
             
-            # Formatação para o Padrão Brasileiro
             total_breno = df_view['Breno'].sum()
             total_uriel = df_view['Uriel'].sum()
             total_vend = df_view['Vendedor Recebe'].sum()
@@ -759,7 +756,8 @@ if menu_selecionado == "Dashboard":
                     st.session_state['menu_lateral'] = "Nova Venda"
                     st.rerun()
             
-            c_filtro1, c_filtro2 = st.columns([1, 2])
+            # --- ATUALIZAÇÃO: FILTROS SEPARADOS DE BUSCA ---
+            c_filtro1, c_filtro2, c_filtro3, c_filtro4 = st.columns([1.5, 1.5, 1, 1])
             with c_filtro1:
                 filtro_cli = st.selectbox("⏳ Filtro da Tabela:", ["Últimos 5 Cadastros", "Todos os Clientes", "Mês Atual", "Mês Anterior", "Ano Atual", "Período Personalizado"])
                 if filtro_cli == "Período Personalizado":
@@ -767,14 +765,19 @@ if menu_selecionado == "Dashboard":
                     with cd1: p_ini = st.date_input("Início", format="DD/MM/YYYY")
                     with cd2: p_fim = st.date_input("Fim", format="DD/MM/YYYY")
             with c_filtro2: 
-                busca = st.text_input("🔍 Buscar (Nome, Grupo ou Cota):")
+                busca_nome = st.text_input("🔍 Buscar Cliente por Nome:")
+            with c_filtro3: 
+                busca_grupo = st.text_input("📦 Buscar Grupo:")
+            with c_filtro4: 
+                busca_cota = st.text_input("🔢 Buscar Cota:")
 
             hoje = datetime.today()
             
             # ORDENAÇÃO: Venda mais recente primeiro
             df_view = df_view.sort_values(by="Data_Real", ascending=False)
             
-            if filtro_cli == "Últimos 5 Cadastros" and busca.strip() == "":
+            # Remove limite de 5 se estiver usando os campos exatos de busca
+            if filtro_cli == "Últimos 5 Cadastros" and busca_nome.strip() == "" and busca_grupo.strip() == "" and busca_cota.strip() == "":
                 df_view = df_view.head(5)
             elif filtro_cli != "Todos os Clientes" and filtro_cli != "Últimos 5 Cadastros":
                 mask = df_view['Data_Real'].notna()
@@ -788,13 +791,14 @@ if menu_selecionado == "Dashboard":
                 elif filtro_cli == "Período Personalizado":
                     df_view = df_view[mask & (df_view['Data_Real'].dt.date >= p_ini) & (df_view['Data_Real'].dt.date <= p_fim)]
 
-            if busca.strip() != "":
-                termo = busca.strip().lower()
-                df_view = df_view[
-                    df_view['Nome do cliente'].astype(str).str.lower().str.contains(termo, na=False) |
-                    df_view['GRUPO'].astype(str).str.lower().str.contains(termo, na=False) |
-                    df_view['COTA'].astype(str).str.lower().str.contains(termo, na=False)
-                ]
+            if busca_nome.strip() != "":
+                df_view = df_view[df_view['Nome do cliente'].astype(str).str.contains(busca_nome.strip(), case=False, na=False)]
+            
+            if busca_grupo.strip() != "":
+                df_view = df_view[df_view['GRUPO'].astype(str).str.contains(busca_grupo.strip(), case=False, na=False)]
+                
+            if busca_cota.strip() != "":
+                df_view = df_view[df_view['COTA'].astype(str).str.contains(busca_cota.strip(), case=False, na=False)]
 
             if not df_view.empty:
                 st.write("Clique em uma linha para ver os detalhes do cliente:")
