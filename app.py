@@ -330,7 +330,6 @@ if not is_logado:
     st.stop() 
 
 if menu_selecionado == "Dashboard":
-    
     if st.session_state['cliente_visualizado'] is not None:
         cliente_nome = st.session_state['cliente_visualizado']
         
@@ -478,11 +477,10 @@ if menu_selecionado == "Dashboard":
                                 breno_recebe = 0.0
                                 uriel_recebe = 0.0
                                 
-                                # APLICANDO A CORREÇÃO DE LÓGICA DE PAGAMENTO DOS SÓCIOS
                                 if vendedor_nome == "BRENO LIMA":
                                     breno_recebe = admin_recebe * (cfg['Breno_Breno']/100)
                                     uriel_recebe = admin_recebe * (cfg['Breno_Uriel']/100)
-                                    vend_recebe = 0.0 # Sócios não preenchem a coluna "Vendedor"
+                                    vend_recebe = 0.0 
                                 elif vendedor_nome == "URIEL GOMES":
                                     uriel_recebe = admin_recebe * (cfg['Uriel_Uriel']/100)
                                     breno_recebe = admin_recebe * (cfg['Uriel_Breno']/100)
@@ -516,7 +514,14 @@ if menu_selecionado == "Dashboard":
 
                                     previsoes.append(row_dict)
                     else:
-                        st.warning(f"⚠️ Regra não cadastrada para: '{r['ADMINISTRADORA']}' - '{r['PRODUTO']}'. Verifique o menu 'Regras de Comissão'.")
+                        admin_cadastradas = df_admin['Administradora'].unique().tolist() if not df_admin.empty else ["Nenhuma"]
+                        prod_cadastrados = df_admin['Produto'].unique().tolist() if not df_admin.empty else ["Nenhum"]
+                        st.warning(f"⚠️ **Atenção:** Regra não encontrada para a cota **{r['GRUPO']}/{r['COTA']}**.\n\n"
+                                   f"🔍 **O sistema buscou por:** Administradora `{admin_venda}` e Produto `{prod_venda}`\n\n"
+                                   f"📋 **O que o sistema achou no Banco de Dados:** \n"
+                                   f"- Administradoras salvas: `{admin_cadastradas}` \n"
+                                   f"- Produtos salvos: `{prod_cadastrados}` \n\n"
+                                   f"💡 **Solução:** Vá no menu 'Regras de Comissão' e edite a regra para que o nome da Administradora fique idêntico ao que está na venda.")
                         
                 if previsoes:
                     df_prev = pd.DataFrame(previsoes)
@@ -820,16 +825,14 @@ elif menu_selecionado == "Regras de Comissão":
     
     df_admin = carregar_df_admin_seguro(aba_admin)
 
-    t_cad_adm, t_regras, t_nova_regra, t_edit_regra, t_com_int = st.tabs([
-        "🏢 1. Cadastro Admin.", 
-        "📋 2. Regras", 
-        "➕ 3. Nova Regra", 
-        "✏️ Editar", 
-        "👥 Internas"
+    t_cad_adm, t_regras, t_reg_int = st.tabs([
+        "🏢 Cadastrar Admin", 
+        "📋 Regras", 
+        "👥 Regras Internas"
     ])
     
     with t_cad_adm:
-        st.subheader("Cadastrar Nova Administradora no Sistema")
+        st.subheader("Cadastrar Nova Administradora")
         with st.form("form_cad_admin"):
             c1, c2 = st.columns([2, 1])
             with c1: nome_adm = st.text_input("Nome da Administradora *")
@@ -854,92 +857,92 @@ elif menu_selecionado == "Regras de Comissão":
             st.info("Nenhuma administradora cadastrada ainda.")
     
     with t_regras:
+        st.subheader("Regras Cadastradas")
         if not df_admin.empty:
             df_mostrar = df_admin.drop(columns=['Admin_Norm', 'Prod_Norm'], errors='ignore')
             st.dataframe(df_mostrar.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}]), use_container_width=True, hide_index=True)
         else: st.info("Nenhuma regra de comissionamento de administradora.")
         
-    with t_nova_regra:
-        with st.form("f_adm_nova"):
-            st.subheader("Dados da Regra")
-            st.info("💡 A Administradora deve ser cadastrada primeiro na aba 'Cadastro Admin.' para aparecer aqui.")
-            c1, c2 = st.columns(2)
-            with c1: 
-                n = st.selectbox("Administradora *", lista_admin_bd)
-            with c2: 
-                p = st.selectbox("Produto *", ["Auto", "Imóvel", "Moto", "Caminhão", "Serviços"])
-            
-            st.divider()
-            st.subheader("Percentual de Comissão por Parcela (%)")
-            st.caption("Preencha apenas as parcelas que geram comissionamento. Deixe 0.0 nas demais.")
-            
-            inputs_p = []
-            for linha in range(5):
-                cols_p = st.columns(5)
-                for col in range(5):
-                    num_p = (linha * 5) + col + 1
-                    with cols_p[col]:
-                        v = st.number_input(f"Parcela {num_p}", min_value=0.0, step=0.1, key=f"n_regra_p{num_p}")
-                        inputs_p.append(v)
-
-            if st.form_submit_button("Salvar Regra da Administradora", type="primary"):
-                if n and p and n != "Nenhuma administradora cadastrada":
-                    nova_linha = [n.upper(), p] + [f"{v}%" if v > 0 else "" for v in inputs_p]
-                    aba_admin.append_row(nova_linha)
-                    st.success("Regra cadastrada com sucesso!")
-                    st.rerun()
-                else: st.error("Cadastre ou selecione uma Administradora válida.")
-                
-    with t_edit_regra:
-        if not df_admin.empty:
-            opts = df_admin.apply(lambda x: f"Linha {x.name + 2} | {x['Administradora']} - {x['Produto']}", axis=1).tolist()
-            sel = st.selectbox("Selecione a regra para editar:", [""] + opts)
-            if sel:
-                l_plan = int(sel.split(" | ")[0].replace("Linha ", ""))
-                reg_at = df_admin.iloc[l_plan - 2]
-                
-                st.subheader("Editando Regra")
+        st.divider()
+        
+        with st.expander("➕ Adicionar Nova Regra", expanded=False):
+            with st.form("f_adm_nova"):
+                st.info("💡 A Administradora deve ser cadastrada primeiro na aba 'Cadastrar Admin' para aparecer aqui.")
                 c1, c2 = st.columns(2)
                 with c1: 
-                    idx_admin = lista_admin_bd.index(reg_at['Administradora']) if reg_at['Administradora'] in lista_admin_bd else 0
-                    if reg_at['Administradora'] in lista_admin_bd:
-                        e_n = st.selectbox("Administradora", lista_admin_bd, index=idx_admin)
-                    else:
-                        e_n = st.text_input("Administradora", value=reg_at['Administradora'])
+                    n = st.selectbox("Administradora *", lista_admin_bd)
                 with c2: 
-                    e_p = st.selectbox("Produto", ["Auto", "Imóvel", "Moto", "Caminhão", "Serviços"], index=obter_index_produto(reg_at['Produto']))
+                    p = st.selectbox("Produto *", ["Auto", "Imóvel", "Moto", "Caminhão", "Serviços"])
                 
-                st.write("Percentuais (%)")
-                edit_inputs_p = []
+                st.write("Percentual de Comissão por Parcela (%)")
+                st.caption("Preencha apenas as parcelas que geram comissionamento. Deixe 0.0 nas demais.")
+                
+                inputs_p = []
                 for linha in range(5):
                     cols_p = st.columns(5)
                     for col in range(5):
                         num_p = (linha * 5) + col + 1
-                        val_str = str(reg_at[f'P{num_p}']).replace('%', '').strip()
-                        try: val_float = float(val_str)
-                        except: val_float = 0.0
-                        
                         with cols_p[col]:
-                            v = st.number_input(f"Parcela {num_p}", min_value=0.0, step=0.1, value=val_float, key=f"e_regra_p{num_p}")
-                            edit_inputs_p.append(v)
+                            v = st.number_input(f"Parcela {num_p}", min_value=0.0, step=0.1, key=f"nova_p{num_p}")
+                            inputs_p.append(v)
+
+                if st.form_submit_button("Salvar Regra da Administradora", type="primary"):
+                    if n and p and n != "Nenhuma administradora cadastrada":
+                        nova_linha = [n.upper(), p] + [f"{v}%" if v > 0 else "" for v in inputs_p]
+                        aba_admin.append_row(nova_linha)
+                        st.success("Regra cadastrada com sucesso!")
+                        st.rerun()
+                    else: st.error("Cadastre ou selecione uma Administradora válida.")
+                
+        with st.expander("✏️ Editar ou Excluir Regra", expanded=False):
+            if not df_admin.empty:
+                opts = df_admin.apply(lambda x: f"Linha {x.name + 2} | {x['Administradora']} - {x['Produto']}", axis=1).tolist()
+                sel = st.selectbox("Selecione a regra para editar:", [""] + opts)
+                if sel:
+                    l_plan = int(sel.split(" | ")[0].replace("Linha ", ""))
+                    reg_at = df_admin.iloc[l_plan - 2]
+                    
+                    c1, c2 = st.columns(2)
+                    with c1: 
+                        idx_admin = lista_admin_bd.index(reg_at['Administradora']) if reg_at['Administradora'] in lista_admin_bd else 0
+                        if reg_at['Administradora'] in lista_admin_bd:
+                            e_n = st.selectbox("Administradora", lista_admin_bd, index=idx_admin)
+                        else:
+                            e_n = st.text_input("Administradora", value=reg_at['Administradora'])
+                    with c2: 
+                        e_p = st.selectbox("Produto", ["Auto", "Imóvel", "Moto", "Caminhão", "Serviços"], index=obter_index_produto(reg_at['Produto']))
+                    
+                    st.write("Percentuais (%)")
+                    edit_inputs_p = []
+                    for linha in range(5):
+                        cols_p = st.columns(5)
+                        for col in range(5):
+                            num_p = (linha * 5) + col + 1
+                            val_str = str(reg_at[f'P{num_p}']).replace('%', '').strip()
+                            try: val_float = float(val_str)
+                            except: val_float = 0.0
                             
-                b1, b2 = st.columns(2)
-                with b1:
-                    if st.button("Salvar Alterações", type="primary"):
-                        aba_admin.update_cell(l_plan, 1, e_n.upper())
-                        aba_admin.update_cell(l_plan, 2, e_p)
-                        for i, v in enumerate(edit_inputs_p):
-                            aba_admin.update_cell(l_plan, i+3, f"{v}%" if v > 0 else "")
-                        st.success("Regra alterada!")
-                        st.rerun()
-                with b2:
-                    if st.button("🚨 EXCLUIR REGRA"):
-                        aba_admin.delete_rows(l_plan)
-                        st.error("Regra deletada!")
-                        st.rerun()
+                            with cols_p[col]:
+                                v = st.number_input(f"P {num_p}", min_value=0.0, step=0.1, value=val_float, key=f"e_regra_p{num_p}")
+                                edit_inputs_p.append(v)
+                                
+                    b1, b2 = st.columns(2)
+                    with b1:
+                        if st.button("Salvar Alterações", type="primary"):
+                            aba_admin.update_cell(l_plan, 1, e_n.upper())
+                            aba_admin.update_cell(l_plan, 2, e_p)
+                            for i, v in enumerate(edit_inputs_p):
+                                aba_admin.update_cell(l_plan, i+3, f"{v}%" if v > 0 else "")
+                            st.success("Regra alterada!")
+                            st.rerun()
+                    with b2:
+                        if st.button("🚨 EXCLUIR REGRA"):
+                            aba_admin.delete_rows(l_plan)
+                            st.error("Regra deletada!")
+                            st.rerun()
 
     # --- ABA DE COMISSÕES INTERNAS (LIVRE DE ON_CHANGE E FORMS) ---
-    with t_com_int:
+    with t_reg_int:
         st.subheader("Configurações de Recebimento (Sócios e Vendedores)")
         st.info("Estas regras alimentam o cálculo automático de comissionamento da equipe e o rateio de lucro da corretora.")
         
