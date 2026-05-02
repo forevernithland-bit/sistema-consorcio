@@ -37,7 +37,7 @@ def carregar_ferramenta(nome_arquivo):
     except FileNotFoundError:
         st.error(f"⚠️ O arquivo {nome_arquivo} não foi encontrado!")
 
-# === MÁSCARAS INTELIGENTES ===
+# === MÁSCARAS INTELIGENTES E NORMALIZADORES ===
 def formatar_telefone(tel):
     if not tel: return ""
     nums = ''.join(filter(str.isdigit, str(tel)))
@@ -59,6 +59,25 @@ def formatar_moeda(valor):
     if not nums: return "R$ 0,00"
     val_float = float(nums) / 100
     return f"R$ {val_float:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+def normalizar_produto(p):
+    p = str(p).strip().upper()
+    if p in ["AUTO", "AUTOMOVEL", "AUTOMÓVEL"]: return "AUTOMÓVEL"
+    if p in ["IMOVEL", "IMÓVEL", "IMÓVEIS", "IMOVEIS"]: return "IMÓVEL"
+    if p in ["MOTO", "MOTOS", "MOTOCICLETA"]: return "MOTO"
+    if p in ["CAMINHAO", "CAMINHÃO", "CAMINHÕES"]: return "CAMINHÃO"
+    if p in ["SERVIÇO", "SERVIÇOS", "SERVICO", "SERVICOS"]: return "SERVIÇOS"
+    return p
+
+def normalizar_admin(a):
+    a = str(a).strip().upper()
+    if a == "ITAU": return "ITAÚ"
+    return a
+
+def obter_index_produto(p_str):
+    norm = normalizar_produto(p_str)
+    mapping = {"AUTOMÓVEL": 0, "IMÓVEL": 1, "MOTO": 2, "CAMINHÃO": 3, "SERVIÇOS": 4}
+    return mapping.get(norm, 0)
 
 # Callbacks
 def mascara_tel_nv(): st.session_state['tel_nv'] = formatar_telefone(st.session_state.get('tel_nv', ''))
@@ -90,7 +109,7 @@ else:
     ferramentas_logadas = ["🏍️ Simulador Yamaha", "🏦 Simulador Itaú", "🎯 Oportunidades Itaú", "⚖️ Financiamento x Consórcio"]
     
     if st.session_state['perfil_logado'] == "Master":
-        opcoes_principais = ["Dashboard", "Nova Venda", "Relatórios", "Administradoras", "Baixar Parcela"]
+        opcoes_principais = ["Dashboard", "Nova Venda", "Relatórios", "Regras de Comissão", "Baixar Parcela"]
     else:
         opcoes_principais = ["Dashboard", "Nova Venda", "Relatórios"]
 
@@ -179,7 +198,6 @@ except:
     aba_clientes = planilha.add_worksheet("Clientes", 1000, 10)
     aba_clientes.append_row(["Nome", "Telefone", "Email", "Endereco", "Aniversario", "Profissao", "Renda", "Data_Cadastro"])
 
-# Estrutura robusta para Administradoras (25 Parcelas)
 try: 
     aba_admin = planilha.worksheet("Administradoras")
     d_admin_temp = aba_admin.get_all_values()
@@ -191,6 +209,13 @@ except:
     aba_admin = planilha.add_worksheet("Administradoras", 100, 27)
     cabecalho_admin = ["Administradora", "Produto"] + [f"P{i}" for i in range(1, 26)]
     aba_admin.append_row(cabecalho_admin)
+
+# Criando a nova aba para Comissões dos Vendedores
+try: 
+    aba_com_int = planilha.worksheet("Comissoes_Internas")
+except: 
+    aba_com_int = planilha.add_worksheet("Comissoes_Internas", 100, 3)
+    aba_com_int.append_row(["Alvo (Usuário/Perfil)", "Base de Cálculo", "Percentual (%)"])
 
 # === RENDERIZAÇÃO ===
 if not is_logado:
@@ -231,17 +256,16 @@ if menu_selecionado == "Dashboard":
     if st.session_state['cliente_visualizado'] is not None:
         cliente_nome = st.session_state['cliente_visualizado']
         
+        st.markdown(f"## 👤 Perfil: {cliente_nome}")
+        
         if st.button("⬅️ Voltar ao Dashboard", type="primary"):
             st.session_state['cliente_visualizado'] = None
             st.session_state['key_tabela'] += 1
             st.rerun()
             
-        # BLINDAGEM: Lê a aba clientes como lista e transforma em DataFrame para evitar erros de colunas
         dados_cli_brutos = aba_clientes.get_all_values()
-        if len(dados_cli_brutos) > 1:
-            df_cli = pd.DataFrame(dados_cli_brutos[1:], columns=dados_cli_brutos[0])
-        else:
-            df_cli = pd.DataFrame(columns=["Nome", "Telefone", "Email", "Endereco", "Aniversario", "Profissao", "Renda", "Data_Cadastro"])
+        if len(dados_cli_brutos) > 1: df_cli = pd.DataFrame(dados_cli_brutos[1:], columns=dados_cli_brutos[0])
+        else: df_cli = pd.DataFrame(columns=["Nome", "Telefone", "Email", "Endereco", "Aniversario", "Profissao", "Renda", "Data_Cadastro"])
         
         info_cliente = {}
         if not df_cli.empty and 'Nome' in df_cli.columns:
@@ -350,21 +374,25 @@ if menu_selecionado == "Dashboard":
                 st.subheader("📈 Previsão de Comissionamento")
                 
                 dados_admin = aba_admin.get_all_values()
-                if len(dados_admin) > 1:
-                    df_admin = pd.DataFrame(dados_admin[1:], columns=dados_admin[0])
-                else:
-                    df_admin = pd.DataFrame(columns=["Administradora", "Produto"] + [f"P{i}" for i in range(1, 26)])
+                if len(dados_admin) > 1: df_admin = pd.DataFrame(dados_admin[1:], columns=dados_admin[0])
+                else: df_admin = pd.DataFrame(columns=["Administradora", "Produto"] + [f"P{i}" for i in range(1, 26)])
                     
                 previsoes = []
                 for idx, r in cotas_cliente.iterrows():
-                    regra = df_admin[(df_admin['Administradora'] == r['ADMINISTRADORA']) & (df_admin['Produto'] == r['PRODUTO'])]
-                    if not regra.empty:
-                        regra = regra.iloc[0]
+                    admin_venda = normalizar_admin(r['ADMINISTRADORA'])
+                    prod_venda = normalizar_produto(r['PRODUTO'])
+                    
+                    regra_encontrada = None
+                    for _, regra_row in df_admin.iterrows():
+                        if normalizar_admin(regra_row['Administradora']) == admin_venda and normalizar_produto(regra_row['Produto']) == prod_venda:
+                            regra_encontrada = regra_row
+                            break
+                            
+                    if regra_encontrada is not None:
                         data_venda = pd.to_datetime(r['DATA'], format="%d/%m/%Y", errors='coerce')
                         if pd.notna(data_venda):
                             for i in range(1, 26):
-                                # CORREÇÃO: Variável corrigida para ler com segurança
-                                p_str = str(regra[f"P{i}"]).replace('%', '').strip()
+                                p_str = str(regra_encontrada[f"P{i}"]).replace('%', '').strip()
                                 try: p_val = float(p_str)
                                 except: p_val = 0.0
                                 
@@ -384,15 +412,13 @@ if menu_selecionado == "Dashboard":
                         
                 if previsoes:
                     df_prev = pd.DataFrame(previsoes)
-                    if not is_master:
-                        df_prev = df_prev[df_prev['Vendedor'] == st.session_state['nome_vendedor']]
+                    if not is_master: df_prev = df_prev[df_prev['Vendedor'] == st.session_state['nome_vendedor']]
                         
                     if not df_prev.empty:
                         st.dataframe(df_prev.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}]), use_container_width=True, hide_index=True)
-                    else:
-                        st.info("Nenhuma previsão de comissão vinculada a você para este cliente.")
+                    else: st.info("Nenhuma previsão de comissão vinculada a você para este cliente.")
                 else:
-                    st.info("Aguardando configurações de regras para gerar a previsão.")
+                    if len(df_admin) == 0: st.info("Aguardando configurações de regras para gerar a previsão.")
 
                 if is_master:
                     st.write("")
@@ -410,8 +436,7 @@ if menu_selecionado == "Dashboard":
                                     aba_vendas.delete_rows(linha_del)
                                     st.success("Cota apagada com sucesso!")
                                     st.rerun()
-                                else:
-                                    st.error("Selecione a cota.")
+                                else: st.error("Selecione a cota.")
 
             else: st.warning("Nenhuma cota encontrada para este cliente.")
 
@@ -462,7 +487,8 @@ if menu_selecionado == "Dashboard":
                 df_display = df_clientes.copy()
                 df_display['Grupo e cota'] = df_display.apply(lambda x: f"{x['GRUPO']} / {x['COTA']}" if str(x['GRUPO']).strip() or str(x['COTA']).strip() else "N/A", axis=1)
                 df_display['valor da venda'] = df_display['Valor_Numerico'].apply(lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-                df_display = df_display[['Nome do cliente', 'Grupo e cota', 'PRODUTO', 'ADMINISTRADORA', 'valor da venda', 'VENDEDOR', 'DATA']].rename(columns={ 'Nome do cliente': 'Nome', 'PRODUTO': 'Tipo de Produto', 'ADMINISTRADORA': 'Administradora', 'VENDEDOR': 'Vendedor', 'DATA': 'Data da Venda' })
+                df_display['Prod_Norm'] = df_display['PRODUTO'].apply(normalizar_produto)
+                df_display = df_display[['Nome do cliente', 'Grupo e cota', 'Prod_Norm', 'ADMINISTRADORA', 'valor da venda', 'VENDEDOR', 'DATA']].rename(columns={ 'Nome do cliente': 'Nome', 'Prod_Norm': 'Tipo de Produto', 'ADMINISTRADORA': 'Administradora', 'VENDEDOR': 'Vendedor', 'DATA': 'Data da Venda' })
                 
                 estilo_tabela = df_display.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}])
                 tabela_interativa = st.dataframe(estilo_tabela, use_container_width=True, hide_index=True, on_select="rerun", selection_mode="single-row", key=f"tabela_clientes_{st.session_state['key_tabela']}")
@@ -484,7 +510,7 @@ if menu_selecionado == "Dashboard":
                     cg1, cg2 = st.columns(2)
                     with cg1: gi = st.date_input("Data Inicial", format="DD/MM/YYYY", key="g_inicio")
                     with cg2: gf = st.date_input("Data Final", format="DD/MM/YYYY", key="g_fim")
-            with g_filtro2: fp_graf = st.selectbox("📦 Produto:", ["Todos", "Auto", "Imovel", "Moto", "Caminhao"])
+            with g_filtro2: fp_graf = st.selectbox("📦 Produto:", ["Todos", "Automóvel", "Imóvel", "Moto", "Caminhão", "Serviços"])
                 
             df_g = df_vendas.copy()
             if ft_graf != "Todas as Vendas" and not df_g['Data_Real'].isna().all():
@@ -496,7 +522,9 @@ if menu_selecionado == "Dashboard":
                 elif ft_graf == "Anual": df_g = df_g[mask & (df_g['Data_Real'].dt.year == hoje.year)]
                 elif ft_graf == "Período Personalizado": df_g = df_g[mask & (df_g['Data_Real'].dt.date >= gi) & (df_g['Data_Real'].dt.date <= gf)]
                 
-            if fp_graf != "Todos": df_g = df_g[df_g['PRODUTO'].astype(str).str.contains(fp_graf, case=False, na=False)]
+            if fp_graf != "Todos": 
+                df_g['Prod_Norm'] = df_g['PRODUTO'].apply(normalizar_produto)
+                df_g = df_g[df_g['Prod_Norm'] == normalizar_produto(fp_graf)]
                 
             if not df_g.empty:
                 m1, m2 = st.columns(2)
@@ -513,7 +541,7 @@ if menu_selecionado == "Dashboard":
         else: st.info("O sistema ainda não possui vendas cadastradas na planilha.")
 
 elif menu_selecionado == "Nova Venda":
-    st.title("📝 Cadastrar Nova Venda")
+    st.markdown("## 📝 Cadastrar Nova Venda")
     
     col_c1, col_c2 = st.columns(2)
     with col_c1:
@@ -573,7 +601,7 @@ elif menu_selecionado == "Nova Venda":
             vendedor = st.session_state['nome_vendedor']
     with col_v2:
         admin = st.selectbox("Administradora *", ["YAMAHA", "ITAÚ", "ROMA", "EMBRACON"])
-        produto = st.selectbox("Produto *", ["Auto", "Imovel", "Moto", "Caminhão", "Serviços"])
+        produto = st.selectbox("Produto *", ["Automóvel", "Imóvel", "Moto", "Caminhão", "Serviços"])
         
     st.markdown("##### Cotas Adquiridas")
     if 'qtd_cotas' not in st.session_state: st.session_state['qtd_cotas'] = 1
@@ -590,7 +618,6 @@ elif menu_selecionado == "Nova Venda":
         with cq1: grupo = st.text_input(f"Grupo *", key=f"g_{i}")
         with cq2: cota = st.text_input(f"Cota *", key=f"c_{i}")
         with cq3:
-            # BLINDAGEM DO CALLBACK: Lendo via .get() de forma segura
             def m_moeda(idx=i): 
                 val = st.session_state.get(f"v_in_{idx}", "")
                 st.session_state[f"v_in_{idx}"] = formatar_moeda(val)
@@ -627,9 +654,10 @@ elif menu_selecionado == "Nova Venda":
                     val_float = float(''.join(filter(str.isdigit, str(c['valor_str']))))/100
                     aba_vendas.append_row(["", cliente, str(data.strftime("%d/%m/%Y")), produto, vendedor, c['grupo'], c['cota'], admin, c['status'], val_float])
 
-                # Leitura segura para salvar novo cliente
-                dados_cli_brutos = aba_clientes.get_all_values()
-                nomes_cadastrados = [row[0] for row in dados_cli_brutos] if len(dados_cli_brutos) > 0 else []
+                try:
+                    dados_cli_brutos = aba_clientes.get_all_values()
+                    nomes_cadastrados = [row[0] for row in dados_cli_brutos] if len(dados_cli_brutos) > 0 else []
+                except: nomes_cadastrados = []
                 
                 if cliente not in nomes_cadastrados:
                     aba_clientes.append_row([cliente, telefone, email, end_completo, aniversario, profissao, renda, str(datetime.today().strftime("%d/%m/%Y"))])
@@ -642,8 +670,48 @@ elif menu_selecionado == "Nova Venda":
                     if k in st.session_state: del st.session_state[k]
                 st.session_state['qtd_cotas'] = 1 
 
+elif menu_selecionado == "Gerenciar Vendas (Editar/Deletar)":
+    st.markdown("## 🛠️ Gerenciar e Editar Vendas")
+    st.warning("Área Restrita (Apenas Sócios). Muito cuidado ao deletar informações!")
+    
+    aba_vendas = planilha.worksheet("Vendas")
+    dados_brutos = aba_vendas.get_all_values()
+    if len(dados_brutos) > 1:
+        df_vendas = pd.DataFrame(dados_brutos[1:]).iloc[:, :10]
+        df_vendas.columns = ["ID_cliente", "Nome do cliente", "DATA", "PRODUTO", "VENDEDOR", "GRUPO", "COTA", "ADMINISTRADORA", "STATUS", "VALOR"]
+        opcoes_busca = df_vendas.apply(lambda r: f"Linha {r.name + 2} | Cliente: {r['Nome do cliente']} - Grupo/Cota: {r['GRUPO']}/{r['COTA']}", axis=1).tolist()
+        venda_selecionada = st.selectbox("Selecione a venda para alterar/excluir:", [""] + opcoes_busca)
+        
+        if venda_selecionada:
+            linha_planilha = int(venda_selecionada.split(" | ")[0].replace("Linha ", ""))
+            venda_atual = df_vendas.iloc[linha_planilha - 2]
+            st.divider()
+            st.subheader(f"Editando Venda: {venda_atual['Nome do cliente']}")
+            col1, col2 = st.columns(2)
+            with col1:
+                novo_nome = st.text_input("Nome do Cliente", value=str(venda_atual['Nome do cliente']))
+                novo_status = st.selectbox("Status", ["Vendido", "Contemplado", "Cancelado"], index=["Vendido", "Contemplado", "Cancelado"].index(venda_atual['STATUS'] if venda_atual['STATUS'] in ["Vendido", "Contemplado", "Cancelado"] else "Vendido"))
+            with col2:
+                val_float = pd.to_numeric(str(venda_atual['VALOR']).replace('R$', '').replace('.','').replace(',', '.').strip(), errors='coerce')
+                novo_valor = st.number_input("Valor da Venda (R$)", value=float(val_float) if not pd.isna(val_float) else 0.0)
+
+            col_btn1, col_btn2 = st.columns(2)
+            with col_btn1:
+                if st.button("Salvar Alterações", type="primary"):
+                    aba_vendas.update_cell(linha_planilha, 2, novo_nome)   
+                    aba_vendas.update_cell(linha_planilha, 10, novo_valor) 
+                    aba_vendas.update_cell(linha_planilha, 9, novo_status) 
+                    st.success("Alterações salvas na planilha!")
+                    st.rerun()
+            with col_btn2:
+                if st.button("🚨 DELETAR ESTA VENDA"):
+                    aba_vendas.delete_rows(linha_planilha)
+                    st.error("Venda apagada permanentemente!")
+                    st.rerun()
+    else: st.info("Nenhuma venda para gerenciar.")
+
 elif menu_selecionado == "Relatórios":
-    st.title("📑 Relatórios Gerenciais")
+    st.markdown("## 📑 Relatórios Gerenciais")
     aba_vendas = planilha.worksheet("Vendas")
     dados_brutos = aba_vendas.get_all_values()
     if len(dados_brutos) > 1:
@@ -696,9 +764,10 @@ elif menu_selecionado == "Relatórios":
                 st.dataframe(dc.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}]), use_container_width=True, hide_index=True)
     else: st.info("Não possui vendas.")
 
-elif menu_selecionado == "Administradoras":
-    st.title("🏢 Gestão de Administradoras e Regras de Comissão")
+elif menu_selecionado == "Regras de Comissão":
+    st.markdown("## 🏢 Regras de Comissão")
     
+    # DF Administradoras
     dados_admin = aba_admin.get_all_values()
     if len(dados_admin) > 1:
         df_admin = pd.DataFrame(dados_admin[1:])
@@ -707,20 +776,27 @@ elif menu_selecionado == "Administradoras":
     else: 
         df_admin = pd.DataFrame(columns=["Administradora", "Produto"] + [f"P{i}" for i in range(1, 26)])
 
-    t1, t2, t3 = st.tabs(["📋 Regras Cadastradas", "➕ Nova Regra", "✏️ Editar/Excluir"])
+    # DF Comissões Internas
+    dados_com_int = aba_com_int.get_all_values()
+    if len(dados_com_int) > 1:
+        df_com_int = pd.DataFrame(dados_com_int[1:], columns=dados_com_int[0])
+    else:
+        df_com_int = pd.DataFrame(columns=["Alvo (Usuário/Perfil)", "Base de Cálculo", "Percentual (%)"])
+
+    t1, t2, t3, t4 = st.tabs(["📋 Adm Cadastradas", "➕ Nova Regra Adm", "✏️ Editar/Excluir Adm", "👥 Comissões Internas"])
     
     with t1:
         if not df_admin.empty:
             df_mostrar = df_admin.copy()
             st.dataframe(df_mostrar.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}]), use_container_width=True, hide_index=True)
-        else: st.info("Nenhuma regra de comissionamento.")
+        else: st.info("Nenhuma regra de comissionamento de administradora.")
         
     with t2:
         with st.form("f_adm"):
             st.subheader("Dados da Regra")
             c1, c2 = st.columns(2)
             with c1: n = st.text_input("Administradora *")
-            with c2: p = st.selectbox("Produto *", ["Automóvel", "Caminhão", "Serviços", "Motos", "Imóveis"])
+            with c2: p = st.selectbox("Produto *", ["Automóvel", "Imóvel", "Moto", "Caminhão", "Serviços"])
             
             st.divider()
             st.subheader("Percentual de Comissão por Parcela (%)")
@@ -735,7 +811,7 @@ elif menu_selecionado == "Administradoras":
                         v = st.number_input(f"Parcela {num_p}", min_value=0.0, step=0.1, key=f"nova_p{num_p}")
                         inputs_p.append(v)
 
-            if st.form_submit_button("Salvar Regra de Comissionamento", type="primary"):
+            if st.form_submit_button("Salvar Regra da Administradora", type="primary"):
                 if n and p:
                     nova_linha = [n.upper(), p] + [f"{v}%" if v > 0 else "" for v in inputs_p]
                     aba_admin.append_row(nova_linha)
@@ -754,7 +830,7 @@ elif menu_selecionado == "Administradoras":
                 st.subheader("Editando Regra")
                 c1, c2 = st.columns(2)
                 with c1: e_n = st.text_input("Administradora", value=reg_at['Administradora'])
-                with c2: e_p = st.selectbox("Produto", ["Automóvel", "Caminhão", "Serviços", "Motos", "Imóveis"], index=["Automóvel", "Caminhão", "Serviços", "Motos", "Imóveis"].index(reg_at['Produto']) if reg_at['Produto'] in ["Automóvel", "Caminhão", "Serviços", "Motos", "Imóveis"] else 0)
+                with c2: e_p = st.selectbox("Produto", ["Automóvel", "Imóvel", "Moto", "Caminhão", "Serviços"], index=obter_index_produto(reg_at['Produto']))
                 
                 st.write("Percentuais (%)")
                 edit_inputs_p = []
@@ -785,6 +861,40 @@ elif menu_selecionado == "Administradoras":
                         st.error("Regra deletada!")
                         st.rerun()
 
+    # --- ABA DE COMISSÕES INTERNAS ---
+    with t4:
+        st.subheader("Configurar Repasses (Vendedores e Masters)")
+        if not df_com_int.empty:
+            st.dataframe(df_com_int.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}]), use_container_width=True, hide_index=True)
+        else: st.info("Nenhuma regra interna configurada.")
+        
+        with st.form("f_com_int"):
+            st.write("Criar Nova Regra Interna")
+            c_int1, c_int2, c_int3 = st.columns(3)
+            with c_int1:
+                opcoes_alvo = ["Perfil: Vendedor", "Perfil: Master"] + [u["nome"] for u in USUARIOS.values()]
+                alvo = st.selectbox("Usuário ou Perfil Alvo *", list(dict.fromkeys(opcoes_alvo)))
+            with c_int2:
+                base_calc = st.selectbox("Base de Cálculo *", ["% sobre a Comissão da Corretora", "% sobre o Valor da Venda"])
+            with c_int3:
+                pct_int = st.number_input("Percentual de Repasse (%) *", min_value=0.0, step=0.1)
+                
+            if st.form_submit_button("Salvar Regra Interna", type="primary"):
+                aba_com_int.append_row([alvo, base_calc, f"{pct_int}%"])
+                st.success("Regra salva com sucesso!")
+                st.rerun()
+
+        if not df_com_int.empty:
+            st.write("---")
+            opts_del = df_com_int.apply(lambda x: f"Linha {x.name + 2} | {x['Alvo (Usuário/Perfil)']} - {x['Base de Cálculo']} - {x['Percentual (%)']}", axis=1).tolist()
+            del_sel = st.selectbox("Selecione a Regra Interna para excluir:", [""] + opts_del)
+            if st.button("🚨 Apagar Regra Interna Selecionada"):
+                if del_sel:
+                    l_del = int(del_sel.split(" | ")[0].replace("Linha ", ""))
+                    aba_com_int.delete_rows(l_del)
+                    st.success("Regra excluída!")
+                    st.rerun()
+
 elif menu_selecionado == "Baixar Parcela":
-    st.title("💰 Baixa de Comissão")
+    st.markdown("## 💰 Baixa de Comissão")
     st.info("A integração de baixa com o sistema de previsão será habilitada na próxima etapa!")
