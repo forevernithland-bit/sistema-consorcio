@@ -63,6 +63,7 @@ def formatar_moeda(valor):
 # Callbacks
 def mascara_tel_nv(): st.session_state['tel_nv'] = formatar_telefone(st.session_state.get('tel_nv', ''))
 def mascara_aniv_nv(): st.session_state['aniv_nv'] = formatar_data(st.session_state.get('aniv_nv', ''))
+def mascara_renda_nv(): st.session_state['renda_nv'] = formatar_moeda(st.session_state.get('renda_nv', ''))
 
 # === 2. LÓGICA DO MENU LATERAL ===
 is_logado = st.session_state['usuario_logado'] is not None
@@ -122,7 +123,9 @@ def conectar_planilha():
 planilha = conectar_planilha()
 aba_vendas = planilha.worksheet("Vendas")
 try: aba_clientes = planilha.worksheet("Clientes")
-except: aba_clientes = planilha.add_worksheet("Clientes", 1000, 6)
+except: 
+    aba_clientes = planilha.add_worksheet("Clientes", 1000, 10)
+    aba_clientes.append_row(["Nome", "Telefone", "Email", "Endereco", "Aniversario", "Profissao", "Renda", "Data_Cadastro"])
 
 # === RENDERIZAÇÃO ===
 if not is_logado:
@@ -152,11 +155,11 @@ if menu_selecionado == "Dashboard":
     dados_brutos = aba_vendas.get_all_values()
     
     # -------------------------------------------------------------
-    # PERFIL DO CLIENTE - AGORA DINÂMICO E SEM FORMULÁRIO (ST.FORM)
+    # PERFIL DO CLIENTE
     # -------------------------------------------------------------
     if st.session_state['cliente_visualizado'] is not None:
         cliente_nome = st.session_state['cliente_visualizado']
-        st.title(f"👤 Perfil do Cliente: {cliente_nome}")
+        
         if st.button("⬅️ Voltar ao Dashboard", type="primary"):
             st.session_state['cliente_visualizado'] = None
             st.session_state['key_tabela'] += 1
@@ -174,41 +177,81 @@ if menu_selecionado == "Dashboard":
         st.subheader("📋 Dados Cadastrais")
         if not is_master: st.info("🔒 Como Vendedor, você só pode visualizar estes dados. Para alterar, contate o Administrador.")
             
-        # Chaves de sessão seguras para não perder dados ao atualizar
+        key_nome = f"nome_ed_{cliente_nome}"
         key_tel = f"tel_ed_{cliente_nome}"
-        key_aniv = f"aniv_ed_{cliente_nome}"
-        key_end = f"end_ed_{cliente_nome}"
         key_email = f"email_ed_{cliente_nome}"
+        key_end = f"end_ed_{cliente_nome}"
+        key_aniv = f"aniv_ed_{cliente_nome}"
+        key_prof = f"prof_ed_{cliente_nome}"
+        key_renda = f"renda_ed_{cliente_nome}"
         
+        if key_nome not in st.session_state: st.session_state[key_nome] = info_cliente.get("Nome", cliente_nome)
         if key_tel not in st.session_state: st.session_state[key_tel] = info_cliente.get("Telefone", "")
-        if key_aniv not in st.session_state: st.session_state[key_aniv] = info_cliente.get("Aniversario", "")
-        if key_end not in st.session_state: st.session_state[key_end] = info_cliente.get("Endereco", "")
         if key_email not in st.session_state: st.session_state[key_email] = info_cliente.get("Email", "")
+        if key_end not in st.session_state: st.session_state[key_end] = info_cliente.get("Endereco", "")
+        if key_aniv not in st.session_state: st.session_state[key_aniv] = info_cliente.get("Aniversario", "")
+        if key_prof not in st.session_state: st.session_state[key_prof] = info_cliente.get("Profissao", "")
+        if key_renda not in st.session_state: st.session_state[key_renda] = info_cliente.get("Renda", "")
             
         def m_tel_ed(): st.session_state[key_tel] = formatar_telefone(st.session_state[key_tel])
         def m_aniv_ed(): st.session_state[key_aniv] = formatar_data(st.session_state[key_aniv])
+        def m_renda_ed(): st.session_state[key_renda] = formatar_moeda(st.session_state[key_renda])
 
-        # Elementos Livres (Sem st.form)
+        nome_edit = st.text_input("Nome Completo", key=key_nome, disabled=not is_master)
+        
         c1, c2 = st.columns(2)
         endereco = c1.text_input("Endereço Completo", key=key_end, disabled=not is_master)
         telefone_edit = c1.text_input("Telefone", key=key_tel, on_change=m_tel_ed, disabled=not is_master, placeholder="(31) 99999-9999", max_chars=15)
+        profissao_edit = c1.text_input("Profissão", key=key_prof, disabled=not is_master)
+        
         email = c2.text_input("E-mail", key=key_email, disabled=not is_master)
         aniversario_edit = c2.text_input("Data de Aniversário (DD/MM/AAAA)", key=key_aniv, on_change=m_aniv_ed, disabled=not is_master, placeholder="DD/MM/AAAA", max_chars=10)
+        renda_edit = c2.text_input("Renda Mensal (R$)", key=key_renda, on_change=m_renda_ed, disabled=not is_master, placeholder="R$ 0,00")
         
         if is_master:
-            if st.button("Salvar Alterações", type="primary", key="btn_salvar_cli"):
-                nomes_col = aba_clientes.col_values(1)
-                if cliente_nome in nomes_col:
-                    row_idx = nomes_col.index(cliente_nome) + 1
-                    aba_clientes.update_cell(row_idx, 2, st.session_state[key_tel])
-                    aba_clientes.update_cell(row_idx, 3, st.session_state[key_email])
-                    aba_clientes.update_cell(row_idx, 4, st.session_state[key_end])
-                    aba_clientes.update_cell(row_idx, 5, st.session_state[key_aniv])
-                else:
-                    aba_clientes.append_row([cliente_nome, st.session_state[key_tel], st.session_state[key_email], st.session_state[key_end], st.session_state[key_aniv], datetime.today().strftime("%d/%m/%Y")])
-                st.success("Dados do cliente atualizados com sucesso!")
-        else:
-            st.button("Salvar Alterações", disabled=True, key="btn_salvar_cli")
+            col_b1, col_b2 = st.columns(2)
+            with col_b1:
+                if st.button("Salvar Alterações", type="primary", use_container_width=True):
+                    novo_nome_val = st.session_state[key_nome]
+                    nomes_col = aba_clientes.col_values(1)
+                    
+                    if cliente_nome in nomes_col:
+                        row_idx = nomes_col.index(cliente_nome) + 1
+                        aba_clientes.update_cell(row_idx, 1, novo_nome_val)
+                        aba_clientes.update_cell(row_idx, 2, st.session_state[key_tel])
+                        aba_clientes.update_cell(row_idx, 3, st.session_state[key_email])
+                        aba_clientes.update_cell(row_idx, 4, st.session_state[key_end])
+                        aba_clientes.update_cell(row_idx, 5, st.session_state[key_aniv])
+                        aba_clientes.update_cell(row_idx, 6, st.session_state[key_prof])
+                        aba_clientes.update_cell(row_idx, 7, st.session_state[key_renda])
+                    else:
+                        aba_clientes.append_row([novo_nome_val, st.session_state[key_tel], st.session_state[key_email], st.session_state[key_end], st.session_state[key_aniv], st.session_state[key_prof], st.session_state[key_renda], datetime.today().strftime("%d/%m/%Y")])
+                    
+                    if novo_nome_val != cliente_nome:
+                        vendas_nomes = aba_vendas.col_values(2)
+                        for i in range(len(vendas_nomes), 0, -1):
+                            if vendas_nomes[i-1] == cliente_nome:
+                                aba_vendas.update_cell(i, 2, novo_nome_val)
+                        st.session_state['cliente_visualizado'] = novo_nome_val
+
+                    st.success("Dados atualizados com sucesso!")
+                    st.rerun()
+
+            with col_b2:
+                if st.button("🚨 Excluir Cliente (Apagar Todas as Cotas)", use_container_width=True):
+                    nomes_col = aba_clientes.col_values(1)
+                    if cliente_nome in nomes_col:
+                        row_idx = nomes_col.index(cliente_nome) + 1
+                        aba_clientes.delete_rows(row_idx)
+                    
+                    vendas_nomes = aba_vendas.col_values(2)
+                    for i in range(len(vendas_nomes), 0, -1):
+                        if vendas_nomes[i-1] == cliente_nome:
+                            aba_vendas.delete_rows(i)
+
+                    st.session_state['cliente_visualizado'] = None
+                    st.session_state['key_tabela'] += 1
+                    st.rerun()
 
         st.divider()
         st.subheader("📦 Cotas do Cliente")
@@ -222,9 +265,31 @@ if menu_selecionado == "Dashboard":
                 info_a.metric("Total de Cotas Adquiridas", len(cotas_cliente))
                 info_b.metric("Volume Total Investido", f"R$ {cotas_cliente['Valor_Numerico'].sum():,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
                 cotas_cliente['Valor Formatado'] = cotas_cliente['Valor_Numerico'].apply(lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-                ficha_display = cotas_cliente[['DATA', 'ADMINISTRADORA', 'PRODUTO', 'GRUPO', 'COTA', 'Valor Formatado']].rename(columns={'DATA': 'Data', 'ADMINISTRADORA': 'Administradora', 'PRODUTO': 'Produto', 'GRUPO': 'Grupo', 'COTA': 'Cota', 'Valor Formatado': 'Valor (R$)'})
+                
+                ficha_display = cotas_cliente[['DATA', 'ADMINISTRADORA', 'PRODUTO', 'GRUPO', 'COTA', 'VENDEDOR', 'Valor Formatado']].rename(columns={'DATA': 'Data da Venda', 'ADMINISTRADORA': 'Administradora', 'PRODUTO': 'Produto', 'GRUPO': 'Grupo', 'COTA': 'Cota', 'VENDEDOR': 'Vendedor', 'Valor Formatado': 'Valor (R$)'})
                 estilo_ficha = ficha_display.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}])
                 st.dataframe(estilo_ficha, use_container_width=True, hide_index=True)
+                
+                # ADICIONADO: APAGAR COTA ESPECÍFICA (SOMENTE MASTER)
+                if is_master:
+                    st.write("")
+                    with st.expander("⚙️ Gerenciar / Excluir Cota Específica"):
+                        st.info("Aqui você pode apagar apenas uma cota caso o cliente tenha cancelado, sem precisar excluir o cadastro inteiro.")
+                        opcoes_cotas = cotas_cliente.apply(lambda r: f"Linha {r.name + 2} | Grupo: {r['GRUPO']} / Cota: {r['COTA']} - Valor: {r['Valor Formatado']}", axis=1).tolist()
+                        c_del1, c_del2 = st.columns([3, 1])
+                        with c_del1:
+                            cota_del_selecionada = st.selectbox("Selecione a cota que deseja apagar:", [""] + opcoes_cotas)
+                        with c_del2:
+                            st.write("")
+                            if st.button("🚨 Apagar Esta Cota", use_container_width=True):
+                                if cota_del_selecionada:
+                                    linha_del = int(cota_del_selecionada.split(" | ")[0].replace("Linha ", ""))
+                                    aba_vendas.delete_rows(linha_del)
+                                    st.success("Cota apagada com sucesso!")
+                                    st.rerun()
+                                else:
+                                    st.error("Selecione a cota.")
+
             else: st.warning("Nenhuma cota encontrada para este cliente.")
 
     # -------------------------------------------------------------
@@ -333,11 +398,15 @@ elif menu_selecionado == "Nova Venda":
         cliente = st.text_input("Nome do Cliente *", key="venda_cliente")
         if 'tel_nv' not in st.session_state: st.session_state['tel_nv'] = ""
         telefone = st.text_input("Telefone", key="tel_nv", on_change=mascara_tel_nv, placeholder="(31) 99999-9999", max_chars=15)
+        if 'prof_nv' not in st.session_state: st.session_state['prof_nv'] = ""
+        profissao = st.text_input("Profissão", key="prof_nv")
     with col_c2:
         if 'venda_email' not in st.session_state: st.session_state['venda_email'] = ""
         email = st.text_input("E-mail", key="venda_email")
         if 'aniv_nv' not in st.session_state: st.session_state['aniv_nv'] = ""
         aniversario = st.text_input("Data de Aniversário (DD/MM/AAAA)", key="aniv_nv", on_change=mascara_aniv_nv, placeholder="DD/MM/AAAA", max_chars=10)
+        if 'renda_nv' not in st.session_state: st.session_state['renda_nv'] = ""
+        renda = st.text_input("Renda Mensal (R$)", key="renda_nv", on_change=mascara_renda_nv, placeholder="R$ 0,00")
         
     st.markdown("##### Busca Rápida de Endereço")
     col_cep1, col_cep2 = st.columns([1, 3])
@@ -434,12 +503,12 @@ elif menu_selecionado == "Nova Venda":
                 try: nomes_cadastrados = aba_clientes.col_values(1)
                 except: nomes_cadastrados = []
                 if cliente not in nomes_cadastrados:
-                    aba_clientes.append_row([cliente, telefone, email, end_completo, aniversario, str(datetime.today().strftime("%d/%m/%Y"))])
+                    aba_clientes.append_row([cliente, telefone, email, end_completo, aniversario, profissao, renda, str(datetime.today().strftime("%d/%m/%Y"))])
 
                 st.success(f"✅ {len(cotas_data)} Venda(s) e Cadastro de {cliente} salvos com sucesso!")
                 
                 # Limpa TELA
-                limpar = ['venda_cliente', 'tel_nv', 'venda_email', 'aniv_nv', 'venda_cep', 'last_cep', 'venda_rua', 'venda_numero', 'venda_complemento', 'venda_bairro', 'venda_cidade', 'venda_uf']
+                limpar = ['venda_cliente', 'tel_nv', 'venda_email', 'aniv_nv', 'prof_nv', 'renda_nv', 'venda_cep', 'last_cep', 'venda_rua', 'venda_numero', 'venda_complemento', 'venda_bairro', 'venda_cidade', 'venda_uf']
                 for i in range(st.session_state['qtd_cotas']): limpar.extend([f"g_{i}", f"c_{i}", f"v_in_{i}", f"s_{i}"])
                 for k in limpar:
                     if k in st.session_state: del st.session_state[k]
@@ -451,6 +520,7 @@ elif menu_selecionado == "Gerenciar Vendas (Editar/Deletar)":
     
     aba_vendas = planilha.worksheet("Vendas")
     dados_brutos = aba_vendas.get_all_values()
+    
     if len(dados_brutos) > 1:
         df_vendas = pd.DataFrame(dados_brutos[1:]).iloc[:, :10]
         df_vendas.columns = ["ID_cliente", "Nome do cliente", "DATA", "PRODUTO", "VENDEDOR", "GRUPO", "COTA", "ADMINISTRADORA", "STATUS", "VALOR"]
