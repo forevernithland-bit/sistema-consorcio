@@ -87,15 +87,8 @@ def obter_index_produto(p_str):
 
 def parse_float_safe(v):
     try:
-        v_str = str(v).replace('%', '').replace('R$', '').replace(' ', '').strip()
+        v_str = str(v).replace('%', '').replace('R$', '').replace(' ', '').replace('.', '').replace(',', '.').strip()
         if not v_str: return 0.0
-        if '.' in v_str and ',' in v_str:
-            if v_str.rfind(',') > v_str.rfind('.'):
-                v_str = v_str.replace('.', '').replace(',', '.')
-            else:
-                v_str = v_str.replace(',', '')
-        elif ',' in v_str:
-            v_str = v_str.replace(',', '.')
         return float(v_str)
     except:
         return 0.0
@@ -120,8 +113,6 @@ def carregar_df_admin_seguro(aba):
 def mascara_tel_nv(): st.session_state['tel_nv'] = formatar_telefone(st.session_state.get('tel_nv', ''))
 def mascara_aniv_nv(): st.session_state['aniv_nv'] = formatar_data(st.session_state.get('aniv_nv', ''))
 def mascara_renda_nv(): st.session_state['renda_nv'] = formatar_moeda(st.session_state.get('renda_nv', ''))
-def mascara_t1_max(): st.session_state['t1_max_in'] = formatar_moeda(st.session_state.get('t1_max_in', ''))
-def mascara_t2_max(): st.session_state['t2_max_in'] = formatar_moeda(st.session_state.get('t2_max_in', ''))
 
 # === MOTOR DE CÁLCULO DE COMISSÃO ===
 def calcular_comissao_vendedor(df_vendas_global, vendedor_nome, data_venda_dt, cfg):
@@ -313,7 +304,7 @@ if not is_logado:
                 
                 c_btn1, c_btn2, c_btn3 = st.columns([1, 1.5, 1])
                 with c_btn2:
-                    btn_login = st.form_submit_button("Entrar no Sistema", type="primary", use_container_width=True)
+                    btn_login = st.form_submit_button("ENTRAR", type="primary", use_container_width=True)
                 
                 if btn_login:
                     if usuario_input in USUARIOS and USUARIOS[usuario_input]["senha"] == senha_input:
@@ -330,10 +321,12 @@ if not is_logado:
     st.stop() 
 
 if menu_selecionado == "Dashboard":
+    
+    # -------------------------------------------------------------
+    # PERFIL DO CLIENTE
+    # -------------------------------------------------------------
     if st.session_state['cliente_visualizado'] is not None:
         cliente_nome = st.session_state['cliente_visualizado']
-        
-        st.markdown(f"### 👤 Perfil do Cliente: {cliente_nome}")
         
         if st.button("⬅️ Voltar ao Dashboard", type="primary"):
             st.session_state['cliente_visualizado'] = None
@@ -350,7 +343,7 @@ if menu_selecionado == "Dashboard":
             if not busca_cli.empty: info_cliente = busca_cli.iloc[0].to_dict()
 
         is_master = st.session_state['perfil_logado'] == "Master"
-        st.subheader("📋 Dados Cadastrais")
+        
         if not is_master: st.info("🔒 Como Vendedor, você só pode visualizar estes dados. Para alterar, contate o Administrador.")
             
         key_nome = f"nome_ed_{cliente_nome}"
@@ -439,7 +432,7 @@ if menu_selecionado == "Dashboard":
                 info_b.metric("Volume Total Investido", formatar_brl_puro(cotas_cliente['Valor_Numerico'].sum()))
                 cotas_cliente['Valor Formatado'] = cotas_cliente['Valor_Numerico'].apply(formatar_brl_puro)
                 
-                ficha_display = cotas_cliente[['DATA', 'ADMINISTRADORA', 'PRODUTO', 'GRUPO', 'COTA', 'VENDEDOR', 'Valor Formatado']].rename(columns={'DATA': 'Data da Venda', 'ADMINISTRADORA': 'Administradora', 'PRODUTO': 'Produto', 'GRUPO': 'Grupo', 'COTA': 'Cota', 'VENDEDOR': 'Vendedor', 'Valor Formatado': 'Valor (R$)'})
+                ficha_display = cotas_cliente[['DATA', 'ADMINISTRADORA', 'PRODUTO', 'GRUPO', 'COTA', 'Valor Formatado', 'STATUS', 'VENDEDOR']].rename(columns={'DATA': 'Data da Venda', 'ADMINISTRADORA': 'Administradora', 'PRODUTO': 'Produto', 'GRUPO': 'Grupo', 'COTA': 'Cota', 'Valor Formatado': 'Valor (R$)', 'STATUS': 'Status', 'VENDEDOR': 'Vendedor'})
                 estilo_ficha = ficha_display.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}])
                 st.dataframe(estilo_ficha, use_container_width=True, hide_index=True)
                 
@@ -533,23 +526,50 @@ if menu_selecionado == "Dashboard":
                 else:
                     if len(df_admin) == 0: st.info("Aguardando configurações de regras para gerar a previsão.")
 
-                if is_master:
-                    st.write("")
-                    with st.expander("⚙️ Gerenciar / Excluir Cota Específica"):
-                        st.info("Aqui você pode apagar apenas uma cota caso o cliente tenha cancelado, sem precisar excluir o cadastro inteiro.")
-                        opcoes_cotas = cotas_cliente.apply(lambda r: f"Linha {r.name + 2} | Grupo: {r['GRUPO']} / Cota: {r['COTA']} - Valor: {r['Valor Formatado']}", axis=1).tolist()
-                        c_del1, c_del2 = st.columns([3, 1])
-                        with c_del1:
-                            cota_del_selecionada = st.selectbox("Selecione a cota que deseja apagar:", [""] + opcoes_cotas)
-                        with c_del2:
-                            st.write("")
-                            if st.button("🚨 Apagar Esta Cota", use_container_width=True):
-                                if cota_del_selecionada:
-                                    linha_del = int(cota_del_selecionada.split(" | ")[0].replace("Linha ", ""))
-                                    aba_vendas.delete_rows(linha_del)
+                st.write("")
+                with st.expander("⚙️ Atualizar Status e Gerenciar Cota"):
+                    st.info("Atualize o status da cota. Apenas usuários Master podem alterar o vendedor ou apagar a venda.")
+                    opcoes_cotas = cotas_cliente.apply(lambda r: f"Linha {r.name + 2} | Grupo: {r['GRUPO']} / Cota: {r['COTA']} - Valor: {r['Valor Formatado']}", axis=1).tolist()
+                    
+                    c_sel, _ = st.columns([3, 1])
+                    with c_sel:
+                        cota_selecionada = st.selectbox("Selecione a cota que deseja gerenciar:", [""] + opcoes_cotas)
+                        
+                    if cota_selecionada:
+                        linha_planilha = int(cota_selecionada.split(" | ")[0].replace("Linha ", ""))
+                        vendedor_atual = cotas_cliente.loc[linha_planilha - 2, 'VENDEDOR']
+                        status_atual = cotas_cliente.loc[linha_planilha - 2, 'STATUS']
+                        
+                        c_ed1, c_ed2 = st.columns(2)
+                        with c_ed1:
+                            status_list = ["Vendido", "Contemplado", "Cancelado"]
+                            idx_status = status_list.index(status_atual) if status_atual in status_list else 0
+                            novo_status = st.selectbox("Status da Cota", status_list, index=idx_status)
+                            
+                        with c_ed2:
+                            vendedores_list = ["BRENO LIMA", "URIEL GOMES", "Consorbens", "Vendedor Terceiro"]
+                            if is_master:
+                                idx_vend = vendedores_list.index(vendedor_atual) if vendedor_atual in vendedores_list else 0
+                                novo_vendedor = st.selectbox("Vendedor Realizador", vendedores_list, index=idx_vend)
+                            else:
+                                st.text_input("Vendedor Realizador", value=vendedor_atual, disabled=True)
+                                novo_vendedor = vendedor_atual
+                                
+                        col_b1, col_b2 = st.columns(2)
+                        with col_b1:
+                            if st.button("Salvar Alterações na Cota", type="primary", use_container_width=True):
+                                aba_vendas.update_cell(linha_planilha, 5, novo_vendedor)
+                                aba_vendas.update_cell(linha_planilha, 9, novo_status)
+                                st.success("Cota atualizada com sucesso!")
+                                st.rerun()
+                        with col_b2:
+                            if is_master:
+                                if st.button("🚨 Apagar Esta Cota", use_container_width=True):
+                                    aba_vendas.delete_rows(linha_planilha)
                                     st.success("Cota apagada com sucesso!")
                                     st.rerun()
-                                else: st.error("Selecione a cota.")
+                            else:
+                                st.button("🚨 Apagar Esta Cota", disabled=True, use_container_width=True, help="Apenas Masters podem excluir cotas.")
 
             else: st.warning("Nenhuma cota encontrada para este cliente.")
 
