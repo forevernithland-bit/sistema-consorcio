@@ -138,18 +138,25 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, aba_status):
     
     hoje = pd.Timestamp.today().normalize()
     parcelas_finais = []
+    vendas_sem_data = [] # Coletor de vendas com problemas na data
     
     for idx, r in df_alvo.iterrows():
-        cliente = r['Nome do cliente']
+        data_venda = r['Data_Real']
+        cliente = r.get('Nome do cliente', 'Desconhecido')
+        grupo = r.get('GRUPO', '')
+        cota = r.get('COTA', '')
+        
+        # === PROTEÇÃO E AVISO CONTRA DATAS EM BRANCO OU INVÁLIDAS ===
+        if pd.isna(data_venda):
+            vendas_sem_data.append(f"{cliente} (Gr: {grupo}/Cota: {cota})")
+            continue 
+            
         admin = r['ADMINISTRADORA']
         admin_norm = normalizar_string(admin)
         prod = r['PRODUTO']
         prod_norm = normalizar_produto(prod)
         vendedor = r['VENDEDOR']
-        grupo = r['GRUPO']
-        cota = r['COTA']
         val_venda = r['Valor_Numerico']
-        data_venda = r['Data_Real']
         
         status_cota = r.get('STATUS', 'Em Andamento')
         if status_cota in ["Vendido", ""]: status_cota = "Em Andamento"
@@ -227,7 +234,7 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, aba_status):
                 "Cota": cota,
                 "Admin": admin,
                 "Parcela": nome_parcela,
-                "data_pagamento_dt": p['data_pagamento'], # Usado para filtro de data
+                "data_pagamento_dt": p['data_pagamento'], 
                 "Data Prevista": data_str,
                 "Comissão (Bruta)": p['bruto'],
                 "Comissão (s/ Imposto)": p['liquido'],
@@ -237,7 +244,8 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, aba_status):
                 "Status": status_pagamento
             })
             
-    return pd.DataFrame(parcelas_finais)
+    # Retornamos o DataFrame de parcelas e a lista de vendas problemáticas
+    return pd.DataFrame(parcelas_finais), vendas_sem_data
 
 def salvar_status_comissoes(df_editado, df_original, aba_status):
     """Sincroniza os cliques de 'PAGO' e 'Pendente' com o Google Sheets"""
@@ -343,20 +351,19 @@ if st.session_state['tela_cheia_relatorio']:
         mostrar_pagos = st.checkbox("Mostrar parcelas já pagas (PAGO)", value=False)
         
     df_admin_regras = carregar_df_admin_seguro(aba_admin)
+    df_parcelas_todas, vendas_sem_data = gerar_tabela_parcelas(df_vendas_global, df_vendas_global, df_admin_regras, cfg, aba_status)
     
-    # 1. Gera TODAS as parcelas de TODAS as vendas
-    df_parcelas_todas = gerar_tabela_parcelas(df_vendas_global, df_vendas_global, df_admin_regras, cfg, aba_status)
-    
+    if vendas_sem_data:
+        st.warning(f"⚠️ **Atenção:** Prezado usuário, as seguintes vendas estão sem data preenchida: **{', '.join(vendas_sem_data)}**. Favor preencher para apuração correta do relatório.")
+
     if not df_parcelas_todas.empty:
         hoje = pd.Timestamp.today().normalize()
         mask = df_parcelas_todas['data_pagamento_dt'].notna()
         df_view = df_parcelas_todas.copy()
         
-        # Filtro de Vendedor (Segurança)
         if st.session_state['perfil_logado'] == "Vendedor":
             df_view = df_view[df_view['Vendedor'] == st.session_state['nome_vendedor']]
         
-        # Filtro de Data (Aplicado na Data Prevista da Parcela, e não na data da venda)
         ft_rel = st.session_state.get('rel_periodo', 'Todas as Vendas')
         
         if ft_rel == "Mês Atual":
@@ -377,7 +384,6 @@ if st.session_state['tela_cheia_relatorio']:
             rf = st.session_state['rel_dt_fim']
             df_view = df_view[mask & (df_view['data_pagamento_dt'].dt.date >= ri) & (df_view['data_pagamento_dt'].dt.date <= rf)]
             
-        # Filtro de Pagos
         if not mostrar_pagos:
             df_view = df_view[df_view['Status'] != 'PAGO']
             
@@ -386,7 +392,7 @@ if st.session_state['tela_cheia_relatorio']:
             is_master = st.session_state['perfil_logado'] == "Master"
             
             col_config = {
-                "Chave": None, # Oculta do usuário final
+                "Chave": None, 
                 "Comissão (Bruta)": st.column_config.NumberColumn(format="R$ %.2f"),
                 "Comissão (s/ Imposto)": st.column_config.NumberColumn(format="R$ %.2f"),
                 "Breno": st.column_config.NumberColumn(format="R$ %.2f"),
@@ -685,13 +691,15 @@ if menu_selecionado == "Dashboard":
                                     st.rerun()
                             else: st.button("🚨 Apagar Esta Cota", disabled=True, use_container_width=True, help="Apenas Masters podem excluir cotas.")
 
-                # --- PREVISÃO DE COMISSIONAMENTO (COM INTELIGÊNCIA DE STATUS) ---
+                # --- PREVISÃO DE COMISSIONAMENTO ---
                 st.write("")
                 st.subheader("📈 Previsão de Comissionamento")
-                
                 df_admin_regras = carregar_df_admin_seguro(aba_admin)
-                df_parcelas = gerar_tabela_parcelas(cotas_cliente, df_vendas_global, df_admin_regras, cfg, aba_status)
+                df_parcelas, vendas_sem_data = gerar_tabela_parcelas(cotas_cliente, df_vendas_global, df_admin_regras, cfg, aba_status)
                 
+                if vendas_sem_data:
+                    st.warning(f"⚠️ **Atenção:** Algumas vendas deste cliente estão sem data preenchida: **{', '.join(vendas_sem_data)}**.")
+
                 if not df_parcelas.empty:
                     df_view_cli = df_parcelas.copy()
                     
@@ -782,8 +790,8 @@ if menu_selecionado == "Dashboard":
                 df_tab['Grupo e Cota'] = df_tab.apply(lambda x: f"{x['GRUPO']}/{x['COTA']}", axis=1)
                 df_tab['Valor Formatado'] = df_tab['Valor_Numerico'].apply(formatar_brl_puro)
                 
-                df_tab = df_tab[['Nome do cliente', 'PRODUTO', 'ADMINISTRADORA', 'Grupo e Cota', 'VENDEDOR', 'Valor Formatado', 'DATA']]
-                df_tab.columns = ['Cliente', 'Produto', 'Administradora', 'Grupo/Cota', 'Vendedor', 'Valor', 'Data da Venda']
+                df_tab = df_tab[['DATA', 'Nome do cliente', 'PRODUTO', 'ADMINISTRADORA', 'Grupo e Cota', 'VENDEDOR', 'Valor Formatado']]
+                df_tab.columns = ['Data da Venda', 'Cliente', 'Produto', 'Administradora', 'Grupo/Cota', 'Vendedor', 'Valor']
                 
                 tabela = st.dataframe(df_tab, on_select="rerun", selection_mode="single-row", use_container_width=True, hide_index=True)
                 
@@ -818,7 +826,7 @@ if menu_selecionado == "Dashboard":
                     if ft_graf == "Mês Atual": 
                         df_g = df_g[mask & (df_g['Data_Real'].dt.month == hoje.month) & (df_g['Data_Real'].dt.year == hoje.year)]
                     elif ft_graf == "Mês Anterior":
-                        ma, aa = (hoje.month - 1, hoje.year) if hoje.month > 1 else (12, hoje.year - 1)
+                        ma, aa = (hoje.month - 1, hoje.year) if hoje.month > 1 else (12, base.year - 1)
                         df_g = df_g[mask & (df_g['Data_Real'].dt.month == ma) & (df_g['Data_Real'].dt.year == aa)]
                     elif ft_graf == "Anual": 
                         df_g = df_g[mask & (df_g['Data_Real'].dt.year == hoje.year)]
@@ -978,6 +986,7 @@ elif menu_selecionado == "Relatórios":
                 with rd2: rf = st.date_input("Data Final", format="DD/MM/YYYY")
         
         hoje = datetime.today()
+        # Aqui para a visualização DESSA aba (Vendas), usamos a Data da Venda
         if ft_rel != "Todas as Vendas":
             mask = df_f['Data_Real'].notna()
             if ft_rel == "Mês Atual": 
