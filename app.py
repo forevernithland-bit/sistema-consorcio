@@ -12,7 +12,7 @@ import os
 # Configuração da página
 st.set_page_config(page_title="Portal Consorbens", layout="wide", initial_sidebar_state="expanded")
 
-# --- SEGURANÇA DE CAMINHOS DE ARQUIVOS (Evita erro de arquivo não encontrado) ---
+# --- SEGURANÇA DE CAMINHOS DE ARQUIVOS ---
 PASTA_ATUAL = os.path.dirname(os.path.abspath(__file__))
 
 # === 1. CONFIGURAÇÃO DE USUÁRIOS E SENHAS ===
@@ -37,6 +37,9 @@ if 'tela_cheia_relatorio' not in st.session_state:
     st.session_state['tela_cheia_relatorio'] = False
 
 is_logado = st.session_state['usuario_logado'] is not None
+
+# FORÇA O ACESSO MASTER PARA BRENO E URIEL
+is_master = (st.session_state.get('perfil_logado') == "Master") or (st.session_state.get('usuario_logado') in ['breno', 'uriel'])
 
 def carregar_ferramenta(nome_arquivo):
     caminho_completo = os.path.join(PASTA_ATUAL, nome_arquivo)
@@ -131,7 +134,6 @@ def calcular_comissao_vendedor(df_vendas_global, vendedor_nome, data_venda_dt, c
     else: return cfg.get('T3_Pct', 2.0), int(cfg.get('T3_Parc', 5))
 
 def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict):
-    """Motor central que calcula as comissões, impostos e o status de pagamento de todas as parcelas"""
     hoje = pd.Timestamp.today().normalize()
     parcelas_finais = []
     vendas_sem_data = [] 
@@ -251,30 +253,24 @@ def iniciar_conexao() -> Client:
 try:
     supabase = iniciar_conexao()
 
-    # Função unificada para carregar qualquer tabela como Pandas DataFrame
     def carregar_tabela(nome_tabela):
         res = supabase.table(nome_tabela).select("*").execute()
         return pd.DataFrame(res.data)
 
-    # 4.1 Carregando Vendas
     df_vendas_bd = carregar_tabela("vendas")
     if not df_vendas_bd.empty:
         df_vendas_global = df_vendas_bd.copy()
-        # Ajusta nomes para manter compatibilidade com o resto do código
         df_vendas_global.rename(columns={"NOME": "Nome do cliente"}, inplace=True)
         df_vendas_global['Data_Real'] = pd.to_datetime(df_vendas_global['DATA'], format="%d/%m/%Y", errors='coerce')
         df_vendas_global['Valor_Numerico'] = df_vendas_global['VALOR'].apply(parse_float_safe)
         
-        # --- LIMPEZA DE GRUPO E COTA (TIRA O .0) ---
         df_vendas_global['GRUPO'] = df_vendas_global['GRUPO'].apply(lambda x: str(x)[:-2] if str(x).endswith('.0') else str(x))
         df_vendas_global['COTA'] = df_vendas_global['COTA'].apply(lambda x: str(x)[:-2] if str(x).endswith('.0') else str(x))
     else:
         df_vendas_global = pd.DataFrame()
 
-    # 4.2 Carregando Clientes
     df_cli = carregar_tabela("clientes")
     
-    # 4.3 Carregando Administradoras (Cadastro e Regras)
     df_admin_cad = carregar_tabela("cad_administradoras")
     lista_admin_bd = df_admin_cad['Administradora'].tolist() if not df_admin_cad.empty else ["Nenhuma administradora cadastrada"]
 
@@ -283,11 +279,9 @@ try:
         df_admin['Admin_Norm'] = df_admin['Administradora'].apply(normalizar_string)
         df_admin['Prod_Norm'] = df_admin['Produto'].apply(normalizar_produto)
 
-    # 4.4 Carregando Status e Regras Internas
     df_status = carregar_tabela("status_comissoes")
     status_dict = dict(zip(df_status['Chave_Unica'], df_status['Status'])) if not df_status.empty else {}
 
-    # Config Interna (Garante que tenha os valores padrão se estiver vazio)
     cfg_padrao = {
         "Breno_Breno": 70.0, "Breno_Uriel": 30.0, "Uriel_Uriel": 70.0, "Uriel_Breno": 30.0,
         "Cons_Breno": 50.0, "Cons_Uriel": 50.0, "T1_Max": 500000.0, "T1_Pct": 1.0, "T1_Parc": 4,
@@ -300,7 +294,6 @@ try:
         cfg = df_cfg.iloc[0].to_dict()
         cfg_id = cfg.get('id')
     else:
-        # Cria a primeira linha de configuração no banco
         res = supabase.table("config_interna").insert(cfg_padrao).execute()
         cfg = cfg_padrao
         cfg_id = res.data[0]['id'] if res.data else None
@@ -311,14 +304,11 @@ except Exception as e:
 
 
 def salvar_status_comissoes(df_editado, df_original):
-    """Atualiza apenas as linhas que foram alteradas usando o Upsert do Supabase"""
     mudancas = df_editado[df_editado['Status'] != df_original['Status']]
     if not mudancas.empty:
         for _, row in mudancas.iterrows():
             chave = row['Chave']
             novo_status = row['Status']
-            
-            # Verifica se já existe para fazer update, senão insert
             existe = supabase.table("status_comissoes").select("id").eq("Chave_Unica", chave).execute()
             if existe.data:
                 supabase.table("status_comissoes").update({"Status": novo_status}).eq("id", existe.data[0]['id']).execute()
@@ -349,7 +339,7 @@ if st.session_state['tela_cheia_relatorio']:
         mask = df_parcelas_todas['data_pagamento_dt'].notna()
         df_view = df_parcelas_todas.copy()
         
-        if st.session_state['perfil_logado'] == "Vendedor":
+        if st.session_state['perfil_logado'] == "Vendedor" and not is_master:
             df_view = df_view[df_view['Vendedor'] == st.session_state['nome_vendedor']]
         
         ft_rel = st.session_state.get('rel_periodo', 'Todas as Vendas')
@@ -377,7 +367,6 @@ if st.session_state['tela_cheia_relatorio']:
             
         if not df_view.empty:
             df_view = df_view[['Chave', 'Cliente', 'Produto', 'Vendedor', 'Grupo', 'Cota', 'Valor da Venda', 'Parcela', 'Comissão (Bruta)', 'Comissão (s/ Imposto)', 'Breno', 'Uriel', 'Vendedor Recebe', 'Status', 'Data Prevista']]
-            is_master = st.session_state['perfil_logado'] == "Master"
             
             total_breno = df_view['Breno'].sum()
             total_uriel = df_view['Uriel'].sum()
@@ -425,7 +414,7 @@ if st.session_state['tela_cheia_relatorio']:
     else:
         st.info("O sistema ainda não possui vendas para calcular a comissão.")
         
-    st.stop() # Bloqueia renderização do resto do app
+    st.stop() 
 
 # === CSS CUSTOMIZADO ===
 css = """
@@ -462,7 +451,7 @@ simuladores_dict = {
 logo_path = os.path.join(PASTA_ATUAL, "logo.png")
 if os.path.exists(logo_path):
     st.sidebar.image(logo_path, use_container_width=True)
-st.sidebar.markdown("<br>", unsafe_allow_html=True) # Espacinho maroto abaixo da logo
+st.sidebar.markdown("<br>", unsafe_allow_html=True) 
 
 if not is_logado:
     opcoes_menu = ["🔐 Login (Área Restrita)"] + list(simuladores_dict.keys())
@@ -474,9 +463,8 @@ if not is_logado:
         st.rerun()
 else:
     st.sidebar.divider() 
-    opcoes_principais = ["Dashboard", "Nova Venda", "Relatórios", "Regras de Comissão", "Baixar Parcela"] if st.session_state['perfil_logado'] == "Master" else ["Dashboard", "Nova Venda", "Relatórios"]
+    opcoes_principais = ["Dashboard", "Nova Venda", "Relatórios", "Regras de Comissão", "Baixar Parcela"] if is_master else ["Dashboard", "Nova Venda", "Relatórios"]
     
-    # CORREÇÃO DO LOOP DO MENU: Se for um simulador, o rádio fica sem seleção
     try:
         idx_principal = opcoes_principais.index(st.session_state['menu_lateral'])
     except ValueError:
@@ -508,6 +496,9 @@ else:
     if st.sidebar.button("Sair do Sistema"):
         st.session_state.clear()
         st.rerun()
+        
+    st.sidebar.divider()
+    st.sidebar.caption("Versão do Sistema: 2.0 (Nova Data) ✅")
 
 menu_selecionado = st.session_state['menu_lateral']
 
@@ -562,7 +553,6 @@ if menu_selecionado == "Dashboard":
                 info_cliente = busca_cli.iloc[0].to_dict()
                 id_cliente_db = info_cliente.get('id')
 
-        is_master = st.session_state['perfil_logado'] == "Master"
         if not is_master: st.info("🔒 Como Vendedor, você só pode visualizar estes dados. Para alterar, contate o Administrador.")
             
         key_nome = f"nome_ed_{cliente_nome}"
@@ -573,7 +563,6 @@ if menu_selecionado == "Dashboard":
         key_prof = f"prof_ed_{cliente_nome}"
         key_renda = f"renda_ed_{cliente_nome}"
         
-        # Função para garantir que campos vazios do banco (NULL/NaN) virem texto vazio ("") no Streamlit
         def safe_str(val, default=""):
             if pd.isna(val) or val is None or str(val).strip().lower() in ["nan", "nat", "none"]:
                 return default
@@ -656,10 +645,10 @@ if menu_selecionado == "Dashboard":
                 st.dataframe(estilo_ficha, use_container_width=True, hide_index=True)
                 
                 st.write("")
-                with st.expander("⚙️ Atualizar Status e Gerenciar Cota", expanded=False):
-                    st.info("Atualize o status da cota. Apenas usuários Master podem alterar o vendedor ou apagar a cota do sistema.")
+                
+                with st.expander("⚙️ Atualizar Status, Data e Gerenciar Cota", expanded=False):
+                    st.info("Atualize o status da cota. Apenas usuários Master (Breno/Uriel) podem alterar o vendedor, a data da venda ou apagar a cota.")
                     
-                    # Usa o ID do banco de dados na chave da opção
                     opcoes_cotas = cotas_cliente.apply(lambda r: f"ID:{r['id']} | Grupo: {r['GRUPO']} / Cota: {r['COTA']} - Valor: {r['Valor Formatado']}", axis=1).tolist()
                     
                     c_sel, _ = st.columns([3, 1])
@@ -667,30 +656,51 @@ if menu_selecionado == "Dashboard":
                         
                     if cota_selecionada:
                         id_cota = int(cota_selecionada.split(" | ")[0].replace("ID:", ""))
-                        # Puxar dados da cota selecionada
                         cota_info = cotas_cliente[cotas_cliente['id'] == id_cota].iloc[0]
                         vendedor_atual = cota_info['VENDEDOR']
                         status_atual = cota_info['STATUS']
+                        data_atual_str = cota_info['DATA']
+                        
                         if status_atual == "Vendido" or not status_atual: status_atual = "Em Andamento"
                         
-                        c_ed1, c_ed2 = st.columns(2)
+                        try:
+                            data_atual_obj = datetime.strptime(str(data_atual_str), "%d/%m/%Y").date()
+                        except:
+                            data_atual_obj = datetime.today().date()
+                        
+                        c_ed1, c_ed2, c_ed3 = st.columns(3)
                         with c_ed1:
                             status_list = ["Em Andamento", "Em Atraso", "Cancelada", "Contemplada"]
                             idx_status = status_list.index(status_atual) if status_atual in status_list else 0
-                            novo_status = st.selectbox("Status da Cota", status_list, index=idx_status)
+                            novo_status = st.selectbox("Status da Cota", status_list, index=idx_status, key=f"edit_status_{id_cota}")
                         with c_ed2:
                             vendedores_list = ["BRENO LIMA", "URIEL GOMES", "Consorbens", "Vendedor Terceiro"]
                             if is_master:
                                 idx_vend = vendedores_list.index(vendedor_atual) if vendedor_atual in vendedores_list else 0
-                                novo_vendedor = st.selectbox("Vendedor Realizador", vendedores_list, index=idx_vend)
+                                novo_vendedor = st.selectbox("Vendedor Realizador", vendedores_list, index=idx_vend, key=f"edit_vend_{id_cota}")
                             else:
-                                st.text_input("Vendedor Realizador", value=vendedor_atual, disabled=True)
+                                st.text_input("Vendedor Realizador", value=vendedor_atual, disabled=True, key=f"edit_vend_block_{id_cota}")
                                 novo_vendedor = vendedor_atual
+                        with c_ed3:
+                            if is_master:
+                                nova_data = st.date_input("Nova Data (DD/MM/AAAA)", value=data_atual_obj, format="DD/MM/YYYY", key=f"edit_data_{id_cota}")
+                            else:
+                                st.text_input("Data da Venda", value=data_atual_str, disabled=True, key=f"edit_data_block_{id_cota}")
+                                nova_data = data_atual_obj
                                 
                         col_b1, col_b2 = st.columns(2)
                         with col_b1:
-                            if st.button("Salvar Alterações na Cota", type="primary", use_container_width=True):
-                                supabase.table("vendas").update({"VENDEDOR": novo_vendedor, "STATUS": novo_status}).eq("id", id_cota).execute()
+                            if st.button("💾 Salvar Alterações na Cota", type="primary", use_container_width=True):
+                                if isinstance(nova_data, str):
+                                    nova_data_formatada = nova_data
+                                else:
+                                    nova_data_formatada = nova_data.strftime("%d/%m/%Y")
+                                    
+                                supabase.table("vendas").update({
+                                    "VENDEDOR": novo_vendedor, 
+                                    "STATUS": novo_status,
+                                    "DATA": nova_data_formatada
+                                }).eq("id", id_cota).execute()
                                 st.success("Cota atualizada com sucesso!")
                                 st.rerun()
                         with col_b2:
@@ -751,7 +761,7 @@ if menu_selecionado == "Dashboard":
     else:
         if not df_vendas_global.empty:
             df_view = df_vendas_global.copy()
-            if st.session_state['perfil_logado'] == "Vendedor":
+            if st.session_state['perfil_logado'] == "Vendedor" and not is_master:
                 df_view = df_view[df_view['VENDEDOR'] == st.session_state['nome_vendedor']]
 
             col_t1, col_t2 = st.columns([4, 1])
@@ -840,7 +850,7 @@ if menu_selecionado == "Dashboard":
                 with g_filtro2: fp_graf = st.selectbox("📦 Produto:", ["Todos", "Auto", "Imóvel", "Moto", "Caminhão", "Serviços"])
                     
                 df_g = df_vendas_global.copy()
-                if st.session_state['perfil_logado'] == "Vendedor":
+                if st.session_state['perfil_logado'] == "Vendedor" and not is_master:
                     df_g = df_g[df_g['VENDEDOR'] == st.session_state['nome_vendedor']]
                     
                 if ft_graf != "Todas as Vendas" and not df_g.empty:
@@ -931,7 +941,7 @@ elif menu_selecionado == "Nova Venda":
     col_v1, col_v2 = st.columns(2)
     with col_v1:
         data = st.date_input("Data da Venda", format="DD/MM/YYYY")
-        if st.session_state['perfil_logado'] == "Master": 
+        if is_master: 
             vendedor = st.selectbox("Vendedor *", ["BRENO LIMA", "URIEL GOMES", "Consorbens", "Vendedor Terceiro"])
         else:
             st.write(f"**Vendedor:** {st.session_state['nome_vendedor']}")
@@ -1030,7 +1040,6 @@ elif menu_selecionado == "Relatórios":
                 with rd2: rf = st.date_input("Data Final", format="DD/MM/YYYY")
         
         hoje = datetime.today()
-        # Aqui no relatório de vendas a gente filtra pelo que foi vendido (Data_Real)
         if ft_rel != "Todas as Vendas":
             mask = df_f['Data_Real'].notna()
             if ft_rel == "Mês Atual": 
@@ -1047,7 +1056,8 @@ elif menu_selecionado == "Relatórios":
             elif ft_rel == "Período Personalizado": 
                 df_f = df_f[mask & (df_f['Data_Real'].dt.date >= ri) & (df_f['Data_Real'].dt.date <= rf)]
                 
-        if st.session_state['perfil_logado'] == "Vendedor": df_f = df_f[df_f['VENDEDOR'] == st.session_state['nome_vendedor']]
+        if st.session_state['perfil_logado'] == "Vendedor" and not is_master: 
+            df_f = df_f[df_f['VENDEDOR'] == st.session_state['nome_vendedor']]
         st.divider()
 
         if df_f.empty: st.warning("Nenhuma venda realizada neste período.")
