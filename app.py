@@ -1,5 +1,5 @@
 import streamlit as st
-import gspread
+from supabase import create_client, Client
 import pandas as pd
 from datetime import datetime
 import calendar
@@ -106,20 +106,6 @@ def parse_float_safe(v):
     except:
         return 0.0
 
-def carregar_df_admin_seguro(aba):
-    try:
-        dados = aba.get_all_values()
-        cabecalho = ["Administradora", "Produto"] + [f"P{i}" for i in range(1, 26)]
-        dados_validos = [r for r in dados if any(str(cell).strip() for cell in r)]
-        if len(dados_validos) > 1:
-            linhas_completas = [r + [""] * (27 - len(r)) for r in dados_validos[1:]]
-            df = pd.DataFrame([r[:27] for r in linhas_completas], columns=cabecalho)
-            df['Admin_Norm'] = df['Administradora'].apply(normalizar_string)
-            df['Prod_Norm'] = df['Produto'].apply(normalizar_produto)
-            return df
-    except Exception as e: pass
-    return pd.DataFrame(columns=["Administradora", "Produto"] + [f"P{i}" for i in range(1, 26)])
-
 # Callbacks
 def mascara_tel_nv(): st.session_state['tel_nv'] = formatar_telefone(st.session_state.get('tel_nv', ''))
 def mascara_aniv_nv(): st.session_state['aniv_nv'] = formatar_data(st.session_state.get('aniv_nv', ''))
@@ -139,11 +125,8 @@ def calcular_comissao_vendedor(df_vendas_global, vendedor_nome, data_venda_dt, c
     elif vol_total <= cfg['T2_Max']: return cfg['T2_Pct'], int(cfg['T2_Parc'])
     else: return cfg['T3_Pct'], int(cfg['T3_Parc'])
 
-def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, aba_status):
+def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict):
     """Motor central que calcula as comissões, impostos e o status de pagamento de todas as parcelas"""
-    status_raw = aba_status.get_all_values()
-    status_dict = {r[0]: r[1] for r in status_raw[1:]} if len(status_raw) > 1 else {}
-    
     hoje = pd.Timestamp.today().normalize()
     parcelas_finais = []
     vendas_sem_data = [] 
@@ -250,94 +233,90 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, aba_status):
             
     return pd.DataFrame(parcelas_finais), vendas_sem_data
 
-def salvar_status_comissoes(df_editado, df_original, aba_status):
-    mudancas = df_editado[df_editado['Status'] != df_original['Status']]
-    if not mudancas.empty:
-        status_raw = aba_status.get_all_values()
-        status_dict = {r[0]: r[1] for r in status_raw[1:]} if len(status_raw) > 1 else {}
-        for _, row in mudancas.iterrows():
-            status_dict[row['Chave']] = row['Status']
-        
-        novos_dados = [["Chave_Unica", "Status"]] + [[k, v] for k, v in status_dict.items()]
-        aba_status.clear()
-        aba_status.append_rows(novos_dados)
-        return True
-    return False
 
-# === 4. CONEXÃO PLANILHA E CONFIGURAÇÕES ===
+# ==========================================
+# 4. CONEXÃO E CARREGAMENTO - SUPABASE (NOVO MOTOR)
+# ==========================================
 @st.cache_resource
-def conectar_planilha():
-    credentials = dict(st.secrets["gcp_service_account"])
-    gc = gspread.service_account_from_dict(credentials)
-    return gc.open("Sistema CRM")
+def iniciar_conexao() -> Client:
+    url = st.secrets["SUPABASE_URL"]
+    key = st.secrets["SUPABASE_KEY"]
+    return create_client(url, key)
 
 try:
-    planilha = conectar_planilha()
-    todas_abas = [aba.title for aba in planilha.worksheets()]
-    
-    if "Vendas" not in todas_abas: planilha.add_worksheet("Vendas", 1000, 10)
-    aba_vendas = planilha.worksheet("Vendas")
+    supabase = iniciar_conexao()
 
-    if "Clientes" not in todas_abas:
-        aba_clientes = planilha.add_worksheet("Clientes", 1000, 10)
-        aba_clientes.append_row(["Nome", "Telefone", "Email", "Endereco", "Aniversario", "Profissao", "Renda", "Data_Cadastro"])
-    else: aba_clientes = planilha.worksheet("Clientes")
+    # Função unificada para carregar qualquer tabela como Pandas DataFrame
+    def carregar_tabela(nome_tabela):
+        res = supabase.table(nome_tabela).select("*").execute()
+        return pd.DataFrame(res.data)
 
-    if "Cad_Administradoras" not in todas_abas:
-        aba_admin_cad = planilha.add_worksheet("Cad_Administradoras", 100, 3)
-        aba_admin_cad.append_row(["Administradora", "CNPJ", "Endereço"])
-    else: aba_admin_cad = planilha.worksheet("Cad_Administradoras")
-
-    lista_admin_bd_raw = aba_admin_cad.col_values(1)[1:]
-    lista_admin_bd = lista_admin_bd_raw if lista_admin_bd_raw else ["Nenhuma administradora cadastrada"]
-
-    if "Administradoras" not in todas_abas:
-        aba_admin = planilha.add_worksheet("Administradoras", 100, 27)
-        aba_admin.append_row(["Administradora", "Produto"] + [f"P{i}" for i in range(1, 26)])
-    else: aba_admin = planilha.worksheet("Administradoras")
-    
-    if "Status_Comissoes" not in todas_abas:
-        aba_status = planilha.add_worksheet("Status_Comissoes", 1000, 2)
-        aba_status.append_row(["Chave_Unica", "Status"])
-    else: aba_status = planilha.worksheet("Status_Comissoes")
-
-    cols_cfg = ["Breno_Breno", "Breno_Uriel", "Uriel_Uriel", "Uriel_Breno", "Cons_Breno", "Cons_Uriel", "T1_Max", "T1_Pct", "T1_Parc", "T2_Max", "T2_Pct", "T2_Parc", "T3_Pct", "T3_Parc", "Imposto"]
-    if "Config_Interna" not in todas_abas:
-        aba_cfg = planilha.add_worksheet("Config_Interna", 10, 20)
-        vals_cfg = [70, 30, 70, 30, 50, 50, 500000, 1.0, 4, 1500000, 1.5, 5, 2.0, 5, 7.16]
-        aba_cfg.append_row(cols_cfg)
-        aba_cfg.append_row(vals_cfg)
-        cfg_data = [cols_cfg, vals_cfg]
+    # 4.1 Carregando Vendas
+    df_vendas_bd = carregar_tabela("vendas")
+    if not df_vendas_bd.empty:
+        df_vendas_global = df_vendas_bd.copy()
+        # Ajusta nomes para manter compatibilidade com o resto do código
+        df_vendas_global.rename(columns={"NOME": "Nome do cliente"}, inplace=True)
+        df_vendas_global['Data_Real'] = pd.to_datetime(df_vendas_global['DATA'], format="%d/%m/%Y", errors='coerce')
+        df_vendas_global['Valor_Numerico'] = df_vendas_global['VALOR'].apply(parse_float_safe)
     else:
-        aba_cfg = planilha.worksheet("Config_Interna")
-        cfg_data = aba_cfg.get_all_values()
-        if len(cfg_data) < 2:
-            aba_cfg.clear()
-            vals_cfg = [70, 30, 70, 30, 50, 50, 500000, 1.0, 4, 1500000, 1.5, 5, 2.0, 5, 7.16]
-            aba_cfg.append_row(cols_cfg)
-            aba_cfg.append_row(vals_cfg)
-            cfg_data = [cols_cfg, vals_cfg]
+        df_vendas_global = pd.DataFrame()
 
-    cfg_dic = {}
-    for i in range(min(len(cfg_data[0]), len(cfg_data[1]))):
-        cfg_dic[cfg_data[0][i]] = parse_float_safe(cfg_data[1][i])
-    if 'Imposto' not in cfg_dic: cfg_dic['Imposto'] = 7.16
-    cfg = cfg_dic
+    # 4.2 Carregando Clientes
+    df_cli = carregar_tabela("clientes")
+    
+    # 4.3 Carregando Administradoras (Cadastro e Regras)
+    df_admin_cad = carregar_tabela("cad_administradoras")
+    lista_admin_bd = df_admin_cad['Administradora'].tolist() if not df_admin_cad.empty else ["Nenhuma administradora cadastrada"]
 
-    if is_logado and st.session_state.get('menu_lateral') in ["Dashboard", "Relatórios"]:
-        dados_brutos = aba_vendas.get_all_values()
-        if len(dados_brutos) > 1:
-            df_vendas_global = pd.DataFrame(dados_brutos[1:]).iloc[:, :10]
-            df_vendas_global.columns = ["ID_cliente", "Nome do cliente", "DATA", "PRODUTO", "VENDEDOR", "GRUPO", "COTA", "ADMINISTRADORA", "STATUS", "VALOR"]
-            df_vendas_global['Data_Real'] = pd.to_datetime(df_vendas_global['DATA'], format="%d/%m/%Y", errors='coerce')
-            df_vendas_global['Valor_Numerico'] = df_vendas_global['VALOR'].apply(parse_float_safe)
-        else: df_vendas_global = pd.DataFrame()
-    else: df_vendas_global = pd.DataFrame()
+    df_admin = carregar_tabela("administradoras")
+    if not df_admin.empty:
+        df_admin['Admin_Norm'] = df_admin['Administradora'].apply(normalizar_string)
+        df_admin['Prod_Norm'] = df_admin['Produto'].apply(normalizar_produto)
 
-except gspread.exceptions.APIError as e:
-    st.error("⚠️ O Google Sheets limitou o acesso temporariamente por excesso de requisições. Por favor, aguarde cerca de 1 minuto e recarregue a página.")
+    # 4.4 Carregando Status e Regras Internas
+    df_status = carregar_tabela("status_comissoes")
+    status_dict = dict(zip(df_status['Chave_Unica'], df_status['Status'])) if not df_status.empty else {}
+
+    # Config Interna (Garante que tenha os valores padrão se estiver vazio)
+    cfg_padrao = {
+        "Breno_Breno": 70.0, "Breno_Uriel": 30.0, "Uriel_Uriel": 70.0, "Uriel_Breno": 30.0,
+        "Cons_Breno": 50.0, "Cons_Uriel": 50.0, "T1_Max": 500000.0, "T1_Pct": 1.0, "T1_Parc": 4,
+        "T2_Max": 1500000.0, "T2_Pct": 1.5, "T2_Parc": 5, "T3_Pct": 2.0, "T3_Parc": 5, "Imposto": 7.16
+    }
+    
+    df_cfg = carregar_tabela("config_interna")
+    cfg_id = None
+    if not df_cfg.empty:
+        cfg = df_cfg.iloc[0].to_dict()
+        cfg_id = cfg.get('id')
+    else:
+        # Cria a primeira linha de configuração no banco
+        res = supabase.table("config_interna").insert(cfg_padrao).execute()
+        cfg = cfg_padrao
+        cfg_id = res.data[0]['id'] if res.data else None
+
+except Exception as e:
+    st.error(f"⚠️ Erro ao conectar com o Supabase. Detalhes: {e}")
     st.stop()
 
+
+def salvar_status_comissoes(df_editado, df_original):
+    """Atualiza apenas as linhas que foram alteradas usando o Upsert do Supabase"""
+    mudancas = df_editado[df_editado['Status'] != df_original['Status']]
+    if not mudancas.empty:
+        for _, row in mudancas.iterrows():
+            chave = row['Chave']
+            novo_status = row['Status']
+            
+            # Verifica se já existe para fazer update, senão insert
+            existe = supabase.table("status_comissoes").select("id").eq("Chave_Unica", chave).execute()
+            if existe.data:
+                supabase.table("status_comissoes").update({"Status": novo_status}).eq("id", existe.data[0]['id']).execute()
+            else:
+                supabase.table("status_comissoes").insert({"Chave_Unica": chave, "Status": novo_status}).execute()
+        return True
+    return False
 
 # === LÓGICA DE TELA CHEIA (RELATÓRIO DE COMISSÃO) ===
 if st.session_state['tela_cheia_relatorio']:
@@ -351,8 +330,7 @@ if st.session_state['tela_cheia_relatorio']:
     with col_chk:
         mostrar_pagos = st.checkbox("Mostrar parcelas já pagas (PAGO)", value=False)
         
-    df_admin_regras = carregar_df_admin_seguro(aba_admin)
-    df_parcelas_todas, vendas_sem_data = gerar_tabela_parcelas(df_vendas_global, df_vendas_global, df_admin_regras, cfg, aba_status)
+    df_parcelas_todas, vendas_sem_data = gerar_tabela_parcelas(df_vendas_global, df_vendas_global, df_admin, cfg, status_dict)
     
     if vendas_sem_data:
         st.warning(f"⚠️ **Atenção:** Prezado usuário, as seguintes vendas estão sem data preenchida: **{', '.join(vendas_sem_data)}**. Favor preencher para apuração correta do relatório.")
@@ -422,7 +400,7 @@ if st.session_state['tela_cheia_relatorio']:
             
             if is_master:
                 if st.button("💾 Salvar Status de Pagamento", type="primary"):
-                    if salvar_status_comissoes(edited_df, df_final, aba_status):
+                    if salvar_status_comissoes(edited_df, df_final):
                         st.success("Status atualizados no banco de dados!")
                         st.rerun()
                     else: st.info("Nenhuma alteração detectada.")
@@ -554,14 +532,13 @@ if menu_selecionado == "Dashboard":
             st.session_state['key_tabela'] += 1
             st.rerun()
             
-        dados_cli_brutos = aba_clientes.get_all_values()
-        if len(dados_cli_brutos) > 1: df_cli = pd.DataFrame(dados_cli_brutos[1:], columns=dados_cli_brutos[0])
-        else: df_cli = pd.DataFrame(columns=["Nome", "Telefone", "Email", "Endereco", "Aniversario", "Profissao", "Renda", "Data_Cadastro"])
-        
         info_cliente = {}
+        id_cliente_db = None
         if not df_cli.empty and 'Nome' in df_cli.columns:
             busca_cli = df_cli[df_cli['Nome'] == cliente_nome]
-            if not busca_cli.empty: info_cliente = busca_cli.iloc[0].to_dict()
+            if not busca_cli.empty: 
+                info_cliente = busca_cli.iloc[0].to_dict()
+                id_cliente_db = info_cliente.get('id')
 
         is_master = st.session_state['perfil_logado'] == "Master"
         if not is_master: st.info("🔒 Como Vendedor, você só pode visualizar estes dados. Para alterar, contate o Administrador.")
@@ -603,36 +580,35 @@ if menu_selecionado == "Dashboard":
             with col_b1:
                 if st.button("Salvar Alterações Cadastrais", type="primary", use_container_width=True):
                     novo_nome_val = st.session_state[key_nome]
-                    nomes_col = aba_clientes.col_values(1)
-                    if cliente_nome in nomes_col:
-                        row_idx = nomes_col.index(cliente_nome) + 1
-                        aba_clientes.update_cell(row_idx, 1, novo_nome_val)
-                        aba_clientes.update_cell(row_idx, 2, st.session_state[key_tel])
-                        aba_clientes.update_cell(row_idx, 3, st.session_state[key_email])
-                        aba_clientes.update_cell(row_idx, 4, st.session_state[key_end])
-                        aba_clientes.update_cell(row_idx, 5, st.session_state[key_aniv])
-                        aba_clientes.update_cell(row_idx, 6, st.session_state[key_prof])
-                        aba_clientes.update_cell(row_idx, 7, st.session_state[key_renda])
+                    dados_cli = {
+                        "Nome": novo_nome_val,
+                        "Telefone": st.session_state[key_tel],
+                        "Email": st.session_state[key_email],
+                        "Endereco": st.session_state[key_end],
+                        "Aniversario": st.session_state[key_aniv],
+                        "Profissao": st.session_state[key_prof],
+                        "Renda": st.session_state[key_renda]
+                    }
+                    
+                    if id_cliente_db:
+                        supabase.table("clientes").update(dados_cli).eq("id", id_cliente_db).execute()
                     else:
-                        aba_clientes.append_row([novo_nome_val, st.session_state[key_tel], st.session_state[key_email], st.session_state[key_end], st.session_state[key_aniv], st.session_state[key_prof], st.session_state[key_renda], datetime.today().strftime("%d/%m/%Y")])
+                        dados_cli["Data_Cadastro"] = datetime.today().strftime("%d/%m/%Y")
+                        supabase.table("clientes").insert(dados_cli).execute()
                     
                     if novo_nome_val != cliente_nome:
-                        vendas_nomes = aba_vendas.col_values(2)
-                        for i in range(len(vendas_nomes), 0, -1):
-                            if vendas_nomes[i-1] == cliente_nome: aba_vendas.update_cell(i, 2, novo_nome_val)
+                        supabase.table("vendas").update({"NOME": novo_nome_val}).eq("NOME", cliente_nome).execute()
                         st.session_state['cliente_visualizado'] = novo_nome_val
+                        
                     st.success("Dados atualizados com sucesso!")
                     st.rerun()
 
             with col_b2:
                 if st.button("🚨 Excluir Cliente (Apagar Todas as Cotas)", use_container_width=True):
-                    nomes_col = aba_clientes.col_values(1)
-                    if cliente_nome in nomes_col:
-                        row_idx = nomes_col.index(cliente_nome) + 1
-                        aba_clientes.delete_rows(row_idx)
-                    vendas_nomes = aba_vendas.col_values(2)
-                    for i in range(len(vendas_nomes), 0, -1):
-                        if vendas_nomes[i-1] == cliente_nome: aba_vendas.delete_rows(i)
+                    if id_cliente_db:
+                        supabase.table("clientes").delete().eq("id", id_cliente_db).execute()
+                    supabase.table("vendas").delete().eq("NOME", cliente_nome).execute()
+                    
                     st.session_state['cliente_visualizado'] = None
                     st.session_state['key_tabela'] += 1
                     st.rerun()
@@ -654,15 +630,19 @@ if menu_selecionado == "Dashboard":
                 st.write("")
                 with st.expander("⚙️ Atualizar Status e Gerenciar Cota", expanded=False):
                     st.info("Atualize o status da cota. Apenas usuários Master podem alterar o vendedor ou apagar a cota do sistema.")
-                    opcoes_cotas = cotas_cliente.apply(lambda r: f"Linha {r.name + 2} | Grupo: {r['GRUPO']} / Cota: {r['COTA']} - Valor: {r['Valor Formatado']}", axis=1).tolist()
+                    
+                    # Usa o ID do banco de dados na chave da opção
+                    opcoes_cotas = cotas_cliente.apply(lambda r: f"ID:{r['id']} | Grupo: {r['GRUPO']} / Cota: {r['COTA']} - Valor: {r['Valor Formatado']}", axis=1).tolist()
                     
                     c_sel, _ = st.columns([3, 1])
                     with c_sel: cota_selecionada = st.selectbox("Selecione a cota que deseja gerenciar:", [""] + opcoes_cotas)
                         
                     if cota_selecionada:
-                        linha_planilha = int(cota_selecionada.split(" | ")[0].replace("Linha ", ""))
-                        vendedor_atual = cotas_cliente.loc[linha_planilha - 2, 'VENDEDOR']
-                        status_atual = cotas_cliente.loc[linha_planilha - 2, 'STATUS']
+                        id_cota = int(cota_selecionada.split(" | ")[0].replace("ID:", ""))
+                        # Puxar dados da cota selecionada
+                        cota_info = cotas_cliente[cotas_cliente['id'] == id_cota].iloc[0]
+                        vendedor_atual = cota_info['VENDEDOR']
+                        status_atual = cota_info['STATUS']
                         if status_atual == "Vendido" or not status_atual: status_atual = "Em Andamento"
                         
                         c_ed1, c_ed2 = st.columns(2)
@@ -682,14 +662,13 @@ if menu_selecionado == "Dashboard":
                         col_b1, col_b2 = st.columns(2)
                         with col_b1:
                             if st.button("Salvar Alterações na Cota", type="primary", use_container_width=True):
-                                aba_vendas.update_cell(linha_planilha, 5, novo_vendedor)
-                                aba_vendas.update_cell(linha_planilha, 9, novo_status)
+                                supabase.table("vendas").update({"VENDEDOR": novo_vendedor, "STATUS": novo_status}).eq("id", id_cota).execute()
                                 st.success("Cota atualizada com sucesso!")
                                 st.rerun()
                         with col_b2:
                             if is_master:
                                 if st.button("🚨 Apagar Esta Cota", use_container_width=True):
-                                    aba_vendas.delete_rows(linha_planilha)
+                                    supabase.table("vendas").delete().eq("id", id_cota).execute()
                                     st.success("Cota apagada com sucesso!")
                                     st.rerun()
                             else: st.button("🚨 Apagar Esta Cota", disabled=True, use_container_width=True, help="Apenas Masters podem excluir cotas.")
@@ -697,8 +676,7 @@ if menu_selecionado == "Dashboard":
                 # --- PREVISÃO DE COMISSIONAMENTO ---
                 st.write("")
                 st.subheader("📈 Previsão de Comissionamento")
-                df_admin_regras = carregar_df_admin_seguro(aba_admin)
-                df_parcelas, vendas_sem_data = gerar_tabela_parcelas(cotas_cliente, df_vendas_global, df_admin_regras, cfg, aba_status)
+                df_parcelas, vendas_sem_data = gerar_tabela_parcelas(cotas_cliente, df_vendas_global, df_admin, cfg, status_dict)
                 
                 if vendas_sem_data:
                     st.warning(f"⚠️ **Atenção:** Algumas vendas deste cliente estão sem data preenchida: **{', '.join(vendas_sem_data)}**.")
@@ -734,11 +712,10 @@ if menu_selecionado == "Dashboard":
                         )
                         
                         if is_master and st.button("💾 Salvar Status de Pagamento (Cliente)", type="primary"):
-                            if salvar_status_comissoes(edited_df_cli, df_final_cli, aba_status):
+                            if salvar_status_comissoes(edited_df_cli, df_final_cli):
                                 st.success("Status atualizados!")
                                 st.rerun()
                             else: st.info("Sem alterações.")
-                    else: st.info("Nenhuma comissão ativa para você nesta cota.")
                 else: st.info("Aguardando configurações de regras para gerar a previsão.")
 
             else: st.warning("Nenhuma cota encontrada para este cliente.")
@@ -870,7 +847,7 @@ if menu_selecionado == "Dashboard":
                         st.altair_chart(chart_a, use_container_width=True)
                 else: st.warning("📊 Não há vendas suficientes para gerar o gráfico com os filtros atuais.")
             else: st.info("Nenhuma venda encontrada para os filtros selecionados.")
-        else: st.info("O sistema ainda não possui vendas cadastradas na planilha.")
+        else: st.info("O sistema ainda não possui vendas cadastradas.")
 
 elif menu_selecionado == "Nova Venda":
     st.markdown("### 📝 Cadastrar Nova Venda")
@@ -974,15 +951,37 @@ elif menu_selecionado == "Nova Venda":
             else:
                 end_completo = ", ".join([p for p in [rua, numero, complemento, bairro, cidade, uf] if p])
                 if cep: end_completo += f" (CEP: {cep})"
+                
+                # Inserindo Vendas no banco
+                vendas_insert = []
                 for c in cotas_data:
                     val_float = float(''.join(filter(str.isdigit, str(c['valor_str']))))/100
-                    aba_vendas.append_row(["", cliente, str(data.strftime("%d/%m/%Y")), produto, vendedor, c['grupo'], c['cota'], admin, c['status'], val_float])
+                    vendas_insert.append({
+                        "NOME": cliente,
+                        "DATA": str(data.strftime("%d/%m/%Y")),
+                        "PRODUTO": produto,
+                        "VENDEDOR": vendedor,
+                        "GRUPO": c['grupo'],
+                        "COTA": c['cota'],
+                        "ADMINISTRADORA": admin,
+                        "STATUS": c['status'],
+                        "VALOR": val_float
+                    })
+                supabase.table("vendas").insert(vendas_insert).execute()
+                
+                # Checar se cliente já existe, senão insere
                 try:
-                    nomes_cadastrados = aba_clientes.col_values(1)
+                    nomes_cadastrados = df_cli['Nome'].tolist() if not df_cli.empty else []
                     if cliente not in nomes_cadastrados:
-                        aba_clientes.append_row([cliente, telefone, email, end_completo, aniversario, profissao, renda, str(datetime.today().strftime("%d/%m/%Y"))])
-                except: pass
-                st.success(f"✅ {len(cotas_data)} Venda(s) salvas!")
+                        supabase.table("clientes").insert({
+                            "Nome": cliente, "Telefone": telefone, "Email": email, "Endereco": end_completo,
+                            "Aniversario": aniversario, "Profissao": profissao, "Renda": renda,
+                            "Data_Cadastro": str(datetime.today().strftime("%d/%m/%Y"))
+                        }).execute()
+                except Exception as e:
+                    pass
+                    
+                st.success(f"✅ {len(cotas_data)} Venda(s) salvas no Supabase!")
                 limpar = ['venda_cliente', 'tel_nv', 'venda_email', 'aniv_nv', 'prof_nv', 'renda_nv', 'venda_cep', 'last_cep', 'venda_rua', 'venda_numero', 'venda_complemento', 'venda_bairro', 'venda_cidade', 'venda_uf']
                 for i in range(st.session_state['qtd_cotas']): limpar.extend([f"g_{i}", f"c_{i}", f"v_in_{i}"])
                 for k in limpar:
@@ -1049,7 +1048,6 @@ elif menu_selecionado == "Relatórios":
 
 elif menu_selecionado == "Regras de Comissão":
     st.markdown("### 🏢 Regras de Comissão")
-    df_admin = carregar_df_admin_seguro(aba_admin)
     
     t_cad_adm, t_regras, t_reg_int = st.tabs(["🏢 Cadastrar Admin", "📋 Regras", "👥 Regras Internas"])
     with t_cad_adm:
@@ -1061,18 +1059,18 @@ elif menu_selecionado == "Regras de Comissão":
             end_adm = st.text_input("Endereço Completo")
             if st.form_submit_button("Salvar Administradora", type="primary"):
                 if nome_adm:
-                    aba_admin_cad.append_row([nome_adm.upper(), cnpj_adm, end_adm])
+                    supabase.table("cad_administradoras").insert({"Administradora": nome_adm.upper(), "CNPJ": cnpj_adm, "Endereço": end_adm}).execute()
                     st.success("Cadastrada com sucesso!")
                     st.rerun()
                 else: st.error("Nome é obrigatório.")
         st.write("Administradoras Cadastradas")
-        dados_cad = aba_admin_cad.get_all_values()
-        if len(dados_cad) > 1: st.dataframe(pd.DataFrame(dados_cad[1:], columns=dados_cad[0]), use_container_width=True, hide_index=True)
+        if not df_admin_cad.empty:
+            st.dataframe(df_admin_cad.drop(columns=['id'], errors='ignore'), use_container_width=True, hide_index=True)
     
     with t_regras:
         st.subheader("Regras Cadastradas")
         if not df_admin.empty:
-            df_mostrar = df_admin.drop(columns=['Admin_Norm', 'Prod_Norm'], errors='ignore').copy()
+            df_mostrar = df_admin.drop(columns=['Admin_Norm', 'Prod_Norm', 'id'], errors='ignore').copy()
             def calc_total(row):
                 t = 0.0
                 for i in range(1, 26):
@@ -1100,18 +1098,22 @@ elif menu_selecionado == "Regras de Comissão":
                             inputs_p.append(v)
                 if st.form_submit_button("Salvar Regra da Administradora", type="primary"):
                     if n and p and n != "Nenhuma administradora cadastrada":
-                        aba_admin.append_row([n.upper(), p] + [f"{v}%" if v > 0 else "" for v in inputs_p])
+                        nova_regra = {"Administradora": n.upper(), "Produto": p}
+                        for i, v in enumerate(inputs_p):
+                            nova_regra[f"P{i+1}"] = f"{v}%" if v > 0 else ""
+                        supabase.table("administradoras").insert(nova_regra).execute()
                         st.success("Regra cadastrada com sucesso!")
                         st.rerun()
                     else: st.error("Selecione uma Administradora.")
                 
         with st.expander("✏️ Editar ou Excluir Regra", expanded=False):
             if not df_admin.empty:
-                opts = df_admin.apply(lambda x: f"Linha {x.name + 2} | {x['Administradora']} - {x['Produto']}", axis=1).tolist()
+                opts = df_admin.apply(lambda x: f"ID:{x['id']} | {x['Administradora']} - {x['Produto']}", axis=1).tolist()
                 sel = st.selectbox("Selecione a regra para editar:", [""] + opts)
                 if sel:
-                    l_plan = int(sel.split(" | ")[0].replace("Linha ", ""))
-                    reg_at = df_admin.iloc[l_plan - 2]
+                    id_regra = int(sel.split(" | ")[0].replace("ID:", ""))
+                    reg_at = df_admin[df_admin['id'] == id_regra].iloc[0]
+                    
                     c1, c2 = st.columns(2)
                     with c1: 
                         idx_admin = lista_admin_bd.index(reg_at['Administradora']) if reg_at['Administradora'] in lista_admin_bd else 0
@@ -1124,7 +1126,7 @@ elif menu_selecionado == "Regras de Comissão":
                         cols_p = st.columns(5)
                         for col in range(5):
                             num_p = (linha * 5) + col + 1
-                            val_str = str(reg_at[f'P{num_p}']).replace('%', '').strip()
+                            val_str = str(reg_at.get(f'P{num_p}', '')).replace('%', '').strip()
                             try: val_float = float(val_str)
                             except: val_float = 0.0
                             with cols_p[col]:
@@ -1133,14 +1135,15 @@ elif menu_selecionado == "Regras de Comissão":
                     b1, b2 = st.columns(2)
                     with b1:
                         if st.button("Salvar Alterações", type="primary"):
-                            aba_admin.update_cell(l_plan, 1, e_n.upper())
-                            aba_admin.update_cell(l_plan, 2, e_p)
-                            for i, v in enumerate(edit_inputs_p): aba_admin.update_cell(l_plan, i+3, f"{v}%" if v > 0 else "")
+                            regra_atualizada = {"Administradora": e_n.upper(), "Produto": e_p}
+                            for i, v in enumerate(edit_inputs_p): 
+                                regra_atualizada[f"P{i+1}"] = f"{v}%" if v > 0 else ""
+                            supabase.table("administradoras").update(regra_atualizada).eq("id", id_regra).execute()
                             st.success("Regra alterada!")
                             st.rerun()
                     with b2:
                         if st.button("🚨 EXCLUIR REGRA"):
-                            aba_admin.delete_rows(l_plan)
+                            supabase.table("administradoras").delete().eq("id", id_regra).execute()
                             st.rerun()
 
     with t_reg_int:
@@ -1184,9 +1187,19 @@ elif menu_selecionado == "Regras de Comissão":
         if st.button("Salvar Regras de Pagamento", type="primary", use_container_width=True):
             t1_val = parse_float_safe(t1_max_str)
             t2_val = parse_float_safe(t2_max_str)
-            aba_cfg.clear()
-            aba_cfg.append_row(cols_cfg)
-            aba_cfg.append_row([b_b, b_u, u_u, u_b, c_b, c_u, t1_val, t1_pct, t1_parc, t2_val, t2_pct, t2_parc, t3_pct, t3_parc, imposto_in])
+            
+            nova_cfg = {
+                "Breno_Breno": b_b, "Breno_Uriel": b_u, "Uriel_Uriel": u_u, "Uriel_Breno": u_b, 
+                "Cons_Breno": c_b, "Cons_Uriel": c_u, "T1_Max": t1_val, "T1_Pct": t1_pct, 
+                "T1_Parc": t1_parc, "T2_Max": t2_val, "T2_Pct": t2_pct, "T2_Parc": t2_parc, 
+                "T3_Pct": t3_pct, "T3_Parc": t3_parc, "Imposto": imposto_in
+            }
+            
+            if cfg_id:
+                supabase.table("config_interna").update(nova_cfg).eq("id", cfg_id).execute()
+            else:
+                supabase.table("config_interna").insert(nova_cfg).execute()
+                
             st.success("Regras Internas atualizadas!")
             st.rerun()
 
