@@ -65,11 +65,10 @@ def formatar_brl_puro(val):
     return f"R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 def normalizar_string(s):
-    """Filtro Universal: Remove acentos e espaços invisíveis para não quebrar a busca de regras"""
     if pd.isna(s): return ""
     s = str(s).strip().upper()
     s = ''.join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
-    s = s.replace(" ", "") # Remove todos os espaços para evitar erros de digitação extras
+    s = s.replace(" ", "")
     return s
 
 def normalizar_produto(p):
@@ -87,7 +86,6 @@ def obter_index_produto(p_str):
     return mapping.get(norm, 0)
 
 def parse_float_safe(v):
-    """Limpador universal de números do Google Sheets e Inputs Manuais"""
     try:
         v_str = str(v).replace('%', '').replace('R$', '').replace(' ', '').strip()
         if not v_str: return 0.0
@@ -103,16 +101,12 @@ def parse_float_safe(v):
         return 0.0
 
 def carregar_df_admin_seguro(aba):
-    """Reconstrói a tabela caso o Google Sheets envie linhas 'cortadas' ou vazias"""
     try:
         dados = aba.get_all_values()
         cabecalho = ["Administradora", "Produto"] + [f"P{i}" for i in range(1, 26)]
-        
-        # Pega apenas linhas que têm algum texto escrito (ignora vazias)
         dados_validos = [r for r in dados if any(str(cell).strip() for cell in r)]
         
         if len(dados_validos) > 1:
-            # Completa as colunas faltantes para garantir tamanho 27
             linhas_completas = [r + [""] * (27 - len(r)) for r in dados_validos[1:]]
             df = pd.DataFrame([r[:27] for r in linhas_completas], columns=cabecalho)
             df['Admin_Norm'] = df['Administradora'].apply(normalizar_string)
@@ -120,17 +114,17 @@ def carregar_df_admin_seguro(aba):
             return df
     except Exception as e:
         pass
-    # Se falhar ou estiver vazio, retorna um DF zerado e limpo
     return pd.DataFrame(columns=["Administradora", "Produto"] + [f"P{i}" for i in range(1, 26)])
 
 # Callbacks
 def mascara_tel_nv(): st.session_state['tel_nv'] = formatar_telefone(st.session_state.get('tel_nv', ''))
 def mascara_aniv_nv(): st.session_state['aniv_nv'] = formatar_data(st.session_state.get('aniv_nv', ''))
 def mascara_renda_nv(): st.session_state['renda_nv'] = formatar_moeda(st.session_state.get('renda_nv', ''))
+def mascara_t1_max(): st.session_state['t1_max_in'] = formatar_moeda(st.session_state.get('t1_max_in', ''))
+def mascara_t2_max(): st.session_state['t2_max_in'] = formatar_moeda(st.session_state.get('t2_max_in', ''))
 
 # === MOTOR DE CÁLCULO DE COMISSÃO ===
 def calcular_comissao_vendedor(df_vendas_global, vendedor_nome, data_venda_dt, cfg):
-    """Calcula a faixa do vendedor baseada no volume do mês"""
     if pd.isna(data_venda_dt): return cfg['T1_Pct'], int(cfg['T1_Parc'])
     mes = data_venda_dt.month
     ano = data_venda_dt.year
@@ -257,6 +251,13 @@ except:
     aba_clientes = planilha.add_worksheet("Clientes", 1000, 10)
     aba_clientes.append_row(["Nome", "Telefone", "Email", "Endereco", "Aniversario", "Profissao", "Renda", "Data_Cadastro"])
 
+# Banco de Dados Master das Administradoras
+try: 
+    aba_admin_cad = planilha.worksheet("Cad_Administradoras")
+except: 
+    aba_admin_cad = planilha.add_worksheet("Cad_Administradoras", 100, 3)
+    aba_admin_cad.append_row(["Administradora", "CNPJ", "Endereço"])
+
 try: 
     aba_admin = planilha.worksheet("Administradoras")
 except: 
@@ -282,6 +283,10 @@ except:
     cfg_data = [cols_cfg, vals_cfg]
 
 cfg = {k: parse_float_safe(v) for k, v in zip(cfg_data[0], cfg_data[1])}
+
+# Lista atualizada de Administradoras cadastradas (Para dropdowns)
+lista_admin_bd = aba_admin_cad.col_values(1)[1:]
+if not lista_admin_bd: lista_admin_bd = ["Nenhuma administradora cadastrada"]
 
 # Carrega Base de Vendas Global
 dados_brutos = aba_vendas.get_all_values()
@@ -326,9 +331,6 @@ if not is_logado:
 
 if menu_selecionado == "Dashboard":
     
-    # -------------------------------------------------------------
-    # PERFIL DO CLIENTE
-    # -------------------------------------------------------------
     if st.session_state['cliente_visualizado'] is not None:
         cliente_nome = st.session_state['cliente_visualizado']
         
@@ -442,7 +444,7 @@ if menu_selecionado == "Dashboard":
                 estilo_ficha = ficha_display.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}])
                 st.dataframe(estilo_ficha, use_container_width=True, hide_index=True)
                 
-                # --- PREVISÃO DE COMISSIONAMENTO (MÁGICA RETROATIVA BLINDADA) ---
+                # --- PREVISÃO DE COMISSIONAMENTO ---
                 st.write("")
                 st.subheader("📈 Previsão de Comissionamento")
                 
@@ -476,7 +478,6 @@ if menu_selecionado == "Dashboard":
                                 breno_recebe = 0.0
                                 uriel_recebe = 0.0
                                 
-                                # Aplicando as regras societárias do Banco de Dados
                                 if vendedor_nome == "BRENO LIMA":
                                     breno_recebe = admin_recebe * (cfg['Breno_Breno']/100)
                                     uriel_recebe = admin_recebe * (cfg['Breno_Uriel']/100)
@@ -516,7 +517,7 @@ if menu_selecionado == "Dashboard":
                         admin_cadastradas = df_admin['Administradora'].unique().tolist() if not df_admin.empty else ["Nenhuma"]
                         prod_cadastrados = df_admin['Produto'].unique().tolist() if not df_admin.empty else ["Nenhum"]
                         st.warning(f"⚠️ **Atenção:** Regra não encontrada para a cota **{r['GRUPO']}/{r['COTA']}**.\n\n"
-                                   f"🔍 **O sistema tentou buscar por:** Administradora `{r['ADMINISTRADORA']}` e Produto `{r['PRODUTO']}`\n\n"
+                                   f"🔍 **O sistema tentou buscar por:** Administradora `{admin_venda}` e Produto `{prod_venda}`\n\n"
                                    f"📋 **O que o sistema achou no Banco de Dados:** \n"
                                    f"- Administradoras salvas: `{admin_cadastradas}` \n"
                                    f"- Produtos salvos: `{prod_cadastrados}` \n\n"
@@ -552,9 +553,6 @@ if menu_selecionado == "Dashboard":
 
             else: st.warning("Nenhuma cota encontrada para este cliente.")
 
-    # -------------------------------------------------------------
-    # DASHBOARD PADRÃO
-    # -------------------------------------------------------------
     else:
         if not df_vendas_global.empty:
             df_vendas = df_vendas_global.copy()
@@ -708,7 +706,12 @@ elif menu_selecionado == "Nova Venda":
             st.write(f"**Vendedor:** {st.session_state['nome_vendedor']}")
             vendedor = st.session_state['nome_vendedor']
     with col_v2:
-        admin = st.selectbox("Administradora *", ["YAMAHA", "ITAÚ", "ROMA", "EMBRACON"])
+        # Traz as administradoras do BD, ou usa padrão se vazio
+        if not lista_admin_bd or lista_admin_bd[0] == "Nenhuma administradora cadastrada":
+            opcoes_admin = ["YAMAHA", "ITAÚ", "ROMA", "EMBRACON"]
+        else:
+            opcoes_admin = lista_admin_bd
+        admin = st.selectbox("Administradora *", opcoes_admin)
         produto = st.selectbox("Produto *", ["Auto", "Imóvel", "Moto", "Caminhão", "Serviços"])
         
     st.markdown("##### Cotas Adquiridas")
@@ -823,20 +826,54 @@ elif menu_selecionado == "Regras de Comissão":
     
     df_admin = carregar_df_admin_seguro(aba_admin)
 
-    t1, t2, t3, t4 = st.tabs(["📋 Adm Cadastradas", "➕ Nova Regra Adm", "✏️ Editar/Excluir Adm", "👥 Comissões Internas"])
+    t_cad_adm, t_regras, t_nova_regra, t_edit_regra, t_com_int = st.tabs([
+        "🏢 1. Cadastro Admin.", 
+        "📋 2. Regras", 
+        "➕ 3. Nova Regra", 
+        "✏️ Editar", 
+        "👥 Internas"
+    ])
     
-    with t1:
+    with t_cad_adm:
+        st.subheader("Cadastrar Nova Administradora no Sistema")
+        with st.form("form_cad_admin"):
+            c1, c2 = st.columns([2, 1])
+            with c1: nome_adm = st.text_input("Nome da Administradora *")
+            with c2: cnpj_adm = st.text_input("CNPJ")
+            end_adm = st.text_input("Endereço Completo")
+            
+            if st.form_submit_button("Salvar Administradora", type="primary"):
+                if nome_adm:
+                    aba_admin_cad.append_row([nome_adm.upper(), cnpj_adm, end_adm])
+                    st.success(f"Administradora {nome_adm} cadastrada com sucesso!")
+                    st.rerun()
+                else:
+                    st.error("O Nome da Administradora é obrigatório.")
+        
+        st.divider()
+        st.write("Administradoras Cadastradas")
+        dados_cad = aba_admin_cad.get_all_values()
+        if len(dados_cad) > 1:
+            df_cad = pd.DataFrame(dados_cad[1:], columns=dados_cad[0])
+            st.dataframe(df_cad.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}]), use_container_width=True, hide_index=True)
+        else:
+            st.info("Nenhuma administradora cadastrada ainda.")
+    
+    with t_regras:
         if not df_admin.empty:
             df_mostrar = df_admin.drop(columns=['Admin_Norm', 'Prod_Norm'], errors='ignore')
             st.dataframe(df_mostrar.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}]), use_container_width=True, hide_index=True)
         else: st.info("Nenhuma regra de comissionamento de administradora.")
         
-    with t2:
+    with t_nova_regra:
         with st.form("f_adm"):
             st.subheader("Dados da Regra")
+            st.info("💡 A Administradora deve ser cadastrada primeiro na aba 'Cadastro Admin.' para aparecer aqui.")
             c1, c2 = st.columns(2)
-            with c1: n = st.text_input("Administradora *")
-            with c2: p = st.selectbox("Produto *", ["Auto", "Imóvel", "Moto", "Caminhão", "Serviços"])
+            with c1: 
+                n = st.selectbox("Administradora *", lista_admin_bd)
+            with c2: 
+                p = st.selectbox("Produto *", ["Auto", "Imóvel", "Moto", "Caminhão", "Serviços"])
             
             st.divider()
             st.subheader("Percentual de Comissão por Parcela (%)")
@@ -852,14 +889,14 @@ elif menu_selecionado == "Regras de Comissão":
                         inputs_p.append(v)
 
             if st.form_submit_button("Salvar Regra da Administradora", type="primary"):
-                if n and p:
+                if n and p and n != "Nenhuma administradora cadastrada":
                     nova_linha = [n.upper(), p] + [f"{v}%" if v > 0 else "" for v in inputs_p]
                     aba_admin.append_row(nova_linha)
                     st.success("Regra cadastrada com sucesso!")
                     st.rerun()
-                else: st.error("Preencha a Administradora e o Produto.")
+                else: st.error("Cadastre ou selecione uma Administradora válida.")
                 
-    with t3:
+    with t_edit_regra:
         if not df_admin.empty:
             opts = df_admin.apply(lambda x: f"Linha {x.name + 2} | {x['Administradora']} - {x['Produto']}", axis=1).tolist()
             sel = st.selectbox("Selecione a regra para editar:", [""] + opts)
@@ -869,8 +906,15 @@ elif menu_selecionado == "Regras de Comissão":
                 
                 st.subheader("Editando Regra")
                 c1, c2 = st.columns(2)
-                with c1: e_n = st.text_input("Administradora", value=reg_at['Administradora'])
-                with c2: e_p = st.selectbox("Produto", ["Auto", "Imóvel", "Moto", "Caminhão", "Serviços"], index=obter_index_produto(reg_at['Produto']))
+                with c1: 
+                    # Tenta achar o index da admin, senao deixa o texto livre antigo pra nao bugar regras velhas
+                    idx_admin = lista_admin_bd.index(reg_at['Administradora']) if reg_at['Administradora'] in lista_admin_bd else 0
+                    if reg_at['Administradora'] in lista_admin_bd:
+                        e_n = st.selectbox("Administradora", lista_admin_bd, index=idx_admin)
+                    else:
+                        e_n = st.text_input("Administradora", value=reg_at['Administradora'])
+                with c2: 
+                    e_p = st.selectbox("Produto", ["Auto", "Imóvel", "Moto", "Caminhão", "Serviços"], index=obter_index_produto(reg_at['Produto']))
                 
                 st.write("Percentuais (%)")
                 edit_inputs_p = []
@@ -901,8 +945,8 @@ elif menu_selecionado == "Regras de Comissão":
                         st.error("Regra deletada!")
                         st.rerun()
 
-    # --- ABA DE COMISSÕES INTERNAS (LIVRE E SEGURA - SEM ON_CHANGE) ---
-    with t4:
+    # --- ABA DE COMISSÕES INTERNAS (LIVRE DE ON_CHANGE) ---
+    with t_com_int:
         st.subheader("Configurações de Recebimento (Sócios e Vendedores)")
         st.info("Estas regras alimentam o cálculo automático de comissionamento da equipe e o rateio de lucro da corretora.")
         
@@ -928,12 +972,13 @@ elif menu_selecionado == "Regras de Comissão":
         ct1, ct2, ct3 = st.columns(3)
         with ct1:
             st.markdown("**Metas - Nível 1**")
-            t1_max_str = st.text_input("Até (Volume R$)", value=formatar_brl_puro(cfg["T1_Max"]), key="t1_max_input")
+            # Texto livre para evitar conflitos de callback
+            t1_max_str = st.text_input("Até (Volume R$) - Digite apenas os números", value=str(cfg["T1_Max"]), help="Ex: 500000 para R$ 500.000,00")
             t1_pct = st.number_input("Comissão (%)", value=cfg["T1_Pct"], step=0.1)
             t1_parc = st.number_input("Dividido em (Qtd. Parcelas)", value=int(cfg["T1_Parc"]), step=1)
         with ct2:
             st.markdown("**Metas - Nível 2**")
-            t2_max_str = st.text_input("Até (Volume R$) ", value=formatar_brl_puro(cfg["T2_Max"]), key="t2_max_input")
+            t2_max_str = st.text_input("Até (Volume R$) - Digite apenas os números ", value=str(cfg["T2_Max"]), help="Ex: 1500000 para R$ 1.500.000,00")
             t2_pct = st.number_input("Comissão (%) ", value=cfg["T2_Pct"], step=0.1)
             t2_parc = st.number_input("Dividido em (Qtd. Parcelas) ", value=int(cfg["T2_Parc"]), step=1)
         with ct3:
