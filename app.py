@@ -324,9 +324,6 @@ if not is_logado:
 
 if menu_selecionado == "Dashboard":
     
-    # -------------------------------------------------------------
-    # PERFIL DO CLIENTE
-    # -------------------------------------------------------------
     if st.session_state['cliente_visualizado'] is not None:
         cliente_nome = st.session_state['cliente_visualizado']
         
@@ -556,11 +553,9 @@ if menu_selecionado == "Dashboard":
                                     
                             # === LÓGICA DE STATUS APLICADA AQUI ===
                             if status_cota == 'Cancelada':
-                                # Se cancelada, corta qualquer parcela que seja pro futuro. Mantém só o que já devia ter sido pago.
                                 parcelas_cota = [p for p in parcelas_cota if p['data_pagamento'] <= hoje]
                                 
                             elif status_cota == 'Contemplada':
-                                # Se contemplada, acumula todo o futuro num bolão só.
                                 past_parcels = [p for p in parcelas_cota if p['data_pagamento'] <= hoje]
                                 future_parcels = [p for p in parcelas_cota if p['data_pagamento'] > hoje]
                                 
@@ -924,7 +919,23 @@ elif menu_selecionado == "Regras de Comissão":
     with t_regras:
         st.subheader("Regras Cadastradas")
         if not df_admin.empty:
-            df_mostrar = df_admin.drop(columns=['Admin_Norm', 'Prod_Norm'], errors='ignore')
+            
+            # --- ADICIONANDO A SOMA VISUAL DA COMISSÃO ---
+            df_mostrar = df_admin.drop(columns=['Admin_Norm', 'Prod_Norm'], errors='ignore').copy()
+            
+            def calc_total(row):
+                t = 0.0
+                for i in range(1, 26):
+                    v_str = str(row.get(f"P{i}", "0")).replace('%', '').strip()
+                    try: t += float(v_str)
+                    except: pass
+                # Retorna em formato brasileiro
+                return f"{t:.2f}%".replace('.', ',')
+            
+            # Insere a coluna logo depois de "Produto" (posição 2)
+            df_mostrar.insert(2, 'Total Comissão', df_mostrar.apply(calc_total, axis=1))
+            # ----------------------------------------------
+            
             st.dataframe(df_mostrar.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}]), use_container_width=True, hide_index=True)
         else: st.info("Nenhuma regra de comissionamento de administradora.")
         
