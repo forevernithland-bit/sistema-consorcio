@@ -259,6 +259,10 @@ try:
         df_vendas_global.rename(columns={"NOME": "Nome do cliente"}, inplace=True)
         df_vendas_global['Data_Real'] = pd.to_datetime(df_vendas_global['DATA'], format="%d/%m/%Y", errors='coerce')
         df_vendas_global['Valor_Numerico'] = df_vendas_global['VALOR'].apply(parse_float_safe)
+        
+        # --- LIMPEZA DE GRUPO E COTA (TIRA O .0) ---
+        df_vendas_global['GRUPO'] = df_vendas_global['GRUPO'].apply(lambda x: str(x)[:-2] if str(x).endswith('.0') else str(x))
+        df_vendas_global['COTA'] = df_vendas_global['COTA'].apply(lambda x: str(x)[:-2] if str(x).endswith('.0') else str(x))
     else:
         df_vendas_global = pd.DataFrame()
 
@@ -1151,37 +1155,37 @@ elif menu_selecionado == "Regras de Comissão":
         cc1, cc2, cc3 = st.columns(3)
         with cc1:
             st.markdown("**Vendas do Breno Lima**")
-            b_b = st.number_input("Para Breno (%)", value=cfg["Breno_Breno"], step=1.0)
-            b_u = st.number_input("Para Uriel (%)", value=cfg["Breno_Uriel"], step=1.0)
+            b_b = st.number_input("Para Breno (%)", value=float(cfg["Breno_Breno"]), step=1.0)
+            b_u = st.number_input("Para Uriel (%)", value=float(cfg["Breno_Uriel"]), step=1.0)
         with cc2:
             st.markdown("**Vendas do Uriel Gomes**")
-            u_u = st.number_input("Para Uriel (%) ", value=cfg["Uriel_Uriel"], step=1.0)
-            u_b = st.number_input("Para Breno (%) ", value=cfg["Uriel_Breno"], step=1.0)
+            u_u = st.number_input("Para Uriel (%) ", value=float(cfg["Uriel_Uriel"]), step=1.0)
+            u_b = st.number_input("Para Breno (%) ", value=float(cfg["Uriel_Breno"]), step=1.0)
         with cc3:
             st.markdown("**Vendas da Consorbens (PJ)**")
-            c_b = st.number_input("Para Breno (%)  ", value=cfg["Cons_Breno"], step=1.0)
-            c_u = st.number_input("Para Uriel (%)  ", value=cfg["Cons_Uriel"], step=1.0)
+            c_b = st.number_input("Para Breno (%)  ", value=float(cfg["Cons_Breno"]), step=1.0)
+            c_u = st.number_input("Para Uriel (%)  ", value=float(cfg["Cons_Uriel"]), step=1.0)
             
         st.divider()
         st.markdown("#### Regra Vendedor Terceiro")
         ct1, ct2, ct3 = st.columns(3)
         with ct1:
             t1_max_str = st.text_input("Nível 1: Até (Volume R$)", value=str(int(cfg["T1_Max"])))
-            t1_pct = st.number_input("Comissão (%)", value=cfg["T1_Pct"], step=0.1)
+            t1_pct = st.number_input("Comissão (%)", value=float(cfg["T1_Pct"]), step=0.1)
             t1_parc = st.number_input("Qtd. Parcelas", value=int(cfg["T1_Parc"]), step=1)
         with ct2:
             t2_max_str = st.text_input("Nível 2: Até (Volume R$) ", value=str(int(cfg["T2_Max"])))
-            t2_pct = st.number_input("Comissão (%) ", value=cfg["T2_Pct"], step=0.1)
+            t2_pct = st.number_input("Comissão (%) ", value=float(cfg["T2_Pct"]), step=0.1)
             t2_parc = st.number_input("Qtd. Parcelas ", value=int(cfg["T2_Parc"]), step=1)
         with ct3:
             st.markdown("**Teto (Nível 3)**")
-            t3_pct = st.number_input("Comissão (%)  ", value=cfg["T3_Pct"], step=0.1)
+            t3_pct = st.number_input("Comissão (%)  ", value=float(cfg["T3_Pct"]), step=0.1)
             t3_parc = st.number_input("Qtd. Parcelas  ", value=int(cfg["T3_Parc"]), step=1)
 
         st.divider()
         st.markdown("#### Imposto sobre Nota Fiscal")
         st.caption("Este imposto é abatido apenas da parte que cabe à Corretora (Sócios), antes da divisão dos lucros.")
-        imposto_in = st.number_input("Imposto (%)", value=cfg.get("Imposto", 7.16), step=0.01)
+        imposto_in = st.number_input("Imposto (%)", value=float(cfg.get("Imposto", 7.16)), step=0.01)
 
         st.write("")
         if st.button("Salvar Regras de Pagamento", type="primary", use_container_width=True):
