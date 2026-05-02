@@ -90,7 +90,6 @@ def obter_index_produto(p_str):
     mapping = {"AUTO": 0, "IMOVEL": 1, "MOTO": 2, "CAMINHAO": 3, "SERVICOS": 4}
     return mapping.get(norm, 0)
 
-# OTIMIZAÇÃO AQUI: Agora ele respeita 1.5% e 500.000,00
 def parse_float_safe(v):
     if isinstance(v, (int, float)): return float(v)
     try:
@@ -120,6 +119,11 @@ def carregar_df_admin_seguro(aba):
             return df
     except Exception as e: pass
     return pd.DataFrame(columns=["Administradora", "Produto"] + [f"P{i}" for i in range(1, 26)])
+
+# Callbacks
+def mascara_tel_nv(): st.session_state['tel_nv'] = formatar_telefone(st.session_state.get('tel_nv', ''))
+def mascara_aniv_nv(): st.session_state['aniv_nv'] = formatar_data(st.session_state.get('aniv_nv', ''))
+def mascara_renda_nv(): st.session_state['renda_nv'] = formatar_moeda(st.session_state.get('renda_nv', ''))
 
 # === MOTORES DE CÁLCULO DE COMISSÃO ===
 def calcular_comissao_vendedor(df_vendas_global, vendedor_nome, data_venda_dt, cfg):
@@ -175,7 +179,6 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, aba_status):
             p_val = parse_float_safe(regra.get(f"P{i}", 0)) / 100.0
             if p_val <= 0: continue
             
-            # MATEMÁTICA CORRIGIDA (Baseada na regra por parcela)
             comissao_bruta = val_venda * p_val
             imposto_val = comissao_bruta * (cfg.get('Imposto', 7.16) / 100.0)
             corretora_liq = comissao_bruta - imposto_val
@@ -218,7 +221,6 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, aba_status):
                 })
             temp_parcels = past
             
-        # Montagem do Dicionário Final (Com as colunas na ordem pedida)
         for p in temp_parcels:
             chave_unica = f"{cliente}_{grupo}_{cota}_{admin}_{p['parcela']}"
             status_pagamento = status_dict.get(chave_unica, "Pendente")
@@ -764,7 +766,8 @@ if menu_selecionado == "Dashboard":
                     cd1, cd2 = st.columns(2)
                     with cd1: p_ini = st.date_input("Início", format="DD/MM/YYYY")
                     with cd2: p_fim = st.date_input("Fim", format="DD/MM/YYYY")
-            with c_filtro2: busca = st.text_input("🔍 Buscar Cliente por Nome:")
+            with c_filtro2: 
+                busca = st.text_input("🔍 Buscar (Nome, Grupo ou Cota):")
 
             hoje = datetime.today()
             
@@ -786,7 +789,12 @@ if menu_selecionado == "Dashboard":
                     df_view = df_view[mask & (df_view['Data_Real'].dt.date >= p_ini) & (df_view['Data_Real'].dt.date <= p_fim)]
 
             if busca.strip() != "":
-                df_view = df_view[df_view['Nome do cliente'].str.contains(busca.strip(), case=False, na=False)]
+                termo = busca.strip().lower()
+                df_view = df_view[
+                    df_view['Nome do cliente'].astype(str).str.lower().str.contains(termo, na=False) |
+                    df_view['GRUPO'].astype(str).str.lower().str.contains(termo, na=False) |
+                    df_view['COTA'].astype(str).str.lower().str.contains(termo, na=False)
+                ]
 
             if not df_view.empty:
                 st.write("Clique em uma linha para ver os detalhes do cliente:")
