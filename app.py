@@ -101,11 +101,23 @@ def parse_float_safe(v):
     except:
         return 0.0
 
-# Callbacks
+def carregar_df_admin_seguro(aba):
+    """Lê as regras garantindo que linhas cortadas pelo Google Sheets fiquem com 27 colunas exatas"""
+    dados = aba.get_all_values()
+    cabecalho = ["Administradora", "Produto"] + [f"P{i}" for i in range(1, 26)]
+    if len(dados) > 1:
+        # Preenche com colunas vazias se o Sheets enviar linha mais curta
+        linhas_completas = [r + [""] * (27 - len(r)) for r in dados[1:]]
+        df = pd.DataFrame([r[:27] for r in linhas_completas], columns=cabecalho)
+        df['Admin_Norm'] = df['Administradora'].apply(normalizar_string)
+        df['Prod_Norm'] = df['Produto'].apply(normalizar_produto)
+        return df
+    return pd.DataFrame(columns=cabecalho)
+
+# Callbacks dinâmicos
 def mascara_tel_nv(): st.session_state['tel_nv'] = formatar_telefone(st.session_state.get('tel_nv', ''))
 def mascara_aniv_nv(): st.session_state['aniv_nv'] = formatar_data(st.session_state.get('aniv_nv', ''))
 def mascara_renda_nv(): st.session_state['renda_nv'] = formatar_moeda(st.session_state.get('renda_nv', ''))
-
 def mascara_t1_max(): st.session_state['t1_max_in'] = formatar_moeda(st.session_state.get('t1_max_in', ''))
 def mascara_t2_max(): st.session_state['t2_max_in'] = formatar_moeda(st.session_state.get('t2_max_in', ''))
 
@@ -240,11 +252,6 @@ except:
 
 try: 
     aba_admin = planilha.worksheet("Administradoras")
-    d_admin_temp = aba_admin.get_all_values()
-    if not d_admin_temp or len(d_admin_temp[0]) < 27:
-        aba_admin.clear()
-        cabecalho_admin = ["Administradora", "Produto"] + [f"P{i}" for i in range(1, 26)]
-        aba_admin.append_row(cabecalho_admin)
 except: 
     aba_admin = planilha.add_worksheet("Administradoras", 100, 27)
     cabecalho_admin = ["Administradora", "Produto"] + [f"P{i}" for i in range(1, 26)]
@@ -312,6 +319,7 @@ if not is_logado:
     st.stop() 
 
 if menu_selecionado == "Dashboard":
+    
     # -------------------------------------------------------------
     # PERFIL DO CLIENTE
     # -------------------------------------------------------------
@@ -428,19 +436,11 @@ if menu_selecionado == "Dashboard":
                 estilo_ficha = ficha_display.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}])
                 st.dataframe(estilo_ficha, use_container_width=True, hide_index=True)
                 
-                # --- PREVISÃO DE COMISSIONAMENTO (MÁGICA RETROATIVA) ---
+                # --- PREVISÃO DE COMISSIONAMENTO ---
                 st.write("")
                 st.subheader("📈 Previsão de Comissionamento")
                 
-                dados_admin = aba_admin.get_all_values()
-                if len(dados_admin) > 1:
-                    df_admin = pd.DataFrame(dados_admin[1:])
-                    df_admin = df_admin.iloc[:, :27]
-                    df_admin.columns = ["Administradora", "Produto"] + [f"P{i}" for i in range(1, 26)]
-                    df_admin['Admin_Norm'] = df_admin['Administradora'].apply(normalizar_string)
-                    df_admin['Prod_Norm'] = df_admin['Produto'].apply(normalizar_produto)
-                else: 
-                    df_admin = pd.DataFrame()
+                df_admin = carregar_df_admin_seguro(aba_admin)
                     
                 previsoes = []
                 for idx, r in cotas_cliente.iterrows():
@@ -470,7 +470,6 @@ if menu_selecionado == "Dashboard":
                                 breno_recebe = 0.0
                                 uriel_recebe = 0.0
                                 
-                                # Aplicando as regras societárias do Banco de Dados
                                 if vendedor_nome == "BRENO LIMA":
                                     breno_recebe = admin_recebe * (cfg['Breno_Breno']/100)
                                     uriel_recebe = admin_recebe * (cfg['Breno_Uriel']/100)
@@ -507,7 +506,7 @@ if menu_selecionado == "Dashboard":
 
                                     previsoes.append(row_dict)
                     else:
-                        st.warning(f"⚠️ Regra não cadastrada para: '{r['ADMINISTRADORA']}' - '{r['PRODUTO']}'. Verifique o menu 'Regras de Comissão'.")
+                        st.warning(f"⚠️ Regra não cadastrada para: Administradora '{admin_venda}' e Produto '{prod_venda}' (Cota {r['GRUPO']}/{r['COTA']}).")
                         
                 if previsoes:
                     df_prev = pd.DataFrame(previsoes)
@@ -612,7 +611,7 @@ if menu_selecionado == "Dashboard":
                 mask = df_g['Data_Real'].notna()
                 if ft_graf == "Mês Atual": df_g = df_g[mask & (df_g['Data_Real'].dt.month == hoje.month) & (df_g['Data_Real'].dt.year == hoje.year)]
                 elif ft_graf == "Mês Anterior":
-                    ma, aa = (hoje.month - 1, hoje.year) if hoje.month > 1 else (12, hoje.year - 1)
+                    ma, aa = (hoje.month - 1, hoje.year) if hoje.month > 1 else (12, margin_year - 1)
                     df_g = df_g[mask & (df_g['Data_Real'].dt.month == ma) & (df_g['Data_Real'].dt.year == aa)]
                 elif ft_graf == "Anual": df_g = df_g[mask & (df_g['Data_Real'].dt.year == hoje.year)]
                 elif ft_graf == "Período Personalizado": df_g = df_g[mask & (df_g['Data_Real'].dt.date >= gi) & (df_g['Data_Real'].dt.date <= gf)]
@@ -696,7 +695,6 @@ elif menu_selecionado == "Nova Venda":
             vendedor = st.session_state['nome_vendedor']
     with col_v2:
         admin = st.selectbox("Administradora *", ["YAMAHA", "ITAÚ", "ROMA", "EMBRACON"])
-        # Unificamos o dropdown para "Auto" para não gerar mais conflitos!
         produto = st.selectbox("Produto *", ["Auto", "Imóvel", "Moto", "Caminhão", "Serviços"])
         
     st.markdown("##### Cotas Adquiridas")
@@ -809,19 +807,13 @@ elif menu_selecionado == "Relatórios":
 elif menu_selecionado == "Regras de Comissão":
     st.markdown("### 🏢 Regras de Comissão")
     
-    dados_admin = aba_admin.get_all_values()
-    if len(dados_admin) > 1:
-        df_admin = pd.DataFrame(dados_admin[1:])
-        df_admin = df_admin.iloc[:, :27]
-        df_admin.columns = ["Administradora", "Produto"] + [f"P{i}" for i in range(1, 26)]
-    else: 
-        df_admin = pd.DataFrame(columns=["Administradora", "Produto"] + [f"P{i}" for i in range(1, 26)])
+    df_admin = carregar_df_admin_seguro(aba_admin)
 
-    t1, t2, t3, t4 = st.tabs(["📋 Adm Cadastradas", "➕ Nova Regra Adm", "✏️ Editar/Excluir Adm", "👥 Comissões Internas (Sócios/Equipe)"])
+    t1, t2, t3, t4 = st.tabs(["📋 Adm Cadastradas", "➕ Nova Regra Adm", "✏️ Editar/Excluir Adm", "👥 Comissões Internas"])
     
     with t1:
         if not df_admin.empty:
-            df_mostrar = df_admin.copy()
+            df_mostrar = df_admin.drop(columns=['Admin_Norm', 'Prod_Norm'], errors='ignore')
             st.dataframe(df_mostrar.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}]), use_container_width=True, hide_index=True)
         else: st.info("Nenhuma regra de comissionamento de administradora.")
         
@@ -895,63 +887,61 @@ elif menu_selecionado == "Regras de Comissão":
                         st.error("Regra deletada!")
                         st.rerun()
 
-    # --- ABA DE COMISSÕES INTERNAS (EDITÁVEL COM MÁSCARA FINANCEIRA) ---
+    # --- ABA DE COMISSÕES INTERNAS (LIVRE DE FORMULÁRIOS PARA MÁSCARA FUNCIONAR) ---
     with t4:
         st.subheader("Configurações de Recebimento (Sócios e Vendedores)")
         st.info("Estas regras alimentam o cálculo automático de comissionamento da equipe e o rateio de lucro da corretora.")
         
-        # Carregando com a máscara para exibição bonita
         if 't1_max_in' not in st.session_state: st.session_state['t1_max_in'] = formatar_brl_puro(cfg["T1_Max"])
         if 't2_max_in' not in st.session_state: st.session_state['t2_max_in'] = formatar_brl_puro(cfg["T2_Max"])
         
-        with st.form("form_cfg_interna"):
-            st.markdown("#### Rateio Direto na Fonte (Comissão da Corretora)")
-            cc1, cc2, cc3 = st.columns(3)
-            with cc1:
-                st.markdown("**Vendas do Breno Lima**")
-                b_b = st.number_input("Para Breno (%)", value=cfg["Breno_Breno"], step=1.0)
-                b_u = st.number_input("Para Uriel (%)", value=cfg["Breno_Uriel"], step=1.0)
-            with cc2:
-                st.markdown("**Vendas do Uriel Gomes**")
-                u_u = st.number_input("Para Uriel (%) ", value=cfg["Uriel_Uriel"], step=1.0)
-                u_b = st.number_input("Para Breno (%) ", value=cfg["Uriel_Breno"], step=1.0)
-            with cc3:
-                st.markdown("**Vendas da Consorbens (PJ)**")
-                c_b = st.number_input("Para Breno (%)  ", value=cfg["Cons_Breno"], step=1.0)
-                c_u = st.number_input("Para Uriel (%)  ", value=cfg["Cons_Uriel"], step=1.0)
-                
-            st.divider()
-            st.markdown("#### Regra Vendedor Terceiro (Calculado sobre o Valor da Venda)")
-            st.caption("O sistema soma as vendas do mês. A comissão que sobra após o pagamento do vendedor é dividida 50/50 entre os Sócios.")
+        st.markdown("#### Rateio Direto na Fonte (Comissão da Corretora)")
+        cc1, cc2, cc3 = st.columns(3)
+        with cc1:
+            st.markdown("**Vendas do Breno Lima**")
+            b_b = st.number_input("Para Breno (%)", value=cfg["Breno_Breno"], step=1.0)
+            b_u = st.number_input("Para Uriel (%)", value=cfg["Breno_Uriel"], step=1.0)
+        with cc2:
+            st.markdown("**Vendas do Uriel Gomes**")
+            u_u = st.number_input("Para Uriel (%) ", value=cfg["Uriel_Uriel"], step=1.0)
+            u_b = st.number_input("Para Breno (%) ", value=cfg["Uriel_Breno"], step=1.0)
+        with cc3:
+            st.markdown("**Vendas da Consorbens (PJ)**")
+            c_b = st.number_input("Para Breno (%)  ", value=cfg["Cons_Breno"], step=1.0)
+            c_u = st.number_input("Para Uriel (%)  ", value=cfg["Cons_Uriel"], step=1.0)
             
-            ct1, ct2, ct3 = st.columns(3)
-            with ct1:
-                st.markdown("**Metas - Nível 1**")
-                t1_max_str = st.text_input("Até (Volume R$)", key="t1_max_in", on_change=mascara_t1_max)
-                t1_pct = st.number_input("Comissão (%)", value=cfg["T1_Pct"], step=0.1)
-                t1_parc = st.number_input("Dividido em (Qtd. Parcelas)", value=int(cfg["T1_Parc"]), step=1)
-            with ct2:
-                st.markdown("**Metas - Nível 2**")
-                t2_max_str = st.text_input("Até (Volume R$)", key="t2_max_in", on_change=mascara_t2_max)
-                t2_pct = st.number_input("Comissão (%) ", value=cfg["T2_Pct"], step=0.1)
-                t2_parc = st.number_input("Dividido em (Qtd. Parcelas) ", value=int(cfg["T2_Parc"]), step=1)
-            with ct3:
-                st.markdown("**Metas - Teto (Nível 3)**")
-                st.markdown("*Para qualquer volume acima do Nível 2*")
-                t3_pct = st.number_input("Comissão (%)  ", value=cfg["T3_Pct"], step=0.1)
-                t3_parc = st.number_input("Dividido em (Qtd. Parcelas)  ", value=int(cfg["T3_Parc"]), step=1)
+        st.divider()
+        st.markdown("#### Regra Vendedor Terceiro (Calculado sobre o Valor da Venda)")
+        st.caption("O sistema soma as vendas do mês. A comissão que sobra após o pagamento do vendedor é dividida 50/50 entre os Sócios.")
+        
+        ct1, ct2, ct3 = st.columns(3)
+        with ct1:
+            st.markdown("**Metas - Nível 1**")
+            t1_max_str = st.text_input("Até (Volume R$)", key="t1_max_in", on_change=mascara_t1_max)
+            t1_pct = st.number_input("Comissão (%)", value=cfg["T1_Pct"], step=0.1)
+            t1_parc = st.number_input("Dividido em (Qtd. Parcelas)", value=int(cfg["T1_Parc"]), step=1)
+        with ct2:
+            st.markdown("**Metas - Nível 2**")
+            t2_max_str = st.text_input("Até (Volume R$)", key="t2_max_in", on_change=mascara_t2_max)
+            t2_pct = st.number_input("Comissão (%) ", value=cfg["T2_Pct"], step=0.1)
+            t2_parc = st.number_input("Dividido em (Qtd. Parcelas) ", value=int(cfg["T2_Parc"]), step=1)
+        with ct3:
+            st.markdown("**Metas - Teto (Nível 3)**")
+            st.markdown("*Para qualquer volume acima do Nível 2*")
+            t3_pct = st.number_input("Comissão (%)  ", value=cfg["T3_Pct"], step=0.1)
+            t3_parc = st.number_input("Dividido em (Qtd. Parcelas)  ", value=int(cfg["T3_Parc"]), step=1)
 
-            if st.form_submit_button("Salvar Regras de Pagamento", type="primary", use_container_width=True):
-                # Conversão segura do formato "R$ 500.000,00" para float do Python
-                t1_val = parse_float_safe(t1_max_str)
-                t2_val = parse_float_safe(t2_max_str)
-                
-                new_vals = [b_b, b_u, u_u, u_b, c_b, c_u, t1_val, t1_pct, t1_parc, t2_val, t2_pct, t2_parc, t3_pct, t3_parc]
-                aba_cfg.clear()
-                aba_cfg.append_row(cols_cfg)
-                aba_cfg.append_row(new_vals)
-                st.success("Regras atualizadas com sucesso! O sistema fará os cálculos baseados nesses novos números.")
-                st.rerun()
+        st.write("")
+        if st.button("Salvar Regras de Pagamento", type="primary", use_container_width=True):
+            t1_val = parse_float_safe(t1_max_str)
+            t2_val = parse_float_safe(t2_max_str)
+            
+            new_vals = [b_b, b_u, u_u, u_b, c_b, c_u, t1_val, t1_pct, t1_parc, t2_val, t2_pct, t2_parc, t3_pct, t3_parc]
+            aba_cfg.clear()
+            aba_cfg.append_row(cols_cfg)
+            aba_cfg.append_row(new_vals)
+            st.success("Regras atualizadas com sucesso! O sistema fará os cálculos baseados nesses novos números.")
+            st.rerun()
 
 elif menu_selecionado == "Baixar Parcela":
     st.markdown("### 💰 Baixa de Comissão")
