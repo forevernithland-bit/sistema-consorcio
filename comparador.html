@@ -251,30 +251,24 @@ def iniciar_conexao() -> Client:
 try:
     supabase = iniciar_conexao()
 
-    # Função unificada para carregar qualquer tabela como Pandas DataFrame
     def carregar_tabela(nome_tabela):
         res = supabase.table(nome_tabela).select("*").execute()
         return pd.DataFrame(res.data)
 
-    # 4.1 Carregando Vendas
     df_vendas_bd = carregar_tabela("vendas")
     if not df_vendas_bd.empty:
         df_vendas_global = df_vendas_bd.copy()
-        # Ajusta nomes para manter compatibilidade com o resto do código
         df_vendas_global.rename(columns={"NOME": "Nome do cliente"}, inplace=True)
         df_vendas_global['Data_Real'] = pd.to_datetime(df_vendas_global['DATA'], format="%d/%m/%Y", errors='coerce')
         df_vendas_global['Valor_Numerico'] = df_vendas_global['VALOR'].apply(parse_float_safe)
         
-        # --- LIMPEZA DE GRUPO E COTA (TIRA O .0) ---
         df_vendas_global['GRUPO'] = df_vendas_global['GRUPO'].apply(lambda x: str(x)[:-2] if str(x).endswith('.0') else str(x))
         df_vendas_global['COTA'] = df_vendas_global['COTA'].apply(lambda x: str(x)[:-2] if str(x).endswith('.0') else str(x))
     else:
         df_vendas_global = pd.DataFrame()
 
-    # 4.2 Carregando Clientes
     df_cli = carregar_tabela("clientes")
     
-    # 4.3 Carregando Administradoras (Cadastro e Regras)
     df_admin_cad = carregar_tabela("cad_administradoras")
     lista_admin_bd = df_admin_cad['Administradora'].tolist() if not df_admin_cad.empty else ["Nenhuma administradora cadastrada"]
 
@@ -283,11 +277,9 @@ try:
         df_admin['Admin_Norm'] = df_admin['Administradora'].apply(normalizar_string)
         df_admin['Prod_Norm'] = df_admin['Produto'].apply(normalizar_produto)
 
-    # 4.4 Carregando Status e Regras Internas
     df_status = carregar_tabela("status_comissoes")
     status_dict = dict(zip(df_status['Chave_Unica'], df_status['Status'])) if not df_status.empty else {}
 
-    # Config Interna (Garante que tenha os valores padrão se estiver vazio)
     cfg_padrao = {
         "Breno_Breno": 70.0, "Breno_Uriel": 30.0, "Uriel_Uriel": 70.0, "Uriel_Breno": 30.0,
         "Cons_Breno": 50.0, "Cons_Uriel": 50.0, "T1_Max": 500000.0, "T1_Pct": 1.0, "T1_Parc": 4,
@@ -300,7 +292,6 @@ try:
         cfg = df_cfg.iloc[0].to_dict()
         cfg_id = cfg.get('id')
     else:
-        # Cria a primeira linha de configuração no banco
         res = supabase.table("config_interna").insert(cfg_padrao).execute()
         cfg = cfg_padrao
         cfg_id = res.data[0]['id'] if res.data else None
@@ -311,14 +302,11 @@ except Exception as e:
 
 
 def salvar_status_comissoes(df_editado, df_original):
-    """Atualiza apenas as linhas que foram alteradas usando o Upsert do Supabase"""
     mudancas = df_editado[df_editado['Status'] != df_original['Status']]
     if not mudancas.empty:
         for _, row in mudancas.iterrows():
             chave = row['Chave']
             novo_status = row['Status']
-            
-            # Verifica se já existe para fazer update, senão insert
             existe = supabase.table("status_comissoes").select("id").eq("Chave_Unica", chave).execute()
             if existe.data:
                 supabase.table("status_comissoes").update({"Status": novo_status}).eq("id", existe.data[0]['id']).execute()
@@ -425,7 +413,7 @@ if st.session_state['tela_cheia_relatorio']:
     else:
         st.info("O sistema ainda não possui vendas para calcular a comissão.")
         
-    st.stop() # Bloqueia renderização do resto do app
+    st.stop() 
 
 # === CSS CUSTOMIZADO ===
 css = """
@@ -462,7 +450,7 @@ simuladores_dict = {
 logo_path = os.path.join(PASTA_ATUAL, "logo.png")
 if os.path.exists(logo_path):
     st.sidebar.image(logo_path, use_container_width=True)
-st.sidebar.markdown("<br>", unsafe_allow_html=True) # Espacinho maroto abaixo da logo
+st.sidebar.markdown("<br>", unsafe_allow_html=True) 
 
 if not is_logado:
     opcoes_menu = ["🔐 Login (Área Restrita)"] + list(simuladores_dict.keys())
@@ -476,7 +464,6 @@ else:
     st.sidebar.divider() 
     opcoes_principais = ["Dashboard", "Nova Venda", "Relatórios", "Regras de Comissão", "Baixar Parcela"] if st.session_state['perfil_logado'] == "Master" else ["Dashboard", "Nova Venda", "Relatórios"]
     
-    # CORREÇÃO DO LOOP DO MENU: Se for um simulador, o rádio fica sem seleção
     try:
         idx_principal = opcoes_principais.index(st.session_state['menu_lateral'])
     except ValueError:
@@ -685,7 +672,6 @@ if menu_selecionado == "Dashboard":
                         with c_ed1:
                             status_list = ["Em Andamento", "Em Atraso", "Cancelada", "Contemplada"]
                             idx_status = status_list.index(status_atual) if status_atual in status_list else 0
-                            # A CHAVE DE SEGURANÇA QUE EVITA O BUG VISUAL AQUI (key=)
                             novo_status = st.selectbox("Status da Cota", status_list, index=idx_status, key=f"edit_status_{id_cota}")
                         with c_ed2:
                             vendedores_list = ["BRENO LIMA", "URIEL GOMES", "Consorbens", "Vendedor Terceiro"]
