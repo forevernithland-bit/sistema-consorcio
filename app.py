@@ -246,7 +246,6 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict):
             
     return pd.DataFrame(parcelas_finais), vendas_sem_data
 
-
 # ==========================================
 # 4. CONEXÃO E CARREGAMENTO - SUPABASE
 # ==========================================
@@ -358,7 +357,7 @@ if st.session_state['tela_cheia_relatorio']:
             if hoje.day <= 15: 
                 q_ini, q_fim = hoje.replace(day=1), hoje.replace(day=15)
             else: 
-                q_ini, q_fim = hoje.replace(day=16), replace(day=calendar.monthrange(hoje.year, hoje.month)[1])
+                q_ini, q_fim = hoje.replace(day=16), hoje.replace(day=calendar.monthrange(hoje.year, hoje.month)[1])
             df_view = df_view[mask & (df_view['data_pagamento_dt'].dt.date >= q_ini.date()) & (df_view['data_pagamento_dt'].dt.date <= q_fim.date())]
         elif ft_rel == "Mês Anterior":
             ma, aa = (hoje.month - 1, hoje.year) if hoje.month > 1 else (12, hoje.year - 1)
@@ -579,9 +578,9 @@ if menu_selecionado == "Dashboard":
 
         if key_nome not in st.session_state: st.session_state[key_nome] = safe_str(info_cliente.get("Nome"), cliente_nome)
         if key_tel not in st.session_state: st.session_state[key_tel] = safe_str(info_cliente.get("Telefone"))
-        if key_email not in st.session_state: st.session_state[key_email] = safe_str(info_cliente.get("E-mail", info_cliente.get("Email")))
+        if key_email not in st.session_state: st.session_state[key_email] = safe_str(info_cliente.get("Email"))
         if key_end not in st.session_state: st.session_state[key_end] = safe_str(info_cliente.get("Endereco"))
-        if key_aniv not in st.session_state: st.session_state[key_aniv] = safe_str(info_cliente.get("Aniversário", info_cliente.get("Aniversario")))
+        if key_aniv not in st.session_state: st.session_state[key_aniv] = safe_str(info_cliente.get("Aniversario"))
         if key_prof not in st.session_state: st.session_state[key_prof] = safe_str(info_cliente.get("Profissao"))
         if key_renda not in st.session_state: st.session_state[key_renda] = safe_str(info_cliente.get("Renda"))
             
@@ -628,9 +627,9 @@ if menu_selecionado == "Dashboard":
                     dados_cli = {
                         "Nome": novo_nome_val,
                         "Telefone": st.session_state[key_tel],
-                        "E-mail": st.session_state[key_email],
+                        "Email": st.session_state[key_email],
                         "Endereco": st.session_state[key_end],
-                        "Aniversário": st.session_state[key_aniv],
+                        "Aniversario": st.session_state[key_aniv],
                         "Profissao": st.session_state[key_prof],
                         "Renda": st.session_state[key_renda]
                     }
@@ -639,7 +638,7 @@ if menu_selecionado == "Dashboard":
                         if id_cliente_db:
                             supabase.table("clientes").update(dados_cli).eq("id", int(id_cliente_db)).execute()
                         else:
-                            dados_cli["Cadastro de dados"] = datetime.today().strftime("%d/%m/%Y")
+                            dados_cli["Data_Cadastro"] = datetime.today().strftime("%d/%m/%Y")
                             supabase.table("clientes").insert([dados_cli]).execute()
                         
                         if novo_nome_val != cliente_nome:
@@ -1041,9 +1040,9 @@ elif menu_selecionado == "Nova Venda":
                     nomes_cadastrados = df_cli['Nome'].tolist() if not df_cli.empty else []
                     if cliente not in nomes_cadastrados:
                         supabase.table("clientes").insert([{
-                            "Nome": cliente, "Telefone": telefone, "E-mail": email, "Endereco": end_completo,
-                            "Aniversário": aniversario, "Profissao": profissao, "Renda": renda,
-                            "Cadastro de dados": str(datetime.today().strftime("%d/%m/%Y"))
+                            "Nome": cliente, "Telefone": telefone, "Email": email, "Endereco": end_completo,
+                            "Aniversario": aniversario, "Profissao": profissao, "Renda": renda,
+                            "Data_Cadastro": str(datetime.today().strftime("%d/%m/%Y"))
                         }]).execute()
                 except Exception as e:
                     st.error(f"Erro ao cadastrar cliente: {e}")
