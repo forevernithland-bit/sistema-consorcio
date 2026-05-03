@@ -1,5 +1,7 @@
 streamlit
-pandas
-gspread
-oauth2client
 supabase
+pandas
+altair
+requests
+google-api-python-client
+google-auth
