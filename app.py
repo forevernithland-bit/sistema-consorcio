@@ -443,6 +443,14 @@ css = """
     button[kind="primary"]:hover { background-color: #1b7a43 !important; border-color: #1b7a43 !important; color: #ffffff !important; transform: scale(1.02); transition: all 0.2s; }
     [data-testid="stMetricValue"] { font-size: 1.8rem !important; }
     h3 { margin-bottom: 0.5rem !important; margin-top: 0.5rem !important; }
+    
+    /* Calendário Customizado */
+    .cal-table { width: 100%; border-collapse: collapse; text-align: center; font-family: sans-serif; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    .cal-table th { background-color: #f8fafc; padding: 12px; font-weight: bold; color: #475569; border-bottom: 2px solid #e2e8f0; }
+    .cal-table td { padding: 15px; border: 1px solid #e2e8f0; font-size: 18px; color: #334155; }
+    .cal-day { border-radius: 50%; display: inline-block; width: 35px; height: 35px; line-height: 35px; }
+    .cal-event { background-color: #e74c3c; color: white; font-weight: bold; box-shadow: 0 2px 4px rgba(231, 76, 60, 0.4); }
+    .cal-empty { background-color: #f8fafc; }
 </style>
 """
 
@@ -454,7 +462,6 @@ simuladores_dict = {
     "⚖️ Financiamento x Consórcio": "comparador.html"
 }
 
-# --- INSERINDO A LOGO NO MENU LATERAL ---
 logo_path = os.path.join(PASTA_ATUAL, "logo.png")
 if os.path.exists(logo_path):
     st.sidebar.image(logo_path, use_container_width=True)
@@ -471,10 +478,11 @@ if not is_logado:
 else:
     st.sidebar.divider() 
     
+    # ADICIONADO O MENU ASSEMBLEIAS
     if is_master:
-        opcoes_principais = ["Dashboard", "Nova Venda", "Relatórios", "Baixar Parcelas", "Configurações de Sistema"] 
+        opcoes_principais = ["Dashboard", "Nova Venda", "Assembleias", "Relatórios", "Baixar Parcelas", "Configurações de Sistema"] 
     else:
-        opcoes_principais = ["Dashboard", "Nova Venda", "Relatórios"]
+        opcoes_principais = ["Dashboard", "Nova Venda", "Assembleias", "Relatórios"]
     
     try:
         idx_principal = opcoes_principais.index(st.session_state['menu_lateral'])
@@ -511,7 +519,7 @@ else:
 menu_selecionado = st.session_state['menu_lateral']
 
 if menu_selecionado in simuladores_dict: css += """ <style>.stApp { background-color: #0f172a !important; }</style> """
-else: css += """ <style>.stApp { background-color: #ffffff !important; }</style> """
+else: css += """ <style>.stApp { background-color: #f8fafc !important; }</style> """
 st.markdown(css, unsafe_allow_html=True)
 
 
@@ -615,7 +623,7 @@ if menu_selecionado == "Dashboard":
             telefone_edit = st.text_input("Telefone", key=key_tel, on_change=m_tel_ed, disabled=not is_master, placeholder="(31) 99999-9999", max_chars=15)
             profissao_edit = st.text_input("Profissão", key=key_prof, disabled=not is_master)
         with c2:
-            email = st.text_input("E-mail", key=key_email, disabled=not is_master)
+            email = st.text_input("Email", key=key_email, disabled=not is_master)
             aniversario_edit = st.text_input("Data de Aniversário (DD/MM/AAAA)", key=key_aniv, on_change=m_aniv_ed, disabled=not is_master, placeholder="DD/MM/AAAA", max_chars=10)
             renda_edit = st.text_input("Renda Mensal (R$)", key=key_renda, on_change=m_renda_ed, disabled=not is_master, placeholder="R$ 0,00")
         
@@ -935,7 +943,7 @@ elif menu_selecionado == "Nova Venda":
         profissao = st.text_input("Profissão", key="prof_nv")
     with col_c2:
         if 'venda_email' not in st.session_state: st.session_state['venda_email'] = ""
-        email = st.text_input("E-mail", key="venda_email")
+        email = st.text_input("Email", key="venda_email")
         if 'aniv_nv' not in st.session_state: st.session_state['aniv_nv'] = ""
         aniversario = st.text_input("Data de Aniversário (DD/MM/AAAA)", key="aniv_nv", on_change=mascara_aniv_nv, placeholder="DD/MM/AAAA", max_chars=10)
         if 'renda_nv' not in st.session_state: st.session_state['renda_nv'] = ""
@@ -1054,6 +1062,70 @@ elif menu_selecionado == "Nova Venda":
                     if k in st.session_state: del st.session_state[k]
                 st.session_state['qtd_cotas'] = 1 
 
+
+# --- ASSEMBLEIAS ---
+elif menu_selecionado == "Assembleias":
+    st.markdown("### 📅 Calendário de Assembleias")
+    st.info("As datas abaixo são exemplos padrão do mês. Se desejar que essas datas sejam dinâmicas para você cadastrar todo mês, podemos criar um painel no banco de dados para isso no futuro.")
+    
+    col_mes, col_ano, _ = st.columns([1, 1, 3])
+    meses_pt = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
+    hoje = datetime.today()
+    
+    with col_mes:
+        mes_selecionado = st.selectbox("Mês", meses_pt, index=hoje.month - 1)
+    with col_ano:
+        ano_selecionado = st.selectbox("Ano", range(hoje.year - 2, hoje.year + 3), index=2)
+        
+    num_mes = meses_pt.index(mes_selecionado) + 1
+    
+    # Mock de eventos do mês (Pode ser substituido por consulta ao banco depois)
+    eventos_mock = {
+        10: ["Assembleia de Automóvel Itaú"],
+        12: ["Assembleia de Consórcio Embracon"],
+        15: ["Assembleia de Automóvel Yamaha", "Assembleia de Moto Yamaha"],
+        20: ["Assembleia de Imóvel Yamaha"],
+        25: ["Assembleia Roma"]
+    }
+    
+    cal_matriz = calendar.monthcalendar(ano_selecionado, num_mes)
+    
+    st.divider()
+    
+    cal_col, list_col = st.columns([1.5, 1])
+    
+    with cal_col:
+        st.markdown(f"#### Calendário: {mes_selecionado} de {ano_selecionado}")
+        html_calendario = "<table class='cal-table'><tr><th>Seg</th><th>Ter</th><th>Qua</th><th>Qui</th><th>Sex</th><th>Sáb</th><th>Dom</th></tr>"
+        
+        for semana in cal_matriz:
+            html_calendario += "<tr>"
+            for dia in semana:
+                if dia == 0:
+                    html_calendario += "<td class='cal-empty'></td>"
+                else:
+                    if dia in eventos_mock:
+                        html_calendario += f"<td><span class='cal-day cal-event'>{dia}</span></td>"
+                    else:
+                        html_calendario += f"<td><span class='cal-day'>{dia}</span></td>"
+            html_calendario += "</tr>"
+        html_calendario += "</table>"
+        
+        st.markdown(html_calendario, unsafe_allow_html=True)
+        
+    with list_col:
+        st.markdown("#### Eventos do Mês")
+        if not eventos_mock:
+            st.write("Nenhuma assembleia programada para este mês.")
+        else:
+            for dia_evento in sorted(eventos_mock.keys()):
+                data_formatada = f"{dia_evento:02d}/{num_mes:02d}/{ano_selecionado}"
+                st.markdown(f"**🔴 {data_formatada}**")
+                for desc in eventos_mock[dia_evento]:
+                    st.markdown(f"- {desc}")
+                st.write("")
+
+# --- RELATÓRIOS ---
 elif menu_selecionado == "Relatórios":
     st.markdown("### 📑 Relatórios Gerenciais")
     if not df_vendas_global.empty:
@@ -1112,7 +1184,7 @@ elif menu_selecionado == "Relatórios":
 
     else: st.info("Não possui vendas.")
 
-
+# --- BAIXAR PARCELAS ---
 elif menu_selecionado == "Baixar Parcelas":
     st.markdown("### Baixar Parcelas de Comissão")
     
@@ -1270,6 +1342,7 @@ elif menu_selecionado == "Baixar Parcelas":
         if historico_lista: st.dataframe(pd.DataFrame(historico_lista), use_container_width=True, hide_index=True)
     else: st.info("Sem pagamentos registrados.")
 
+# --- CONFIGURACOES DE SISTEMA ---
 elif menu_selecionado == "Configurações de Sistema":
     st.markdown("### 🏢 Configurações de Sistema")
     
