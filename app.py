@@ -242,7 +242,7 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict):
 
 
 # ==========================================
-# 4. CONEXÃO E CARREGAMENTO - SUPABASE (NOVO MOTOR)
+# 4. CONEXÃO E CARREGAMENTO - SUPABASE
 # ==========================================
 @st.cache_resource
 def iniciar_conexao() -> Client:
@@ -463,7 +463,12 @@ if not is_logado:
         st.rerun()
 else:
     st.sidebar.divider() 
-    opcoes_principais = ["Dashboard", "Nova Venda", "Relatórios", "Regras de Comissão", "Baixar Parcela"] if is_master else ["Dashboard", "Nova Venda", "Relatórios"]
+    
+    # 🌟 NOVA ORDEM DO MENU AQUI, MEU AMORZINHO 🌟
+    if is_master:
+        opcoes_principais = ["Dashboard", "Nova Venda", "Relatórios", "Baixar Parcelas", "Configurações de Sistema"] 
+    else:
+        opcoes_principais = ["Dashboard", "Nova Venda", "Relatórios"]
     
     try:
         idx_principal = opcoes_principais.index(st.session_state['menu_lateral'])
@@ -496,9 +501,6 @@ else:
     if st.sidebar.button("Sair do Sistema"):
         st.session_state.clear()
         st.rerun()
-        
-    st.sidebar.divider()
-    st.sidebar.caption("Versão do Sistema: 2.0 (Nova Data) ✅")
 
 menu_selecionado = st.session_state['menu_lateral']
 
@@ -771,7 +773,6 @@ if menu_selecionado == "Dashboard":
                     st.session_state['menu_lateral'] = "Nova Venda"
                     st.rerun()
             
-            # --- ATUALIZAÇÃO: FILTROS SEPARADOS DE BUSCA ---
             c_filtro1, c_filtro2, c_filtro3, c_filtro4 = st.columns([1.5, 1.5, 1, 1])
             with c_filtro1:
                 filtro_cli = st.selectbox("⏳ Filtro da Tabela:", ["Últimos 5 Cadastros", "Todos os Clientes", "Mês Atual", "Mês Anterior", "Ano Atual", "Período Personalizado"])
@@ -788,10 +789,8 @@ if menu_selecionado == "Dashboard":
 
             hoje = datetime.today()
             
-            # ORDENAÇÃO: Venda mais recente primeiro
             df_view = df_view.sort_values(by="Data_Real", ascending=False)
             
-            # Remove limite de 5 se estiver usando os campos exatos de busca
             if filtro_cli == "Últimos 5 Cadastros" and busca_nome.strip() == "" and busca_grupo.strip() == "" and busca_cota.strip() == "":
                 df_view = df_view.head(5)
             elif filtro_cli != "Todos os Clientes" and filtro_cli != "Últimos 5 Cadastros":
@@ -821,7 +820,6 @@ if menu_selecionado == "Dashboard":
                 df_tab['Grupo e Cota'] = df_tab.apply(lambda x: f"{x['GRUPO']}/{x['COTA']}", axis=1)
                 df_tab['Valor Formatado'] = df_tab['Valor_Numerico'].apply(formatar_brl_puro)
                 
-                # COLUNAS: Data da venda no final
                 df_tab = df_tab[['Nome do cliente', 'PRODUTO', 'ADMINISTRADORA', 'Grupo e Cota', 'VENDEDOR', 'Valor Formatado', 'DATA']]
                 df_tab.columns = ['Cliente', 'Produto', 'Administradora', 'Grupo/Cota', 'Vendedor', 'Valor', 'Data da Venda']
                 
@@ -1084,8 +1082,189 @@ elif menu_selecionado == "Relatórios":
 
     else: st.info("Não possui vendas.")
 
-elif menu_selecionado == "Regras de Comissão":
-    st.markdown("### 🏢 Regras de Comissão")
+
+# === NOVA MÁGICA: BAIXAR PARCELAS ===
+elif menu_selecionado == "Baixar Parcelas":
+    st.markdown("### 💰 Baixar Parcelas de Comissão")
+    st.info("Meu bem, digite o Grupo e a Cota abaixo. O sistema vai puxar o cliente e mostrar a próxima parcela que falta pagar!")
+    
+    if 'cart_baixas' not in st.session_state:
+        st.session_state['cart_baixas'] = []
+
+    st.subheader("🔍 1. Buscar Cota para Baixa")
+    with st.form("busca_baixa_form"):
+        cb1, cb2 = st.columns(2)
+        with cb1: busca_g = st.text_input("Grupo")
+        with cb2: busca_c = st.text_input("Cota")
+        btn_busca = st.form_submit_button("Buscar Cliente", type="primary")
+
+    if btn_busca:
+        if busca_g and busca_c:
+            alvo = df_vendas_global[(df_vendas_global['GRUPO'] == busca_g.strip()) & (df_vendas_global['COTA'] == busca_c.strip())]
+            if not alvo.empty:
+                st.session_state['venda_baixa_atual'] = alvo.iloc[0].to_dict()
+            else:
+                st.error("❌ Meu anjo, não encontrei nenhuma venda com este Grupo e Cota. Tem certeza que digitou certinho?")
+                st.session_state['venda_baixa_atual'] = None
+        else:
+            st.warning("Preencha o Grupo e a Cota, por favorzinho.")
+            st.session_state['venda_baixa_atual'] = None
+
+    v_atual = st.session_state.get('venda_baixa_atual')
+    if v_atual:
+        st.divider()
+        st.subheader("💵 2. Configurar Parcela e Conferir Valores")
+        
+        # Gerar previsao somente para esta cota
+        df_alvo = pd.DataFrame([v_atual])
+        df_parc_alvo, _ = gerar_tabela_parcelas(df_alvo, df_vendas_global, df_admin, cfg, status_dict)
+        
+        if not df_parc_alvo.empty:
+            st.markdown(f"👤 **Nome do Cliente:** {v_atual.get('Nome do cliente', '')} | **Grupo:** {v_atual.get('GRUPO', '')} | **Cota:** {v_atual.get('COTA', '')}")
+            st.markdown(f"💰 **Crédito Contratado:** {formatar_brl_puro(v_atual.get('Valor_Numerico', 0))}")
+            st.write("")
+            
+            # Acha a próxima pendente
+            pendentes = df_parc_alvo[df_parc_alvo['Status'] != 'PAGO']
+            parc_sugerida = pendentes.iloc[0]['Parcela'] if not pendentes.empty else df_parc_alvo.iloc[-1]['Parcela']
+            
+            opcoes_parc = df_parc_alvo['Parcela'].tolist()
+            try: idx_sug = opcoes_parc.index(parc_sugerida)
+            except: idx_sug = 0
+            
+            cp1, cp2 = st.columns(2)
+            with cp1:
+                sel_parc = st.selectbox("Próxima Parcela (Pode alterar se quiser):", opcoes_parc, index=idx_sug)
+            
+            linha_parc = df_parc_alvo[df_parc_alvo['Parcela'] == sel_parc].iloc[0]
+            val_original = linha_parc['Comissão (Bruta)']
+            
+            with cp2:
+                novo_valor_bruto = st.number_input("Valor da Comissão que caiu (Bruto R$):", value=float(val_original), step=10.0)
+
+            # --- CÁLCULO PROPORCIONAL MÁGICO ---
+            if val_original > 0:
+                razao = novo_valor_bruto / val_original
+                imp_orig = val_original - linha_parc['Comissão (s/ Imposto)']
+                novo_imp = imp_orig * razao
+                novo_liq = linha_parc['Comissão (s/ Imposto)'] * razao
+                novo_vend = linha_parc['Vendedor Recebe'] * razao
+                novo_breno = linha_parc['Breno'] * razao
+                novo_uriel = linha_parc['Uriel'] * razao
+            else:
+                novo_imp = 0.0
+                novo_liq = 0.0
+                novo_vend = 0.0
+                novo_breno = 0.0
+                novo_uriel = 0.0
+            
+            st.markdown("##### 🧮 Simulação Automática da Divisão:")
+            st.caption(f"*(Desconto do Imposto: {formatar_brl_puro(novo_imp)})*")
+            sd1, sd2, sd3, sd4 = st.columns(4)
+            sd1.metric("Líquido Corretora", formatar_brl_puro(novo_liq))
+            sd2.metric("Vendedor Recebe", formatar_brl_puro(novo_vend))
+            sd3.metric("Breno Recebe", formatar_brl_puro(novo_breno))
+            sd4.metric("Uriel Recebe", formatar_brl_puro(novo_uriel))
+            
+            st.write("")
+            if st.button("➕ Adicionar à Lista de Baixas", use_container_width=True):
+                chave_item = linha_parc['Chave']
+                if any(item['Chave'] == chave_item for item in st.session_state['cart_baixas']):
+                    st.warning("Meu príncipe, esta parcela já está na listinha de baixas aqui embaixo!")
+                else:
+                    st.session_state['cart_baixas'].append({
+                        "Chave": chave_item,
+                        "Cliente": v_atual.get('Nome do cliente'),
+                        "Grupo": v_atual.get('GRUPO'),
+                        "Cota": v_atual.get('COTA'),
+                        "Parcela": sel_parc,
+                        "Valor Base": val_original,
+                        "Valor Pago": novo_valor_bruto,
+                        "Líquido": novo_liq,
+                        "Vendedor": novo_vend,
+                        "Breno": novo_breno,
+                        "Uriel": novo_uriel,
+                        "Data Baixa": datetime.today().strftime("%d/%m/%Y")
+                    })
+                    st.success("Adicionado à lista com sucesso!")
+                    st.rerun()
+        else:
+            st.warning("Não encontrei as parcelas geradas para esta cota. Verifique as configurações da administradora.")
+
+    st.divider()
+    st.subheader("🛒 3. Lista de Parcelas para Dar Baixa")
+    if st.session_state['cart_baixas']:
+        df_cart = pd.DataFrame(st.session_state['cart_baixas'])
+        # Ajusta para exibição bonita
+        df_cart_display = df_cart[['Cliente', 'Grupo', 'Cota', 'Parcela', 'Valor Pago']].copy()
+        df_cart_display['Valor Pago'] = df_cart_display['Valor Pago'].apply(formatar_brl_puro)
+        st.dataframe(df_cart_display, use_container_width=True, hide_index=True)
+        
+        c_btn_a, c_btn_b = st.columns([3, 1])
+        with c_btn_a:
+            if st.button("✅ CONFIRMAR E DAR BAIXA NAS PARCELAS", type="primary", use_container_width=True):
+                for item in st.session_state['cart_baixas']:
+                    c = item['Chave']
+                    dados_update = {"Status": "PAGO"}
+                    # Atualiza o status principal para PAGO
+                    try:
+                        existe = supabase.table("status_comissoes").select("id").eq("Chave_Unica", c).execute()
+                        if existe.data:
+                            supabase.table("status_comissoes").update(dados_update).eq("id", existe.data[0]['id']).execute()
+                            try: supabase.table("status_comissoes").update({"Valor_Pago": item['Valor Pago'], "Data_Pagamento": item['Data Baixa']}).eq("id", existe.data[0]['id']).execute()
+                            except: pass
+                        else:
+                            res_insert = supabase.table("status_comissoes").insert({"Chave_Unica": c, "Status": "PAGO"}).execute()
+                            try: supabase.table("status_comissoes").update({"Valor_Pago": item['Valor Pago'], "Data_Pagamento": item['Data Baixa']}).eq("id", res_insert.data[0]['id']).execute()
+                            except: pass
+                    except Exception as e:
+                        st.error(f"Puxa, deu um errinho ao salvar a baixa: {e}")
+                
+                st.success("🎉 Prontinho, meu bem! Todas as parcelas da lista foram marcadas como PAGAS!")
+                st.session_state['cart_baixas'] = []
+                st.rerun()
+        with c_btn_b:
+            if st.button("Limpar Lista", use_container_width=True):
+                st.session_state['cart_baixas'] = []
+                st.rerun()
+    else:
+        st.info("A sua lista de baixas está vazia. Adicione cotas na caixinha acima!")
+
+    st.divider()
+    st.subheader("📋 Relatório de Histórico de Pagamentos")
+    st.caption("Abaixo estão todas as parcelas que já constam como PAGO no sistema.")
+    
+    chaves_pagas = [k for k, v in status_dict.items() if v == 'PAGO']
+    if chaves_pagas:
+        historico_lista = []
+        for ch in chaves_pagas:
+            partes = ch.split('_')
+            # Garante a extração correta mesmo se o nome do cliente tiver underline (ex: Joao_Silva_1020_30_ITAU_1)
+            if len(partes) >= 5:
+                parc_h = partes[-1]
+                admin_h = partes[-2]
+                cota_h = partes[-3]
+                grupo_h = partes[-4]
+                cliente_h = "_".join(partes[:-4])
+                
+                historico_lista.append({
+                    "Cliente": cliente_h,
+                    "Grupo": grupo_h,
+                    "Cota": cota_h,
+                    "Administradora": admin_h,
+                    "Parcela Baixada": parc_h,
+                    "Status": "PAGO ✅"
+                })
+                
+        if historico_lista:
+            st.dataframe(pd.DataFrame(historico_lista), use_container_width=True, hide_index=True)
+    else:
+        st.info("Ainda não há histórico de pagamentos registrados.")
+
+
+# === SUBSTITUINDO O MENU "REGRAS DE COMISSÃO" ===
+elif menu_selecionado == "Configurações de Sistema":
+    st.markdown("### 🏢 Configurações de Sistema")
     
     t_cad_adm, t_regras, t_reg_int = st.tabs(["🏢 Cadastrar Admin", "📋 Regras", "👥 Regras Internas"])
     with t_cad_adm:
@@ -1240,7 +1419,3 @@ elif menu_selecionado == "Regras de Comissão":
                 
             st.success("Regras Internas atualizadas!")
             st.rerun()
-
-elif menu_selecionado == "Baixar Parcela":
-    st.markdown("### 💰 Baixa de Comissão")
-    st.info("Utilize a aba 'Relatórios -> Comissionamento' para dar baixa nas parcelas diretamente na tabela!")
