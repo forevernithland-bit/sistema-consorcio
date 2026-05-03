@@ -358,7 +358,7 @@ if st.session_state['tela_cheia_relatorio']:
             if hoje.day <= 15: 
                 q_ini, q_fim = hoje.replace(day=1), hoje.replace(day=15)
             else: 
-                q_ini, q_fim = hoje.replace(day=16), hoje.replace(day=calendar.monthrange(hoje.year, hoje.month)[1])
+                q_ini, q_fim = hoje.replace(day=16), replace(day=calendar.monthrange(hoje.year, hoje.month)[1])
             df_view = df_view[mask & (df_view['data_pagamento_dt'].dt.date >= q_ini.date()) & (df_view['data_pagamento_dt'].dt.date <= q_fim.date())]
         elif ft_rel == "Mês Anterior":
             ma, aa = (hoje.month - 1, hoje.year) if hoje.month > 1 else (12, hoje.year - 1)
@@ -579,7 +579,6 @@ if menu_selecionado == "Dashboard":
 
         if key_nome not in st.session_state: st.session_state[key_nome] = safe_str(info_cliente.get("Nome"), cliente_nome)
         if key_tel not in st.session_state: st.session_state[key_tel] = safe_str(info_cliente.get("Telefone"))
-        # Ajustado para ler da coluna com hífen (E-mail) e da coluna com acento (Aniversário) se existirem
         if key_email not in st.session_state: st.session_state[key_email] = safe_str(info_cliente.get("E-mail", info_cliente.get("Email")))
         if key_end not in st.session_state: st.session_state[key_end] = safe_str(info_cliente.get("Endereco"))
         if key_aniv not in st.session_state: st.session_state[key_aniv] = safe_str(info_cliente.get("Aniversário", info_cliente.get("Aniversario")))
@@ -650,28 +649,7 @@ if menu_selecionado == "Dashboard":
                         st.success("Dados atualizados com sucesso!")
                         st.rerun()
                     except Exception as e:
-                        # FALLBACK: Tentar salvar sem as colunas que podem não existir (Profissao e Renda)
-                        try:
-                            dados_basicos = {
-                                "Nome": novo_nome_val,
-                                "Telefone": st.session_state[key_tel],
-                                "E-mail": st.session_state[key_email],
-                                "Endereco": st.session_state[key_end],
-                                "Aniversário": st.session_state[key_aniv]
-                            }
-                            if id_cliente_db:
-                                supabase.table("clientes").update(dados_basicos).eq("id", int(id_cliente_db)).execute()
-                            else:
-                                dados_basicos["Cadastro de dados"] = datetime.today().strftime("%d/%m/%Y")
-                                supabase.table("clientes").insert([dados_basicos]).execute()
-                                
-                            if novo_nome_val != cliente_nome:
-                                supabase.table("vendas").update({"NOME": novo_nome_val}).eq("NOME", cliente_nome).execute()
-                                st.session_state['cliente_visualizado'] = novo_nome_val
-                                
-                            st.warning("⚠️ Os dados básicos foram salvos, mas Profissão e Renda não foram gravados. Crie essas colunas no Supabase.")
-                        except Exception as fallback_e:
-                            st.error(f"❌ Erro crítico ao tentar salvar no banco: {fallback_e}")
+                        st.error(f"❌ Erro ao salvar no banco: {e}")
 
             with col_b2:
                 if st.button("🚨 Excluir Cliente (Apagar Todas as Cotas)", use_container_width=True):
@@ -1062,19 +1040,13 @@ elif menu_selecionado == "Nova Venda":
                 try:
                     nomes_cadastrados = df_cli['Nome'].tolist() if not df_cli.empty else []
                     if cliente not in nomes_cadastrados:
-                        try:
-                            supabase.table("clientes").insert([{
-                                "Nome": cliente, "Telefone": telefone, "E-mail": email, "Endereco": end_completo,
-                                "Aniversário": aniversario, "Profissao": profissao, "Renda": renda,
-                                "Cadastro de dados": str(datetime.today().strftime("%d/%m/%Y"))
-                            }]).execute()
-                        except:
-                            # FALLBACK: Se as colunas extras não existirem, salva apenas o básico
-                            supabase.table("clientes").insert([{
-                                "Nome": cliente, "Telefone": telefone, "E-mail": email
-                            }]).execute()
+                        supabase.table("clientes").insert([{
+                            "Nome": cliente, "Telefone": telefone, "E-mail": email, "Endereco": end_completo,
+                            "Aniversário": aniversario, "Profissao": profissao, "Renda": renda,
+                            "Cadastro de dados": str(datetime.today().strftime("%d/%m/%Y"))
+                        }]).execute()
                 except Exception as e:
-                    pass
+                    st.error(f"Erro ao cadastrar cliente: {e}")
                     
                 st.success(f"✅ {len(cotas_data)} Venda(s) salvas no Supabase!")
                 limpar = ['venda_cliente', 'tel_nv', 'venda_email', 'aniv_nv', 'prof_nv', 'renda_nv', 'venda_cep', 'last_cep', 'venda_rua', 'venda_numero', 'venda_complemento', 'venda_bairro', 'venda_cidade', 'venda_uf']
