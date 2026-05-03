@@ -114,6 +114,12 @@ def parse_float_safe(v):
     except:
         return 0.0
 
+def limpar_str_nan(val):
+    s = str(val).strip()
+    if s.lower() in ['nan', 'none', '<na>', 'nat']: return ""
+    if s.endswith('.0'): return s[:-2]
+    return s
+
 # Callbacks
 def mascara_tel_nv(): st.session_state['tel_nv'] = formatar_telefone(st.session_state.get('tel_nv', ''))
 def mascara_aniv_nv(): st.session_state['aniv_nv'] = formatar_data(st.session_state.get('aniv_nv', ''))
@@ -265,8 +271,9 @@ try:
         df_vendas_global['Data_Real'] = pd.to_datetime(df_vendas_global['DATA'], dayfirst=True, errors='coerce')
         df_vendas_global['Valor_Numerico'] = df_vendas_global['VALOR'].apply(parse_float_safe)
         
-        df_vendas_global['GRUPO'] = df_vendas_global['GRUPO'].apply(lambda x: str(x)[:-2] if str(x).endswith('.0') else str(x).strip())
-        df_vendas_global['COTA'] = df_vendas_global['COTA'].apply(lambda x: str(x)[:-2] if str(x).endswith('.0') else str(x).strip())
+        # Filtro de nan e formatos incorretos
+        df_vendas_global['GRUPO'] = df_vendas_global['GRUPO'].apply(limpar_str_nan)
+        df_vendas_global['COTA'] = df_vendas_global['COTA'].apply(limpar_str_nan)
     else:
         df_vendas_global = pd.DataFrame()
 
@@ -662,6 +669,8 @@ if menu_selecionado == "Dashboard":
                         vendedor_atual = cota_info['VENDEDOR']
                         status_atual = cota_info['STATUS']
                         data_atual_str = cota_info['DATA']
+                        grupo_atual = cota_info['GRUPO']
+                        cota_atual = cota_info['COTA']
                         
                         if status_atual == "Vendido" or not status_atual: status_atual = "Em Andamento"
                         
@@ -689,6 +698,12 @@ if menu_selecionado == "Dashboard":
                             else:
                                 st.text_input("Data da Venda", value=data_atual_str, disabled=True, key=f"edit_data_block_{id_cota}")
                                 nova_data = data_atual_obj
+
+                        c_ed4, c_ed5 = st.columns(2)
+                        with c_ed4:
+                            novo_grupo = st.text_input("Grupo", value=grupo_atual, disabled=not is_master, key=f"edit_g_{id_cota}")
+                        with c_ed5:
+                            nova_cota = st.text_input("Cota", value=cota_atual, disabled=not is_master, key=f"edit_c_{id_cota}")
                                 
                         col_b1, col_b2 = st.columns(2)
                         with col_b1:
@@ -701,7 +716,9 @@ if menu_selecionado == "Dashboard":
                                 supabase.table("vendas").update({
                                     "VENDEDOR": novo_vendedor, 
                                     "STATUS": novo_status,
-                                    "DATA": nova_data_formatada
+                                    "DATA": nova_data_formatada,
+                                    "GRUPO": novo_grupo,
+                                    "COTA": nova_cota
                                 }).eq("id", id_cota).execute()
                                 st.success("Cota atualizada com sucesso!")
                                 st.rerun()
