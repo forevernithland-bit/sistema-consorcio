@@ -635,23 +635,27 @@ if menu_selecionado == "Dashboard":
                         "Renda": st.session_state[key_renda]
                     }
                     
-                    if id_cliente_db:
-                        supabase.table("clientes").update(dados_cli).eq("id", id_cliente_db).execute()
-                    else:
-                        dados_cli["Data_Cadastro"] = datetime.today().strftime("%d/%m/%Y")
-                        supabase.table("clientes").insert(dados_cli).execute()
-                    
-                    if novo_nome_val != cliente_nome:
-                        supabase.table("vendas").update({"NOME": novo_nome_val}).eq("NOME", cliente_nome).execute()
-                        st.session_state['cliente_visualizado'] = novo_nome_val
+                    try:
+                        if id_cliente_db:
+                            supabase.table("clientes").update(dados_cli).eq("id", int(id_cliente_db)).execute()
+                        else:
+                            dados_cli["Data_Cadastro"] = datetime.today().strftime("%d/%m/%Y")
+                            supabase.table("clientes").insert([dados_cli]).execute()
                         
-                    st.success("Dados atualizados com sucesso!")
-                    st.rerun()
+                        if novo_nome_val != cliente_nome:
+                            supabase.table("vendas").update({"NOME": novo_nome_val}).eq("NOME", cliente_nome).execute()
+                            st.session_state['cliente_visualizado'] = novo_nome_val
+                            
+                        st.success("Dados atualizados com sucesso!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ Erro de banco de dados: {e}")
+                        st.warning("Dica: Verifique se a sua tabela 'clientes' no Supabase tem exatamente estas colunas, com essas letras maiúsculas: Nome, Telefone, Email, Endereco, Aniversario, Profissao, Renda, Data_Cadastro.")
 
             with col_b2:
                 if st.button("🚨 Excluir Cliente (Apagar Todas as Cotas)", use_container_width=True):
                     if id_cliente_db:
-                        supabase.table("clientes").delete().eq("id", id_cliente_db).execute()
+                        supabase.table("clientes").delete().eq("id", int(id_cliente_db)).execute()
                     supabase.table("vendas").delete().eq("NOME", cliente_nome).execute()
                     
                     st.session_state['cliente_visualizado'] = None
@@ -1037,11 +1041,11 @@ elif menu_selecionado == "Nova Venda":
                 try:
                     nomes_cadastrados = df_cli['Nome'].tolist() if not df_cli.empty else []
                     if cliente not in nomes_cadastrados:
-                        supabase.table("clientes").insert({
+                        supabase.table("clientes").insert([{
                             "Nome": cliente, "Telefone": telefone, "Email": email, "Endereco": end_completo,
                             "Aniversario": aniversario, "Profissao": profissao, "Renda": renda,
                             "Data_Cadastro": str(datetime.today().strftime("%d/%m/%Y"))
-                        }).execute()
+                        }]).execute()
                 except Exception as e:
                     pass
                     
