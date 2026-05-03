@@ -591,6 +591,25 @@ if menu_selecionado == "Dashboard":
 
         nome_edit = st.text_input("Nome Completo", key=key_nome, disabled=not is_master)
         
+        if is_master:
+            col_cep_1, col_cep_2 = st.columns([1, 3])
+            with col_cep_1:
+                cep_busca = st.text_input("Buscar CEP p/ Endereço", key=f"cep_ed_{cliente_nome}", max_chars=9)
+            
+            if cep_busca and cep_busca != st.session_state.get(f'last_cep_ed_{cliente_nome}', ''):
+                cep_limpo = ''.join(filter(str.isdigit, cep_busca))
+                if len(cep_limpo) == 8:
+                    try:
+                        res = requests.get(f"https://viacep.com.br/ws/{cep_limpo}/json/", timeout=5)
+                        if res.status_code == 200:
+                            d_cep = res.json()
+                            if "erro" not in d_cep:
+                                end_montado = f"{d_cep.get('logradouro','')}, Nº , {d_cep.get('bairro','')}, {d_cep.get('localidade','')}-{d_cep.get('uf','')} (CEP: {cep_busca})"
+                                st.session_state[key_end] = end_montado
+                                st.rerun()
+                    except: pass
+                st.session_state[f'last_cep_ed_{cliente_nome}'] = cep_busca
+        
         c1, c2 = st.columns(2)
         with c1:
             endereco = st.text_input("Endereço Completo", key=key_end, disabled=not is_master)
