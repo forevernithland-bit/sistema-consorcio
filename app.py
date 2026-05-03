@@ -267,9 +267,11 @@ try:
     if not df_vendas_bd.empty:
         df_vendas_global = df_vendas_bd.copy()
         df_vendas_global.rename(columns={"NOME": "Nome do cliente"}, inplace=True)
+        # Correção no parser de data para ser mais robusto com os formatos
         df_vendas_global['Data_Real'] = pd.to_datetime(df_vendas_global['DATA'], dayfirst=True, errors='coerce')
         df_vendas_global['Valor_Numerico'] = df_vendas_global['VALOR'].apply(parse_float_safe)
         
+        # Filtro de nan e formatos incorretos
         df_vendas_global['GRUPO'] = df_vendas_global['GRUPO'].apply(limpar_str_nan)
         df_vendas_global['COTA'] = df_vendas_global['COTA'].apply(limpar_str_nan)
     else:
@@ -1373,4 +1375,79 @@ elif menu_selecionado == "Configurações de Sistema":
                         cols_p = st.columns(5)
                         for col in range(5):
                             num_p = (linha * 5) + col + 1
-                            val_str = str(reg_at.get(f
+                            val_str = str(reg_at.get(f'P{num_p}', '')).replace('%', '').strip()
+                            try: val_float = float(val_str)
+                            except: val_float = 0.0
+                            with cols_p[col]:
+                                v = st.number_input(f"P {num_p}", min_value=0.0, step=0.1, value=val_float, key=f"e_regra_p{num_p}")
+                                edit_inputs_p.append(v)
+                    b1, b2 = st.columns(2)
+                    with b1:
+                        if st.button("Salvar Alterações", type="primary"):
+                            regra_atualizada = {"Administradora": e_n.upper(), "Produto": e_p}
+                            for i, v in enumerate(edit_inputs_p): 
+                                regra_atualizada[f"P{i+1}"] = f"{v}%" if v > 0 else ""
+                            supabase.table("administradoras").update(regra_atualizada).eq("id", id_regra).execute()
+                            st.success("Regra alterada!")
+                            st.rerun()
+                    with b2:
+                        if st.button("🚨 EXCLUIR REGRA"):
+                            supabase.table("administradoras").delete().eq("id", id_regra).execute()
+                            st.rerun()
+
+    with t_reg_int:
+        st.subheader("Configurações de Recebimento (Sócios e Vendedores)")
+        cc1, cc2, cc3 = st.columns(3)
+        with cc1:
+            st.markdown("**Vendas do Breno Lima**")
+            b_b = st.number_input("Para Breno (%)", value=parse_float_safe(cfg.get("Breno_Breno", 70.0)), step=1.0)
+            b_u = st.number_input("Para Uriel (%)", value=parse_float_safe(cfg.get("Breno_Uriel", 30.0)), step=1.0)
+        with cc2:
+            st.markdown("**Vendas do Uriel Gomes**")
+            u_u = st.number_input("Para Uriel (%) ", value=parse_float_safe(cfg.get("Uriel_Uriel", 70.0)), step=1.0)
+            u_b = st.number_input("Para Breno (%) ", value=parse_float_safe(cfg.get("Uriel_Breno", 30.0)), step=1.0)
+        with cc3:
+            st.markdown("**Vendas da Consorbens (PJ)**")
+            c_b = st.number_input("Para Breno (%)  ", value=parse_float_safe(cfg.get("Cons_Breno", 50.0)), step=1.0)
+            c_u = st.number_input("Para Uriel (%)  ", value=parse_float_safe(cfg.get("Cons_Uriel", 50.0)), step=1.0)
+            
+        st.divider()
+        st.markdown("#### Regra Vendedor Terceiro")
+        ct1, ct2, ct3 = st.columns(3)
+        with ct1:
+            t1_max_str = st.text_input("Nível 1: Até (Volume R$)", value=str(int(parse_float_safe(cfg.get("T1_Max", 500000)))))
+            t1_pct = st.number_input("Comissão (%)", value=parse_float_safe(cfg.get("T1_Pct", 1.0)), step=0.1)
+            t1_parc = st.number_input("Qtd. Parcelas", value=int(parse_float_safe(cfg.get("T1_Parc", 4))), step=1)
+        with ct2:
+            t2_max_str = st.text_input("Nível 2: Até (Volume R$) ", value=str(int(parse_float_safe(cfg.get("T2_Max", 1500000)))))
+            t2_pct = st.number_input("Comissão (%) ", value=parse_float_safe(cfg.get("T2_Pct", 1.5)), step=0.1)
+            t2_parc = st.number_input("Qtd. Parcelas ", value=int(parse_float_safe(cfg.get("T2_Parc", 5))), step=1)
+        with ct3:
+            st.markdown("**Teto (Nível 3)**")
+            t3_pct = st.number_input("Comissão (%)  ", value=parse_float_safe(cfg.get("T3_Pct", 2.0)), step=0.1)
+            t3_parc = st.number_input("Qtd. Parcelas  ", value=int(parse_float_safe(cfg.get("T3_Parc", 5))), step=1)
+
+        st.divider()
+        st.markdown("#### Imposto sobre Nota Fiscal")
+        st.caption("Este imposto é abatido apenas da parte que cabe à Corretora (Sócios), antes da divisão dos lucros.")
+        imposto_in = st.number_input("Imposto (%)", value=parse_float_safe(cfg.get("Imposto", 7.16)), step=0.01)
+
+        st.write("")
+        if st.button("Salvar Regras de Pagamento", type="primary", use_container_width=True):
+            t1_val = parse_float_safe(t1_max_str)
+            t2_val = parse_float_safe(t2_max_str)
+            
+            nova_cfg = {
+                "Breno_Breno": b_b, "Breno_Uriel": b_u, "Uriel_Uriel": u_u, "Uriel_Breno": u_b, 
+                "Cons_Breno": c_b, "Cons_Uriel": c_u, "T1_Max": t1_val, "T1_Pct": t1_pct, 
+                "T1_Parc": t1_parc, "T2_Max": t2_val, "T2_Pct": t2_pct, "T2_Parc": t2_parc, 
+                "T3_Pct": t3_pct, "T3_Parc": t3_parc, "Imposto": imposto_in
+            }
+            
+            if cfg_id:
+                supabase.table("config_interna").update(nova_cfg).eq("id", cfg_id).execute()
+            else:
+                supabase.table("config_interna").insert(nova_cfg).execute()
+                
+            st.success("Regras Internas atualizadas!")
+            st.rerun()
