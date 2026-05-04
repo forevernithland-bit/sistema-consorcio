@@ -61,6 +61,12 @@ def formatar_telefone(tel):
     elif len(nums) == 10: return f"({nums[:2]}) {nums[2:6]}-{nums[6:]}"
     return tel
 
+def formatar_data_br(dt):
+    if pd.isna(dt) or dt is None: return ""
+    if isinstance(dt, (datetime, pd.Timestamp)):
+        return dt.strftime('%d/%m/%Y')
+    return str(dt)
+
 def formatar_data(data_str):
     if not data_str: return ""
     nums = ''.join(filter(str.isdigit, str(data_str)))
