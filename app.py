@@ -13,7 +13,7 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
 # ==========================================
-# CONFIGURAÇÃO DA PÁGINA E VARIÁVEIS GLOBAIS
+# 1. CONFIGURAÇÃO DA PÁGINA E USUÁRIOS
 # ==========================================
 st.set_page_config(page_title="Portal Consorbens", layout="wide", initial_sidebar_state="expanded")
 
@@ -46,12 +46,13 @@ def carregar_ferramenta(nome_arquivo):
     caminho_completo = os.path.join(PASTA_ATUAL, nome_arquivo)
     try:
         with open(caminho_completo, 'r', encoding='utf-8') as f:
-            components.html(f.read(), height=900, scrolling=True)
+            html_code = f.read()
+            components.html(html_code, height=900, scrolling=True)
     except FileNotFoundError:
-        st.error(f"⚠️ O arquivo {nome_arquivo} não foi encontrado no servidor!")
+        st.error(f"⚠️ O arquivo {nome_arquivo} não foi encontrado no servidor! Verifique se ele está no GitHub.")
 
 # ==========================================
-# MÁSCARAS E NORMALIZADORES
+# 2. MÁSCARAS E NORMALIZADORES
 # ==========================================
 def formatar_telefone(tel):
     if not tel: return ""
@@ -72,7 +73,8 @@ def formatar_moeda(valor):
     if not valor: return "R$ 0,00"
     nums = ''.join(filter(str.isdigit, str(valor)))
     if not nums: return "R$ 0,00"
-    return f"R$ {float(nums)/100:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    val_float = float(nums) / 100
+    return f"R$ {val_float:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 def formatar_brl_puro(val):
     if pd.isna(val): return "R$ 0,00"
@@ -82,7 +84,8 @@ def normalizar_string(s):
     if pd.isna(s): return ""
     s = str(s).strip().upper()
     s = ''.join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
-    return s.replace(" ", "")
+    s = s.replace(" ", "")
+    return s
 
 def normalizar_produto(p):
     p = normalizar_string(p)
@@ -94,8 +97,9 @@ def normalizar_produto(p):
     return p
 
 def obter_index_produto(p_str):
+    norm = normalizar_produto(p_str)
     mapping = {"AUTO": 0, "IMOVEL": 1, "MOTO": 2, "CAMINHAO": 3, "SERVICOS": 4}
-    return mapping.get(normalizar_produto(p_str), 0)
+    return mapping.get(norm, 0)
 
 def parse_float_safe(v):
     if isinstance(v, (int, float)): return float(v)
@@ -103,77 +107,103 @@ def parse_float_safe(v):
         v_str = str(v).replace('%', '').replace('R$', '').strip()
         if not v_str: return 0.0
         if '.' in v_str and ',' in v_str:
-            if v_str.rfind(',') > v_str.rfind('.'): v_str = v_str.replace('.', '').replace(',', '.')
-            else: v_str = v_str.replace(',', '')
-        elif ',' in v_str: v_str = v_str.replace(',', '.')
+            if v_str.rfind(',') > v_str.rfind('.'):
+                v_str = v_str.replace('.', '').replace(',', '.')
+            else:
+                v_str = v_str.replace(',', '')
+        elif ',' in v_str:
+            v_str = v_str.replace(',', '.')
         return float(v_str)
-    except: return 0.0
+    except:
+        return 0.0
 
 def limpar_str_nan(val):
     s = str(val).strip()
     if s.lower() in ['nan', 'none', '<na>', 'nat']: return ""
-    return s[:-2] if s.endswith('.0') else s
+    if s.endswith('.0'): return s[:-2]
+    return s
 
+# Callbacks
 def mascara_tel_nv(): st.session_state['tel_nv'] = formatar_telefone(st.session_state.get('tel_nv', ''))
 def mascara_aniv_nv(): st.session_state['aniv_nv'] = formatar_data(st.session_state.get('aniv_nv', ''))
 def mascara_renda_nv(): st.session_state['renda_nv'] = formatar_moeda(st.session_state.get('renda_nv', ''))
 
 # ==========================================
-# INTEGRAÇÃO GOOGLE DRIVE E COMISSÕES
+# 3. INTEGRAÇÃO GOOGLE DRIVE (MÍDIAS)
 # ==========================================
 @st.cache_resource
 def get_drive_service():
+    """Autentica com o Google Drive usando as credenciais do Streamlit Secrets"""
     try:
         creds_dict = dict(st.secrets["gcp_service_account"])
         creds = service_account.Credentials.from_service_account_info(
-            creds_dict, scopes=['https://www.googleapis.com/auth/drive.readonly']
+            creds_dict, 
+            scopes=['https://www.googleapis.com/auth/drive.readonly']
         )
-        return build('drive', 'v3', credentials=creds)
-    except Exception:
+        service = build('drive', 'v3', credentials=creds)
+        return service
+    except Exception as e:
         return None
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=300) # Cache de 5 minutos para não estourar limite da API
 def listar_arquivos_drive(folder_ids):
+    """Lista os arquivos das pastas do Google Drive especificadas"""
     service = get_drive_service()
     if not service: return []
     todos_arquivos = []
     if isinstance(folder_ids, str): folder_ids = [folder_ids]
-    for fid in folder_ids:
+    
+    for folder_id in folder_ids:
         try:
-            query = f"'{fid}' in parents and trashed=false"
-            res = service.files().list(
+            query = f"'{folder_id}' in parents and trashed=false"
+            results = service.files().list(
                 q=query, 
                 fields="files(id, name, mimeType, webViewLink, webContentLink, thumbnailLink)",
                 pageSize=100
             ).execute()
-            todos_arquivos.extend(res.get('files', []))
-        except Exception:
+            todos_arquivos.extend(results.get('files', []))
+        except Exception as e:
             continue
     return todos_arquivos
 
+# ==========================================
+# 4. MOTORES DE CÁLCULO DE COMISSÃO
+# ==========================================
 def calcular_comissao_vendedor(df_vendas_global, vendedor_nome, data_venda_dt, cfg):
     if pd.isna(data_venda_dt): return cfg.get('T1_Pct', 1.0), int(cfg.get('T1_Parc', 4))
-    mes, ano = data_venda_dt.month, data_venda_dt.year
-    df_mes = df_vendas_global[(df_vendas_global['VENDEDOR'] == vendedor_nome) & 
-                              (df_vendas_global['Data_Real'].dt.month == mes) & 
+    mes = data_venda_dt.month
+    ano = data_venda_dt.year
+    df_mes = df_vendas_global[(df_vendas_global['VENDEDOR'] == vendedor_nome) &
+                              (df_vendas_global['Data_Real'].dt.month == mes) &
                               (df_vendas_global['Data_Real'].dt.year == ano)]
     vol_total = df_mes['Valor_Numerico'].sum()
+
     if vol_total <= cfg.get('T1_Max', 500000): return cfg.get('T1_Pct', 1.0), int(cfg.get('T1_Parc', 4))
     elif vol_total <= cfg.get('T2_Max', 1500000): return cfg.get('T2_Pct', 1.5), int(cfg.get('T2_Parc', 5))
     else: return cfg.get('T3_Pct', 2.0), int(cfg.get('T3_Parc', 5))
 
 def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict):
     hoje = pd.Timestamp.today().normalize()
-    parcelas_finais, vendas_sem_data = [], []
+    parcelas_finais = []
+    vendas_sem_data = [] 
+    
     for idx, r in df_alvo.iterrows():
         data_venda = r['Data_Real']
-        cliente, grupo, cota = r.get('Nome do cliente', 'Desconhecido'), r.get('GRUPO', ''), r.get('COTA', '')
+        cliente = r.get('Nome do cliente', 'Desconhecido')
+        grupo = r.get('GRUPO', '')
+        cota = r.get('COTA', '')
+        
         if pd.isna(data_venda):
             vendas_sem_data.append(f"{cliente} (Gr: {grupo}/Cota: {cota})")
             continue 
             
-        admin, prod, vendedor, val_venda = r['ADMINISTRADORA'], r['PRODUTO'], r['VENDEDOR'], r['Valor_Numerico']
-        admin_norm, prod_norm = normalizar_string(admin), normalizar_produto(prod)
+        admin = r['ADMINISTRADORA']
+        admin_norm = normalizar_string(admin)
+        prod = r['PRODUTO']
+        prod_norm = normalizar_produto(prod)
+        vendedor = r['VENDEDOR']
+        val_venda = r['Valor_Numerico']
+        
         status_cota = r.get('STATUS', 'Em Andamento')
         if status_cota in ["Vendido", ""]: status_cota = "Em Andamento"
         
@@ -183,6 +213,7 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict):
         
         tier_pct, tier_parc = calcular_comissao_vendedor(df_global, vendedor, data_venda, cfg)
         temp_parcels = []
+        
         for i in range(1, 26):
             p_val = parse_float_safe(regra.get(f"P{i}", 0)) / 100.0
             if p_val <= 0: continue
@@ -190,62 +221,103 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict):
             comissao_bruta = val_venda * p_val
             imposto_val = comissao_bruta * (parse_float_safe(cfg.get('Imposto', 7.16)) / 100.0)
             corretora_liq = comissao_bruta - imposto_val
-            vend_rec = breno_rec = uriel_rec = 0.0
+            
+            vend_rec = 0.0
+            breno_rec = 0.0
+            uriel_rec = 0.0
             
             if vendedor == "BRENO LIMA":
-                breno_rec, uriel_rec = corretora_liq * (parse_float_safe(cfg.get('Breno_Breno', 70))/100.0), corretora_liq * (parse_float_safe(cfg.get('Breno_Uriel', 30))/100.0)
+                breno_rec = corretora_liq * (parse_float_safe(cfg.get('Breno_Breno', 70))/100.0)
+                uriel_rec = corretora_liq * (parse_float_safe(cfg.get('Breno_Uriel', 30))/100.0)
             elif vendedor == "URIEL GOMES":
-                uriel_rec, breno_rec = corretora_liq * (parse_float_safe(cfg.get('Uriel_Uriel', 70))/100.0), corretora_liq * (parse_float_safe(cfg.get('Uriel_Breno', 30))/100.0)
+                uriel_rec = corretora_liq * (parse_float_safe(cfg.get('Uriel_Uriel', 70))/100.0)
+                breno_rec = corretora_liq * (parse_float_safe(cfg.get('Uriel_Breno', 30))/100.0)
             elif vendedor == "Consorbens":
-                breno_rec, uriel_rec = corretora_liq * (parse_float_safe(cfg.get('Cons_Breno', 50))/100.0), corretora_liq * (parse_float_safe(cfg.get('Cons_Uriel', 50))/100.0)
+                breno_rec = corretora_liq * (parse_float_safe(cfg.get('Cons_Breno', 50))/100.0)
+                uriel_rec = corretora_liq * (parse_float_safe(cfg.get('Cons_Uriel', 50))/100.0)
             else:
                 if i <= tier_parc: vend_rec = val_venda * (tier_pct/100.0) / tier_parc
                 sobra = corretora_liq - vend_rec
-                breno_rec, uriel_rec = sobra * 0.50, sobra * 0.50
+                breno_rec = sobra * 0.50
+                uriel_rec = sobra * 0.50
 
             data_pagamento = data_venda + pd.Timedelta(days=7) + pd.DateOffset(months=i-1)
-            temp_parcels.append({'parcela': i, 'data_pagamento': data_pagamento, 'bruto': comissao_bruta, 'liquido': corretora_liq, 'vend': vend_rec, 'breno': breno_rec, 'uriel': uriel_rec})
+            temp_parcels.append({
+                'parcela': i, 'data_pagamento': data_pagamento, 'bruto': comissao_bruta,
+                'liquido': corretora_liq, 'vend': vend_rec, 'breno': breno_rec, 'uriel': uriel_rec
+            })
             
-        if status_cota == 'Cancelada': temp_parcels = [p for p in temp_parcels if p['data_pagamento'] <= hoje]
+        if status_cota == 'Cancelada':
+            temp_parcels = [p for p in temp_parcels if p['data_pagamento'] <= hoje]
         elif status_cota == 'Contemplada':
             past = [p for p in temp_parcels if p['data_pagamento'] <= hoje]
             future = [p for p in temp_parcels if p['data_pagamento'] > hoje]
-            if future: past.append({'parcela': 'Antecipação', 'data_pagamento': hoje, 'bruto': sum(p['bruto'] for p in future), 'liquido': sum(p['liquido'] for p in future), 'vend': sum(p['vend'] for p in future), 'breno': sum(p['breno'] for p in future), 'uriel': sum(p['uriel'] for p in future)})
+            if future:
+                past.append({
+                    'parcela': 'Antecipação', 'data_pagamento': hoje,
+                    'bruto': sum(p['bruto'] for p in future), 'liquido': sum(p['liquido'] for p in future),
+                    'vend': sum(p['vend'] for p in future), 'breno': sum(p['breno'] for p in future), 'uriel': sum(p['uriel'] for p in future)
+                })
             temp_parcels = past
             
         for p in temp_parcels:
             chave_unica = f"{cliente}_{grupo}_{cota}_{admin}_{p['parcela']}"
-            data_str = "⚠️ Travada (Atraso)" if status_cota == 'Em Atraso' else p['data_pagamento'].strftime("%d/%m/%Y")
-            nome_parc = f"{p['parcela']}ª Parcela" if isinstance(p['parcela'], int) else "Antecip. (Contemplada)"
+            status_pagamento = status_dict.get(chave_unica, "Pendente")
+            
+            data_str = p['data_pagamento'].strftime("%d/%m/%Y")
+            if status_cota == 'Em Atraso': data_str = "⚠️ Travada (Atraso)"
+            nome_parcela = f"{p['parcela']}ª Parcela" if isinstance(p['parcela'], int) else "Antecip. (Contemplada)"
             
             parcelas_finais.append({
-                "Chave": chave_unica, "Cliente": cliente, "Produto": prod, "Vendedor": vendedor, "Grupo": grupo, "Cota": cota,
-                "Valor da Venda": val_venda, "Parcela": nome_parc, "data_pagamento_dt": p['data_pagamento'], "Comissão (Bruta)": p['bruto'],
-                "Comissão (s/ Imposto)": p['liquido'], "Breno": p['breno'], "Uriel": p['uriel'], "Vendedor Recebe": p['vend'],
-                "Status": status_dict.get(chave_unica, "Pendente"), "Data Prevista": data_str
+                "Chave": chave_unica,
+                "Cliente": cliente,
+                "Produto": prod,
+                "Vendedor": vendedor,
+                "Grupo": grupo,
+                "Cota": cota,
+                "Valor da Venda": val_venda,
+                "Parcela": nome_parcela,
+                "data_pagamento_dt": p['data_pagamento'], 
+                "Comissão (Bruta)": p['bruto'],
+                "Comissão (s/ Imposto)": p['liquido'],
+                "Breno": p['breno'],
+                "Uriel": p['uriel'],
+                "Vendedor Recebe": p['vend'],
+                "Status": status_pagamento,
+                "Data Prevista": data_str
             })
+            
     return pd.DataFrame(parcelas_finais), vendas_sem_data
 
+
 # ==========================================
-# CONEXÃO E CARREGAMENTO - SUPABASE
+# 5. CONEXÃO E CARREGAMENTO - SUPABASE
 # ==========================================
 @st.cache_resource
 def iniciar_conexao() -> Client:
-    return create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
+    url = st.secrets["SUPABASE_URL"]
+    key = st.secrets["SUPABASE_KEY"]
+    return create_client(url, key)
 
 try:
     supabase = iniciar_conexao()
 
     def carregar_tabela(nome_tabela):
-        try: return pd.DataFrame(supabase.table(nome_tabela).select("*").execute().data)
-        except: return pd.DataFrame()
+        try:
+            res = supabase.table(nome_tabela).select("*").execute()
+            return pd.DataFrame(res.data)
+        except:
+            return pd.DataFrame() # Caso a tabela não exista ainda
 
     df_vendas_bd = carregar_tabela("vendas")
     if not df_vendas_bd.empty:
         df_vendas_global = df_vendas_bd.copy()
         df_vendas_global.rename(columns={"NOME": "Nome do cliente"}, inplace=True)
+        # Correção no parser de data para ser mais robusto com os formatos
         df_vendas_global['Data_Real'] = pd.to_datetime(df_vendas_global['DATA'], dayfirst=True, errors='coerce')
         df_vendas_global['Valor_Numerico'] = df_vendas_global['VALOR'].apply(parse_float_safe)
+        
+        # Filtro de nan e formatos incorretos
         df_vendas_global['GRUPO'] = df_vendas_global['GRUPO'].apply(limpar_str_nan)
         df_vendas_global['COTA'] = df_vendas_global['COTA'].apply(limpar_str_nan)
     else:
@@ -253,10 +325,11 @@ try:
 
     df_cli = carregar_tabela("clientes")
     
+    # Carregar Assembleias
     df_ass = carregar_tabela("assembleias")
     if not df_ass.empty:
         df_ass['data_dt'] = pd.to_datetime(df_ass['data_evento'], format="%d/%m/%Y", errors='coerce')
-    
+
     df_admin_cad = carregar_tabela("cad_administradoras")
     lista_admin_bd = df_admin_cad['Administradora'].tolist() if not df_admin_cad.empty else ["Nenhuma administradora cadastrada"]
 
@@ -268,7 +341,12 @@ try:
     df_status = carregar_tabela("status_comissoes")
     status_dict = dict(zip(df_status['Chave_Unica'], df_status['Status'])) if not df_status.empty else {}
 
-    cfg_padrao = {"Breno_Breno": 70.0, "Breno_Uriel": 30.0, "Uriel_Uriel": 70.0, "Uriel_Breno": 30.0, "Cons_Breno": 50.0, "Cons_Uriel": 50.0, "T1_Max": 500000.0, "T1_Pct": 1.0, "T1_Parc": 4, "T2_Max": 1500000.0, "T2_Pct": 1.5, "T2_Parc": 5, "T3_Pct": 2.0, "T3_Parc": 5, "Imposto": 7.16}
+    cfg_padrao = {
+        "Breno_Breno": 70.0, "Breno_Uriel": 30.0, "Uriel_Uriel": 70.0, "Uriel_Breno": 30.0,
+        "Cons_Breno": 50.0, "Cons_Uriel": 50.0, "T1_Max": 500000.0, "T1_Pct": 1.0, "T1_Parc": 4,
+        "T2_Max": 1500000.0, "T2_Pct": 1.5, "T2_Parc": 5, "T3_Pct": 2.0, "T3_Parc": 5, "Imposto": 7.16
+    }
+    
     df_cfg = carregar_tabela("config_interna")
     cfg_id = None
     if not df_cfg.empty:
@@ -287,72 +365,121 @@ def salvar_status_comissoes(df_editado, df_original):
     mudancas = df_editado[df_editado['Status'] != df_original['Status']]
     if not mudancas.empty:
         for _, row in mudancas.iterrows():
-            chave, novo_status = row['Chave'], row['Status']
+            chave = row['Chave']
+            novo_status = row['Status']
             existe = supabase.table("status_comissoes").select("id").eq("Chave_Unica", chave).execute()
-            if existe.data: supabase.table("status_comissoes").update({"Status": novo_status}).eq("id", existe.data[0]['id']).execute()
-            else: supabase.table("status_comissoes").insert({"Chave_Unica": chave, "Status": novo_status}).execute()
+            if existe.data:
+                supabase.table("status_comissoes").update({"Status": novo_status}).eq("id", existe.data[0]['id']).execute()
+            else:
+                supabase.table("status_comissoes").insert({"Chave_Unica": chave, "Status": novo_status}).execute()
         return True
     return False
 
 # ==========================================
-# LÓGICA DE TELA CHEIA (RELATÓRIO)
+# 6. LÓGICA DE TELA CHEIA (RELATÓRIO DE COMISSÃO)
 # ==========================================
 if st.session_state['tela_cheia_relatorio']:
     st.markdown("## 💰 Relatório de Comissionamento Detalhado")
+    
     col_bt, col_chk = st.columns([1, 3])
     with col_bt:
         if st.button("⬅️ Voltar aos Filtros", type="secondary"):
             st.session_state['tela_cheia_relatorio'] = False
             st.rerun()
-    with col_chk: mostrar_pagos = st.checkbox("Mostrar parcelas já pagas (PAGO)", value=False)
+    with col_chk:
+        mostrar_pagos = st.checkbox("Mostrar parcelas já pagas (PAGO)", value=False)
         
     df_parcelas_todas, vendas_sem_data = gerar_tabela_parcelas(df_vendas_global, df_vendas_global, df_admin, cfg, status_dict)
-    if vendas_sem_data: st.warning(f"⚠️ Vendas sem data preenchida: **{', '.join(vendas_sem_data)}**.")
+    
+    if vendas_sem_data:
+        st.warning(f"⚠️ **Atenção:** As seguintes vendas estão sem data preenchida ou em formato incorreto: **{', '.join(vendas_sem_data)}**.")
 
     if not df_parcelas_todas.empty:
         hoje = pd.Timestamp.today().normalize()
-        df_view = df_parcelas_todas[df_parcelas_todas['data_pagamento_dt'].notna()].copy()
-        if st.session_state['perfil_logado'] == "Vendedor" and not is_master: df_view = df_view[df_view['Vendedor'] == st.session_state['nome_vendedor']]
+        mask = df_parcelas_todas['data_pagamento_dt'].notna()
+        df_view = df_parcelas_todas.copy()
+        
+        if st.session_state['perfil_logado'] == "Vendedor" and not is_master:
+            df_view = df_view[df_view['Vendedor'] == st.session_state['nome_vendedor']]
         
         ft_rel = st.session_state.get('rel_periodo', 'Todas as Vendas')
-        if ft_rel == "Mês Atual": df_view = df_view[(df_view['data_pagamento_dt'].dt.month == hoje.month) & (df_view['data_pagamento_dt'].dt.year == hoje.year)]
+        
+        if ft_rel == "Mês Atual":
+            df_view = df_view[mask & (df_view['data_pagamento_dt'].dt.month == hoje.month) & (df_view['data_pagamento_dt'].dt.year == hoje.year)]
         elif ft_rel == "Quinzena Atual":
-            q_ini, q_fim = (hoje.replace(day=1), hoje.replace(day=15)) if hoje.day <= 15 else (hoje.replace(day=16), hoje.replace(day=calendar.monthrange(hoje.year, hoje.month)[1]))
-            df_view = df_view[(df_view['data_pagamento_dt'].dt.date >= q_ini.date()) & (df_view['data_pagamento_dt'].dt.date <= q_fim.date())]
+            if hoje.day <= 15: 
+                q_ini, q_fim = hoje.replace(day=1), hoje.replace(day=15)
+            else: 
+                q_ini, q_fim = hoje.replace(day=16), hoje.replace(day=calendar.monthrange(hoje.year, hoje.month)[1])
+            df_view = df_view[mask & (df_view['data_pagamento_dt'].dt.date >= q_ini.date()) & (df_view['data_pagamento_dt'].dt.date <= q_fim.date())]
         elif ft_rel == "Mês Anterior":
             ma, aa = (hoje.month - 1, hoje.year) if hoje.month > 1 else (12, hoje.year - 1)
-            df_view = df_view[(df_view['data_pagamento_dt'].dt.month == ma) & (df_view['data_pagamento_dt'].dt.year == aa)]
-        elif ft_rel == "Ano Atual": df_view = df_view[df_view['data_pagamento_dt'].dt.year == hoje.year]
-        elif ft_rel == "Período Personalizado": df_view = df_view[(df_view['data_pagamento_dt'].dt.date >= st.session_state['rel_dt_ini']) & (df_view['data_pagamento_dt'].dt.date <= st.session_state['rel_dt_fim'])]
+            df_view = df_view[mask & (df_view['data_pagamento_dt'].dt.month == ma) & (df_view['data_pagamento_dt'].dt.year == aa)]
+        elif ft_rel == "Ano Atual":
+            df_view = df_view[mask & (df_view['data_pagamento_dt'].dt.year == hoje.year)]
+        elif ft_rel == "Período Personalizado":
+            ri = st.session_state['rel_dt_ini']
+            rf = st.session_state['rel_dt_fim']
+            df_view = df_view[mask & (df_view['data_pagamento_dt'].dt.date >= ri) & (df_view['data_pagamento_dt'].dt.date <= rf)]
             
-        if not mostrar_pagos: df_view = df_view[df_view['Status'] != 'PAGO']
+        if not mostrar_pagos:
+            df_view = df_view[df_view['Status'] != 'PAGO']
             
         if not df_view.empty:
             df_view = df_view[['Chave', 'Cliente', 'Produto', 'Vendedor', 'Grupo', 'Cota', 'Valor da Venda', 'Parcela', 'Comissão (Bruta)', 'Comissão (s/ Imposto)', 'Breno', 'Uriel', 'Vendedor Recebe', 'Status', 'Data Prevista']]
-            total_breno, total_uriel, total_vend = df_view['Breno'].sum(), df_view['Uriel'].sum(), df_view['Vendedor Recebe'].sum()
-            for col in ['Valor da Venda', 'Comissão (Bruta)', 'Comissão (s/ Imposto)', 'Breno', 'Uriel', 'Vendedor Recebe']: df_view[col] = df_view[col].apply(formatar_brl_puro)
             
-            df_final = df_view.drop(columns=[] if is_master else ["Comissão (Bruta)", "Comissão (s/ Imposto)", "Breno", "Uriel"]).reset_index(drop=True)
+            total_breno = df_view['Breno'].sum()
+            total_uriel = df_view['Uriel'].sum()
+            total_vend = df_view['Vendedor Recebe'].sum()
+            
+            for col in ['Valor da Venda', 'Comissão (Bruta)', 'Comissão (s/ Imposto)', 'Breno', 'Uriel', 'Vendedor Recebe']:
+                df_view[col] = df_view[col].apply(formatar_brl_puro)
+            
+            col_config = {
+                "Chave": None, 
+                "Status": st.column_config.SelectboxColumn("Status", options=["Pendente", "PAGO"], required=True) if is_master else st.column_config.TextColumn("Status", disabled=True)
+            }
+            
+            cols_to_hide = []
+            if not is_master: cols_to_hide = ["Comissão (Bruta)", "Comissão (s/ Imposto)", "Breno", "Uriel"]
+            
+            df_final = df_view.drop(columns=cols_to_hide).reset_index(drop=True)
+            disabled_cols = [c for c in df_final.columns if c != "Status"]
+            
+            st.caption("Dica: Clique na coluna 'Status' para alterar. Em seguida, salve as alterações no botão vermelho.")
             edited_df = st.data_editor(
-                df_final, disabled=[c for c in df_final.columns if c != "Status"],
-                column_config={"Chave": None, "Status": st.column_config.SelectboxColumn("Status", options=["Pendente", "PAGO"], required=True) if is_master else st.column_config.TextColumn("Status", disabled=True)},
-                use_container_width=True, hide_index=True, key="editor_relatorio_full"
+                df_final,
+                disabled=disabled_cols,
+                column_config=col_config,
+                use_container_width=True,
+                hide_index=True,
+                key="editor_relatorio_full"
             )
-            if is_master and st.button("💾 Salvar Status de Pagamento", type="primary"):
-                if salvar_status_comissoes(edited_df, df_final): st.success("Atualizados!"); st.rerun()
-            st.divider()
-            mt1, mt2, mt3 = st.columns(3)
-            mt1.metric("Breno (Sócios)", formatar_brl_puro(total_breno))
-            mt2.metric("Uriel (Sócios)", formatar_brl_puro(total_uriel))
-            mt3.metric("Vendedores", formatar_brl_puro(total_vend))
-        else: st.success("Nenhuma comissão pendente encontrada para exibição.")
-    else: st.info("O sistema ainda não possui vendas para calcular comissões.")
+            
+            if is_master:
+                if st.button("💾 Salvar Status de Pagamento", type="primary"):
+                    if salvar_status_comissoes(edited_df, df_final):
+                        st.success("Status atualizados no banco de dados!")
+                        st.rerun()
+                    else: st.info("Nenhuma alteração detectada.")
+                        
+                st.divider()
+                st.markdown("#### 💵 Total do Período (Apenas o visualizado acima)")
+                mt1, mt2, mt3 = st.columns(3)
+                mt1.metric("Breno (Sócios)", formatar_brl_puro(total_breno))
+                mt2.metric("Uriel (Sócios)", formatar_brl_puro(total_uriel))
+                mt3.metric("Vendedores", formatar_brl_puro(total_vend))
+        else:
+            st.success("Nenhuma comissão pendente (ou com os filtros atuais) para exibir!")
+    else:
+        st.info("O sistema ainda não possui vendas para calcular a comissão.")
+        
     st.stop() 
 
 # ==========================================
-# CSS CUSTOMIZADO
+# 7. CSS CUSTOMIZADO
 # ==========================================
-st.markdown("""
+css = """
 <style>
     .block-container { padding-top: 1rem; padding-bottom: 0rem; padding-left: 1rem; padding-right: 1rem; }
     [data-testid="stSidebar"] { background-color: #ffffff !important; border-right: 2px solid #e2e8f0 !important; }
@@ -366,24 +493,24 @@ st.markdown("""
     [data-testid="stMetricValue"] { font-size: 1.8rem !important; }
     h3 { margin-bottom: 0.5rem !important; margin-top: 0.5rem !important; }
     
-    /* Calendário Customizado */
-    .cal-table { width: 100%; border-collapse: collapse; text-align: center; background-color: white; border-radius: 6px; font-size: 14px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    .cal-table th { background-color: #f8fafc; padding: 8px; color: #475569; border-bottom: 1px solid #e2e8f0; font-weight: bold; }
+    /* Calendário Customizado Menor */
+    .cal-table { width: 100%; border-collapse: collapse; text-align: center; font-family: sans-serif; background-color: white; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); font-size: 14px; }
+    .cal-table th { background-color: #f8fafc; padding: 8px; font-weight: bold; color: #475569; border-bottom: 1px solid #e2e8f0; }
     .cal-table td { padding: 8px; border: 1px solid #e2e8f0; color: #334155; }
     .cal-day { border-radius: 50%; display: inline-block; width: 28px; height: 28px; line-height: 28px; }
     .cal-event { background-color: #e74c3c; color: white; font-weight: bold; box-shadow: 0 2px 4px rgba(231, 76, 60, 0.4); }
     .cal-empty { background-color: #f8fafc; }
-    .event-desc { font-size: 14px; margin-bottom: 6px; border-left: 3px solid #e74c3c; padding-left: 8px; background: #fdf2f2; padding: 6px; border-radius: 0 4px 4px 0; }
+    .event-desc { font-size: 14px; margin-bottom: 4px; border-left: 3px solid #e74c3c; padding-left: 8px; background: #fdf2f2; padding: 4px; border-radius: 0 4px 4px 0; }
     
-    /* Mídias */
+    /* Mídias Cards */
     .media-card { background: white; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .media-img { max-width: 100%; max-height: 120px; object-fit: contain; border-radius: 4px; margin-bottom: 10px; }
     .media-title { font-size: 13px; font-weight: 500; color: #334155; margin-bottom: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
-""", unsafe_allow_html=True)
+"""
 
 # ==========================================
-# ROTEADOR DE MENU LATERAL
+# 8. ROTEADOR DE MENU LATERAL
 # ==========================================
 simuladores_dict = {
     "🏍️ Simulador Yamaha": "yamaha.html",
@@ -399,28 +526,42 @@ st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
 if not is_logado:
     opcoes_menu = ["🔐 Login (Área Restrita)"] + list(simuladores_dict.keys())
-    selecao = st.sidebar.radio(" ", opcoes_menu, index=opcoes_menu.index(st.session_state['menu_lateral']) if st.session_state['menu_lateral'] in opcoes_menu else 0, label_visibility="collapsed")
+    try: idx_menu = opcoes_menu.index(st.session_state['menu_lateral'])
+    except ValueError: idx_menu = 0
+    selecao = st.sidebar.radio(" ", opcoes_menu, index=idx_menu, label_visibility="collapsed")
     if selecao != st.session_state['menu_lateral']:
         st.session_state['menu_lateral'] = selecao
         st.rerun()
 else:
     st.sidebar.divider() 
+    
     if is_master:
         opcoes_principais = ["Dashboard", "Nova Venda", "Assembleias", "Relatórios", "Mídias", "Baixar Parcelas", "Configurações de Sistema"] 
     else:
         opcoes_principais = ["Dashboard", "Nova Venda", "Assembleias", "Relatórios", "Mídias"]
         
-    selecao_principal = st.sidebar.radio("Navegação", opcoes_principais, index=opcoes_principais.index(st.session_state['menu_lateral']) if st.session_state['menu_lateral'] in opcoes_principais else None, label_visibility="collapsed")
+    try:
+        idx_principal = opcoes_principais.index(st.session_state['menu_lateral'])
+    except ValueError:
+        idx_principal = None 
+        
+    selecao_principal = st.sidebar.radio("Navegação", opcoes_principais, index=idx_principal, label_visibility="collapsed")
     
-    if selecao_principal and selecao_principal != st.session_state.get('last_radio_selection'):
+    if selecao_principal and selecao_principal != st.session_state.get('last_radio_selection') and selecao_principal in opcoes_principais:
         st.session_state['menu_lateral'] = selecao_principal
         st.session_state['cliente_visualizado'] = None
         st.session_state['last_radio_selection'] = selecao_principal
         st.rerun()
             
+    if selecao_principal in opcoes_principais:
+        st.session_state['last_radio_selection'] = selecao_principal
+        
+    st.sidebar.write("")
+    
     with st.sidebar.expander("🛠️ Simuladores", expanded=(st.session_state['menu_lateral'] in simuladores_dict)):
         for sim in simuladores_dict.keys():
-            if st.button(sim, use_container_width=True, type="primary" if st.session_state['menu_lateral'] == sim else "secondary"):
+            btn_type = "primary" if st.session_state['menu_lateral'] == sim else "secondary"
+            if st.button(sim, use_container_width=True, type=btn_type):
                 st.session_state['menu_lateral'] = sim
                 st.session_state['cliente_visualizado'] = None
                 st.session_state['last_radio_selection'] = None
@@ -434,12 +575,14 @@ else:
 menu_selecionado = st.session_state['menu_lateral']
 
 if menu_selecionado in simuladores_dict: 
-    st.markdown("<style>.stApp { background-color: #0f172a !important; }</style>", unsafe_allow_html=True)
+    css += """ <style>.stApp { background-color: #0f172a !important; }</style> """
 else: 
-    st.markdown("<style>.stApp { background-color: #f8fafc !important; }</style>", unsafe_allow_html=True)
+    css += """ <style>.stApp { background-color: #f8fafc !important; }</style> """
+st.markdown(css, unsafe_allow_html=True)
+
 
 # ==========================================
-# RENDERIZAÇÃO DAS TELAS
+# 9. RENDERIZAÇÃO DAS TELAS
 # ==========================================
 if menu_selecionado in simuladores_dict:
     carregar_ferramenta(simuladores_dict[menu_selecionado])
@@ -535,7 +678,7 @@ if menu_selecionado == "Dashboard":
             profissao_edit = st.text_input("Profissão", key=key_prof, disabled=not is_master)
         with c2:
             email = st.text_input("Email", key=key_email, disabled=not is_master)
-            aniversario_edit = st.text_input("Data de Aniversário (DD/MM/AAAA)", key=key_aniv, on_change=lambda: st.session_state.update({key_aniv: formatar_data(st.session_state[key_aniv])}), disabled=not is_master)
+            aniversario_edit = st.text_input("Data de Aniversário (DD/MM/AAAA)", key=key_aniv, on_change=lambda: st.session_state.update({key_aniv: formatar_data(st.session_state[key_aniv])}), disabled=not is_master, placeholder="DD/MM/AAAA")
             renda_edit = st.text_input("Renda Mensal (R$)", key=key_renda, on_change=lambda: st.session_state.update({key_renda: formatar_moeda(st.session_state[key_renda])}), disabled=not is_master)
         
         if is_master:
@@ -572,9 +715,12 @@ if menu_selecionado == "Dashboard":
                 info_a, info_b = st.columns(2)
                 info_a.metric("Total de Cotas Adquiridas", len(cotas_cliente))
                 info_b.metric("Volume Total Investido", formatar_brl_puro(cotas_cliente['Valor_Numerico'].sum()))
-                cotas_cliente['Valor Formatado'] = cotas_cliente['Valor_Numerico'].apply(formatar_brl_puro)
                 
-                ficha_display = cotas_cliente[['DATA', 'ADMINISTRADORA', 'PRODUTO', 'GRUPO', 'COTA', 'Valor Formatado', 'STATUS', 'VENDEDOR']].rename(columns={'DATA': 'Data da Venda', 'Valor Formatado': 'Valor (R$)'})
+                # Formatando a data antes de exibir na tabela
+                cotas_cliente['Valor Formatado'] = cotas_cliente['Valor_Numerico'].apply(formatar_brl_puro)
+                cotas_cliente['Data da Venda'] = cotas_cliente['Data_Real'].apply(formatar_data_br)
+                
+                ficha_display = cotas_cliente[['Data da Venda', 'ADMINISTRADORA', 'PRODUTO', 'GRUPO', 'COTA', 'Valor Formatado', 'STATUS', 'VENDEDOR']].rename(columns={'ADMINISTRADORA': 'Administradora', 'PRODUTO': 'Produto', 'GRUPO': 'Grupo', 'COTA': 'Cota', 'Valor Formatado': 'Valor (R$)', 'STATUS': 'Status', 'VENDEDOR': 'Vendedor'})
                 estilo_ficha = ficha_display.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}])
                 st.dataframe(estilo_ficha, use_container_width=True, hide_index=True)
                 
@@ -586,25 +732,36 @@ if menu_selecionado == "Dashboard":
                     if cota_selecionada:
                         id_cota = int(cota_selecionada.split(" | ")[0].replace("ID:", ""))
                         cota_info = cotas_cliente[cotas_cliente['id'] == id_cota].iloc[0]
-                        st_atual = cota_info['STATUS'] if cota_info['STATUS'] in ["Em Andamento", "Em Atraso", "Cancelada", "Contemplada"] else "Em Andamento"
-                        try: dt_obj = datetime.strptime(str(cota_info['DATA']), "%d/%m/%Y").date()
-                        except: dt_obj = datetime.today().date()
+                        vendedor_atual = cota_info['VENDEDOR']
+                        status_atual = cota_info['STATUS']
+                        data_atual_str = cota_info['DATA']
+                        grupo_atual = cota_info['GRUPO']
+                        cota_atual = cota_info['COTA']
+                        
+                        if status_atual == "Vendido" or not status_atual: status_atual = "Em Andamento"
+                        
+                        try:
+                            data_atual_obj = pd.to_datetime(data_atual_str, format="%d/%m/%Y", errors='coerce').date()
+                            if pd.isna(data_atual_obj): data_atual_obj = datetime.today().date()
+                        except:
+                            data_atual_obj = datetime.today().date()
                         
                         c_ed1, c_ed2, c_ed3 = st.columns(3)
-                        with c_ed1: novo_status = st.selectbox("Status", ["Em Andamento", "Em Atraso", "Cancelada", "Contemplada"], index=["Em Andamento", "Em Atraso", "Cancelada", "Contemplada"].index(st_atual))
+                        with c_ed1: novo_status = st.selectbox("Status", ["Em Andamento", "Em Atraso", "Cancelada", "Contemplada"], index=["Em Andamento", "Em Atraso", "Cancelada", "Contemplada"].index(status_atual))
                         with c_ed2:
                             opts_v = ["BRENO LIMA", "URIEL GOMES", "Consorbens", "Vendedor Terceiro"]
-                            novo_vendedor = st.selectbox("Vendedor", opts_v, index=opts_v.index(cota_info['VENDEDOR']) if cota_info['VENDEDOR'] in opts_v else 0) if is_master else st.text_input("Vendedor", value=cota_info['VENDEDOR'], disabled=True)
-                        with c_ed3: nova_data = st.date_input("Data", value=dt_obj, format="DD/MM/YYYY") if is_master else st.text_input("Data", value=cota_info['DATA'], disabled=True)
+                            novo_vendedor = st.selectbox("Vendedor", opts_v, index=opts_v.index(vendedor_atual) if vendedor_atual in opts_v else 0) if is_master else st.text_input("Vendedor", value=vendedor_atual, disabled=True)
+                        with c_ed3: nova_data = st.date_input("Data da Venda", value=data_atual_obj, format="DD/MM/YYYY") if is_master else st.text_input("Data da Venda", value=formatar_data_br(cota_info['Data_Real']), disabled=True)
 
                         c_ed4, c_ed5 = st.columns(2)
-                        with c_ed4: novo_grupo = st.text_input("Grupo", value=cota_info['GRUPO'], disabled=not is_master)
-                        with c_ed5: nova_cota = st.text_input("Cota", value=cota_info['COTA'], disabled=not is_master)
+                        with c_ed4: novo_grupo = st.text_input("Grupo", value=grupo_atual, disabled=not is_master)
+                        with c_ed5: nova_cota = st.text_input("Cota", value=cota_atual, disabled=not is_master)
                                 
                         col_b1, col_b2 = st.columns(2)
                         with col_b1:
                             if st.button("💾 Salvar Alterações na Cota", type="primary", use_container_width=True):
-                                supabase.table("vendas").update({"VENDEDOR": novo_vendedor, "STATUS": novo_status, "DATA": nova_data.strftime("%d/%m/%Y") if not isinstance(nova_data, str) else nova_data, "GRUPO": novo_grupo, "COTA": nova_cota}).eq("id", id_cota).execute()
+                                data_formatada = nova_data.strftime("%d/%m/%Y") if not isinstance(nova_data, str) else nova_data
+                                supabase.table("vendas").update({"VENDEDOR": novo_vendedor, "STATUS": novo_status, "DATA": data_formatada, "GRUPO": novo_grupo, "COTA": nova_cota}).eq("id", id_cota).execute()
                                 st.success("Cota atualizada com sucesso!"); st.rerun()
                         with col_b2:
                             if is_master and st.button("🚨 Apagar Esta Cota", use_container_width=True):
@@ -667,10 +824,15 @@ if menu_selecionado == "Dashboard":
         if busca_cota: df_view = df_view[df_view['COTA'].astype(str).str.contains(busca_cota.strip(), case=False, na=False)]
 
         if not df_view.empty:
+            st.write("Clique em uma linha para ver os detalhes do cliente:")
             df_tab = df_view.copy()
             df_tab['Grupo e Cota'] = df_tab.apply(lambda x: f"{x['GRUPO']}/{x['COTA']}", axis=1)
             df_tab['Valor Formatado'] = df_tab['Valor_Numerico'].apply(formatar_brl_puro)
-            df_tab = df_tab[['Nome do cliente', 'PRODUTO', 'ADMINISTRADORA', 'Grupo e Cota', 'VENDEDOR', 'Valor Formatado', 'DATA']]
+            
+            # Formatando a data da coluna Data_Real para ficar certinho DD/MM/YYYY
+            df_tab['Data da Venda'] = df_tab['Data_Real'].apply(formatar_data_br)
+            
+            df_tab = df_tab[['Nome do cliente', 'PRODUTO', 'ADMINISTRADORA', 'Grupo e Cota', 'VENDEDOR', 'Valor Formatado', 'Data da Venda']]
             df_tab.columns = ['Cliente', 'Produto', 'Administradora', 'Grupo/Cota', 'Vendedor', 'Valor', 'Data da Venda']
             
             tabela = st.dataframe(df_tab, on_select="rerun", selection_mode="single-row", use_container_width=True, hide_index=True)
@@ -685,10 +847,10 @@ if menu_selecionado == "Dashboard":
             m3.metric("Ticket Médio", formatar_brl_puro(vol_total/len(df_view) if len(df_view)>0 else 0))
 
             st.write("")
-            st.subheader("📊 Gráficos Globais")
+            st.subheader("📊 Gráficos Globais (Filtro Independente)")
             g_f1, g_f2 = st.columns(2)
             with g_f1:
-                ft_graf = st.selectbox("⏳ Período do Gráfico:", ["Mês Atual", "Mês Anterior", "Anual", "Todas as Vendas", "Período Personalizado"])
+                ft_graf = st.selectbox("⏳ Período para o Gráfico:", ["Mês Atual", "Mês Anterior", "Anual", "Todas as Vendas", "Período Personalizado"])
                 if ft_graf == "Período Personalizado":
                     cg1, cg2 = st.columns(2)
                     with cg1: gi = st.date_input("Início", format="DD/MM/YYYY", key="g_ini")
@@ -720,7 +882,6 @@ if menu_selecionado == "Dashboard":
                     df_a = df_g['ADMINISTRADORA'].value_counts().reset_index()
                     df_a.columns = ['Administradora', 'Quantidade']
                     st.altair_chart(alt.Chart(df_a).mark_arc(innerRadius=50).encode(theta='Quantidade', color='Administradora', tooltip=['Administradora', 'Quantidade']), use_container_width=True)
-            else: st.warning("📊 Não há vendas para gerar gráfico neste filtro.")
         else: st.info("Nenhuma venda encontrada.")
 
 # --- NOVA VENDA ---
@@ -741,10 +902,10 @@ elif menu_selecionado == "Nova Venda":
     with col_cep1: cep = st.text_input("CEP (Digite e clique fora)", max_chars=9)
         
     if cep and cep != st.session_state.get('last_cep', ''):
-        cep_limpo = ''.join(filter(str.isdigit, cep))
-        if len(cep_limpo) == 8:
+        c_limpo = ''.join(filter(str.isdigit, cep))
+        if len(c_limpo) == 8:
             try:
-                res = requests.get(f"https://viacep.com.br/ws/{cep_limpo}/json/", timeout=5)
+                res = requests.get(f"https://viacep.com.br/ws/{c_limpo}/json/", timeout=5)
                 if res.status_code == 200 and "erro" not in res.json():
                     d_cep = res.json()
                     st.session_state.update({'v_rua': d_cep.get("logradouro", ""), 'v_bai': d_cep.get("bairro", ""), 'v_cid': d_cep.get("localidade", ""), 'v_uf': d_cep.get("uf", "")})
@@ -803,7 +964,10 @@ elif menu_selecionado == "Nova Venda":
                 
                 try:
                     if df_cli.empty or cliente not in df_cli['Nome'].tolist():
-                        supabase.table("clientes").insert([{"Nome": cliente, "Telefone": telefone, "Email": email, "Endereco": end_completo, "Aniversario": aniversario, "Profissao": profissao, "Renda": renda, "Data_Cadastro": datetime.today().strftime("%d/%m/%Y")}]).execute()
+                        supabase.table("clientes").insert([{
+                            "Nome": cliente, "Telefone": telefone, "Email": email, "Endereco": end_completo,
+                            "Aniversario": aniversario, "Profissao": profissao, "Renda": renda, "Data_Cadastro": datetime.today().strftime("%d/%m/%Y")
+                        }]).execute()
                 except Exception: pass
                 st.success(f"✅ {len(cotas_data)} Venda(s) salvas!"); st.session_state['qtd_cotas'] = 1
 
