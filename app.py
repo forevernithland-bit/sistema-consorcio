@@ -744,7 +744,9 @@ if menu_selecionado == "Dashboard":
                         grupo_atual = cota_info['GRUPO']
                         cota_atual = cota_info['COTA']
                         
-                        if status_atual == "Vendido" or not status_atual: status_atual = "Em Andamento"
+                        opcoes_status = ["Em Andamento", "Em Atraso", "Cancelada", "Contemplada"]
+                        if status_atual not in opcoes_status:
+                            status_atual = "Em Andamento"
                         
                         try:
                             data_atual_obj = pd.to_datetime(data_atual_str, format="%d/%m/%Y", errors='coerce').date()
@@ -753,7 +755,7 @@ if menu_selecionado == "Dashboard":
                             data_atual_obj = datetime.today().date()
                         
                         c_ed1, c_ed2, c_ed3 = st.columns(3)
-                        with c_ed1: novo_status = st.selectbox("Status", ["Em Andamento", "Em Atraso", "Cancelada", "Contemplada"], index=["Em Andamento", "Em Atraso", "Cancelada", "Contemplada"].index(status_atual))
+                        with c_ed1: novo_status = st.selectbox("Status", opcoes_status, index=opcoes_status.index(status_atual))
                         with c_ed2:
                             opts_v = ["BRENO LIMA", "URIEL GOMES", "Consorbens", "Vendedor Terceiro"]
                             novo_vendedor = st.selectbox("Vendedor", opts_v, index=opts_v.index(vendedor_atual) if vendedor_atual in opts_v else 0) if is_master else st.text_input("Vendedor", value=vendedor_atual, disabled=True)
