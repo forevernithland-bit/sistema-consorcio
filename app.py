@@ -1222,7 +1222,10 @@ elif menu_selecionado == "Configurações de Sistema":
     with t_regras:
         if not df_admin.empty:
             df_m = df_admin.drop(columns=['Admin_Norm', 'Prod_Norm', 'id'], errors='ignore').copy()
-            df_m.insert(2, 'Total Comissão', df_m.apply(lambda r: f"{sum([float(str(r.get(f'P{i}', '0')).replace('%','').strip() or 0) for i in range(1,26)]):.2f}%".replace('.',','), axis=1))
+            
+            # Usando o parse_float_safe para blindar contra erros de vírgula ou campos vazios
+            df_m.insert(2, 'Total Comissão', df_m.apply(lambda r: f"{sum([parse_float_safe(r.get(f'P{i}', 0)) for i in range(1, 26)]):.2f}%".replace('.', ','), axis=1))
+            
             st.dataframe(df_m.style.set_properties(**{'text-align': 'center'}), use_container_width=True, hide_index=True)
         
         with st.expander("➕ Nova Regra", expanded=False):
@@ -1290,18 +1293,4 @@ elif menu_selecionado == "Configurações de Sistema":
             t1_parc = st.number_input("Qtd N1", value=int(parse_float_safe(cfg.get("T1_Parc", 4))), step=1)
         with ct2:
             t2_max = parse_float_safe(st.text_input("N2 Até (R$) ", value=str(int(parse_float_safe(cfg.get("T2_Max", 1500000))))))
-            t2_pct = st.number_input("Comissão N2 (%)", value=parse_float_safe(cfg.get("T2_Pct", 1.5)), step=0.1)
-            t2_parc = st.number_input("Qtd N2", value=int(parse_float_safe(cfg.get("T2_Parc", 5))), step=1)
-        with ct3:
-            st.markdown("**Teto N3**")
-            t3_pct = st.number_input("Comissão N3 (%)", value=parse_float_safe(cfg.get("T3_Pct", 2.0)), step=0.1)
-            t3_parc = st.number_input("Qtd N3", value=int(parse_float_safe(cfg.get("T3_Parc", 5))), step=1)
-
-        st.divider()
-        imp_in = st.number_input("Imposto Nota (%)", value=parse_float_safe(cfg.get("Imposto", 7.16)), step=0.01)
-
-        if st.button("Salvar Regras", type="primary", use_container_width=True):
-            n_c = {"Breno_Breno": b_b, "Breno_Uriel": b_u, "Uriel_Uriel": u_u, "Uriel_Breno": u_b, "Cons_Breno": c_b, "Cons_Uriel": c_u, "T1_Max": t1_max, "T1_Pct": t1_pct, "T1_Parc": t1_parc, "T2_Max": t2_max, "T2_Pct": t2_pct, "T2_Parc": t2_parc, "T3_Pct": t3_pct, "T3_Parc": t3_parc, "Imposto": imp_in}
-            if cfg_id: supabase.table("config_interna").update(n_c).eq("id", cfg_id).execute()
-            else: supabase.table("config_interna").insert(n_c).execute()
-            st.success("Atualizado!"); st.rerun()
+            t2_pct = st.number_input("Comissão N2 (%)", value=parse_float_safe(cfg.get("T2_Pct", 1
