@@ -45,22 +45,39 @@ def render_senhas(supabase):
 
     st.divider()
 
-    # 2. TABELA DE EDIÇÃO RÁPIDA
+    # 2. TABELA DE EDIÇÃO RÁPIDA E PESQUISA
     st.markdown("#### 📋 Seus Acessos")
-    st.caption("Dica: Você pode dar um duplo-clique em qualquer célula da tabela para editar o texto diretamente. Depois de alterar, clique no botão de salvar abaixo.")
+    
+    # --- NOVO: Campo de pesquisa dinâmico ---
+    busca = st.text_input("🔍 Pesquisar por Empresa, Login ou Descrição:", placeholder="Digite o termo que deseja localizar...")
 
     df_display = df.drop(columns=['id'], errors='ignore')
+    df_display = df_display.fillna("")
     
-    # O data_editor permite editar e até excluir linhas selecionando na lateral
+    # Lógica de filtragem com base no que foi digitado
+    if busca:
+        df_display = df_display[
+            df_display['empresa'].astype(str).str.contains(busca, case=False, na=False) |
+            df_display['login'].astype(str).str.contains(busca, case=False, na=False) |
+            df_display['descricao'].astype(str).str.contains(busca, case=False, na=False)
+        ]
+
+    st.caption("Dica: Você pode dar um duplo-clique em qualquer célula da tabela para editar. Se preencher novas linhas em branco, preencha Empresa, Login e Senha!")
+
+    # Exibição do editor de dados com botão limpo para link
     edited_df = st.data_editor(
         df_display,
-        num_rows="dynamic", # Permite adicionar ou deletar linhas pela própria tabela
+        num_rows="dynamic",
         use_container_width=True,
         column_config={
             "empresa": st.column_config.TextColumn("Empresa", required=True),
             "login": st.column_config.TextColumn("Login", required=True),
             "senha": st.column_config.TextColumn("Senha", required=True),
-            "link": st.column_config.LinkColumn("Link"),
+            "link": st.column_config.LinkColumn(
+                "Link", 
+                help="Dê um duplo-clique para colar ou editar a URL.",
+                display_text="🔗 Acessar"
+            ),
             "descricao": st.column_config.TextColumn("Descrição")
         },
         key="editor_senhas"
@@ -69,24 +86,40 @@ def render_senhas(supabase):
     if st.button("💾 Salvar Alterações da Tabela", type="primary"):
         mudancas = st.session_state["editor_senhas"]
         try:
-            # Salva as edições feitas em linhas existentes
+            # 1. Salva as edições em linhas existentes (mapeando pelo índice real)
             for idx, cols in mudancas.get("edited_rows", {}).items():
-                row_id = df.iloc[idx]["id"]
+                real_idx = df_display.index[idx]
+                row_id = df.iloc[real_idx]["id"]
                 supabase.table("senhas_sistema").update(cols).eq("id", int(row_id)).execute()
                 
-            # Salva exclusões (se o usuário selecionou e deletou a linha)
+            # 2. Salva exclusões de linhas
             for idx in mudancas.get("deleted_rows", []):
-                row_id = df.iloc[idx]["id"]
+                real_idx = df_display.index[idx]
+                row_id = df.iloc[real_idx]["id"]
                 supabase.table("senhas_sistema").delete().eq("id", int(row_id)).execute()
                 
-            # Salva novas linhas adicionadas direto pela grade
+            # 3. Salva novas linhas adicionadas direto pela grade
+            valid_added = []
             for row in mudancas.get("added_rows", []):
-                supabase.table("senhas_sistema").insert(row).execute()
+                emp = row.get("empresa", "")
+                log = row.get("login", "")
+                sen = row.get("senha", "")
+                if emp and log and sen:
+                    valid_added.append({
+                        "empresa": emp,
+                        "login": log,
+                        "senha": sen,
+                        "link": row.get("link", ""),
+                        "descricao": row.get("descricao", "")
+                    })
+                    
+            if valid_added:
+                supabase.table("senhas_sistema").insert(valid_added).execute()
                 
             st.success("✅ Alterações salvas com sucesso!")
             st.rerun()
         except Exception as e:
-            st.error(f"❌ Erro ao salvar: {e}")
+            st.error(f"❌ Erro ao salvar as modificações: {e}")
 
     st.divider()
 
@@ -102,12 +135,13 @@ def render_senhas(supabase):
             if st.button("Processar Importação"):
                 try:
                     df_import = pd.read_csv(uploaded_file)
+                    df_import = df_import.fillna("")
                     records = df_import.to_dict(orient="records")
                     supabase.table("senhas_sistema").insert(records).execute()
                     st.success("✅ Senhas importadas com sucesso!")
                     st.rerun()
                 except Exception as e:
-                    st.error(f"❌ Erro na importação. Verifique o padrão das colunas. Erro: {e}")
+                    st.error(f"❌ Erro na importação. Detalhes: {e}")
     
     with c_exp:
         st.write("**Exportar para Excel (CSV)**")
