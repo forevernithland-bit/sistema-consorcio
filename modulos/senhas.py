@@ -14,6 +14,11 @@ def render_senhas(supabase):
     try:
         res = supabase.table("senhas_sistema").select("*").execute()
         df = pd.DataFrame(res.data)
+        
+        # AQUI ESTÁ A NOVIDADE: Ordenação alfabética automática pela Empresa
+        if not df.empty and "empresa" in df.columns:
+            df = df.sort_values(by="empresa", key=lambda col: col.str.lower(), ascending=True).reset_index(drop=True)
+            
     except Exception as e:
         st.error(f"Erro ao ligar à tabela de senhas. Detalhes: {e}")
         df = pd.DataFrame(columns=["id", "empresa", "login", "senha", "link", "descricao"])
@@ -69,8 +74,8 @@ def render_senhas(supabase):
         column_config={
             "id": None, 
             "empresa": st.column_config.TextColumn("Empresa", required=True),
-            "login": st.column_config.TextColumn("Login", required=False), # Deixei de ser obrigatório
-            "senha": st.column_config.TextColumn("Senha", required=False), # Deixei de ser obrigatório
+            "login": st.column_config.TextColumn("Login", required=False), 
+            "senha": st.column_config.TextColumn("Senha", required=False), 
             "link": st.column_config.LinkColumn(
                 "Link", 
                 help="Dê um duplo-clique para colar ou editar a URL.",
@@ -95,11 +100,11 @@ def render_senhas(supabase):
                 row_id = df_display.iloc[idx]["id"]
                 supabase.table("senhas_sistema").delete().eq("id", int(row_id)).execute()
                 
-            # 3. Salva novas linhas (AGORA SÓ EXIGE A EMPRESA)
+            # 3. Salva novas linhas
             valid_added = []
             for row in mudancas.get("added_rows", []):
                 emp = row.get("empresa", "")
-                if emp: # Se tiver pelo menos o nome da empresa, ele salva!
+                if emp: 
                     valid_added.append({
                         "empresa": emp,
                         "login": row.get("login", ""),
@@ -133,23 +138,4 @@ def render_senhas(supabase):
                     df_import = df_import.fillna("")
                     if 'id' in df_import.columns:
                         df_import = df_import.drop(columns=['id'])
-                    records = df_import.to_dict(orient="records")
-                    supabase.table("senhas_sistema").insert(records).execute()
-                    st.success("✅ Senhas importadas com sucesso!")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"❌ Erro na importação. Detalhes: {e}")
-    
-    with c_exp:
-        st.write("**Exportar para Excel (CSV)**")
-        st.caption("Baixe uma cópia de segurança de todos os acessos cadastrados.")
-        df_export = df_display.drop(columns=['id'], errors='ignore')
-        csv_data = df_export.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="⬇️ Baixar Backup em CSV",
-            data=csv_data,
-            file_name=f"backup_senhas_consorbens_{pd.Timestamp.today().strftime('%Y%m%d')}.csv",
-            mime="text/csv",
-            type="secondary",
-            use_container_width=True
-        )
+                    records = df_import.to_dict(
