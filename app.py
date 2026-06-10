@@ -18,6 +18,7 @@ from modulos.relatorios import render_relatorios
 from modulos.midias import render_midias
 from modulos.baixas import render_baixas
 from modulos.configuracoes import render_configuracoes
+from modulos.senhas import render_senhas  # <--- Novo módulo integrado aqui
 
 # ==========================================
 # 1. CONFIGURAÇÃO DA PÁGINA E USUÁRIOS
@@ -58,7 +59,6 @@ except Exception as e:
 # ==========================================
 # 3. LÓGICA DE TELA CHEIA (RELATÓRIO)
 # ==========================================
-# Esta tela sobrepõe tudo quando ativada no módulo de Relatórios
 if st.session_state['tela_cheia_relatorio']:
     st.markdown("## 💰 Relatório de Comissionamento Detalhado")
     
@@ -195,8 +195,10 @@ if not is_logado:
         st.rerun()
 else:
     st.sidebar.divider() 
+    
+    # Condicional que adiciona a aba "Senhas" somente se o perfil for Master (breno ou uriel)
     if is_master:
-        opcoes_principais = ["Dashboard", "Nova Venda", "Assembleias", "Relatórios", "Mídias", "Baixar Parcelas", "Configurações de Sistema"] 
+        opcoes_principais = ["Dashboard", "Nova Venda", "Assembleias", "Relatórios", "Mídias", "Baixar Parcelas", "Configurações de Sistema", "Senhas"] 
     else:
         opcoes_principais = ["Dashboard", "Nova Venda", "Assembleias", "Relatórios", "Mídias"]
         
@@ -283,3 +285,5 @@ elif menu_selecionado == "Baixar Parcelas":
     render_baixas(supabase, df_vendas_global, df_admin, cfg, status_dict)
 elif menu_selecionado == "Configurações de Sistema":
     render_configuracoes(supabase, df_admin_cad, df_admin, lista_admin_bd, cfg, cfg_id)
+elif menu_selecionado == "Senhas":
+    render_senhas(supabase)
