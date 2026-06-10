@@ -26,13 +26,13 @@ def render_senhas(supabase):
         with st.form("form_nova_senha"):
             c1, c2 = st.columns(2)
             empresa = c1.text_input("Empresa *")
-            login = c2.text_input("Login *")
-            senha = c1.text_input("Senha *")
+            login = c2.text_input("Login")
+            senha = c1.text_input("Senha")
             link = c2.text_input("Link (URL)")
             descricao = st.text_input("Descrição / Observações")
             
             if st.form_submit_button("Salvar Acesso", type="primary"):
-                if empresa and login and senha:
+                if empresa:
                     novo_dado = {
                         "empresa": empresa, "login": login, 
                         "senha": senha, "link": link, "descricao": descricao
@@ -41,7 +41,7 @@ def render_senhas(supabase):
                     st.success("✅ Acesso salvo com sucesso!")
                     st.rerun()
                 else:
-                    st.error("Preencha Empresa, Login e Senha!")
+                    st.error("Preencha ao menos o nome da Empresa!")
 
     st.divider()
 
@@ -50,7 +50,6 @@ def render_senhas(supabase):
     
     busca = st.text_input("🔍 Pesquisar por Empresa, Login ou Descrição:", placeholder="Digite o termo que deseja localizar...")
 
-    # AQUI ESTÁ A CORREÇÃO MÁGICA: Não retiramos mais o 'id'
     df_display = df.copy()
     df_display = df_display.fillna("")
     
@@ -61,17 +60,17 @@ def render_senhas(supabase):
             df_display['descricao'].astype(str).str.contains(busca, case=False, na=False)
         ]
 
-    st.caption("Dica: Pode dar um duplo-clique em qualquer célula da tabela para editar. Se preencher novas linhas em branco, preencha Empresa, Login e Senha!")
+    st.caption("Dica: Pode dar um duplo-clique em qualquer célula da tabela para editar. Para criar uma nova linha, basta preencher o nome da Empresa!")
 
     edited_df = st.data_editor(
         df_display,
         num_rows="dynamic",
         use_container_width=True,
         column_config={
-            "id": None, # <--- ESCONDE O ID VISUALMENTE, MAS MANTÉM NA LÓGICA!
+            "id": None, 
             "empresa": st.column_config.TextColumn("Empresa", required=True),
-            "login": st.column_config.TextColumn("Login", required=True),
-            "senha": st.column_config.TextColumn("Senha", required=True),
+            "login": st.column_config.TextColumn("Login", required=False), # Deixei de ser obrigatório
+            "senha": st.column_config.TextColumn("Senha", required=False), # Deixei de ser obrigatório
             "link": st.column_config.LinkColumn(
                 "Link", 
                 help="Dê um duplo-clique para colar ou editar a URL.",
@@ -96,17 +95,15 @@ def render_senhas(supabase):
                 row_id = df_display.iloc[idx]["id"]
                 supabase.table("senhas_sistema").delete().eq("id", int(row_id)).execute()
                 
-            # 3. Salva novas linhas
+            # 3. Salva novas linhas (AGORA SÓ EXIGE A EMPRESA)
             valid_added = []
             for row in mudancas.get("added_rows", []):
                 emp = row.get("empresa", "")
-                log = row.get("login", "")
-                sen = row.get("senha", "")
-                if emp and log and sen:
+                if emp: # Se tiver pelo menos o nome da empresa, ele salva!
                     valid_added.append({
                         "empresa": emp,
-                        "login": log,
-                        "senha": sen,
+                        "login": row.get("login", ""),
+                        "senha": row.get("senha", ""),
                         "link": row.get("link", ""),
                         "descricao": row.get("descricao", "")
                     })
@@ -134,7 +131,6 @@ def render_senhas(supabase):
                 try:
                     df_import = pd.read_csv(uploaded_file)
                     df_import = df_import.fillna("")
-                    # Remove o id na importação para não dar conflito com os IDs automáticos do Supabase
                     if 'id' in df_import.columns:
                         df_import = df_import.drop(columns=['id'])
                     records = df_import.to_dict(orient="records")
@@ -147,7 +143,6 @@ def render_senhas(supabase):
     with c_exp:
         st.write("**Exportar para Excel (CSV)**")
         st.caption("Baixe uma cópia de segurança de todos os acessos cadastrados.")
-        # Retira o ID na hora de baixar o CSV para ficar limpo
         df_export = df_display.drop(columns=['id'], errors='ignore')
         csv_data = df_export.to_csv(index=False).encode('utf-8')
         st.download_button(
