@@ -138,4 +138,23 @@ def render_senhas(supabase):
                     df_import = df_import.fillna("")
                     if 'id' in df_import.columns:
                         df_import = df_import.drop(columns=['id'])
-                    records = df_import.to_dict(
+                    records = df_import.to_dict(orient="records")
+                    supabase.table("senhas_sistema").insert(records).execute()
+                    st.success("✅ Senhas importadas com sucesso!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"❌ Erro na importação. Detalhes: {e}")
+    
+    with c_exp:
+        st.write("**Exportar para Excel (CSV)**")
+        st.caption("Baixe uma cópia de segurança de todos os acessos cadastrados.")
+        df_export = df_display.drop(columns=['id'], errors='ignore')
+        csv_data = df_export.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="⬇️ Baixar Backup em CSV",
+            data=csv_data,
+            file_name=f"backup_senhas_consorbens_{pd.Timestamp.today().strftime('%Y%m%d')}.csv",
+            mime="text/csv",
+            type="secondary",
+            use_container_width=True
+        )
