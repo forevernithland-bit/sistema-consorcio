@@ -3,6 +3,9 @@ import pandas as pd
 from datetime import datetime
 import calendar
 import os
+from modulos.configuracoes import render_configuracoes
+from modulos.senhas import render_senhas
+from modulos.assistente import render_assistente  # <--- ADICIONE ESTA LINHA
 
 # ==========================================
 # IMPORTAÇÃO DOS NOSSOS MÓDULOS LOCAIS
@@ -287,3 +290,7 @@ elif menu_selecionado == "Configurações de Sistema":
     render_configuracoes(supabase, df_admin_cad, df_admin, lista_admin_bd, cfg, cfg_id)
 elif menu_selecionado == "Senhas":
     render_senhas(supabase)
+elif menu_selecionado == "Senhas":
+    render_senhas(supabase)
+elif menu_selecionado == "Assistente IA":          # <--- ADICIONE ESTAS DUAS LINHAS
+    render_assistente(supabase)                    # <--- ADICIONE ESTAS DUAS LINHAS
