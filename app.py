@@ -19,7 +19,7 @@ from modulos.midias import render_midias
 from modulos.baixas import render_baixas
 from modulos.configuracoes import render_configuracoes
 from modulos.senhas import render_senhas
-from modulos.assistente import render_assistente  # <--- ADICIONADO AQUI
+from modulos.assistente import render_widget_ia, render_config_ia
 
 # ==========================================
 # 1. CONFIGURAÇÃO DA PÁGINA E USUÁRIOS
@@ -197,11 +197,11 @@ if not is_logado:
 else:
     st.sidebar.divider() 
     
-    # Condicional que adiciona a aba "Senhas" e "Assistente IA" dependendo do perfil
+    # Condicional que adiciona a aba "Senhas" e "Base de Conhecimento IA" dependendo do perfil
     if is_master:
-        opcoes_principais = ["Dashboard", "Nova Venda", "Assembleias", "Relatórios", "Mídias", "Baixar Parcelas", "Configurações de Sistema", "Senhas", "Assistente IA"] 
+        opcoes_principais = ["Dashboard", "Nova Venda", "Assembleias", "Relatórios", "Mídias", "Baixar Parcelas", "Configurações de Sistema", "Senhas", "Base de Conhecimento IA"] 
     else:
-        opcoes_principais = ["Dashboard", "Nova Venda", "Assembleias", "Relatórios", "Mídias", "Assistente IA"]
+        opcoes_principais = ["Dashboard", "Nova Venda", "Assembleias", "Relatórios", "Mídias"]
         
     try: idx_principal = opcoes_principais.index(st.session_state['menu_lateral'])
     except ValueError: idx_principal = None 
@@ -228,6 +228,10 @@ else:
                 st.rerun()
                 
     st.sidebar.write("")
+    
+    # --- CHAMA O WIDGET FLUTUANTE DA IA AQUI ---
+    render_widget_ia(supabase)
+    
     if st.sidebar.button("Sair do Sistema"):
         st.session_state.clear()
         st.rerun()
@@ -288,5 +292,5 @@ elif menu_selecionado == "Configurações de Sistema":
     render_configuracoes(supabase, df_admin_cad, df_admin, lista_admin_bd, cfg, cfg_id)
 elif menu_selecionado == "Senhas":
     render_senhas(supabase)
-elif menu_selecionado == "Assistente IA":
-    render_assistente(supabase)
+elif menu_selecionado == "Base de Conhecimento IA":
+    render_config_ia(supabase)
