@@ -34,32 +34,42 @@ def render_widget_ia(supabase):
                 
                 with st.spinner("Pensando..."):
                     try:
-                        res = supabase.table("base_conhecimento_ia").select("*").execute()
-                        df_base = pd.DataFrame(res.data)
+                        # ---------------------------------------------------------
+                        # A MÁGICA AQUI: O sistema rastreia os modelos permitidos!
+                        # ---------------------------------------------------------
+                        modelos_permitidos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
                         
-                        contexto_geral = ""
-                        if not df_base.empty:
-                            for _, row in df_base.iterrows():
-                                contexto_geral += f"\n\n--- ADMINISTRADORA: {row['administradora']} ---\n"
-                                contexto_geral += f"Regras Operacionais: {row['regras_operacionais']}\n"
-                                if is_master:
-                                    contexto_geral += f"Comissões (SIGILOSO): {row['regras_comissionamento']}\n"
-                        
-                        if not contexto_geral:
-                            contexto_geral = "Ainda não há regras cadastradas no banco de dados."
+                        if not modelos_permitidos:
+                            st.error("⚠️ NENHUM modelo liberado! O Google bloqueou sua chave porque seu projeto foi criado em um servidor no Brasil. Crie um novo projeto no Google Cloud e certifique-se de escolher um servidor nos Estados Unidos (US).")
+                        else:
+                            # O sistema escolhe o Gemini Flash (mais rápido), senão pega o 1º da lista
+                            modelo_escolhido = next((m for m in modelos_permitidos if '1.5-flash' in m), modelos_permitidos[0])
+                            
+                            res = supabase.table("base_conhecimento_ia").select("*").execute()
+                            df_base = pd.DataFrame(res.data)
+                            
+                            contexto_geral = ""
+                            if not df_base.empty:
+                                for _, row in df_base.iterrows():
+                                    contexto_geral += f"\n\n--- ADMINISTRADORA: {row['administradora']} ---\n"
+                                    contexto_geral += f"Regras Operacionais: {row['regras_operacionais']}\n"
+                                    if is_master:
+                                        contexto_geral += f"Comissões (SIGILOSO): {row['regras_comissionamento']}\n"
+                            
+                            if not contexto_geral:
+                                contexto_geral = "Ainda não há regras cadastradas no banco de dados."
 
-                        # AQUI ESTÁ A SOLUÇÃO BLINDADA 👇
-                        model = genai.GenerativeModel('gemini-pro')
-                        
-                        prompt_sistema = f"""Você é o assistente virtual da Consorbens, especializado em consórcios.
-                        Responda APENAS com base neste contexto (se não souber, diga que não tem a informação):
-                        {contexto_geral}
-                        
-                        PERGUNTA DO USUÁRIO: {pergunta}
-                        """
-                        
-                        resposta = model.generate_content(prompt_sistema)
-                        st.session_state["mensagens_ia"].append({"role": "assistant", "content": resposta.text})
+                            model = genai.GenerativeModel(modelo_escolhido)
+                            
+                            prompt_sistema = f"""Você é o assistente virtual da Consorbens, especializado em consórcios.
+                            Responda APENAS com base neste contexto (se não souber, diga que não tem a informação):
+                            {contexto_geral}
+                            
+                            PERGUNTA DO USUÁRIO: {pergunta}
+                            """
+                            
+                            resposta = model.generate_content(prompt_sistema)
+                            st.session_state["mensagens_ia"].append({"role": "assistant", "content": resposta.text})
                     except Exception as e:
                         st.error(f"Erro ao consultar a IA: {e}")
 
@@ -81,7 +91,6 @@ def render_config_ia(supabase):
     except:
         df_bd = pd.DataFrame(columns=["id", "administradora", "regras_operacionais", "regras_comissionamento"])
         
-    # --- 2.1 FORMULÁRIO MANUAL ACIMA ---
     with st.expander("➕ Cadastrar Regras Manualmente", expanded=False):
         with st.form("form_ia_cadastro"):
             admin_nome = st.text_input("Nome da Administradora *")
@@ -102,7 +111,6 @@ def render_config_ia(supabase):
                     
     st.divider()
 
-    # --- 2.2 NOVO: SEÇÃO DE IMPORTAR / EXPORTAR EM WORD (.DOCX) ---
     st.markdown("#### 📥 Importar / 📤 Exportar Base via Word (.docx)")
     c_imp, c_exp = st.columns(2)
     
@@ -199,7 +207,6 @@ def render_config_ia(supabase):
 
     st.divider()
 
-    # --- 2.3 EXIBIÇÃO DA BASE ATUAL ---
     if not df_bd.empty:
         st.markdown("#### 📚 Base Atual de Conhecimento")
         for _, row in df_bd.iterrows():
