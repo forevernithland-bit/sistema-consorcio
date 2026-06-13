@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import google.generativeai as genai
 import io
-from docx import Document # Biblioteca para manipular arquivos Word
+from docx import Document
 
 # ==========================================
 # 1. WIDGET DO CHAT (Fica fixo no Menu Lateral)
@@ -48,8 +48,10 @@ def render_widget_ia(supabase):
                         if not contexto_geral:
                             contexto_geral = "Ainda não há regras cadastradas no banco de dados."
 
-                        model = genai.GenerativeModel('gemini-1.5-flash')
-                        prompt_sistema = f"""Você é o assistente virtual da Consorbens, specialized em consórcios.
+                        # AQUI ESTÁ A CORREÇÃO DA ZEBRA 👇
+                        model = genai.GenerativeModel('gemini-1.5-flash-latest')
+                        
+                        prompt_sistema = f"""Você é o assistente virtual da Consorbens, especializado em consórcios.
                         Responda APENAS com base neste contexto (se não souber, diga que não tem a informação):
                         {contexto_geral}
                         
@@ -117,7 +119,6 @@ def render_config_ia(supabase):
                     current_section = None
                     records = {}
                     
-                    # Motor de leitura inteligente por marcadores de texto
                     for p in doc.paragraphs:
                         text = p.text.strip()
                         if not text:
@@ -125,7 +126,6 @@ def render_config_ia(supabase):
                                 records[current_admin][current_section] += "\n"
                             continue
                         
-                        # Detecta os marcadores independente de maiúscula/minúscula
                         if text.upper().startswith("ADMINISTRADORA:"):
                             current_admin = text.split(":", 1)[1].strip().upper()
                             records[current_admin] = {"op": "", "com": ""}
@@ -135,21 +135,17 @@ def render_config_ia(supabase):
                         elif text.upper() == "[REGRAS DE COMISSIONAMENTO]":
                             current_section = "com"
                         elif text.startswith("--------------------"):
-                            # Ignora linhas de separação visual
                             current_section = None
                         else:
                             if current_admin and current_section:
                                 records[current_admin][current_section] += text + "\n"
                     
-                    # Envia os dados limpos para o Supabase
                     contador = 0
                     for admin, info in records.items():
                         if admin:
-                            # Limpa quebras sobressalentes
                             op_clean = info["op"].strip()
                             com_clean = info["com"].strip()
                             
-                            # Verifica se essa administradora já existia para atualizar ou criar nova
                             existe = supabase.table("base_conhecimento_ia").select("id").eq("administradora", admin).execute()
                             
                             payload = {
@@ -174,7 +170,6 @@ def render_config_ia(supabase):
         st.caption("Baixe um documento estruturado pronto para editar ou servir de modelo.")
         
         if not df_bd.empty:
-            # Montagem estruturada do Word (.docx)
             doc_out = Document()
             doc_out.add_heading('Base de Conhecimento - Consorbens IA', 0)
             p_inst = doc_out.add_paragraph()
