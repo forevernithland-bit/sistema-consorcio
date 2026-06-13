@@ -48,8 +48,8 @@ def render_widget_ia(supabase):
                         if not contexto_geral:
                             contexto_geral = "Ainda não há regras cadastradas no banco de dados."
 
-                        # AQUI ESTÁ A CORREÇÃO DA ZEBRA 👇
-                        model = genai.GenerativeModel('gemini-1.5-flash-latest')
+                        # AQUI ESTÁ A SOLUÇÃO BLINDADA 👇
+                        model = genai.GenerativeModel('gemini-pro')
                         
                         prompt_sistema = f"""Você é o assistente virtual da Consorbens, especializado em consórcios.
                         Responda APENAS com base neste contexto (se não souber, diga que não tem a informação):
