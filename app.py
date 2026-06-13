@@ -3,9 +3,6 @@ import pandas as pd
 from datetime import datetime
 import calendar
 import os
-from modulos.configuracoes import render_configuracoes
-from modulos.senhas import render_senhas
-from modulos.assistente import render_assistente  # <--- ADICIONE ESTA LINHA
 
 # ==========================================
 # IMPORTAÇÃO DOS NOSSOS MÓDULOS LOCAIS
@@ -21,7 +18,8 @@ from modulos.relatorios import render_relatorios
 from modulos.midias import render_midias
 from modulos.baixas import render_baixas
 from modulos.configuracoes import render_configuracoes
-from modulos.senhas import render_senhas  # <--- Novo módulo integrado aqui
+from modulos.senhas import render_senhas
+from modulos.assistente import render_assistente  # <--- ADICIONADO AQUI
 
 # ==========================================
 # 1. CONFIGURAÇÃO DA PÁGINA E USUÁRIOS
@@ -199,11 +197,11 @@ if not is_logado:
 else:
     st.sidebar.divider() 
     
-    # Condicional que adiciona a aba "Senhas" somente se o perfil for Master (breno ou uriel)
+    # Condicional que adiciona a aba "Senhas" e "Assistente IA" dependendo do perfil
     if is_master:
-        opcoes_principais = ["Dashboard", "Nova Venda", "Assembleias", "Relatórios", "Mídias", "Baixar Parcelas", "Configurações de Sistema", "Senhas"] 
+        opcoes_principais = ["Dashboard", "Nova Venda", "Assembleias", "Relatórios", "Mídias", "Baixar Parcelas", "Configurações de Sistema", "Senhas", "Assistente IA"] 
     else:
-        opcoes_principais = ["Dashboard", "Nova Venda", "Assembleias", "Relatórios", "Mídias"]
+        opcoes_principais = ["Dashboard", "Nova Venda", "Assembleias", "Relatórios", "Mídias", "Assistente IA"]
         
     try: idx_principal = opcoes_principais.index(st.session_state['menu_lateral'])
     except ValueError: idx_principal = None 
@@ -290,7 +288,5 @@ elif menu_selecionado == "Configurações de Sistema":
     render_configuracoes(supabase, df_admin_cad, df_admin, lista_admin_bd, cfg, cfg_id)
 elif menu_selecionado == "Senhas":
     render_senhas(supabase)
-elif menu_selecionado == "Senhas":
-    render_senhas(supabase)
-elif menu_selecionado == "Assistente IA":          # <--- ADICIONE ESTAS DUAS LINHAS
-    render_assistente(supabase)                    # <--- ADICIONE ESTAS DUAS LINHAS
+elif menu_selecionado == "Assistente IA":
+    render_assistente(supabase)
