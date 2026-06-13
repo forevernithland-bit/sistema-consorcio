@@ -6,3 +6,4 @@ requests
 google-api-python-client
 google-auth
 google-generativeai
+python-docx
