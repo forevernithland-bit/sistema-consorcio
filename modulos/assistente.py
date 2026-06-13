@@ -22,8 +22,17 @@ def render_widget_ia(supabase):
     st.sidebar.divider()
     
     with st.sidebar.popover("🤖 Falar com a IA", use_container_width=True):
-        st.markdown("### 💬 Assistente Consorbens")
         
+        # --- NOVIDADE: Colunas para alinhar o título e o botão de limpar ---
+        c_titulo, c_limpar = st.columns([7, 3])
+        with c_titulo:
+            st.markdown("### 💬 Assistente")
+        with c_limpar:
+            if st.button("🗑️ Limpar", help="Apagar histórico da conversa"):
+                st.session_state["mensagens_ia"] = [{"role": "assistant", "content": "Olá! Sou a IA da Consorbens. Qual a sua dúvida sobre as administradoras?"}]
+                st.rerun()
+        # ------------------------------------------------------------------
+
         with st.form("chat_form", clear_on_submit=True):
             c1, c2 = st.columns([4, 1])
             pergunta = c1.text_input("Digite sua dúvida:", label_visibility="collapsed", placeholder="Ex: Qual a taxa da Yamaha?")
@@ -34,42 +43,31 @@ def render_widget_ia(supabase):
                 
                 with st.spinner("Pensando..."):
                     try:
-                        # ---------------------------------------------------------
-                        # A MÁGICA AQUI: O sistema rastreia os modelos permitidos!
-                        # ---------------------------------------------------------
-                        modelos_permitidos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+                        res = supabase.table("base_conhecimento_ia").select("*").execute()
+                        df_base = pd.DataFrame(res.data)
                         
-                        if not modelos_permitidos:
-                            st.error("⚠️ NENHUM modelo liberado! O Google bloqueou sua chave porque seu projeto foi criado em um servidor no Brasil. Crie um novo projeto no Google Cloud e certifique-se de escolher um servidor nos Estados Unidos (US).")
-                        else:
-                            # O sistema escolhe o Gemini Flash (mais rápido), senão pega o 1º da lista
-                            modelo_escolhido = next((m for m in modelos_permitidos if '1.5-flash' in m), modelos_permitidos[0])
-                            
-                            res = supabase.table("base_conhecimento_ia").select("*").execute()
-                            df_base = pd.DataFrame(res.data)
-                            
-                            contexto_geral = ""
-                            if not df_base.empty:
-                                for _, row in df_base.iterrows():
-                                    contexto_geral += f"\n\n--- ADMINISTRADORA: {row['administradora']} ---\n"
-                                    contexto_geral += f"Regras Operacionais: {row['regras_operacionais']}\n"
-                                    if is_master:
-                                        contexto_geral += f"Comissões (SIGILOSO): {row['regras_comissionamento']}\n"
-                            
-                            if not contexto_geral:
-                                contexto_geral = "Ainda não há regras cadastradas no banco de dados."
+                        contexto_geral = ""
+                        if not df_base.empty:
+                            for _, row in df_base.iterrows():
+                                contexto_geral += f"\n\n--- ADMINISTRADORA: {row['administradora']} ---\n"
+                                contexto_geral += f"Regras Operacionais: {row['regras_operacionais']}\n"
+                                if is_master:
+                                    contexto_geral += f"Comissões (SIGILOSO): {row['regras_comissionamento']}\n"
+                        
+                        if not contexto_geral:
+                            contexto_geral = "Ainda não há regras cadastradas no banco de dados."
 
-                            model = genai.GenerativeModel(modelo_escolhido)
-                            
-                            prompt_sistema = f"""Você é o assistente virtual da Consorbens, especializado em consórcios.
-                            Responda APENAS com base neste contexto (se não souber, diga que não tem a informação):
-                            {contexto_geral}
-                            
-                            PERGUNTA DO USUÁRIO: {pergunta}
-                            """
-                            
-                            resposta = model.generate_content(prompt_sistema)
-                            st.session_state["mensagens_ia"].append({"role": "assistant", "content": resposta.text})
+                        model = genai.GenerativeModel('gemini-pro')
+                        
+                        prompt_sistema = f"""Você é o assistente virtual da Consorbens, especializado em consórcios.
+                        Responda APENAS com base neste contexto (se não souber, diga que não tem a informação):
+                        {contexto_geral}
+                        
+                        PERGUNTA DO USUÁRIO: {pergunta}
+                        """
+                        
+                        resposta = model.generate_content(prompt_sistema)
+                        st.session_state["mensagens_ia"].append({"role": "assistant", "content": resposta.text})
                     except Exception as e:
                         st.error(f"Erro ao consultar a IA: {e}")
 
