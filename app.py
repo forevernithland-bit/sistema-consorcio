@@ -3,6 +3,7 @@ import pandas as pd
 from datetime import datetime
 import calendar
 import os
+import base64  # Necessário para codificar imagens caso use futuramente
 
 # ==========================================
 # IMPORTAÇÃO DOS NOSSOS MÓDULOS LOCAIS
@@ -197,9 +198,9 @@ if not is_logado:
 else:
     st.sidebar.divider() 
     
-    # Condicional que adiciona a aba "Senhas" e "Base de Conhecimento IA" dependendo do perfil
+    # Condicional que adiciona a aba "Senhas" e "Base de Conhecimento" dependendo do perfil
     if is_master:
-        opcoes_principais = ["Dashboard", "Nova Venda", "Assembleias", "Relatórios", "Mídias", "Baixar Parcelas", "Configurações de Sistema", "Senhas", "Base de Conhecimento IA"] 
+        opcoes_principais = ["Dashboard", "Nova Venda", "Assembleias", "Relatórios", "Mídias", "Baixar Parcelas", "Configurações de Sistema", "Senhas", "Base de Conhecimento"] 
     else:
         opcoes_principais = ["Dashboard", "Nova Venda", "Assembleias", "Relatórios", "Mídias"]
         
@@ -292,5 +293,5 @@ elif menu_selecionado == "Configurações de Sistema":
     render_configuracoes(supabase, df_admin_cad, df_admin, lista_admin_bd, cfg, cfg_id)
 elif menu_selecionado == "Senhas":
     render_senhas(supabase)
-elif menu_selecionado == "Base de Conhecimento IA":
+elif menu_selecionado == "Base de Conhecimento":
     render_config_ia(supabase)
