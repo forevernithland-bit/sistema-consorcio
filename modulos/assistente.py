@@ -6,7 +6,7 @@ import os
 from docx import Document
 
 # ==========================================
-# 1. WIDGET DO CHAT DO BENTO
+# 1. WIDGET DO CHAT DO BENTO (Flutuante / Tela Cheia)
 # ==========================================
 def render_widget_ia(supabase):
     is_master = (st.session_state.get('perfil_logado') == "Master") or (st.session_state.get('usuario_logado') in ['breno', 'uriel'])
@@ -20,26 +20,59 @@ def render_widget_ia(supabase):
     if "mensagens_ia" not in st.session_state:
         st.session_state["mensagens_ia"] = [{"role": "assistant", "content": "Olá! Sou o Bento, a Inteligência Artificial da Consorbens. Qual a sua dúvida sobre as administradoras?"}]
 
+    # Variável para controlar se o chat está minimizado ou em tela cheia
+    if "bento_tela_cheia" not in st.session_state:
+        st.session_state["bento_tela_cheia"] = False
+
+    # A Mágica do CSS: Se a tela cheia estiver ativada, expandimos o popover!
+    if st.session_state["bento_tela_cheia"]:
+        st.markdown("""
+        <style>
+            div[data-testid="stPopoverBody"] {
+                position: fixed !important;
+                top: 5vh !important;
+                left: 5vw !important;
+                width: 90vw !important;
+                min-width: 90vw !important;
+                height: 90vh !important;
+                max-height: 90vh !important;
+                z-index: 99999 !important;
+                border-radius: 12px !important;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.4) !important;
+                overflow: hidden !important;
+            }
+        </style>
+        """, unsafe_allow_html=True)
+
     st.sidebar.divider()
     
-    # O Popover atua como a nossa janela flutuante expansível!
     with st.sidebar.popover("🤖 Falar com o Bento", use_container_width=True):
         
-        # Cabeçalho com o nome Bento, a foto (se existir) e o botão Limpar
-        c_img, c_titulo, c_limpar = st.columns([2, 5, 3])
+        # Cabeçalho com o nome Bento, a foto, botão Limpar e botão Expandir/Minimizar
+        c_img, c_titulo, c_botoes = st.columns([1.5, 4.5, 4])
         with c_img:
-            # Tenta carregar a imagem do Bento. Se você salvar uma imagem chamada "logo_bento_ia.png" 
-            # na mesma pasta do app.py, ela vai aparecer aqui magicamente!
             if os.path.exists("logo_bento_ia.png"):
                 st.image("logo_bento_ia.png", use_container_width=True)
             else:
                 st.markdown("<h1>🤖</h1>", unsafe_allow_html=True)
         with c_titulo:
             st.markdown("### Bento AI")
-        with c_limpar:
-            if st.button("🗑️ Limpar", help="Apagar histórico da conversa"):
-                st.session_state["mensagens_ia"] = [{"role": "assistant", "content": "Olá! Sou o Bento, a Inteligência Artificial da Consorbens. Qual a sua dúvida sobre as administradoras?"}]
-                st.rerun()
+            
+        with c_botoes:
+            b1, b2 = st.columns(2)
+            with b1:
+                if st.button("🗑️", help="Limpar conversa", use_container_width=True):
+                    st.session_state["mensagens_ia"] = [{"role": "assistant", "content": "Olá! Sou o Bento, a Inteligência Artificial da Consorbens. Qual a sua dúvida sobre as administradoras?"}]
+                    st.rerun()
+            with b2:
+                if st.session_state["bento_tela_cheia"]:
+                    if st.button("↙️", help="Minimizar", use_container_width=True):
+                        st.session_state["bento_tela_cheia"] = False
+                        st.rerun()
+                else:
+                    if st.button("⛶", help="Expandir Tela", use_container_width=True):
+                        st.session_state["bento_tela_cheia"] = True
+                        st.rerun()
 
         # Formulário de Pergunta
         with st.form("chat_form", clear_on_submit=True):
@@ -52,11 +85,11 @@ def render_widget_ia(supabase):
                 
                 with st.spinner("O Bento está pensando..."):
                     try:
-                        # Auto-Detector de Modelos (Resolve o erro 404 de região do Google)
+                        # Auto-Detector de Modelos (Resolve o erro 404)
                         modelos_permitidos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
                         
                         if not modelos_permitidos:
-                            st.error("⚠️ O Google bloqueou sua chave porque seu projeto foi criado num servidor do Brasil. Crie um novo projeto no Google Cloud escolhendo os Estados Unidos (US).")
+                            st.error("⚠️ O Google bloqueou sua chave. Crie um novo projeto no Google Cloud escolhendo os Estados Unidos (US).")
                         else:
                             modelo_escolhido = next((m for m in modelos_permitidos if '1.5-flash' in m), modelos_permitidos[0])
                             modelo_limpo = modelo_escolhido.replace('models/', '')
@@ -91,8 +124,10 @@ def render_widget_ia(supabase):
                     except Exception as e:
                         st.error(f"Erro ao consultar o Bento: {e}")
 
-        # Caixa do chat mais alongada para facilitar a leitura
-        chat_container = st.container(height=450)
+        # Ajusta a altura da caixa de texto baseada no modo de visualização
+        altura_caixa = 650 if st.session_state["bento_tela_cheia"] else 400
+        chat_container = st.container(height=altura_caixa)
+        
         with chat_container:
             for msg in st.session_state["mensagens_ia"]:
                 if msg["role"] == "assistant":
