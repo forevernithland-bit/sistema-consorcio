@@ -104,3 +104,32 @@ def salvar_status_comissoes(supabase: Client, df_editado: pd.DataFrame, df_origi
                 supabase.table("status_comissoes").insert({"Chave_Unica": chave, "Status": novo_status}).execute()
         return True
     return False
+
+# ==========================================
+# FUNÇÕES DE AUTENTICAÇÃO E GESTÃO DE USUÁRIOS
+# ==========================================
+def verificar_login_db(supabase: Client, login_input: str, senha_input: str):
+    """
+    Verifica as credenciais no Supabase. 
+    O login é avaliado de forma CASE-INSENSITIVE (.ilike),
+    e a senha é validada de forma CASE-SENSITIVE exata no Python.
+    """
+    try:
+        # Busca o utilizador ignorando maiúsculas/minúsculas no login
+        res = supabase.table("usuarios").select("*").ilike("login", login_input.strip()).execute()
+        if res.data:
+            usuario = res.data[0]
+            # Validação estrita (Case Sensitive) da senha no Python
+            if usuario["senha"] == senha_input:
+                return usuario
+        return None
+    except Exception as e:
+        return None
+
+def atualizar_senha_usuario(supabase: Client, login_input: str, nova_senha: str):
+    """Atualiza a senha de um utilizador específico no banco de dados"""
+    try:
+        res = supabase.table("usuarios").update({"senha": nova_senha}).ilike("login", login_input.strip()).execute()
+        return len(res.data) > 0
+    except Exception as e:
+        return False
