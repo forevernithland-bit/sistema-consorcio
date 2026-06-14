@@ -20,14 +20,21 @@ def render_widget_ia(supabase):
     if "mensagens_ia" not in st.session_state:
         st.session_state["mensagens_ia"] = [{"role": "assistant", "content": "Olá! Sou o Bento, a Inteligência Artificial da Consorbens. Qual a sua dúvida sobre as administradoras?"}]
 
-    # Variável para controlar se o chat está minimizado ou em tela cheia
     if "bento_tela_cheia" not in st.session_state:
         st.session_state["bento_tela_cheia"] = False
 
-    # A Mágica do CSS: Se a tela cheia estiver ativada, expandimos o popover!
+    # --- A MÁGICA DO CSS PARA BLINDAR O SCROLL ---
+    # Bloqueamos o scroll da janela principal para que os botões do topo NUNCA sumam.
+    css_popover = """
+    <style>
+        div[data-testid="stPopoverBody"] {
+            overflow-y: hidden !important; /* Trava o scroll da janela externa */
+            padding: 1rem !important;
+        }
+    """
+    
     if st.session_state["bento_tela_cheia"]:
-        st.markdown("""
-        <style>
+        css_popover += """
             div[data-testid="stPopoverBody"] {
                 position: fixed !important;
                 top: 5vh !important;
@@ -39,53 +46,45 @@ def render_widget_ia(supabase):
                 z-index: 99999 !important;
                 border-radius: 12px !important;
                 box-shadow: 0 10px 40px rgba(0,0,0,0.4) !important;
-                overflow: hidden !important;
             }
-        </style>
-        """, unsafe_allow_html=True)
+        """
+    css_popover += "</style>"
+    st.markdown(css_popover, unsafe_allow_html=True)
 
     st.sidebar.divider()
     
     with st.sidebar.popover("🤖 Falar com o Bento", use_container_width=True):
         
-        # Cabeçalho com o nome Bento, a foto, botão Limpar e botão Expandir/Minimizar
-        c_img, c_titulo, c_botoes = st.columns([1.5, 4.5, 4])
-        with c_img:
-            if os.path.exists("logo_bento_ia.png"):
-                st.image("logo_bento_ia.png", use_container_width=True)
-            else:
-                st.markdown("<h1>🤖</h1>", unsafe_allow_html=True)
-        with c_titulo:
-            st.markdown("### Bento AI")
-            
-        with c_botoes:
-            b1, b2 = st.columns(2)
-            with b1:
-                if st.button("🗑️", help="Limpar conversa", use_container_width=True):
-                    st.session_state["mensagens_ia"] = [{"role": "assistant", "content": "Olá! Sou o Bento, a Inteligência Artificial da Consorbens. Qual a sua dúvida sobre as administradoras?"}]
+        # Cabeçalho SUPER COMPACTO e fixo no topo
+        c1, c2, c3 = st.columns([5, 2.5, 2.5])
+        with c1:
+            st.markdown("#### 🤖 Bento AI")
+        with c2:
+            if st.button("🗑️ Limpar", help="Apagar histórico", use_container_width=True):
+                st.session_state["mensagens_ia"] = [{"role": "assistant", "content": "Olá! Sou o Bento, a Inteligência Artificial da Consorbens. Qual a sua dúvida sobre as administradoras?"}]
+                st.rerun()
+        with c3:
+            if st.session_state["bento_tela_cheia"]:
+                if st.button("↙️ Voltar", help="Tamanho original", use_container_width=True):
+                    st.session_state["bento_tela_cheia"] = False
                     st.rerun()
-            with b2:
-                if st.session_state["bento_tela_cheia"]:
-                    if st.button("↙️", help="Minimizar", use_container_width=True):
-                        st.session_state["bento_tela_cheia"] = False
-                        st.rerun()
-                else:
-                    if st.button("⛶", help="Expandir Tela", use_container_width=True):
-                        st.session_state["bento_tela_cheia"] = True
-                        st.rerun()
+            else:
+                if st.button("⛶ Ampliar", help="Tela Cheia", use_container_width=True):
+                    st.session_state["bento_tela_cheia"] = True
+                    st.rerun()
 
         # Formulário de Pergunta
         with st.form("chat_form", clear_on_submit=True):
-            c1, c2 = st.columns([4, 1])
-            pergunta = c1.text_input("Digite sua dúvida:", label_visibility="collapsed", placeholder="Ex: Qual a taxa da Yamaha?")
-            enviou = c2.form_submit_button("➤")
+            c_input, c_btn = st.columns([5, 1])
+            pergunta = c_input.text_input("Dúvida:", label_visibility="collapsed", placeholder="Ex: Qual a taxa da Yamaha?")
+            enviou = c_btn.form_submit_button("➤", use_container_width=True)
             
             if enviou and pergunta:
                 st.session_state["mensagens_ia"].append({"role": "user", "content": pergunta})
                 
                 with st.spinner("O Bento está pensando..."):
                     try:
-                        # Auto-Detector de Modelos (Resolve o erro 404)
+                        # Auto-Detector de Modelos
                         modelos_permitidos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
                         
                         if not modelos_permitidos:
@@ -124,8 +123,8 @@ def render_widget_ia(supabase):
                     except Exception as e:
                         st.error(f"Erro ao consultar o Bento: {e}")
 
-        # Ajusta a altura da caixa de texto baseada no modo de visualização
-        altura_caixa = 650 if st.session_state["bento_tela_cheia"] else 400
+        # Ajuste dinâmico da altura da caixa para caber perfeitamente na tela
+        altura_caixa = 480 if st.session_state["bento_tela_cheia"] else 350
         chat_container = st.container(height=altura_caixa)
         
         with chat_container:
@@ -173,7 +172,7 @@ def render_config_ia(supabase):
     
     with c_imp:
         st.write("**Importar arquivo do Word**")
-        st.caption("O arquivo deve seguir a estrutura de marcadores gerada no botão de exportação ao lado.")
+        st.caption("O arquivo deve seguir a estrutura gerada no botão de exportação ao lado.")
         uploaded_file = st.file_uploader("Subir documento Word (.docx)", type=['docx'], label_visibility="collapsed")
         
         if uploaded_file is not None:
