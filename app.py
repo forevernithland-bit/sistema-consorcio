@@ -9,7 +9,7 @@ import base64  # Necessário para codificar imagens caso use futuramente
 # IMPORTAÇÃO DOS NOSSOS MÓDULOS LOCAIS
 # ==========================================
 from utils import carregar_ferramenta, formatar_brl_puro
-from database import iniciar_conexao, carregar_dados_iniciais, salvar_status_comissoes
+from database import iniciar_conexao, carregar_dados_iniciais, salvar_status_comissoes, verificar_login_db, atualizar_senha_usuario
 from regras import gerar_tabela_parcelas
 
 from modulos.dashboard import render_dashboard
@@ -23,18 +23,11 @@ from modulos.senhas import render_senhas
 from modulos.assistente import render_widget_ia, render_config_ia
 
 # ==========================================
-# 1. CONFIGURAÇÃO DA PÁGINA E USUÁRIOS
+# 1. CONFIGURAÇÃO DA PÁGINA E SESSÕES
 # ==========================================
 st.set_page_config(page_title="Portal Consorbens", layout="wide", initial_sidebar_state="expanded")
 
 PASTA_ATUAL = os.path.dirname(os.path.abspath(__file__))
-
-USUARIOS = {
-    "breno": {"senha": "123", "perfil": "Master", "nome": "BRENO LIMA"},
-    "uriel": {"senha": "123", "perfil": "Master", "nome": "URIEL GOMES"},
-    "vendedor1": {"senha": "123", "perfil": "Vendedor", "nome": "Vendedor Terceiro"},
-    "consorbens": {"senha": "123", "perfil": "Vendedor", "nome": "Consorbens"}
-}
 
 # Inicialização de Variáveis de Sessão
 for key, default in [('usuario_logado', None), ('perfil_logado', None), ('nome_vendedor', None), 
@@ -255,25 +248,65 @@ if menu_selecionado in simuladores_dict:
 
 if not is_logado:
     if menu_selecionado == "🔐 Login (Área Restrita)":
-        st.markdown("<br><br><br>", unsafe_allow_html=True)
-        _, col_meio, _ = st.columns([1, 1.2, 1])
+        st.markdown("<br><br>", unsafe_allow_html=True)
+        _, col_meio, _ = st.columns([1, 1.3, 1])
+        
         with col_meio:
-            with st.form("form_login"):
-                usuario_input = st.text_input("Usuário (Login)").lower()
-                senha_input = st.text_input("Senha", type="password")
-                st.write("") 
-                _, c_btn2, _ = st.columns([1, 1.5, 1])
-                with c_btn2:
+            t_login, t_senha = st.tabs(["🔐 Entrar no Sistema", "🔄 Alterar Minha Senha"])
+            
+            with t_login:
+                with st.form("form_login"):
+                    st.markdown("##### Selecione ou digite as suas credenciais")
+                    opcoes_usuarios = ["Breno", "Uriel", "Outro (Digitar Manualmente / Novo Usuário)"]
+                    usuario_sel = st.selectbox("Utilizador", opcoes_usuarios, index=0)
+                    
+                    if usuario_sel == "Outro (Digitar Manualmente / Novo Usuário)":
+                        usuario_input = st.text_input("Introduza o Login do Utilizador").strip()
+                    else:
+                        usuario_input = usuario_sel.lower()
+                        
+                    senha_input = st.text_input("Palavra-passe (Senha)", type="password")
+                    st.write("") 
+                    
                     if st.form_submit_button("ENTRAR", type="primary", use_container_width=True):
-                        if usuario_input in USUARIOS and USUARIOS[usuario_input]["senha"] == senha_input:
-                            st.session_state.update({
-                                'usuario_logado': usuario_input,
-                                'perfil_logado': USUARIOS[usuario_input]["perfil"],
-                                'nome_vendedor': USUARIOS[usuario_input]["nome"],
-                                'menu_lateral': "Dashboard"
-                            })
-                            st.rerun() 
-                        else: st.error("❌ Usuário ou senha incorretos.")
+                        if not usuario_input:
+                            st.error("❌ Por favor, introduza o nome do utilizador.")
+                        else:
+                            user_valido = verificar_login_db(supabase, usuario_input, senha_input)
+                            
+                            if user_valido:
+                                st.session_state.update({
+                                    'usuario_logado': user_valido["login"],
+                                    'perfil_logado': user_valido["perfil"],
+                                    'nome_vendedor': user_valido["nome"],
+                                    'menu_lateral': "Dashboard"
+                                })
+                                st.rerun() 
+                            else: 
+                                st.error("❌ Utilizador ou senha incorretos.")
+                                
+            with t_senha:
+                with st.form("form_alterar_senha"):
+                    st.markdown("##### Atualizar Palavra-passe")
+                    alt_usuario = st.text_input("Confirme o seu Usuário (Login)").strip()
+                    alt_senha_antiga = st.text_input("Senha Atual", type="password")
+                    alt_senha_nova = st.text_input("Nova Senha", type="password")
+                    alt_senha_conf = st.text_input("Confirmar Nova Senha", type="password")
+                    
+                    if st.form_submit_button("SALVAR NOVA SENHA", type="primary", use_container_width=True):
+                        if not alt_usuario or not alt_senha_antiga or not alt_senha_nova:
+                            st.error("❌ Preencha todos os campos obrigatórios.")
+                        elif alt_senha_nova != alt_senha_conf:
+                            st.error("❌ A nova senha e a confirmação não coincidem.")
+                        else:
+                            checar_atual = verificar_login_db(supabase, alt_usuario, alt_senha_antiga)
+                            if checar_atual:
+                                if atualizar_senha_usuario(supabase, alt_usuario, alt_senha_nova):
+                                    st.success("✅ Senha atualizada com sucesso! Já pode iniciar sessão.")
+                                else:
+                                    st.error("❌ Erro técnico ao atualizar no banco de dados.")
+                            else:
+                                st.error("❌ Usuário ou Senha Atual incorretos. Operação recusada.")
     st.stop() 
 
 # --- ROTEAMENTO PARA OS MÓDULOS ---
