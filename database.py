@@ -88,24 +88,46 @@ def carregar_dados_iniciais(supabase: Client):
 # ==========================================
 def salvar_status_comissoes(supabase: Client, df_editado: pd.DataFrame, df_original: pd.DataFrame) -> bool:
     """Verifica quais linhas mudaram de status ou data na tabela e salva no Supabase"""
-    # Detecta mudança no Status OU na Data Recebimento
-    mudancas = df_editado[(df_editado['Status'] != df_original['Status']) | (df_editado['Data Recebimento'] != df_original['Data Recebimento'])]
+    
+    # Preenchemos valores nulos/NaN com strings vazias temporariamente apenas para a comparação matemática não falhar
+    df_ed_cmp = df_editado.fillna("")
+    df_or_cmp = df_original.fillna("")
+    
+    # Detecta mudança no Status OU na Data Recebimento de forma segura
+    mudancas = df_editado[(df_ed_cmp['Status'] != df_or_cmp['Status']) | (df_ed_cmp['Data Recebimento'] != df_or_cmp['Data Recebimento'])]
     
     if not mudancas.empty:
         for _, row in mudancas.iterrows():
-            chave = row['Chave']
-            novo_status = row['Status']
+            chave = str(row['Chave'])
+            novo_status = str(row['Status'])
+            
+            # Sanitiza a data: Se for nula (NaN), enviamos None (nulo no banco), senão enviamos o texto exato
             nova_data = row['Data Recebimento']
+            if pd.isna(nova_data):
+                nova_data = None
+            else:
+                nova_data = str(nova_data).strip()
+            
+            payload = {
+                "Chave_Unica": chave, 
+                "Status": novo_status, 
+                "Data_Pagamento": nova_data
+            }
             
             # Verifica se já existe um registro para esta parcela
             existe = supabase.table("status_comissoes").select("id").eq("Chave_Unica", chave).execute()
             
-            if existe.data:
-                # Atualiza o existente
-                supabase.table("status_comissoes").update({"Status": novo_status, "Data_Pagamento": nova_data}).eq("id", existe.data[0]['id']).execute()
-            else:
-                # Cria um novo registro
-                supabase.table("status_comissoes").insert({"Chave_Unica": chave, "Status": novo_status, "Data_Pagamento": nova_data}).execute()
+            try:
+                if existe.data:
+                    # Atualiza o existente
+                    supabase.table("status_comissoes").update(payload).eq("id", existe.data[0]['id']).execute()
+                else:
+                    # Cria um novo registro
+                    supabase.table("status_comissoes").insert(payload).execute()
+            except Exception as e:
+                st.error(f"Erro ao salvar a parcela {chave}: {e}")
+                return False
+                
         return True
     return False
 
