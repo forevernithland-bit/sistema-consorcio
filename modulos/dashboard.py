@@ -138,11 +138,15 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
                     if cota_selecionada:
                         id_cota = int(cota_selecionada.split(" | ")[0].replace("ID:", ""))
                         cota_info = cotas_cliente[cotas_cliente['id'] == id_cota].iloc[0]
+                        
                         vendedor_atual = cota_info['VENDEDOR']
                         status_atual = cota_info['STATUS']
                         data_atual_str = cota_info['DATA']
                         grupo_atual = cota_info['GRUPO']
                         cota_atual = cota_info['COTA']
+                        valor_atual = cota_info['Valor_Numerico']
+                        admin_atual = cota_info['ADMINISTRADORA']
+                        produto_atual = cota_info['PRODUTO']
                         
                         opcoes_status = ["Em Andamento", "Em Atraso", "Cancelada", "Contemplada"]
                         if status_atual not in opcoes_status:
@@ -154,6 +158,7 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
                         except:
                             data_atual_obj = datetime.today().date()
                         
+                        # --- LINHA 1 ---
                         c_ed1, c_ed2, c_ed3 = st.columns(3)
                         with c_ed1: novo_status = st.selectbox("Status", opcoes_status, index=opcoes_status.index(status_atual))
                         with c_ed2:
@@ -161,15 +166,42 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
                             novo_vendedor = st.selectbox("Vendedor", opts_v, index=opts_v.index(vendedor_atual) if vendedor_atual in opts_v else 0) if is_master else st.text_input("Vendedor", value=vendedor_atual, disabled=True)
                         with c_ed3: nova_data = st.date_input("Data da Venda", value=data_atual_obj, format="DD/MM/YYYY") if is_master else st.text_input("Data da Venda", value=formatar_data_br(cota_info['Data_Real']), disabled=True)
 
-                        c_ed4, c_ed5 = st.columns(2)
+                        # --- LINHA 2 ---
+                        c_ed4, c_ed5, c_ed6 = st.columns(3)
                         with c_ed4: novo_grupo = st.text_input("Grupo", value=grupo_atual, disabled=not is_master)
                         with c_ed5: nova_cota = st.text_input("Cota", value=cota_atual, disabled=not is_master)
+                        with c_ed6: novo_valor = st.number_input("Valor da Carta (R$)", value=float(valor_atual) if pd.notna(valor_atual) else 0.0, step=1000.0, format="%.2f", disabled=not is_master)
                                 
+                        # --- LINHA 3 ---
+                        c_ed7, c_ed8 = st.columns(2)
+                        with c_ed7:
+                            try: idx_admin = lista_admin_bd.index(admin_atual)
+                            except ValueError: idx_admin = 0
+                            nova_admin = st.selectbox("Administradora", options=lista_admin_bd, index=idx_admin, disabled=not is_master)
+                            
+                        with c_ed8:
+                            lista_produtos = ["Auto", "Imóvel", "Moto", "Caminhão", "Serviços"]
+                            try: idx_produto = lista_produtos.index(produto_atual)
+                            except ValueError: idx_produto = 0
+                            novo_produto = st.selectbox("Tipo do Bem", options=lista_produtos, index=idx_produto, disabled=not is_master)
+
                         col_b1, col_b2 = st.columns(2)
                         with col_b1:
                             if st.button("💾 Salvar Alterações na Cota", type="primary", use_container_width=True):
                                 data_formatada = nova_data.strftime("%d/%m/%Y") if not isinstance(nova_data, str) else nova_data
-                                supabase.table("vendas").update({"VENDEDOR": novo_vendedor, "STATUS": novo_status, "DATA": data_formatada, "GRUPO": novo_grupo, "COTA": nova_cota}).eq("id", id_cota).execute()
+                                
+                                dados_atualizados = {
+                                    "VENDEDOR": novo_vendedor, 
+                                    "STATUS": novo_status, 
+                                    "DATA": data_formatada, 
+                                    "GRUPO": novo_grupo, 
+                                    "COTA": nova_cota,
+                                    "VALOR": novo_valor,
+                                    "ADMINISTRADORA": nova_admin,
+                                    "PRODUTO": novo_produto
+                                }
+                                
+                                supabase.table("vendas").update(dados_atualizados).eq("id", id_cota).execute()
                                 st.success("Cota atualizada com sucesso!"); st.rerun()
                         with col_b2:
                             if is_master and st.button("🚨 Apagar Esta Cota", use_container_width=True):
