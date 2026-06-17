@@ -102,10 +102,23 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict):
             
         for p in temp_parcels:
             chave_unica = f"{cliente}_{grupo}_{cota}_{admin}_{p['parcela']}"
-            status_pagamento = status_dict.get(chave_unica, "Pendente")
+            
+            # Puxa o status e a data customizada (se houver no banco)
+            info_status = status_dict.get(chave_unica, {})
+            if isinstance(info_status, str): 
+                status_pagamento = info_status
+                data_custom = None
+            else:
+                status_pagamento = info_status.get('Status', 'Pendente')
+                data_custom = info_status.get('Data_Pagamento')
             
             data_str = p['data_pagamento'].strftime("%d/%m/%Y")
             if status_cota == 'Em Atraso': data_str = "⚠️ Travada (Atraso)"
+            
+            # Se tivermos uma data editada manualmente no banco, sobrescrevemos a calculada
+            if data_custom and pd.notna(data_custom) and str(data_custom).strip() != "":
+                data_str = str(data_custom)
+            
             nome_parcela = f"{p['parcela']}ª Parcela" if isinstance(p['parcela'], int) else "Antecip. (Contemplada)"
             
             parcelas_finais.append({
@@ -124,7 +137,7 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict):
                 "Uriel": p['uriel'],
                 "Vendedor Recebe": p['vend'],
                 "Status": status_pagamento,
-                "Data Prevista": data_str
+                "Data Recebimento": data_str
             })
             
     return pd.DataFrame(parcelas_finais), vendas_sem_data
