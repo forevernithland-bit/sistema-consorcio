@@ -99,23 +99,29 @@ if st.session_state['tela_cheia_relatorio']:
             df_view = df_view[df_view['Status'] != 'PAGO']
             
         if not df_view.empty:
-            df_view = df_view[['Chave', 'Cliente', 'Produto', 'Vendedor', 'Grupo', 'Cota', 'Valor da Venda', 'Parcela', 'Comissão (Bruta)', 'Comissão (s/ Imposto)', 'Breno', 'Uriel', 'Vendedor Recebe', 'Status', 'Data Prevista']]
+            df_view = df_view[['Chave', 'Cliente', 'Produto', 'Vendedor', 'Grupo', 'Cota', 'Valor da Venda', 'Parcela', 'Comissão (Bruta)', 'Comissão (s/ Imposto)', 'Breno', 'Uriel', 'Vendedor Recebe', 'Status', 'Data Recebimento']]
             total_breno, total_uriel, total_vend = df_view['Breno'].sum(), df_view['Uriel'].sum(), df_view['Vendedor Recebe'].sum()
             
             for col in ['Valor da Venda', 'Comissão (Bruta)', 'Comissão (s/ Imposto)', 'Breno', 'Uriel', 'Vendedor Recebe']:
                 df_view[col] = df_view[col].apply(formatar_brl_puro)
             
-            col_config = {"Chave": None, "Status": st.column_config.SelectboxColumn("Status", options=["Pendente", "PAGO"], required=True) if is_master else st.column_config.TextColumn("Status", disabled=True)}
+            col_config = {
+                "Chave": None, 
+                "Status": st.column_config.SelectboxColumn("Status", options=["Pendente", "PAGO"], required=True) if is_master else st.column_config.TextColumn("Status", disabled=True),
+                "Data Recebimento": st.column_config.TextColumn("Data Recebimento", disabled=not is_master)
+            }
             cols_to_hide = [] if is_master else ["Comissão (Bruta)", "Comissão (s/ Imposto)", "Breno", "Uriel"]
             df_final = df_view.drop(columns=cols_to_hide).reset_index(drop=True)
             
-            st.caption("Dica: Clique na coluna 'Status' para alterar. Em seguida, salve as alterações no botão vermelho.")
-            edited_df = st.data_editor(df_final, disabled=[c for c in df_final.columns if c != "Status"], column_config=col_config, use_container_width=True, hide_index=True)
+            st.caption("Dica: Clique em 'Status' ou 'Data Recebimento' para alterar. Em seguida, salve as alterações no botão vermelho.")
+            
+            cols_editaveis = ["Status", "Data Recebimento"] if is_master else []
+            edited_df = st.data_editor(df_final, disabled=[c for c in df_final.columns if c not in cols_editaveis], column_config=col_config, use_container_width=True, hide_index=True)
             
             if is_master:
                 if st.button("💾 Salvar Status de Pagamento", type="primary"):
                     if salvar_status_comissoes(supabase, edited_df, df_final):
-                        st.success("Status atualizados no banco de dados!")
+                        st.success("Status e Datas atualizados no banco de dados!")
                         st.rerun()
                     else: 
                         st.info("Nenhuma alteração detectada.")
