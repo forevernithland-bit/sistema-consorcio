@@ -116,7 +116,15 @@ def render_baixas(supabase, df_vendas_global, df_admin, cfg, status_dict):
 
     st.divider()
     st.subheader("Histórico")
-    c_p = [k for k, v in status_dict.items() if v == 'PAGO']
+    
+    # Novo formato de leitura de Status Pagos
+    c_p = []
+    for k, v in status_dict.items():
+        if isinstance(v, str) and v == 'PAGO':
+            c_p.append(k)
+        elif isinstance(v, dict) and v.get('Status') == 'PAGO':
+            c_p.append(k)
+
     if c_p:
         h_l = []
         for ch in c_p:
