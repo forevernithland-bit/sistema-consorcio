@@ -60,7 +60,8 @@ def carregar_dados_iniciais(supabase: Client):
 
     # 6. Carregar Status das Comissões (Pagas ou Pendentes)
     df_status = carregar_tabela(supabase, "status_comissoes")
-    status_dict = dict(zip(df_status['Chave_Unica'], df_status['Status'])) if not df_status.empty else {}
+    # Novo formato: armazena status e data de pagamento para permitir edição
+    status_dict = df_status.set_index('Chave_Unica').to_dict('index') if not df_status.empty else {}
 
     # 7. Carregar Configurações Internas e Impostos
     cfg_padrao = {
@@ -86,22 +87,25 @@ def carregar_dados_iniciais(supabase: Client):
 # FUNÇÕES DE ATUALIZAÇÃO NO BANCO
 # ==========================================
 def salvar_status_comissoes(supabase: Client, df_editado: pd.DataFrame, df_original: pd.DataFrame) -> bool:
-    """Verifica quais linhas mudaram de status na tabela e salva no Supabase"""
-    mudancas = df_editado[df_editado['Status'] != df_original['Status']]
+    """Verifica quais linhas mudaram de status ou data na tabela e salva no Supabase"""
+    # Detecta mudança no Status OU na Data Recebimento
+    mudancas = df_editado[(df_editado['Status'] != df_original['Status']) | (df_editado['Data Recebimento'] != df_original['Data Recebimento'])]
+    
     if not mudancas.empty:
         for _, row in mudancas.iterrows():
             chave = row['Chave']
             novo_status = row['Status']
+            nova_data = row['Data Recebimento']
             
             # Verifica se já existe um registro para esta parcela
             existe = supabase.table("status_comissoes").select("id").eq("Chave_Unica", chave).execute()
             
             if existe.data:
                 # Atualiza o existente
-                supabase.table("status_comissoes").update({"Status": novo_status}).eq("id", existe.data[0]['id']).execute()
+                supabase.table("status_comissoes").update({"Status": novo_status, "Data_Pagamento": nova_data}).eq("id", existe.data[0]['id']).execute()
             else:
                 # Cria um novo registro
-                supabase.table("status_comissoes").insert({"Chave_Unica": chave, "Status": novo_status}).execute()
+                supabase.table("status_comissoes").insert({"Chave_Unica": chave, "Status": novo_status, "Data_Pagamento": nova_data}).execute()
         return True
     return False
 
