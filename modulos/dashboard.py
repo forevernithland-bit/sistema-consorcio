@@ -216,11 +216,20 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
                     df_view_cli = df_parcelas[df_parcelas['Vendedor Recebe'] > 0].copy() if not is_master else df_parcelas.copy()
                     if not df_view_cli.empty:
                         for col in ['Valor da Venda', 'Comissão (Bruta)', 'Comissão (s/ Imposto)', 'Breno', 'Uriel', 'Vendedor Recebe']: df_view_cli[col] = df_view_cli[col].apply(formatar_brl_puro)
-                        c_conf = {"Chave": None, "Status": st.column_config.SelectboxColumn("Status", options=["Pendente", "PAGO"], required=True) if is_master else st.column_config.TextColumn("Status", disabled=True)}
+                        
+                        c_conf = {
+                            "Chave": None, 
+                            "Status": st.column_config.SelectboxColumn("Status", options=["Pendente", "PAGO"], required=True) if is_master else st.column_config.TextColumn("Status", disabled=True),
+                            "Data Recebimento": st.column_config.TextColumn("Data Recebimento", disabled=not is_master)
+                        }
                         c_hide = ['Cliente', 'Produto', 'Vendedor', 'data_pagamento_dt'] + (["Comissão (Bruta)", "Comissão (s/ Imposto)", "Breno", "Uriel"] if not is_master else [])
                         df_final_cli = df_view_cli.drop(columns=c_hide).reset_index(drop=True)
                         
-                        edited_df_cli = st.data_editor(df_final_cli, disabled=[c for c in df_final_cli.columns if c != "Status"], column_config=c_conf, use_container_width=True, hide_index=True)
+                        cols_editaveis_cli = ["Status", "Data Recebimento"] if is_master else []
+                        
+                        st.caption("Dica: Clique em 'Status' ou 'Data Recebimento' para alterar. Em seguida, salve no botão.")
+                        edited_df_cli = st.data_editor(df_final_cli, disabled=[c for c in df_final_cli.columns if c not in cols_editaveis_cli], column_config=c_conf, use_container_width=True, hide_index=True)
+                        
                         if is_master and st.button("💾 Salvar Status de Pagamento (Cliente)", type="primary"):
                             if salvar_status_comissoes(supabase, edited_df_cli, df_final_cli): 
                                 st.success("Atualizados!")
