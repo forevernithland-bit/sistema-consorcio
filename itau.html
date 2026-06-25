@@ -7,14 +7,74 @@
 
 <style>
 body{margin:0;font-family:Arial;background:#0f172a}
-.container{max-width:980px;margin:auto;padding:10px}
+.container{max-width:980px;margin:auto;padding:10px; transition: max-width 0.3s;}
+.container.wide {max-width: 1300px;}
+
 .top-header {text-align:center; margin-bottom: 15px;}
 .logo-itau {height: 50px; margin-bottom: 10px;}
+
+/* Estilos da Barra Superior (Abas + Botão Externo) */
+.top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    margin-bottom: 20px;
+    margin-top: 10px;
+    width: 100%;
+}
+.tabs-container {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+.tab-btn {
+    padding: 12px 24px;
+    border: none;
+    background: #222;
+    color: #fff;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 15px;
+    transition: 0.2s;
+}
+.tab-btn.active {
+    background: #ec7000;
+    box-shadow: 0 0 10px rgba(236, 112, 0, 0.5);
+}
+.tab-content {
+    display: none;
+}
+.tab-content.active {
+    display: block;
+}
+
+.btn-assembleia {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 11px 20px;
+    background: #ef4444;
+    color: #fff;
+    font-weight: bold;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 13px;
+    transition: 0.2s;
+    text-transform: uppercase;
+}
+.btn-assembleia:hover {
+    background: #dc2626;
+}
+
+/* --------------- ESTILOS ORIGINAIS DO SIMULADOR SIMPLES --------------- */
 .top-buttons{text-align:center;color:#fff;font-weight:bold;margin-bottom:12px}
 .btns{display:flex;justify-content:center;gap:10px;margin-top:8px;flex-wrap:wrap}
 .btnProduto,.btnLembrete{
 padding:14px;
-border:2px solid #ec7000; /* Laranja Itaú */
+border:2px solid #ec7000; 
 background:#000;
 color:#fff;
 cursor:pointer;
@@ -34,7 +94,7 @@ gap:12px;
 box-sizing:border-box;
 }
 
-input,select{
+.card input, .card select{
 padding:12px;
 border-radius:6px;
 border:1px solid #ccc;
@@ -132,7 +192,6 @@ cursor:pointer;
 }
 .green { color: #ec7000; font-size: 20px; font-weight: bold; margin-bottom: 10px; }
 .red { color: #555; font-size: 12px; margin-top: 15px; font-style: italic;}
-.blue { color: #2563eb; font-size: 12px; font-weight: bold; white-space: nowrap; }
 
 .modalBg{
 display:none;
@@ -165,81 +224,281 @@ cursor:pointer;
 font-weight:bold;
 }
 
+/* --------------- ESTILOS DO SIMULADOR ESTRUTURADO --------------- */
+.excel-wrapper {
+    background: #fff;
+    border-radius: 12px;
+    padding: 15px;
+    overflow-x: auto;
+}
+.grupo-card {
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 4px solid #1e293b;
+}
+.grupo-card:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+.excel-table {
+    border-collapse: collapse;
+    width: 100%;
+}
+.table-tier-1 {
+    width: max-content;
+    margin-bottom: 10px;
+    min-width: 400px;
+}
+.table-tier-2 {
+    min-width: 1200px;
+}
+.excel-table th {
+    background: #cbd5e1;
+    color: #1e293b;
+    font-size: 11px;
+    padding: 8px 4px;
+    border: 1px solid #94a3b8;
+    text-transform: uppercase;
+}
+.excel-table td {
+    border: 1px solid #ccc;
+    padding: 0;
+    position: relative;
+}
+.excel-table input, .excel-table select {
+    width: 100%;
+    height: 100%;
+    min-height: 36px;
+    box-sizing: border-box;
+    border: none;
+    padding: 4px 8px;
+    font-size: 13px;
+    background: transparent;
+    outline: none;
+}
+.excel-table input:focus, .excel-table select:focus {
+    background: #eff6ff;
+}
+.excel-table .td-gray {
+    background: #e2e8f0;
+}
+.excel-table .td-gray input {
+    font-weight: bold;
+    color: #334155;
+}
+.btn-remove {
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    width: 24px;
+    height: 24px;
+    margin: 4px;
+}
+.totais-barra {
+    background: #1e293b;
+    color: #fff;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 15px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: center;
+    font-size: 14px;
+}
+.totais-barra .titulo {
+    font-weight: bold;
+    font-size: 16px;
+    color: #94a3b8;
+    margin-right: auto;
+}
+.tot-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.tot-item span {
+    font-size: 11px;
+    color: #cbd5e1;
+    text-transform: uppercase;
+}
+.tot-item b {
+    font-size: 15px;
+}
+.actions-row {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px;
+}
+.actions-row button {
+    padding: 12px 20px;
+    border-radius: 6px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 14px;
+}
+.btn-add { background: #10b981; color: white; }
+.btn-gerar-estruturado { background: #ec7000; color: white; flex: 1; }
+
 @media(max-width:768px){
 .card{grid-template-columns:1fr}
 .footer,button.gerar{grid-column:span 1}
 .col-esq { width: 100%; }
 .proposta-header { flex-direction: column; gap: 15px; text-align: center; }
+.top-bar { flex-direction: column-reverse; gap: 12px; }
+.btn-assembleia { position: static; transform: none; width: 100%; text-align: center; box-sizing: border-box; }
+.totais-barra {flex-direction: column; align-items: flex-start; gap: 10px;}
 }
 </style>
 </head>
 
 <body>
-<div class="container">
+<div class="container" id="containerPrincipal">
 
 <div class="top-header">
   <img class="logo-itau" src="https://upload.wikimedia.org/wikipedia/commons/1/15/Ita%C3%BA_Unibanco_logo.svg" alt="Itaú Consórcios">
 </div>
 
-<div class="top-buttons">
-Selecione um produto
-<div class="btns">
-<button class="btnProduto active" onclick="setProduto('imovel',this)">Imóvel</button>
-<button class="btnProduto" onclick="setProduto('auto',this)">Automóvel</button>
-<button class="btnProduto" onclick="setProduto('moto',this)">Moto</button>
-<button class="btnProduto" onclick="setProduto('caminhao',this)">Caminhão</button>
-<button class="btnLembrete" onclick="abrirModal()">LEMBRETES ITAÚ</button>
-</div>
+<div class="top-bar">
+    <div class="tabs-container">
+        <button id="tabBtnSimples" class="tab-btn active" onclick="switchTab('simples')">Simulador Simples</button>
+        <button id="tabBtnEstruturado" class="tab-btn" onclick="switchTab('estruturado')">Simulador Estruturado</button>
+    </div>
+    <a href="#" class="btn-assembleia">ASSEMBLEIAS</a>
 </div>
 
-<div class="card">
-<input id="grupo" placeholder="Grupo (Ex: 50080)">
-<input id="cotas" type="number" placeholder="Quantidade de Cotas" value="1" oninput="calcular()">
+<!-- ==================== ABA SIMPLES ==================== -->
+<div id="tab-simples" class="tab-content active">
+    <div class="top-buttons">
+    Selecione um produto
+    <div class="btns">
+    <button class="btnProduto active" onclick="setProduto('imovel',this)">Imóvel</button>
+    <button class="btnProduto" onclick="setProduto('auto',this)">Automóvel</button>
+    <button class="btnProduto" onclick="setProduto('moto',this)">Moto</button>
+    <button class="btnProduto" onclick="setProduto('caminhao',this)">Caminhão</button>
+    <button class="btnLembrete" onclick="abrirModal()">LEMBRETES ITAÚ</button>
+    </div>
+    </div>
 
-<input id="credito" placeholder="Crédito (R$)">
-<input id="prazo" type="number" placeholder="Prazo (Meses)">
+    <div class="card">
+    <input id="grupo" placeholder="Grupo (Ex: 50080)">
+    <input id="cotas" type="number" placeholder="Quantidade de Cotas" value="1" oninput="calcular()">
 
-<input id="taxa" placeholder="Taxa Admin (%)">
-<input id="fundoReserva" placeholder="Fundo de Reserva (%)">
+    <input id="credito" placeholder="Crédito (R$)">
+    <input id="prazo" type="number" placeholder="Prazo (Meses)">
 
-<div>
-<input id="embutido" placeholder="Lance Embutido (%)">
-<div class="small" id="embRef"></div>
+    <input id="taxa" placeholder="Taxa Admin (%)">
+    
+    <!-- Novo Seletor de Seguro -->
+    <select id="temSeguro" onchange="calcular()">
+        <option value="sim">Com Seguro Prestamista</option>
+        <option value="nao">Sem Seguro</option>
+    </select>
+
+    <input id="fundoReserva" placeholder="Fundo de Reserva (%)">
+
+    <div>
+    <input id="embutido" placeholder="Lance Embutido (%)">
+    <div class="small" id="embRef"></div>
+    </div>
+
+    <div>
+    <input id="recurso" placeholder="Recursos Próprios (%)">
+    <div class="small" id="recRef"></div>
+    </div>
+
+    <div>
+    <input class="gray" id="parcelaAntes" readonly>
+    <div class="small" id="lblParcelaAntes">Parcela Inicial (Com Seguro)</div>
+    </div>
+
+    <div style="visibility: hidden;"></div> <div class="footer">
+    <div class="highlight">LANCE TOTAL EM: <span id="lanceTotalPerc"></span></div>
+    Lance Ofertado Total (Emb. + Rec.): <span id="lanceOf"></span><br>
+    Somente Recursos Próprios: <span id="lanceRecFooter" class="lanceAmarelo"></span><br>
+    <div class="creditoDestacado">Crédito Liberado: <span id="liberado"></span></div>
+
+    <div class="blocoPosContemplacao">
+      <b>Parcela Pós Contemplação (Reduzindo Valor):</b><br>
+      <span id="linhaPosCom">- Com Seguro: <span id="parcelaPosCom" style="color: #4ade80;"></span><br></span>
+      <span id="linhaPosSem">- Sem Seguro: <span id="parcelaPosSem" style="color: #94a3b8;"></span><br></span>
+      <br>
+      <b>OU Redução de Prazo (Mantendo a Parcela):</b><br>
+      - <span id="reducaoPrazo" style="color: #facc15;"></span> Parcelas a menos
+    </div>
+
+    </div>
+
+    <button class="gerar" onclick="gerarProposta()">Gerar Proposta Itaú</button>
+    </div>
+
+    <div id="resultado"></div>
 </div>
 
-<div>
-<input id="recurso" placeholder="Recursos Próprios (%)">
-<div class="small" id="recRef"></div>
+
+<!-- ==================== ABA ESTRUTURADA ==================== -->
+<div id="tab-estruturado" class="tab-content">
+    <div class="excel-wrapper">
+        <div id="listaGruposEstruturados"></div>
+
+        <div class="totais-barra">
+            <div class="titulo">TOTAIS DA OPERAÇÃO:</div>
+            <div class="tot-item"><span>Crédito Total</span> <b id="totCreditoTotal">R$ 0,00</b></div>
+            <div class="tot-item"><span>Qtd. Cotas</span> <b id="totCotas">0</b></div>
+            <div class="tot-item"><span>Recurso Próprio</span> <b id="totRecurso">R$ 0,00</b></div>
+            <div class="tot-item"><span>Parcela Inicial</span> <b id="totParcela">R$ 0,00</b></div>
+            <div class="tot-item"><span>Vlr. Embutido</span> <b id="totEmbutido">R$ 0,00</b></div>
+            <div class="tot-item"><span>Créd. Líquido</span> <b id="totLiquido" style="color:#10b981">R$ 0,00</b></div>
+            <div class="tot-item"><span>Parcela Pós</span> <b id="totParcelaPos" style="color:#f59e0b">R$ 0,00</b></div>
+        </div>
+    </div>
+
+    <div class="actions-row">
+        <button class="btn-add" onclick="addLinhaEstruturada()">+ Adicionar Grupo</button>
+        <button class="btn-gerar-estruturado" onclick="gerarResumoEstruturado()">Gerar Relatório</button>
+    </div>
+
+    <div class="proposta" id="resumoEstruturadoBox" style="display:none; margin-top:20px;">
+      <div class="proposta-header">
+        <div class="proposta-title">RESUMO DA OPERAÇÃO ESTRUTURADA ITAÚ</div>
+      </div>
+      <div class="proposta-body">
+        
+        <div class="col-esq">
+            <img class="produtoImg" id="imgResumoEstruturado" src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c" alt="Produto">
+            <img class="logoConsorbens" src="https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png" alt="Logo Consorbens">
+        </div>
+
+        <div class="info">
+          <p>Total de Cotas: <b id="reCotas"></b></p>
+          <p>Crédito Total Contratado: <b id="reCredito"></b></p>
+          <p>Lance Total (Recursos Próprios): <b id="reRecurso"></b></p>
+          <hr style="border: 0; height: 1px; background: #ccc; margin: 10px 0;">
+          <p>Soma das Parcelas INICIAIS: <b id="reParcela"></b></p>
+          <p>Soma das Parcelas PÓS: <b id="reParcelaPos"></b></p>
+          
+          <div class="green" style="margin-top:15px;">Crédito Líquido Total: <span id="reLiquido"></span></div>
+          
+          <div class="red">
+            * Simulação baseada nas regras matemáticas do Itaú Consórcios.<br>
+            * A opção com ou sem seguro prestamista é aplicada individualmente na linha.<br>
+            * Valores de seguro prestamista estão embutidos no cálculo de parcela e podem sofrer leves alterações reais.<br>
+            * A contemplação depende de sorteio ou aprovação de lance em assembleia.
+          </div>
+        </div>
+      </div>
+    </div>
+
 </div>
 
-<div>
-<input class="gray" id="parcelaAntes" readonly>
-<div class="small">Parcela Inicial (Com Seguro)</div>
 </div>
 
-<div style="visibility: hidden;"></div> <div class="footer">
-<div class="highlight">LANCE TOTAL EM: <span id="lanceTotalPerc"></span></div>
-Lance Ofertado Total (Emb. + Rec.): <span id="lanceOf"></span><br>
-Somente Recursos Próprios: <span id="lanceRecFooter" class="lanceAmarelo"></span><br>
-<div class="creditoDestacado">Crédito Liberado: <span id="liberado"></span></div>
-
-<div class="blocoPosContemplacao">
-  <b>Parcela Pós Contemplação (Reduzindo Valor):</b><br>
-  - Com Seguro: <span id="parcelaPosCom" style="color: #4ade80;"></span><br>
-  - Sem Seguro: <span id="parcelaPosSem" style="color: #94a3b8;"></span><br>
-  <br>
-  <b>OU Redução de Prazo (Mantendo a Parcela):</b><br>
-  - <span id="reducaoPrazo" style="color: #facc15;"></span> Parcelas a menos
-</div>
-
-</div>
-
-<button class="gerar" onclick="gerarProposta()">Gerar Proposta Itaú</button>
-</div>
-
-<div id="resultado"></div>
-</div>
-
+<!-- Modal Itaú Original -->
 <div class="modalBg" id="modalBg">
 <div class="modal">
 <div class="fechar" onclick="fecharModal()">×</div>
@@ -254,9 +513,41 @@ Geralmente varia entre 1% e 5% dependendo do grupo.<br><br>
 </div>
 
 <script>
+// =========================================================================
+// 1. SISTEMA DE ABAS (TABS)
+// =========================================================================
+function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+    
+    document.getElementById('tab-' + tabId).classList.add('active');
+    
+    if(tabId === 'estruturado'){
+        document.getElementById('tabBtnEstruturado').classList.add('active');
+        document.getElementById('containerPrincipal').classList.add('wide');
+        if(document.getElementById('listaGruposEstruturados').children.length === 0) {
+            addLinhaEstruturada(); 
+        }
+    } else {
+        document.getElementById('tabBtnSimples').classList.add('active');
+        document.getElementById('containerPrincipal').classList.remove('wide');
+    }
+}
+
+// Funções utilitárias comuns
+function moeda(v){return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
+function numero(v){if(!v)return 0;return parseFloat(v.replace(/[^0-9,]/g,'').replace(',','.'))||0}
+function percent(v){if(!v)return 0;return parseFloat(v.replace('%','').replace(',','.'))/100||0}
+function maskMoeda(v){let n=v.replace(/\D/g,'');if(!n)return'';return(n/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
+function maskPercent(v){let n=v.replace(/[^\d,]/g,'');return n?n+'%':''}
+
+const taxaSeguroMensal = 0.0006711; // Constante Global Itaú
+
+// =========================================================================
+// 2. SIMULADOR SIMPLES ORIGINAL ITAÚ
+// =========================================================================
 let produto='imovel'
-// Taxa de seguro exata baseada no cálculo de R$100.000 do Itaú (67,11 de diferença)
-const taxaSeguroMensal = 0.0006711; 
+let usaSeguroSimples = true;
 
 const imagens={
 auto:'https://images.unsplash.com/photo-1583367761342-046cb0d6165b?q=80&w=870&auto=format&fit=crop',
@@ -273,11 +564,6 @@ document.querySelectorAll('.btnProduto').forEach(b=>b.classList.remove('active')
 el.classList.add('active')
 calcular()
 }
-function moeda(v){return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
-function numero(v){if(!v)return 0;return parseFloat(v.replace(/[^0-9,]/g,'').replace(',','.'))||0}
-function percent(v){if(!v)return 0;return parseFloat(v.replace('%','').replace(',','.'))/100||0}
-function maskMoeda(v){let n=v.replace(/\D/g,'');if(!n)return'';return(n/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
-function maskPercent(v){let n=v.replace(/[^\d,]/g,'');return n?n+'%':''}
 
 credito.oninput=e=>{e.target.value=maskMoeda(e.target.value);calcular()}
 taxa.oninput=e=>{e.target.value=maskPercent(e.target.value);calcular()}
@@ -302,6 +588,9 @@ let fr=percent(fundoReserva.value)
 let emb=percent(embutido.value)
 let recPerc=percent(recurso.value)
 
+usaSeguroSimples = document.getElementById('temSeguro').value === 'sim';
+document.getElementById('lblParcelaAntes').innerText = usaSeguroSimples ? "Parcela Inicial (Com Seguro)" : "Parcela Inicial (Sem Seguro)";
+
 let embVal = cred * emb;
 embRef.innerText = 'R$ ' + embVal.toLocaleString('pt-BR', {minimumFractionDigits: 2});
 
@@ -315,7 +604,7 @@ lanceTotalPerc.innerText = ((lanceTotalPercNum*100)).toFixed(2)+'%';
 let dividaTotal = cred * (1 + tx + fr);
 let parcelaBaseSemSeguro = dividaTotal / prazoC;
 
-let seguroVal = cred * taxaSeguroMensal;
+let seguroVal = usaSeguroSimples ? (cred * taxaSeguroMensal) : 0;
 
 let parcelaInicialComSeguro = parcelaBaseSemSeguro + seguroVal;
 parcelaAntes.value = moeda(parcelaInicialComSeguro);
@@ -334,14 +623,34 @@ lanceOf.innerText = moeda(lanceTotalGlobal);
 document.getElementById('lanceRecFooter').innerText = moeda(recVal);
 liberado.innerText = moeda(libCalcGlobal);
 
-document.getElementById('parcelaPosCom').innerText = moeda(novaParcComSeguroGlobal);
-document.getElementById('parcelaPosSem').innerText = moeda(novaParcSemSeguroGlobal);
+// Ajusta exibição do bloco final baseado na escolha
+if(usaSeguroSimples){
+    document.getElementById('linhaPosCom').style.display = 'inline';
+    document.getElementById('linhaPosSem').innerHTML = `- Sem Seguro: <span id="parcelaPosSem" style="color: #94a3b8;">${moeda(novaParcSemSeguroGlobal)}</span><br>`;
+    document.getElementById('parcelaPosCom').innerText = moeda(novaParcComSeguroGlobal);
+} else {
+    document.getElementById('linhaPosCom').style.display = 'none';
+    document.getElementById('linhaPosSem').innerHTML = `- Nova Parcela: <span id="parcelaPosSem" style="color: #4ade80;">${moeda(novaParcSemSeguroGlobal)}</span><br>`;
+}
+
 document.getElementById('reducaoPrazo').innerText = parcReduzidasGlobal;
 }
 
 function gerarProposta(){
 let grupoTxt=grupo.value?grupo.value:'-';
 let txtPrazoRes = prazo.value ? (prazo.value - 1) : '-';
+
+let textoPosContemplacao = "";
+if(usaSeguroSimples){
+    textoPosContemplacao = `
+      - Novo Valor Com Seguro: ${moeda(novaParcComSeguroGlobal)} (Faltando ${txtPrazoRes}x)<br>
+      - Novo Valor Sem Seguro: ${moeda(novaParcSemSeguroGlobal)} (Faltando ${txtPrazoRes}x)<br>
+    `;
+} else {
+    textoPosContemplacao = `
+      - Novo Valor da Parcela: ${moeda(novaParcSemSeguroGlobal)} (Faltando ${txtPrazoRes}x)<br>
+    `;
+}
 
 resultado.innerHTML=`
 <div class="proposta">
@@ -359,7 +668,7 @@ resultado.innerHTML=`
       <strong>Crédito Contratado:</strong> ${credito.value}<br>
       <strong>Prazo Contratado:</strong> ${prazo.value} meses<br>
       <strong>Taxa Admin:</strong> ${taxa.value || '0%'} | <strong>Fundo Reserva:</strong> ${fundoReserva.value || '0%'}<br>
-      <strong>Parcela Inicial:</strong> ${parcelaAntes.value}<br>
+      <strong>Parcela Inicial:</strong> ${parcelaAntes.value} <em>(${usaSeguroSimples ? 'Com' : 'Sem'} Seguro)</em><br>
       <strong>Lance (Recursos Próprios):</strong> ${moeda(recVal)} <br>
       <strong>Lance Total Ofertado:</strong> ${lanceTotalPerc.innerText} (${moeda(lanceTotalGlobal)})<br>
       <br>
@@ -367,8 +676,7 @@ resultado.innerHTML=`
       
       <strong>CENÁRIOS PÓS CONTEMPLAÇÃO:</strong><br>
       <u>Opção 1: Redução do Valor da Parcela</u><br>
-      - Novo Valor Com Seguro: ${moeda(novaParcComSeguroGlobal)} (Faltando ${txtPrazoRes}x)<br>
-      - Novo Valor Sem Seguro: ${moeda(novaParcSemSeguroGlobal)} (Faltando ${txtPrazoRes}x)<br>
+      ${textoPosContemplacao}
       <br>
       <u>Opção 2: Redução de Prazo</u><br>
       - Elimina ${parcReduzidasGlobal} parcelas do final do plano (Mantendo a parcela inicial).<br>
@@ -383,7 +691,231 @@ resultado.innerHTML=`
 </div>`
 }
 
-// Inicia com os placeholders vazios esperando o usuário
+
+// =========================================================================
+// 3. SIMULADOR ESTRUTURADO (REGRA ITAÚ)
+// =========================================================================
+function addLinhaEstruturada() {
+    const container = document.getElementById('listaGruposEstruturados');
+    const div = document.createElement('div');
+    div.className = 'grupo-card';
+    
+    div.innerHTML = `
+        <table class="excel-table table-tier-1">
+            <thead>
+                <tr>
+                    <th style="width:40px">X</th>
+                    <th style="min-width:120px">Grupo</th>
+                    <th style="width:80px">Cotas</th>
+                    <th style="min-width:160px">Crédito Un.</th>
+                    <th style="width:90px">Prazo</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="text-align:center"><button class="btn-remove" onclick="removerLinha(this)">X</button></td>
+                    <td><input type="text" class="e-grupo" placeholder="Grupo"></td>
+                    <td><input type="number" class="e-cotas" value="1" min="1" oninput="calcLinha(this)"></td>
+                    <td><input type="text" class="e-credito" placeholder="R$ 0,00" oninput="formataMoedaEstruturado(this)"></td>
+                    <td><input type="number" class="e-prazo" placeholder="Meses" oninput="calcLinha(this)"></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <table class="excel-table table-tier-2">
+            <thead>
+                <tr>
+                    <th style="width:70px">Taxa%</th>
+                    <th style="width:70px">Fundo%</th>
+                    <th style="width:80px">Seguro</th>
+                    <th style="min-width:100px">Diluição</th>
+                    <th style="width:70px">Emb%</th>
+                    <th style="width:70px">Tipo Rec</th>
+                    <th style="min-width:140px">Recurso Próprio</th>
+                    <th style="min-width:140px">Créd. Total</th>
+                    <th style="min-width:120px">Parcela</th>
+                    <th style="min-width:120px">Vlr Embutido</th>
+                    <th style="width:70px">Lance %</th>
+                    <th style="min-width:140px">Créd. Líquido</th>
+                    <th style="min-width:120px">Parcela Pós</th>
+                    <th style="width:80px">Prazo Pós</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><input type="text" class="e-taxa" placeholder="%" oninput="formataPercEstruturado(this)"></td>
+                    <td><input type="text" class="e-fundo" placeholder="%" oninput="formataPercEstruturado(this)"></td>
+                    <td>
+                        <select class="e-seg" onchange="calcLinha(this)">
+                            <option value="sim">Com</option>
+                            <option value="nao">Sem</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select class="e-diluicao" onchange="calcLinha(this)">
+                            <option value="parcela">Parcela</option>
+                            <option value="prazo">Prazo</option>
+                        </select>
+                    </td>
+                    <td><input type="text" class="e-emb" placeholder="%" oninput="formataPercEstruturado(this)"></td>
+                    <td>
+                        <select class="e-tiporec" onchange="mudarTipoRecurso(this)">
+                            <option value="valor">R$</option>
+                            <option value="perc">%</option>
+                        </select>
+                    </td>
+                    <td><input type="text" class="e-recurso" placeholder="R$ 0,00" oninput="formataRecursoEstruturado(this)"></td>
+                    
+                    <td class="td-gray"><input type="text" class="e-out-credTotal" readonly></td>
+                    <td class="td-gray"><input type="text" class="e-out-parcela" readonly></td>
+                    <td class="td-gray"><input type="text" class="e-out-valorEmb" readonly></td>
+                    <td class="td-gray"><input type="text" class="e-out-lancePerc" readonly></td>
+                    <td class="td-gray"><input type="text" class="e-out-liquido" style="color:#10b981" readonly></td>
+                    <td class="td-gray"><input type="text" class="e-out-parcelaPos" style="color:#f59e0b" readonly></td>
+                    <td class="td-gray"><input type="text" class="e-out-prazoPos" readonly></td>
+                </tr>
+            </tbody>
+        </table>
+    `;
+    container.appendChild(div);
+}
+
+function removerLinha(btn) {
+    const card = btn.closest('.grupo-card');
+    card.remove();
+    calcTotaisEstruturado();
+}
+
+function formataMoedaEstruturado(input) { input.value = maskMoeda(input.value); calcLinha(input); }
+function formataPercEstruturado(input) { input.value = maskPercent(input.value); calcLinha(input); }
+function mudarTipoRecurso(select) {
+    const card = select.closest('.grupo-card');
+    const inputRecurso = card.querySelector('.e-recurso');
+    inputRecurso.value = '';
+    inputRecurso.placeholder = select.value === 'valor' ? 'R$ 0,00' : '%';
+    calcLinha(select);
+}
+function formataRecursoEstruturado(input) {
+    const card = input.closest('.grupo-card');
+    const tipo = card.querySelector('.e-tiporec').value;
+    if (tipo === 'valor') input.value = maskMoeda(input.value);
+    else input.value = maskPercent(input.value);
+    calcLinha(input);
+}
+
+function calcLinha(elemento) {
+    const card = elemento.closest('.grupo-card');
+    
+    // Inputs da linha
+    let c = +(card.querySelector('.e-cotas').value) || 1;
+    let credUnitario = numero(card.querySelector('.e-credito').value);
+    let p = +(card.querySelector('.e-prazo').value) || 1;
+    let tx = percent(card.querySelector('.e-taxa').value);
+    let fd = percent(card.querySelector('.e-fundo').value);
+    let emb = percent(card.querySelector('.e-emb').value);
+    let usaSeguroLinha = card.querySelector('.e-seg').value === 'sim';
+    let tipoDiluicao = card.querySelector('.e-diluicao').value;
+    let tipoRec = card.querySelector('.e-tiporec').value;
+    let valRecurso = card.querySelector('.e-recurso').value;
+
+    // Regras Matemáticas Itaú
+    let credTotal = credUnitario * c;
+    let embVal = credTotal * emb;
+
+    let rec = 0;
+    let recPerc = 0;
+    if (tipoRec === 'valor') {
+        rec = numero(valRecurso);
+        recPerc = credTotal > 0 ? rec / credTotal : 0;
+    } else {
+        recPerc = percent(valRecurso);
+        rec = credTotal * recPerc; 
+    }
+    card.dataset.recursoEfetivo = rec;
+
+    let lanceTotalGlobal = embVal + rec;
+    let lanceTotalPercNum = emb + recPerc;
+
+    let dividaTotal = credTotal * (1 + tx + fd);
+    let parcelaBaseSemSeguro = p > 0 ? dividaTotal / p : 0;
+    
+    let seguroVal = usaSeguroLinha ? (credTotal * taxaSeguroMensal) : 0;
+    let parcelaInicialAplicada = parcelaBaseSemSeguro + seguroVal;
+
+    let libCalcGlobal = credTotal - embVal;
+
+    // Pós Contemplação
+    let novaParcAplicadaGlobal = 0;
+    let novoPrazoCalc = 0;
+
+    if (p > 1 && credTotal > 0) {
+        let saldoApos1a = dividaTotal - parcelaBaseSemSeguro;
+        let saldoAposLance = saldoApos1a - lanceTotalGlobal;
+
+        if (tipoDiluicao === 'parcela') {
+            let novaParcSemSeguroGlobal = saldoAposLance / (p - 1);
+            novaParcAplicadaGlobal = novaParcSemSeguroGlobal + seguroVal;
+            novoPrazoCalc = p - 1;
+        } else {
+            let parcReduzidasGlobal = Math.floor(lanceTotalGlobal / parcelaBaseSemSeguro);
+            novoPrazoCalc = p - parcReduzidasGlobal;
+            novaParcAplicadaGlobal = parcelaInicialAplicada; 
+        }
+    }
+
+    if(isNaN(novoPrazoCalc) || !isFinite(novoPrazoCalc) || novoPrazoCalc < 0) novoPrazoCalc = 0;
+    if(isNaN(novaParcAplicadaGlobal) || !isFinite(novaParcAplicadaGlobal) || novaParcAplicadaGlobal < 0) novaParcAplicadaGlobal = 0;
+
+    // Set Outputs da linha
+    card.querySelector('.e-out-credTotal').value = moeda(credTotal);
+    card.querySelector('.e-out-parcela').value = moeda(parcelaInicialAplicada);
+    card.querySelector('.e-out-valorEmb').value = moeda(embVal);
+    card.querySelector('.e-out-lancePerc').value = (lanceTotalPercNum * 100).toFixed(2) + '%';
+    card.querySelector('.e-out-liquido').value = moeda(libCalcGlobal);
+    card.querySelector('.e-out-parcelaPos').value = moeda(novaParcAplicadaGlobal);
+    card.querySelector('.e-out-prazoPos').value = novoPrazoCalc;
+
+    calcTotaisEstruturado();
+}
+
+function calcTotaisEstruturado() {
+    const cards = document.querySelectorAll('.grupo-card');
+    let sCotas = 0, sRecurso = 0, sCredTotal = 0, sParcela = 0, sEmbutido = 0, sLiquido = 0, sParcelaPos = 0;
+
+    cards.forEach(card => {
+        sCotas += +(card.querySelector('.e-cotas').value) || 0;
+        sRecurso += +(card.dataset.recursoEfetivo) || 0;
+        sCredTotal += numero(card.querySelector('.e-out-credTotal').value);
+        sParcela += numero(card.querySelector('.e-out-parcela').value);
+        sEmbutido += numero(card.querySelector('.e-out-valorEmb').value);
+        sLiquido += numero(card.querySelector('.e-out-liquido').value);
+        sParcelaPos += numero(card.querySelector('.e-out-parcelaPos').value);
+    });
+
+    document.getElementById('totCotas').innerText = sCotas;
+    document.getElementById('totRecurso').innerText = moeda(sRecurso);
+    document.getElementById('totCreditoTotal').innerText = moeda(sCredTotal);
+    document.getElementById('totParcela').innerText = moeda(sParcela);
+    document.getElementById('totEmbutido').innerText = moeda(sEmbutido);
+    document.getElementById('totLiquido').innerText = moeda(sLiquido);
+    document.getElementById('totParcelaPos').innerText = moeda(sParcelaPos);
+}
+
+function gerarResumoEstruturado() {
+    const box = document.getElementById('resumoEstruturadoBox');
+    box.style.display = 'flex';
+
+    document.getElementById('reCotas').innerText = document.getElementById('totCotas').innerText;
+    document.getElementById('reCredito').innerText = document.getElementById('totCreditoTotal').innerText;
+    document.getElementById('reRecurso').innerText = document.getElementById('totRecurso').innerText;
+    document.getElementById('reParcela').innerText = document.getElementById('totParcela').innerText;
+    document.getElementById('reParcelaPos').innerText = document.getElementById('totParcelaPos').innerText;
+    document.getElementById('reLiquido').innerText = document.getElementById('totLiquido').innerText;
+
+    box.scrollIntoView({behavior: "smooth"});
+}
+
+// Inicia com os placeholders vazios esperando o usuário no simulador simples
 calcular();
 </script>
 </body>
