@@ -1,0 +1,734 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lance por IA · Itaú Consórcios</title>
+<style>
+:root{--bg1:#0a1626;--bg2:#0d1f38;--card:#10233f;--card2:#152b4d;--orange:#ff7a18;--orange2:#ff9d4d;
+ --green:#22c55e;--amber:#fbbf24;--blue:#38bdf8;--txt:#eaf1fb;--mut:#8ea4c2;--line:#22395c;--red:#f87171;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:
+ radial-gradient(1200px 600px at 80% -10%,#163a66 0,transparent 60%),linear-gradient(160deg,var(--bg1),var(--bg2));
+ color:var(--txt);min-height:100vh;padding:28px 16px}
+.wrap{max-width:1040px;margin:0 auto}
+.brand{display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:6px}
+.brand .logo{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--orange),#ff5e1a);
+ display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;box-shadow:0 6px 20px rgba(255,122,24,.4)}
+.brand h1{font-size:22px;font-weight:700}.brand h1 span{color:var(--orange2)}
+.sub{text-align:center;color:var(--mut);font-size:13px;margin-bottom:12px}
+.guiaver{display:inline-flex;align-items:center;gap:6px;background:#0d2241;border:1px solid var(--line);border-radius:20px;padding:6px 14px;font-size:12px;color:var(--mut);margin:0 auto 22px}
+.guiaver b{color:var(--orange2);font-weight:700}
+.panel{background:linear-gradient(180deg,var(--card),#0e2039);border:1px solid var(--line);border-radius:20px;
+ padding:30px;box-shadow:0 24px 60px rgba(0,0,0,.45)}
+.steps{display:flex;gap:8px;justify-content:center;margin-bottom:26px}
+.dot{width:34px;height:5px;border-radius:3px;background:#24405f;transition:.3s}
+.dot.on{background:linear-gradient(90deg,var(--orange),var(--orange2))}
+.q{display:none;animation:fade .4s ease}.q.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.q .num{color:var(--orange2);font-weight:700;font-size:13px;letter-spacing:1px}
+.q h2{font-size:24px;margin:6px 0 4px;font-weight:700}.q p.hint{color:var(--mut);font-size:13px;margin-bottom:20px}
+.field{width:100%;background:#0a1a30;border:1.5px solid var(--line);border-radius:14px;color:var(--txt);
+ font-size:26px;font-weight:700;padding:16px 18px;outline:none;transition:.2s}
+.field::placeholder{color:#46618a;font-weight:500}
+.field:focus{border-color:var(--orange);box-shadow:0 0 0 4px rgba(255,122,24,.15)}
+.toggle{display:flex;gap:12px}
+.toggle button{flex:1;background:#0a1a30;border:1.5px solid var(--line);color:var(--txt);padding:14px;
+ border-radius:14px;font-size:15px;font-weight:600;cursor:pointer;transition:.2s}
+.toggle button.sel{border-color:var(--orange);background:rgba(255,122,24,.12);color:var(--orange2)}
+.minilbl{font-size:13px;color:var(--mut);margin:16px 0 8px}
+.chkrow{display:flex;align-items:center;gap:10px;margin-top:14px;color:var(--mut);font-size:14px;cursor:pointer}
+.chkrow input{width:18px;height:18px;accent-color:var(--orange)}
+.nav{display:flex;justify-content:space-between;margin-top:26px;gap:12px}
+.btn{border:none;border-radius:14px;padding:15px 26px;font-size:16px;font-weight:700;cursor:pointer;transition:.2s}
+.btn.prim{background:linear-gradient(135deg,var(--orange),#ff5e1a);color:#fff;flex:1;box-shadow:0 10px 26px rgba(255,122,24,.4)}
+.btn.prim:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.btn.ghost{background:transparent;border:1.5px solid var(--line);color:var(--mut)}
+#loading{display:none;text-align:center;padding:40px 0}#loading.on{display:block}
+.spinner{width:56px;height:56px;border-radius:50%;border:5px solid #24405f;border-top-color:var(--orange);
+ margin:0 auto 18px;animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+#loading .lt{font-size:18px;font-weight:600}#loading .ls{color:var(--mut);font-size:13px;margin-top:6px}
+#results,#detalhe{display:none}#results.on{display:block}
+.rhead{text-align:center;margin-bottom:18px}.rhead h2{font-size:24px}.rhead h2 b{color:var(--orange2)}
+.rhead p{color:var(--mut);font-size:13px;margin-top:4px}
+.sechd{font-size:13px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.6px;margin:22px 0 12px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.rc{background:linear-gradient(180deg,var(--card2),#0e2039);border:1px solid var(--line);border-radius:16px;
+ overflow:hidden;display:flex;flex-direction:column;animation:fade .5s ease both}
+.rc.dest{border:2px solid var(--orange)}
+.rc .badge{padding:7px 14px;font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:#06101f}
+.b1{background:linear-gradient(90deg,#22c55e,#4ade80)}.b2{background:linear-gradient(90deg,#fbbf24,#fcd34d)}
+.b3{background:linear-gradient(90deg,#38bdf8,#7dd3fc)}.b4{background:linear-gradient(90deg,#a78bfa,#c4b5fd)}
+.b5{background:linear-gradient(90deg,#fb923c,#fdba74)}.bideal{background:linear-gradient(90deg,#ff7a18,#ff9d4d)}
+.rc .body{padding:16px;display:flex;flex-direction:column;gap:10px;flex:1}
+.rc .tline{font-size:12px;color:var(--mut)}.rc .big{font-size:30px;font-weight:800;line-height:1}
+.rc .csub{font-size:12px;color:var(--mut);line-height:1.4}
+.combo-tag{display:inline-block;font-size:11px;font-weight:700;color:var(--orange2);background:rgba(255,122,24,.12);padding:3px 9px;border-radius:20px;align-self:flex-start}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:20px;align-self:flex-start}
+.tag.ok{background:rgba(34,197,94,.16);color:#4ade80}.tag.mid{background:rgba(251,191,36,.16);color:#fcd34d}
+.tag.low{background:rgba(248,113,113,.16);color:#fca5a5}.tag.fixo{background:rgba(167,139,250,.18);color:#c4b5fd}
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mgrid div{background:#0a1a30;border-radius:9px;padding:8px 10px}
+.mgrid .l{font-size:11px;color:var(--mut)}.mgrid b{font-size:14px;font-weight:700;display:block;margin-top:2px}
+.mgrid b.g{color:var(--green)}.mgrid b.o{color:var(--orange2)}
+.therm{margin:2px 0}
+.therm .lbl{display:flex;justify-content:space-between;font-size:11.5px;color:var(--mut);margin-bottom:5px}
+.therm .bar{height:10px;border-radius:6px;background:#0a1a30;position:relative;overflow:hidden}
+.therm .fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--orange),var(--orange2))}
+.therm .mark{position:absolute;top:-3px;width:2px;height:16px;background:#fff;opacity:.85}
+.swap{background:transparent;border:1px solid var(--line);color:var(--mut);border-radius:10px;padding:8px;font-size:12.5px;font-weight:600;cursor:pointer;transition:.2s}
+.swap:hover{border-color:var(--orange);color:var(--orange2)}
+.cbtns{display:flex;gap:8px}.cbtns .choose{flex:1}
+.swapedit{margin-top:8px}
+.swapttl{font-size:12px;color:var(--mut);margin-bottom:6px}
+.swaprow{display:flex;gap:8px;align-items:center;margin-bottom:6px;font-size:12px;color:var(--mut)}
+.swaprow span{white-space:nowrap}
+.swaprow select{flex:1;background:#0d2241;border:1px solid var(--line);border-radius:8px;color:var(--txt);font-size:12px;padding:7px;outline:none}
+.legs{display:flex;flex-direction:column;gap:6px}
+.leg{background:#0a1a30;border-radius:9px;padding:7px 10px;font-size:12px;color:var(--mut)}.leg b{color:var(--txt)}
+.lmod{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:4px}
+.lmod.livre{background:rgba(34,197,94,.16);color:#4ade80}.lmod.fixo{background:rgba(167,139,250,.18);color:#c4b5fd}
+.note{font-size:12px;color:var(--mut);background:#0a1a30;border-radius:10px;padding:10px;line-height:1.45}
+.faltam{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);border-radius:10px;padding:9px;font-size:12.5px}.faltam b{color:#fca5a5}
+.tem{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:9px;font-size:12.5px}.tem b{color:#4ade80}
+.choose{margin-top:4px;background:transparent;border:1.5px solid var(--orange);color:var(--orange2);border-radius:12px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;transition:.2s}
+.choose:hover{background:rgba(255,122,24,.14)}
+.refine{margin-top:24px;background:#0a1a30;border:1px solid var(--line);border-radius:16px;padding:18px}
+.refine h3{font-size:16px;margin-bottom:4px}.refine p{color:var(--mut);font-size:13px;margin-bottom:12px}
+.refine textarea{width:100%;min-height:60px;background:#0d2241;border:1.5px solid var(--line);border-radius:12px;color:var(--txt);font-size:15px;padding:12px 14px;outline:none;resize:vertical;font-family:inherit}
+.refine textarea:focus{border-color:var(--orange)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chip{background:#13294a;border:1px solid var(--line);color:var(--mut);font-size:12px;padding:6px 11px;border-radius:20px;cursor:pointer}.chip:hover{border-color:var(--orange);color:var(--orange2)}
+.ajuste{background:rgba(255,122,24,.1);border:1px solid rgba(255,122,24,.3);border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:16px;color:var(--orange2)}
+.actions{display:flex;gap:12px;justify-content:center;margin-top:22px;flex-wrap:wrap}
+.foot{text-align:center;color:#5d7497;font-size:11px;margin-top:18px;line-height:1.5}
+.empty{text-align:center;color:var(--mut);padding:30px}
+.taxbox{display:flex;align-items:center;gap:12px;background:#0a1a30;border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:14px 0}
+.taxbox label{font-size:14px;color:var(--mut)}
+.taxbox input{width:120px;background:#0d2241;border:1.5px solid var(--line);border-radius:10px;color:var(--txt);font-size:20px;font-weight:700;padding:10px 12px;outline:none}
+.taxbox input:focus{border-color:var(--orange)}
+.warn{background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);border-radius:10px;padding:11px 13px;font-size:13px;color:#fcd34d;line-height:1.45;margin-bottom:14px}
+#manual{display:none}
+.mform{display:grid;grid-template-columns:1fr 1fr;gap:10px;background:#0a1a30;border:1px solid var(--line);border-radius:14px;padding:14px;margin:14px 0}
+.mform label{font-size:11px;color:var(--mut);display:block;margin-bottom:4px}
+.mform select,.mform input{width:100%;background:#0d2241;border:1.5px solid var(--line);border-radius:10px;color:var(--txt);font-size:14px;padding:10px;outline:none}
+.mform select:focus,.mform input:focus{border-color:var(--orange)}
+.mform .full{grid-column:1/3}
+.mitem{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#0a1a30;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;font-size:13px;color:var(--mut)}
+.mitem b{color:var(--txt)}
+.mitem .rm{background:transparent;border:1px solid var(--line);color:var(--red);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:12px}
+.addbtn{background:linear-gradient(135deg,var(--orange),#ff5e1a);color:#fff;border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:700;cursor:pointer}
+.mfilters{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:8px 0 4px}
+.mfilters input,.mfilters select{background:#0d2241;border:1.5px solid var(--line);border-radius:10px;color:var(--txt);font-size:13px;padding:9px;outline:none}
+.mfilters input:focus,.mfilters select:focus{border-color:var(--orange)}
+.artbanner{border-radius:14px;overflow:hidden;margin:12px 0;border:1px solid var(--line);line-height:0}
+.artbanner svg{display:block}
+/* ---- Layout de resultados com sidebar de filtros ---- */
+.wrap.wide{max-width:1200px}
+.reslayout{display:flex;gap:20px;align-items:flex-start}
+.rescol{flex:1;min-width:0}
+.sidebar{width:290px;flex:none;background:#0a1a30;border:1px solid var(--line);border-radius:16px;padding:16px;position:sticky;top:16px;max-height:calc(100vh - 32px);overflow-y:auto}
+.sidebar.hidden{display:none}
+.sbhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.sbhead h3{font-size:15px;font-weight:700}
+.sbclose{background:transparent;border:1px solid var(--line);color:var(--mut);border-radius:8px;padding:4px 9px;cursor:pointer;font-size:12px}
+.sbclose:hover{border-color:var(--orange);color:var(--orange2)}
+.sbsub{font-size:11.5px;color:var(--mut);margin-bottom:6px}
+.sbgroup{margin-top:16px}
+.sbgroup .gt{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--orange2);margin-bottom:9px;border-top:1px solid var(--line);padding-top:12px}
+.fctrl{margin-bottom:12px}
+.fctrl label{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--mut);margin-bottom:5px}
+.fctrl label b{color:var(--orange2);font-weight:700;white-space:nowrap}
+.fctrl input[type=range]{width:100%;accent-color:var(--orange);cursor:pointer}
+.fctrl input[type=text],.fctrl input[type=number]{width:100%;background:#0d2241;border:1.5px solid var(--line);border-radius:9px;color:var(--txt);font-size:14px;font-weight:600;padding:9px 10px;outline:none}
+.fctrl input:focus{border-color:var(--orange)}
+.sbtipo{display:flex;gap:8px}
+.sbtipo button{flex:1;background:#0d2241;border:1.5px solid var(--line);color:var(--txt);padding:9px;border-radius:9px;font-size:12px;font-weight:600;cursor:pointer}
+.sbtipo button.sel{border-color:var(--orange);background:rgba(255,122,24,.12);color:var(--orange2)}
+.sbtoggle{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--txt);padding:6px 0;cursor:pointer}
+.sbtoggle input{width:16px;height:16px;accent-color:var(--orange);flex:none}
+.sbreset{width:100%;margin-top:14px;background:transparent;border:1px solid var(--line);color:var(--mut);border-radius:10px;padding:10px;font-size:13px;font-weight:600;cursor:pointer}
+.sbreset:hover{border-color:var(--orange);color:var(--orange2)}
+.fbtn{display:none;background:var(--card2);border:1px solid var(--orange);color:var(--orange2);border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:14px}
+.fbtn.show{display:inline-block}
+@media(max-width:860px){.reslayout{flex-direction:column}.sidebar{width:100%;position:static;max-height:none;order:2}.rescol{order:1}}
+@media print{body{background:#fff;color:#111}.panel{box-shadow:none;border:none}.actions,.foot,.refine,.choose,.sidebar,.fbtn{display:none}.rc{border:1px solid #ccc}.reslayout{display:block}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><div class="logo">IA</div><h1>Lance por <span>IA</span> · Itaú Consórcios</h1></div>
+  <div class="sub">Encontramos o melhor caminho para sua contemplação, direto da Guia de Oportunidades.</div>
+  <div style="text-align:center"><span class="guiaver" id="guiaVer"></span></div>
+  <div class="panel">
+    <div id="wizard">
+      <div class="steps"><div class="dot on" id="d0"></div><div class="dot" id="d1"></div><div class="dot" id="d2"></div><div class="dot" id="d3"></div></div>
+      <div class="q on" data-step="0"><div class="num">PASSO 1 DE 4</div><h2>Qual o nome do cliente?</h2><p class="hint">Para personalizar a simulação (opcional — pode deixar em branco).</p>
+        <input class="field" id="nome" placeholder="Ex: Paulo" autocomplete="off">
+        <div class="nav"><button class="btn ghost" onclick="abrirManual('wizard')">✏️ Escolher grupos eu mesmo</button><button class="btn prim" onclick="next(0)">Continuar →</button></div></div>
+      <div class="q" data-step="1"><div class="num">PASSO 2 DE 4</div><h2>Quanto de crédito quer receber?</h2><p class="hint">O valor líquido que cai pra você ao ser contemplado.</p>
+        <input class="field" id="credito" inputmode="numeric" placeholder="R$ 0,00">
+        <div class="nav"><button class="btn ghost" onclick="prev(1)">← Voltar</button><button class="btn prim" onclick="next(1)">Continuar →</button></div></div>
+      <div class="q" data-step="2"><div class="num">PASSO 3 DE 4</div><h2>Tem qual valor para dar de lance?</h2><p class="hint">Recursos próprios que você pode ofertar (opcional).</p>
+        <input class="field" id="lance" inputmode="numeric" placeholder="R$ 0,00">
+        <label class="chkrow"><input type="checkbox" id="semLance" onchange="toggleLance()"> Não tenho valor para lance</label>
+        <div class="minilbl">Usar lance embutido da carta? (padrão 30%)</div>
+        <div class="toggle" id="embToggle"><button data-v="sim" class="sel" onclick="selEmb(this)">Sim</button><button data-v="nao" onclick="selEmb(this)">Não</button></div>
+        <div id="embWrap" style="margin-top:10px"><div class="minilbl" style="margin:0 0 6px">Percentual do embutido: <b id="embVal" style="color:var(--orange2)">30%</b></div><input id="embRange" type="range" min="0" max="30" value="30" step="1" oninput="onEmbRange()" style="width:100%;accent-color:#ff7a18"></div>
+        <div class="nav"><button class="btn ghost" onclick="prev(2)">← Voltar</button><button class="btn prim" onclick="next(2)">Continuar →</button></div></div>
+      <div class="q" data-step="3"><div class="num">PASSO 4 DE 4</div><h2>Quanto pode pagar por mês?</h2><p class="hint">A parcela que cabe no seu orçamento.</p>
+        <input class="field" id="parcela" inputmode="numeric" placeholder="R$ 0,00">
+        <div class="nav"><button class="btn ghost" onclick="prev(3)">← Voltar</button><button class="btn prim" onclick="analisar()">✨ Gerar opções</button></div></div>
+    </div>
+    <div id="loading"><div class="spinner"></div><div class="lt">Analisando a Guia de Oportunidades…</div><div class="ls" id="lsub">Cruzando vagas, prazos e histórico de lances</div></div>
+    <div id="results">
+     <div class="reslayout">
+      <aside class="sidebar" id="sidebar">
+        <div class="sbhead"><h3>⚙ Filtros &amp; Ajustes</h3><button class="sbclose" onclick="toggleSidebar()">ocultar ✕</button></div>
+        <div class="sbsub">Ajuste e as propostas se refazem na hora.</div>
+
+        <div class="sbgroup">
+          <div class="gt">Ajustes</div>
+          <div class="fctrl"><label>Tipo de bem</label><div class="sbtipo" id="fTipo"><button data-v="Imóvel" onclick="fTipoSel(this)">🏠 Imóvel</button><button data-v="Rodas" onclick="fTipoSel(this)">🚗 Auto</button></div></div>
+          <div class="fctrl"><label>⚡ Foco da contemplação rápida</label><div class="sbtipo" id="fRapModo"><button data-v="credito" onclick="fRapModo(this)" title="Crédito o mais perto possível do desejado">Maior crédito</button><button data-v="media" onclick="fRapModo(this)" title="Grupo mais rodado (menor média de lance) — mais chance, crédito um pouco menor">Mais seguro</button></div></div>
+          <div class="fctrl"><label>Crédito desejado</label><input type="text" id="fCredito" inputmode="numeric" oninput="onMoney(this,'desejado')"></div>
+          <div class="fctrl"><label>Lance disponível (recursos próprios)</label><input type="text" id="fLance" inputmode="numeric" placeholder="R$ 0,00" oninput="onMoney(this,'RP')"></div>
+          <div class="fctrl"><label>Parcela alvo (máx/mês)</label><input type="text" id="fParcela" inputmode="numeric" oninput="onMoney(this,'parcelaMax')"></div>
+          <div class="fctrl"><label>Parcela pós-contempl. (máx)</label><input type="text" id="fParcelaPos" inputmode="numeric" placeholder="sem limite" oninput="onMoney(this,'parcelaPosMax')"></div>
+          <div class="fctrl"><label>Prazo máximo <b id="fPrazoV">sem limite</b></label><input type="range" id="fPrazo" min="12" max="240" step="6" value="240" oninput="onPrazo(this.value)"></div>
+          <div class="fctrl"><label>Máx. grupos combinados <b id="fLegsV">8</b></label><input type="range" id="fLegs" min="1" max="8" step="1" value="8" oninput="onLegs(this.value)"></div>
+        </div>
+
+        <div class="sbgroup">
+          <div class="gt">Propostas a exibir</div>
+          <label class="sbtoggle"><input type="checkbox" id="pRapida" checked onchange="togShow()"> ⚡ Contemplação rápida</label>
+          <label class="sbtoggle"><input type="checkbox" id="pMix" checked onchange="togShow()"> 🧩 Mix lance livre + fixo</label>
+          <label class="sbtoggle"><input type="checkbox" id="pFixo" checked onchange="togShow()"> 📌 100% lance fixo</label>
+          <label class="sbtoggle"><input type="checkbox" id="pIdeal" onchange="togShow()"> ✨ Recomendação ideal da IA</label>
+          <label class="sbtoggle"><input type="checkbox" id="pC2" onchange="togShow()"> 🎯 Crédito desejado (alta chance)</label>
+          <label class="sbtoggle"><input type="checkbox" id="pC3" onchange="togShow()"> 💳 Maior crédito no seu bolso</label>
+        </div>
+
+        <button class="sbreset" onclick="resetFiltros()">↺ Restaurar valores originais</button>
+      </aside>
+
+      <div class="rescol">
+        <button class="fbtn" id="fbtn" onclick="toggleSidebar()">⚙ Mostrar filtros</button>
+        <div class="artbanner" id="artResults"></div>
+        <div class="rhead"><h2 id="rtitle"></h2><p id="rsub"></p></div>
+        <div id="ajusteBox"></div>
+        <div class="sechd">Propostas para o cliente</div>
+        <div class="cards" id="cards"></div>
+        <div class="refine">
+          <h3>Não ficou ideal? 🤔</h3>
+          <p>Escreva o que o cliente gostaria de mudar e a IA refaz a proposta.</p>
+          <textarea id="feedback" placeholder="Ex: a parcela ficou alta demais / queria um crédito maior / quero contemplar mais rápido / prazo menor"></textarea>
+          <div class="chips" id="chips"></div>
+          <div class="nav"><span></span><button class="btn prim" onclick="refinar()">🔄 Refazer proposta</button></div>
+        </div>
+        <div class="actions"><button class="btn ghost" onclick="abrirManual('results')">✏️ Montar manualmente</button><button class="btn prim" onclick="window.print()">🖨️ Imprimir / PDF</button><button class="btn ghost" onclick="reiniciar()">↺ Nova simulação</button></div>
+        <div class="foot">Valores com as fórmulas oficiais do Simulador Estruturado Itaú (fundo conforme grupo, seguro 0,06711%/mês). Só grupos COM vagas. Contemplação depende de sorteio ou lance em assembleia. <span id="fontemeta"></span></div>
+      </div>
+     </div>
+    </div>
+    <div id="manual">
+      <button class="btn ghost" onclick="fecharManual()">← Voltar</button>
+      <h2 style="font-size:22px;margin:16px 0 4px">🛠️ Montar proposta manualmente</h2>
+      <p style="color:var(--mut);font-size:13px;margin-bottom:6px">Escolha grupos com vaga, o crédito, a quantidade de cotas e se a carta entra como <b>lance livre</b> ou <b>fixo</b>. A IA calcula a probabilidade.</p>
+      <div class="minilbl">Tipo de bem</div>
+      <div class="toggle" id="mTipo"><button data-v="Imóvel" class="sel" onclick="mSelTipo(this)">🏠 Imóvel</button><button data-v="Rodas" onclick="mSelTipo(this)">🚗 Automóvel</button></div>
+      <div class="artbanner" id="artManual"></div>
+      <div class="minilbl">Filtros (opcional)</div>
+      <div class="mfilters">
+        <input id="fMin" inputmode="numeric" placeholder="Crédito mín" oninput="this.value=maskMoeda(this.value);mPopGrupos()">
+        <input id="fMax" inputmode="numeric" placeholder="Crédito máx" oninput="this.value=maskMoeda(this.value);mPopGrupos()">
+        <input id="fPrazoMax" inputmode="numeric" placeholder="Prazo máx (m)" oninput="mPopGrupos()">
+        <input id="fMedMax" inputmode="numeric" placeholder="Lance médio máx %" oninput="mPopGrupos()">
+        <select id="fOrder" onchange="mPopGrupos()"><option value="med">Menor média de lance</option><option value="vagas">Mais vagas</option><option value="prazoA">Prazo menor</option><option value="prazoD">Prazo maior</option></select>
+      </div>
+      <div class="mform">
+        <div class="full"><label>Grupo (com vaga)</label><select id="mGrupo" onchange="mPopValores()"></select></div>
+        <div><label>Crédito da carta</label><select id="mValor"></select></div>
+        <div><label>Cotas</label><input id="mCotas" type="number" min="1" value="1"></div>
+        <div class="full"><label>Modalidade do lance</label><div class="toggle" id="mMod"><button data-v="livre" class="sel" onclick="mSelMod(this)">Lance livre</button><button data-v="fixo" onclick="mSelMod(this)">Lance fixo (40%)</button></div></div>
+        <div class="full" id="mRecursoWrap"><label>Recurso próprio desta carta (lance livre)</label><input id="mRecurso" inputmode="numeric" placeholder="R$ 0,00"></div>
+        <div class="full" id="mEmbWrap"><label>Lance embutido desta carta (%) — padrão 30</label><input id="mEmb" inputmode="numeric" value="30"></div>
+        <button class="addbtn full" onclick="addCarta()">+ Adicionar carta</button>
+      </div>
+      <div class="sechd">Cartas selecionadas</div>
+      <div id="mLista"></div>
+      <div class="taxbox"><label>Taxa de administração (%)</label><input id="mTaxa" inputmode="decimal" value="16" oninput="MANUAL.taxa=numero(this.value)/100;renderManual()"></div>
+      <div class="sechd">Resultado da proposta</div>
+      <div id="mTotais"></div>
+      <div class="actions"><button class="btn prim" onclick="window.print()">🖨️ Imprimir / PDF</button><button class="btn ghost" onclick="fecharManual()">← Voltar</button></div>
+    </div>
+    <div id="detalhe">
+      <button class="btn ghost" onclick="voltar()">← Voltar às propostas</button>
+      <h2 style="font-size:22px;margin:16px 0 4px">Proposta escolhida — ajuste a taxa</h2>
+      <p style="color:var(--mut);font-size:13px;margin-bottom:6px">A simulação usa <b>16%</b> como padrão. Confirme a taxa exata do(s) grupo(s) e ajuste abaixo para recalcular.</p>
+      <div class="warn">⚠️ Confira a taxa de administração real do(s) grupo(s) no site do banco e ajuste o campo abaixo. <span id="autoTaxa"></span></div>
+      <div class="taxbox"><label>Taxa de administração (%)</label><input id="dTaxa" inputmode="decimal" value="16" oninput="onTaxa()"><span style="color:var(--mut);font-size:13px" id="dTaxaInfo"></span></div>
+      <div id="dCard"></div>
+      <div class="actions"><button class="btn prim" onclick="window.print()">🖨️ Imprimir / PDF</button><button class="btn ghost" onclick="voltar()">← Voltar</button></div>
+    </div>
+  </div>
+</div>
+<script>
+const DADOS = __DADOS__;
+const SEG=0.0006711,EMBMAX=0.30,TAXA_PADRAO=0.16,VAGAS_MIN=5,TOL=0.06,MAXLEGS=8;
+const PRAZO={"Imóvel":[90,240],"Rodas":[24,140]};
+const lv=g=>g.lances.filter(x=>x>0);
+const lMed=g=>{const v=lv(g);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;};
+const lMax=g=>{const v=lv(g);return v.length?Math.max.apply(null,v):null;};
+const prazoCap=()=>FILTROS&&isFinite(FILTROS.prazoMax)?FILTROS.prazoMax:1e9;
+const elegiveis=aba=>{const p=PRAZO[aba]||[12,240];const cap=prazoCap();return DADOS.grupos.filter(g=>g.aba===aba&&g.vagas>=VAGAS_MIN&&g.prazo>=p[0]&&g.prazo<=Math.min(p[1],cap));};
+function legCalc(g,cotas,cu,embPct,RP,taxa){taxa=(taxa==null?TAXA_PADRAO:taxa);
+  const ct=cotas*cu,div=ct*(1+taxa+g.fundo),base=div/g.prazo,seg=SEG*ct;
+  const emb=embPct*ct,liq=ct-emb,lance=emb+RP,saldo=div-base-lance,pos=g.prazo>1?saldo/(g.prazo-1):0;
+  return {g,cotas,cu,prazo:g.prazo,embPct,RP,ct,emb,liq,lance,lancePct:ct?lance/ct:0,base,
+    pIniSem:base,pIniCom:base+seg,pPosSem:pos,pPosCom:pos+seg,med:lMed(g),mx:lMax(g),cont:g.contLivre,vagas:g.vagas};}
+const _c={};
+function legsPool(aba,embPct){const k=aba+"|"+embPct+"|"+prazoCap();if(_c[k])return _c[k];
+  const legs=[];for(const g of elegiveis(aba))for(const v of g.valores)for(let c=1;c<=2;c++){const ct=c*v;
+    legs.push({g,cotas:c,cu:v,ct,liq:ct*(1-embPct),med:lMed(g)||0,cont:g.contLivre});}
+  legs.sort((a,b)=>b.liq-a.liq);return _c[k]=legs;}
+function aggFromLegs(legs){const S=k=>legs.reduce((s,l)=>s+(l[k]||0),0);const ct=S('ct');
+  return {legs,ct,emb:S('emb'),liq:S('liq'),RP:S('RP'),lance:S('lance'),lancePct:ct?S('lance')/ct:0,
+    pIniCom:S('pIniCom'),pIniSem:S('pIniSem'),pPosCom:S('pPosCom'),pPosSem:S('pPosSem'),
+    medWorst:Math.max.apply(null,legs.map(l=>l.med||0)),mxWorst:Math.max.apply(null,legs.map(l=>l.mx||0)),
+    cont:Math.min.apply(null,legs.map(l=>l.cont)),vagas:Math.min.apply(null,legs.map(l=>l.vagas)),
+    nGrupos:new Set(legs.map(l=>l.g.grupo)).size};}
+function aggregate(parts,RP,taxa){const totCt=parts.reduce((s,p)=>s+p.cotas*p.cu,0);
+  return aggFromLegs(parts.map(p=>{const ct=p.cotas*p.cu;return legCalc(p.g,p.cotas,p.cu,p.embPct,totCt?RP*ct/totCt:0,taxa);}));}
+function prazoMed(p){return p.legs.reduce((s,l)=>s+l.prazo,0)/p.legs.length;}
+function combosBeam(L,RP,aba,embPct,maxLegs,excl){maxLegs=maxLegs||MAXLEGS;
+  const legs=legsPool(aba,embPct);let beam=[{legs:[],gr:new Set(),liq:0}];const W=60,out=[];
+  for(let d=0;d<maxLegs;d++){const next=[];
+    for(const st of beam){const rem=L-st.liq;if(Math.abs(st.liq-L)<=L*TOL)out.push(st);if(rem<=L*0.03)continue;let added=0;
+      for(const lg of legs){if(st.gr.has(lg.g.grupo))continue;if(excl&&excl.has(lg.g.grupo))continue;if(lg.liq>rem+L*0.06)continue;
+        next.push({legs:st.legs.concat(lg),gr:new Set(st.gr).add(lg.g.grupo),liq:st.liq+lg.liq});if(++added>=8)break;}}
+    if(!next.length)break;
+    const cb=x=>Math.round(Math.abs(x.liq-L)/(L*0.02)),sm=x=>x.legs.reduce((s,l)=>s+l.med,0),sp=x=>-x.legs.reduce((s,l)=>s+l.g.prazo,0);
+    next.sort((a,b)=>cb(a)-cb(b)||sm(a)-sm(b)||a.legs.length-b.legs.length||sp(a)-sp(b));beam=next.slice(0,W);}
+  for(const st of beam)if(Math.abs(st.liq-L)<=L*TOL)out.push(st);
+  const seen=new Set(),props=[];const cb2=x=>Math.round(Math.abs(x.liq-L)/(L*0.02)),sm2=x=>x.legs.reduce((s,l)=>s+l.med,0),sp2=x=>-x.legs.reduce((s,l)=>s+l.g.prazo,0);
+  out.sort((a,b)=>cb2(a)-cb2(b)||sm2(a)-sm2(b)||a.legs.length-b.legs.length||sp2(a)-sp2(b));
+  for(const st of out){const sig=st.legs.map(l=>l.g.grupo+":"+l.cotas+":"+l.cu).sort().join("|");if(seen.has(sig))continue;seen.add(sig);
+    props.push(aggregate(st.legs.map(l=>({g:l.g,cotas:l.cotas,cu:l.cu,embPct})),RP));if(props.length>=16)break;}
+  return props;}
+function cen1(desired,RP,aba,excl){let fb=null;
+  for(let L=Math.min(desired,3000000);L>=Math.max(40000,Math.round(desired*0.4));L-=Math.max(15000,Math.round(L*0.05))){
+    let pick=null;
+    for(const p of combosBeam(L,RP,aba,EMB,MAXLEGS,excl)){if(p.cont<1)continue;
+      const mg=p.lancePct-p.medWorst;if(!fb||mg>(fb.lancePct-fb.medWorst))fb=p;
+      if(p.lancePct<p.medWorst)continue;
+      if(!pick||p.medWorst<pick.medWorst-0.01||(Math.abs(p.medWorst-pick.medWorst)<=0.01&&(p.cont>pick.cont||(p.cont===pick.cont&&prazoMed(p)<prazoMed(pick)))))pick=p;}
+    if(pick)return pick;}
+  return fb;}
+function cen2(L,RP,aba,excl){let best=null;
+  for(const p of combosBeam(L,RP,aba,EMB,MAXLEGS,excl)){if(p.cont<1)continue;
+    const t=p.mxWorst||p.medWorst;p.rpNeed=Math.max(0,(t-EMBMAX)*p.ct);
+    if(!best||p.rpNeed<best.rpNeed*0.98||(Math.abs(p.rpNeed-best.rpNeed)<=best.rpNeed*0.02&&p.pIniCom<best.pIniCom))best=p;}
+  return best;}
+function cen3(desired,RP,budget,aba,excl){let best=null;
+  for(let L=50000;L<=desired*1.25;L+=Math.max(10000,Math.round(L*0.03)))
+    for(const p of combosBeam(L,RP,aba,0,MAXLEGS,excl))if(p.pIniCom<=budget){if(!best||p.liq>best.liq)best=p;}
+  return best;}
+function cenIdeal(desired,RP,budget,aba,excl){let bestC=null,bestAny=null;
+  for(const embPct of [...new Set([0,Math.min(0.15,EMB),EMB])])for(let L=40000;L<=desired*1.2;L+=Math.max(10000,Math.round(L*0.03)))
+    for(const p of combosBeam(L,RP,aba,embPct,MAXLEGS,excl)){
+      if(p.cont<1||p.pIniCom>budget||p.pPosCom>budget)continue;
+      if(!bestAny||p.liq>bestAny.liq)bestAny=p;
+      if(p.lancePct>=p.medWorst){const mg=p.lancePct-p.medWorst;
+        if(!bestC||p.liq>bestC.liq||(Math.abs(p.liq-bestC.liq)<=bestC.liq*0.04&&mg>(bestC.lancePct-bestC.medWorst)))bestC=p;}}
+  return {p:bestC||bestAny,contemplavel:!!bestC};}
+function fixoLance(g,ct){const fp=(g.fixoPct||0.40),emb=Math.min(0.30,fp);return {embPct:emb,RP:(fp-emb)*ct,fp};}
+/* PROPOSTA 1 — Contemplacao rapida: ALAVANCAGEM real. Grupos rodados (media menor),
+   lance ~ o que o cliente tem (RP+embutido) e credito liquido ~ o desejado.
+   Aceita a parcela um pouco acima do alvo, sem exagero. */
+function cenRapida(F,excl){const emb=F.emb,desired=F.desejado,aba=F.aba;
+  const cands=[];
+  // cartas isoladas — garante achar os grupos mais rodados (menor media)
+  for(const g of elegiveis(aba)){if(excl&&excl.has(g.grupo))continue;if(g.contLivre<1||lMed(g)==null)continue;
+    for(const v of g.valores)for(let c=1;c<=2;c++)cands.push(aggFromLegs([legCalc(g,c,v,emb,F.RP)]));}
+  // combinacoes p/ creditos que uma carta so nao alcanca
+  for(let L=desired;L>=desired*0.5;L-=Math.max(10000,Math.round(L*0.04)))
+    for(const p of combosBeam(L,F.RP,aba,emb,F.maxLegs,excl))cands.push(p);
+  if(!cands.length)return null;
+  const posOk=p=>!isFinite(F.parcelaPosMax)||p.pPosCom<=F.parcelaPosMax;
+  const SOBRA_MAX=0.20;   // lance no maximo 20pp acima da media: evita desperdicar lance (ex.: ofertar 107%)
+  let alta=cands.filter(p=>p.cont>=1&&p.lancePct>=p.medWorst&&(p.lancePct-p.medWorst)<=SOBRA_MAX&&posOk(p));
+  if(!alta.length)alta=cands.filter(p=>p.cont>=1&&p.lancePct>=p.medWorst&&posOk(p));
+  const teto1=F.parcelaMax,teto2=isFinite(F.parcelaMax)?F.parcelaMax*1.3:Infinity;
+  const modo=F.rapidaModo||'credito';   // 'credito' = crédito perto do desejado | 'media' = menor lance/média
+  function melhor(a,b){if(!b)return true;
+    if(modo==='media'){
+      if(a.medWorst<b.medWorst-0.005)return true;
+      if(a.medWorst>b.medWorst+0.005)return false;
+      return Math.abs(a.liq-desired)<Math.abs(b.liq-desired);}
+    const da=Math.abs(a.liq-desired),db=Math.abs(b.liq-desired);
+    if(da<db-desired*0.005)return true;
+    if(da>db+desired*0.005)return false;
+    if(a.medWorst<b.medWorst-0.005)return true;
+    if(a.medWorst>b.medWorst+0.005)return false;
+    return a.pIniCom<b.pIniCom;}
+  const floor=(modo==='media')?desired*0.4:0;
+  function escolher(pool,teto){let best=null;for(const p of pool){if(p.pIniCom>teto||p.liq<floor)continue;if(melhor(p,best))best=p;}return best;}
+  let pick=escolher(alta,teto1);
+  if(!pick||(modo==='credito'&&pick.liq<desired*0.9))pick=escolher(alta,teto2)||pick;
+  if(!pick){let fb=null;for(const p of cands){if(p.pIniCom>teto2||!posOk(p))continue;if(!fb||(p.lancePct-p.medWorst)>(fb.lancePct-fb.medWorst))fb=p;}pick=fb;}
+  if(!pick)return null;
+  pick.altaChance=pick.lancePct>=pick.medWorst;
+  const alvo=rapidaAlvo(F,desired,excl);pick.alvoDesejado=alvo;
+  pick.longe=(pick.liq<desired*0.70)||(!!alvo&&alvo.extraPct>0.30);
+  return pick;}
+/* Quanto precisaria para tirar targetLiq com alta chance (menor caixa extra alem do RP+embutido) */
+function rapidaAlvo(F,targetLiq,excl){const emb=F.emb,aba=F.aba;let best=null;
+  for(const g of elegiveis(aba)){if(excl&&excl.has(g.grupo))continue;if(g.contLivre<1||lMed(g)==null)continue;
+    const alvoLance=Math.max(lMax(g)||0,lMed(g)||0);
+    for(const v of g.valores)for(let c=1;c<=2;c++){const ct=c*v,liq=ct*(1-emb);
+      if(Math.abs(liq-targetLiq)>targetLiq*0.15)continue;
+      const lanceNec=alvoLance*ct,extra=Math.max(0,lanceNec-emb*ct-F.RP);
+      const x=legCalc(g,c,v,emb,F.RP);
+      const cand={grupo:g.grupo,ct,liq,media:lMed(g),lanceNec,extra,extraPct:ct?extra/ct:1,parcela:x.pIniCom};
+      if(!best||cand.extra<best.extra-ct*0.005||(Math.abs(cand.extra-best.extra)<=ct*0.01&&cand.parcela<best.parcela))best=cand;}}
+  return best;}
+/* PROPOSTA 3 — 100% lance fixo: cartas fixo de MAIOR prazo (parcela menor) ate o desejado */
+function propostaFixo(F,excl){const aba=F.aba,desired=F.desejado;
+  const elig=elegiveis(aba).filter(g=>g.fixoOk&&!(excl&&excl.has(g.grupo)));
+  if(!elig.length)return null;
+  const pool=[];for(const g of elig)for(const v of g.valores)for(const c of[1,2])pool.push({g,cotas:c,cu:v,ct:c*v,liq:c*v*0.7});
+  pool.sort((a,b)=>b.g.prazo-a.g.prazo||a.g.grupo-b.g.grupo||Math.abs(a.liq-desired*0.4)-Math.abs(b.liq-desired*0.4));
+  let rem=desired,used=new Set(),legs=[];
+  for(const lg of pool){if(rem<=desired*0.06)break;if(legs.length>=F.maxLegs)break;if(used.has(lg.g.grupo))continue;if(lg.liq>rem+desired*0.12)continue;
+    const f=fixoLance(lg.g,lg.ct);const x=legCalc(lg.g,lg.cotas,lg.cu,f.embPct,f.RP);x.modalidade='fixo';legs.push(x);used.add(lg.g.grupo);rem-=lg.liq;}
+  if(!legs.length)return null;
+  const p=aggFromLegs(legs);if(isFinite(F.parcelaPosMax)&&p.pPosCom>F.parcelaPosMax)return null;
+  p.modalidade='fixo';p.ownCash=p.RP;return p;}
+/* PROPOSTA 2 — Mix: (1) parte LIVRE de ALTA CHANCE com o RP+embutido (lance dimensionado
+   para bater a media +5pp), nos grupos mais rodados; (2) RESTANTE no LANCE FIXO em grupos
+   mais NOVOS (maior prazo) -> derruba o lance total e a parcela antes de contemplar. */
+const MARGEM_ALTA=0.05;
+function propostaMix(F,excl){const aba=F.aba,emb=F.emb,desired=F.desejado;
+  const tetoMix=isFinite(F.parcelaMax)?F.parcelaMax*1.3:Infinity;   // livre+fixo: parcela total <= 1,3x o alvo
+  const elig=elegiveis(aba).filter(g=>!(excl&&excl.has(g.grupo)));
+  if(!elig.length)return null;
+  const sum=(a,k)=>a.reduce((s,l)=>s+(l[k]||0),0);
+  // pool LIVRE de alta chance: menor media; entre iguais, maior prazo (parcela menor)
+  const livrePool=[];for(const g of elig){if(g.contLivre<1||lMed(g)==null)continue;const alvo=lMed(g)+MARGEM_ALTA;
+    for(const v of g.valores)for(const c of[1,2]){const ct=c*v;
+      livrePool.push({g,cotas:c,cu:v,ct,liq:ct*(1-emb),med:lMed(g),custo:Math.max(0,(alvo-emb))*ct});}}
+  livrePool.sort((a,b)=>a.med-b.med||b.g.prazo-a.g.prazo||b.liq-a.liq);
+  // pool FIXO: grupos mais NOVOS (maior prazo) primeiro; depois cartas maiores (+valor / +cota)
+  const fixoPool=[];for(const g of elig){if(!g.fixoOk)continue;for(const v of g.valores)for(const c of[1,2])fixoPool.push({g,cotas:c,cu:v,ct:c*v});}
+  fixoPool.sort((a,b)=>b.g.prazo-a.g.prazo||b.ct-a.ct);
+  // completa com FIXO (prazo longo) ate ~alvoLiq, sem estourar parcelaCap
+  function fillFixo(base,baseUsed,alvoLiq,parcelaCap){const legs=base.slice(),used=new Set(baseUsed);
+    let liq=sum(legs,'liq'),parc=sum(legs,'pIniCom');
+    for(const lg of fixoPool){if(liq>=alvoLiq*0.985)break;if(legs.length>=F.maxLegs)break;if(used.has(lg.g.grupo))continue;
+      const rem=alvoLiq-liq;if(lg.ct*0.7>rem+alvoLiq*0.14)continue;
+      const f=fixoLance(lg.g,lg.ct);const x=legCalc(lg.g,lg.cotas,lg.cu,f.embPct,f.RP);
+      if(parc+x.pIniCom>parcelaCap)continue;
+      x.modalidade='fixo';legs.push(x);used.add(lg.g.grupo);liq+=x.liq;parc+=x.pIniCom;}
+    return legs;}
+  // maior credito alcancavel so no fixo (prazo longo) dentro do teto -> referencia p/ nao sacrificar muito valor
+  const maxReach=sum(fillFixo([],new Set(),desired,tetoMix),'liq');
+  const alvoLiq=Math.min(desired,maxReach||desired);
+  // Fase 1: MAXIMO de livre — cada leg so entra se, completando com fixo, o total ainda ficar >=85% do alvo
+  let legs=[],used=new Set(),budget=F.RP;
+  for(const lg of livrePool){if(sum(legs,'liq')>=alvoLiq*0.97)break;if(legs.length>=F.maxLegs)break;if(used.has(lg.g.grupo))continue;
+    if(lg.custo>budget)continue;
+    const x=legCalc(lg.g,lg.cotas,lg.cu,emb,lg.custo);x.modalidade='livre';
+    const tst=legs.concat(x),tstU=new Set(used);tstU.add(lg.g.grupo);
+    if(sum(tst,'pIniCom')>tetoMix)continue;
+    if(sum(fillFixo(tst,tstU,alvoLiq,tetoMix),'liq')<alvoLiq*0.85)continue;   // sacrificaria muito o valor a receber -> pula
+    legs=tst;used=tstU;budget-=lg.custo;}
+  // Fase 2: completa com fixo de prazo longo
+  legs=fillFixo(legs,used,alvoLiq,tetoMix);
+  if(!legs.length)return null;
+  const p=aggFromLegs(legs);if(isFinite(F.parcelaPosMax)&&p.pPosCom>F.parcelaPosMax)return null;
+  p.modalidade='mix';p.ownCash=p.RP;p.livreLiq=sum(legs.filter(l=>l.modalidade==='livre'),'liq');
+  p.nLivre=legs.filter(l=>l.modalidade==='livre').length;p.nFixo=legs.filter(l=>l.modalidade==='fixo').length;
+  return p;}
+function recompute(parts,taxa){return aggFromLegs(parts.map(p=>legCalc(p.g,p.cotas,p.cu,p.embPct,p.RP,taxa)));}
+
+/* ---------- UI ---------- */
+let step=0;const tipoBem={v:"Imóvel"};const fixo={on:false};let EST=null,RENDER=[],CHOSEN=null,FILTROS=null;
+function selTipo(b){document.querySelectorAll('#tipoBem button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');tipoBem.v=b.dataset.v;setArt('artWizard',tipoBem.v);}
+function selFixo(b){document.querySelectorAll('#lanceFixo button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');fixo.on=b.dataset.v==='sim';}
+function show(s){document.querySelectorAll('.q').forEach(q=>q.classList.remove('on'));
+  document.querySelector('.q[data-step="'+s+'"]').classList.add('on');
+  for(let i=0;i<4;i++)document.getElementById('d'+i).classList.toggle('on',i<=s);step=s;
+  const f=document.querySelector('.q.on .field');if(f)setTimeout(()=>f.focus(),60);}
+function next(s){if(s===1&&numero(document.getElementById('credito').value)<=0)return shake('credito');show(s+1);}
+function prev(s){show(s-1);}
+function shake(id){const e=document.getElementById(id);e.style.borderColor='#f87171';setTimeout(()=>e.style.borderColor='',600);}
+function toggleLance(){const c=document.getElementById('semLance').checked,l=document.getElementById('lance');l.disabled=c;if(c)l.value='';}
+function maskMoeda(v){v=(v||'').replace(/\D/g,'');if(!v)return'';return'R$ '+(parseInt(v,10)/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function numero(v){if(!v)return 0;return parseFloat((''+v).replace(/[^\d,]/g,'').replace(',','.'))||0;}
+['credito','parcela','lance','mRecurso'].forEach(id=>{const e=document.getElementById(id);if(e)e.addEventListener('input',()=>{e.value=maskMoeda(e.value);});});
+document.getElementById('nome').addEventListener('keydown',e=>{if(e.key==='Enter')next(0);});
+function brl(v){return 'R$ '+(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function pct(v){return (v*100).toFixed(1)+'%';}
+function modStats(p){let lct=0,llance=0,lmed=0,fct=0;p.legs.forEach(l=>{if(l.modalidade==='fixo'){fct+=l.ct;}else{lct+=l.ct;llance+=l.lance;lmed=Math.max(lmed,l.med||0);}});return {lct,llancePct:lct?llance/lct:0,lmed,fct,hasL:lct>0,hasF:fct>0};}
+function velocidade(p){const s=modStats(p);
+  if(s.hasF&&!s.hasL)return 'depende de sorteio';
+  if(s.hasF&&s.hasL)return 'moderada';
+  const mg=p.lancePct-(p.medWorst||0);
+  return (p.mxWorst&&p.lancePct>=p.mxWorst)?'muito rápida':(mg>=0.05?'rápida':(mg>=-0.005?'moderada':'depende de sorteio'));}
+function tagChance(p,o){const s=modStats(p);
+  if(s.hasF&&!s.hasL)return '<span class="tag low">chance baixa (lance fixo)</span>';
+  if(s.hasF&&s.hasL)return '<span class="tag mid">chance média (livre + fixo)</span>';
+  const m=p.lancePct-(p.medWorst||0);
+  if(!p.medWorst)return '<span class="tag mid">sem histórico</span>';
+  if(p.mxWorst&&p.lancePct>=p.mxWorst)return '<span class="tag ok">chance excelente</span>';
+  if(m>=0.05)return '<span class="tag ok">chance alta</span>';
+  if(m>=-0.03)return '<span class="tag mid">chance média</span>';
+  return '<span class="tag low">chance baixa</span>';}
+function legsHTML(p){return '<div class="legs">'+p.legs.map(l=>
+  `<div class="leg">Grupo <b>${l.g.grupo}</b> · <b>${l.cotas}</b>×${brl(l.cu)} · prazo <b>${l.prazo}m</b> · vagas ${l.vagas}`+
+  (l.modalidade?`<span class="lmod ${l.modalidade}">${l.modalidade}</span>`:'')+`</div>`).join('')+'</div>';}
+function barTherm(label,val,mark,color){const esc=Math.max(val,mark||0,0.9);return `<div class="therm"><div class="lbl"><span>${label}: <b style="color:${color}">${pct(val)}</b></span><span>${mark!=null?'Média do grupo: '+pct(mark):'(fila própria)'}</span></div><div class="bar"><div class="fill" style="width:${Math.min(100,val/esc*100)}%;background:${color}"></div>${mark!=null?`<div class="mark" style="left:${Math.min(100,mark/esc*100)}%"></div>`:''}</div></div>`;}
+function therm(p){const s=modStats(p);let h='';
+  if(s.hasL)h+=barTherm('Lance livre',s.llancePct,s.lmed,'#ff9d4d');
+  if(s.hasF)h+=barTherm('Lance fixo',0.40,null,'#c4b5fd');
+  return h;}
+function card(p,o){o=o||{};const vel=velocidade(p);
+  return `<div class="rc ${o.cls||''} ${o.dest?'dest':''}" ${o.idx>=0?'id="rc-'+o.idx+'"':''}><div class="badge ${o.bcls||''}">${o.badge||''}</div><div class="body">
+    <div><div class="tline">Crédito líquido (o que o cliente recebe)</div><div class="big">${brl(p.liq)}</div></div>
+    ${o.sub?`<div class="csub">${o.sub}</div>`:''}
+    ${p.nGrupos>1?'<span class="combo-tag">✦ Combinação de '+p.nGrupos+' grupos</span>':''}
+    ${tagChance(p,o)}
+    ${therm(p)}
+    <div class="mgrid">
+      <div><span class="l">Parcela ANTES</span><b>${brl(p.pIniCom)}</b></div>
+      <div><span class="l">Parcela DEPOIS</span><b class="g">${brl(p.pPosCom)}</b></div>
+      <div><span class="l">Lance ofertado</span><b class="o">${brl(p.lance)} (${pct(p.lancePct)})</b></div>
+      <div><span class="l">Crédito total</span><b>${brl(p.ct)}</b></div>
+      <div><span class="l">Recurso do bolso</span><b>${brl(p.ownCash!=null?p.ownCash:p.RP)}</b></div>
+      <div><span class="l">Velocidade</span><b>${vel}</b></div>
+    </div>
+    ${legsHTML(p)}
+    ${o.note?`<div class="note">${o.note}</div>`:''}
+    ${o.noBtn?'':`<div class="cbtns"><button class="choose" onclick="escolher(${o.idx})">✓ Escolher</button>${o.scen?`<button class="swap" onclick="trocar(${o.idx})" title="Trocar automaticamente">↻ Auto</button><button class="swap" onclick="trocarManual(${o.idx})" title="Escolher o grupo">✎ Manual</button>`:''}</div>${o.scen?`<div class="swapedit" id="swapedit-${o.idx}"></div>`:''}`}</div></div>`;}
+function partsOf(p){return p.legs.map(l=>({g:l.g,cotas:l.cotas,cu:l.cu,embPct:l.embPct,RP:l.RP}));}
+
+function gerar(st,ajuste){
+  if(st){EST=st;initFiltros();syncFiltrosUI();}
+  if(!FILTROS)initFiltros();
+  const F=FILTROS;EMB=F.emb;
+  document.getElementById('loading').classList.remove('on');
+  document.getElementById('detalhe').style.display='none';
+  document.querySelector('.wrap').classList.add('wide');
+  const R=document.getElementById('results');R.classList.add('on');R.style.display='block';
+  const nome=EST.nome||'Cliente';
+  document.getElementById('rtitle').innerHTML=`Olá, <b>${nome}</b>! Aqui estão as opções`;
+  document.getElementById('rsub').innerText=`Desejo: ${brl(F.desejado)} · Parcela alvo: ${brl(F.parcelaMax)} · Lance: ${brl(F.RP)} · ${F.aba==='Rodas'?'Automóvel':'Imóvel'}`;
+  document.getElementById('fontemeta').innerText=`Referência: Guia de Oportunidades · baixado dia ${DADOS.meta.baixado_em||DADOS.meta.modificado_em||''}.`;setArt('artResults',F.aba);
+  document.getElementById('ajusteBox').innerHTML=ajuste?`<div class="ajuste">🔄 ${ajuste}</div>`:'';
+  RENDER=[];
+  const add=(p,o)=>{if(!p)return '';const i=RENDER.length;RENDER.push({parts:partsOf(p),badge:o.badge,bcls:o.bcls,cls:o.cls,dest:o.dest,fixo:o.fixo,scen:o.scen,note:o.note,groups:[...new Set(p.legs.map(l=>l.g.grupo))],excl:new Set()});return card(p,Object.assign({idx:i},o));};
+  let g='';
+  if(F.show.rapida){const r=cenRapida(F);let note;
+    if(r&&r.longe){const a=r.alvoDesejado,tetoP=isFinite(F.parcelaMax)?F.parcelaMax*1.3:Infinity;let comp='';
+      if(a){const precisaLance=a.extra>a.ct*0.02,precisaParcela=a.parcela>tetoP;
+        if(precisaLance)comp=`Para tirar os ${brl(F.desejado)}, o lance precisaria ser ~<b>${brl(a.lanceNec)}</b> — cerca de <b>${brl(a.extra)}</b> a mais de recursos próprios (além do embutido)`+(precisaParcela?`, e a parcela subiria para ~<b>${brl(a.parcela)}</b>/mês`:'')+`.`;
+        else if(precisaParcela)comp=`O crédito de ${brl(F.desejado)} <b>cabe no seu lance</b>, mas a parcela ficaria em ~<b>${brl(a.parcela)}</b>/mês (acima do seu limite). Para caber na sua parcela, o máximo com alta chance é <b>${brl(r.liq)}</b> — ou aumente a parcela para chegar mais perto.`;}
+      note=`<div class="faltam">⚠️ <b>Os ${brl(F.desejado)} não saem rápido com este lance/parcela.</b><br>O mais perto viável com alta chance é <b>${brl(r.liq)}</b> (lance ${pct(r.lancePct)}, parcela ${brl(r.pIniCom)}). ${comp}</div>`;}
+    else{note=`Grupo <b>rodado</b> (média baixa): oferta ~<b>${brl(r?r.lance:0)}</b> de lance e recebe <b>${brl(r?r.liq:0)}</b> líquido — alavancagem real, sem depender de sorteio.`;}
+    g+=add(r,{scen:'rapida',badge:'⚡ Contemplação rápida',bcls:'b1',dest:true,note});}
+  if(F.show.mix){const m=propostaMix(F);
+    if(m){const comp=`${m.nLivre} carta(s) no lance livre + ${m.nFixo} no lance fixo`;
+      g+=add(m,{scen:'mix',badge:'🧩 Mix lance livre + fixo',bcls:'b4',
+        note:`<b>${comp}</b>. A parte livre é dimensionada para <b>bater a fila</b> (alta chance) com seu lance; o restante entra no <b>lance fixo</b> em grupos mais novos (maior prazo) — isso derruba o lance total e a parcela. Custo do bolso: <b>${brl(m.ownCash)}</b>.`});}}
+  if(F.show.fixo){const f=propostaFixo(F);
+    if(f)g+=add(f,{scen:'fixo',badge:'📌 100% lance fixo',bcls:'b5',fixo:true,
+      note:`${f.legs.length} carta(s) no lance fixo (40%) em grupos de <b>maior prazo</b> para a parcela ficar menor. Disputa na fila do lance fixo.`});}
+  if(F.show.ideal){const id=cenIdeal(F.desejado,F.RP,F.parcelaMax,F.aba);
+    if(id.p)g+=add(id.p,{scen:'ideal',badge:'✨ Recomendação ideal da IA',bcls:'bideal',dest:true,
+      sub:'Maior crédito que cabe na parcela e que você tira com o lance atual — contemplação '+velocidade(id.p)+'.'});}
+  if(F.show.c2){const s2=cen2(F.desejado,F.RP,F.aba);
+    if(s2){const falta=Math.max(0,s2.rpNeed-F.RP);
+      g+=add(s2,{scen:'c2',badge:'🎯 Crédito desejado',bcls:'b2',note:falta>0
+        ?`<div class="faltam">Para alta chance neste crédito o lance ideal é <b>${brl(s2.rpNeed)}</b> → <b>faltam ${brl(falta)}</b>.</div>`
+        :`<div class="tem">Seu lance já tira esse crédito com alta chance! 🎉</div>`});}}
+  if(F.show.c3){const s3=cen3(F.desejado,F.RP,F.parcelaMax,F.aba);
+    if(s3)g+=add(s3,{scen:'c3',badge:'💳 No seu bolso',bcls:'b3',note:`Maior crédito mantendo a parcela em até ${brl(F.parcelaMax)}.`});}
+  document.getElementById('cards').innerHTML=g||'<div class="empty">Sem grupos com vaga compatíveis. Ajuste os filtros ao lado (aumente a parcela/lance ou o prazo).</div>';
+  renderChips();
+}
+function regen(scen,excl){const F=FILTROS;
+  if(scen==='rapida')return cenRapida(F,excl);
+  if(scen==='mix')return propostaMix(F,excl);
+  if(scen==='fixo')return propostaFixo(F,excl);
+  if(scen==='ideal'){const r=cenIdeal(F.desejado,F.RP,F.parcelaMax,F.aba,excl);return r.p;}
+  if(scen==='c2')return cen2(F.desejado,F.RP,F.aba,excl);
+  if(scen==='c3')return cen3(F.desejado,F.RP,F.parcelaMax,F.aba,excl);
+  return null;}
+/* ---------- Filtros dinâmicos (sidebar) ---------- */
+function initFiltros(){FILTROS={aba:EST.aba,desejado:EST.desejado,RP:EST.RP,parcelaMax:EST.parcelaMax||Infinity,
+  parcelaPosMax:Infinity,prazoMax:Infinity,maxLegs:MAXLEGS,emb:(EST.emb!=null?EST.emb:0.30),rapidaModo:'credito',
+  show:{rapida:true,mix:true,fixo:true,ideal:false,c2:false,c3:false}};}
+function syncFiltrosUI(){const F=FILTROS;if(!document.getElementById('fCredito'))return;
+  document.querySelectorAll('#fTipo button').forEach(b=>b.classList.toggle('sel',b.dataset.v===F.aba));
+  document.querySelectorAll('#fRapModo button').forEach(b=>b.classList.toggle('sel',b.dataset.v===(F.rapidaModo||'credito')));
+  document.getElementById('fCredito').value=brl(F.desejado);
+  document.getElementById('fLance').value=F.RP?brl(F.RP):'';
+  document.getElementById('fParcela').value=isFinite(F.parcelaMax)?brl(F.parcelaMax):'';
+  document.getElementById('fParcelaPos').value=isFinite(F.parcelaPosMax)?brl(F.parcelaPosMax):'';
+  document.getElementById('fPrazo').value=isFinite(F.prazoMax)?F.prazoMax:240;
+  document.getElementById('fPrazoV').innerText=isFinite(F.prazoMax)?F.prazoMax+'m':'sem limite';
+  document.getElementById('fLegs').value=F.maxLegs;document.getElementById('fLegsV').innerText=F.maxLegs;
+  document.getElementById('pRapida').checked=F.show.rapida;document.getElementById('pMix').checked=F.show.mix;document.getElementById('pFixo').checked=F.show.fixo;
+  document.getElementById('pIdeal').checked=F.show.ideal;document.getElementById('pC2').checked=F.show.c2;document.getElementById('pC3').checked=F.show.c3;}
+let _fdeb=null;
+function schedule(){if(_fdeb)clearTimeout(_fdeb);_fdeb=setTimeout(()=>gerar(),220);}
+function clearCache(){for(const k in _c)delete _c[k];}
+function onMoney(el,key){el.value=maskMoeda(el.value);const v=numero(el.value);
+  if(key==='desejado')FILTROS.desejado=v||FILTROS.desejado;
+  else if(key==='RP')FILTROS.RP=v;
+  else if(key==='parcelaMax')FILTROS.parcelaMax=v||Infinity;
+  else if(key==='parcelaPosMax')FILTROS.parcelaPosMax=v||Infinity;
+  schedule();}
+function onPrazo(v){v=+v;FILTROS.prazoMax=(v>=240?Infinity:v);document.getElementById('fPrazoV').innerText=(v>=240?'sem limite':v+'m');clearCache();schedule();}
+function onLegs(v){v=+v;FILTROS.maxLegs=v;document.getElementById('fLegsV').innerText=v;schedule();}
+function fTipoSel(b){document.querySelectorAll('#fTipo button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');FILTROS.aba=b.dataset.v;setArt('artResults',FILTROS.aba);clearCache();schedule();}
+function fRapModo(b){document.querySelectorAll('#fRapModo button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');FILTROS.rapidaModo=b.dataset.v;schedule();}
+function togShow(){FILTROS.show={rapida:document.getElementById('pRapida').checked,mix:document.getElementById('pMix').checked,fixo:document.getElementById('pFixo').checked,ideal:document.getElementById('pIdeal').checked,c2:document.getElementById('pC2').checked,c3:document.getElementById('pC3').checked};schedule();}
+function toggleSidebar(){const sb=document.getElementById('sidebar'),fb=document.getElementById('fbtn');const hid=sb.classList.toggle('hidden');fb.classList.toggle('show',hid);}
+function resetFiltros(){initFiltros();syncFiltrosUI();clearCache();gerar();}
+function trocarManual(i){const it=RENDER[i];if(!it)return;const box=document.getElementById('swapedit-'+i);if(!box)return;
+  if(box.innerHTML){box.innerHTML='';return;}
+  const aba=EST.aba,exclG=new Set(it.parts.map(p=>p.g.grupo));
+  let html='<div class="swapttl">Escolha qual carta trocar e por qual grupo:</div>';
+  it.parts.forEach((part,j)=>{const alvo=part.cu;
+    const cands=elegiveis(aba).filter(g=>!exclG.has(g.grupo)&&g.valores.some(v=>Math.abs(v-alvo)<=alvo*0.25)).sort((a,b)=>(lMed(a)||9)-(lMed(b)||9)).slice(0,40);
+    html+=`<div class="swaprow"><span>G<b>${part.g.grupo}</b> (${part.cotas}× ${brl(part.cu)})</span><select onchange="aplicarTrocaManual(${i},${j},this.value)"><option value="">trocar por…</option>`+cands.map(g=>`<option value="${g.grupo}">G${g.grupo} · ${g.prazo}m · média ${lMed(g)?Math.round(lMed(g)*100)+'%':'—'} · ${g.vagas} vagas</option>`).join('')+`</select></div>`;});
+  box.innerHTML=html;}
+function aplicarTrocaManual(i,j,grupoStr){if(!grupoStr)return;const it=RENDER[i],aba=EST.aba;
+  const g=DADOS.grupos.find(x=>x.grupo==grupoStr&&x.aba==aba);if(!g)return;const part=it.parts[j];
+  const nv=g.valores.reduce((a,b)=>Math.abs(b-part.cu)<Math.abs(a-part.cu)?b:a);
+  it.parts[j]={g,cotas:part.cotas,cu:nv,embPct:part.embPct,RP:part.RP};it.groups=[...new Set(it.parts.map(p=>p.g.grupo))];
+  const p=recompute(it.parts,EST.taxa||0.16);const el=document.getElementById('rc-'+i);
+  if(el)el.outerHTML=card(p,{idx:i,badge:it.badge,bcls:it.bcls,cls:it.cls,dest:it.dest,fixo:it.fixo,scen:it.scen,note:'<i>Grupo trocado manualmente</i>'});
+  trocarManual(i);}
+function trocar(i){const it=RENDER[i];if(!it||!it.scen)return;
+  it.groups.forEach(g=>it.excl.add(g));
+  const p=regen(it.scen,it.excl);
+  if(!p){it.groups.forEach(g=>it.excl.delete(g));const el=document.getElementById('rc-'+i);if(el){const b=el.querySelector('.swap');if(b){b.innerText='sem outro grupo';setTimeout(()=>b.innerHTML='↻ Trocar grupo',1500);}}return;}
+  it.parts=partsOf(p);it.groups=[...new Set(p.legs.map(l=>l.g.grupo))];
+  const el=document.getElementById('rc-'+i);
+  if(el)el.outerHTML=card(p,{idx:i,badge:it.badge,bcls:it.bcls,cls:it.cls,dest:it.dest,fixo:it.fixo,scen:it.scen,note:'<i>Alternativa — '+it.badge.replace(/^[^ ]+ /,'')+'</i>'});}
+function analisar(){
+  if(numero(document.getElementById('parcela').value)<=0)return shake('parcela');
+  EST={nome:document.getElementById('nome').value.trim()||'Cliente',
+    desejado:numero(document.getElementById('credito').value),
+    parcelaMax:numero(document.getElementById('parcela').value),
+    RP:document.getElementById('semLance').checked?0:numero(document.getElementById('lance').value),
+    aba:tipoBem.v,emb:embCfg.on?embCfg.pct:0};
+  document.getElementById('wizard').style.display='none';
+  document.getElementById('loading').classList.add('on');
+  const msgs=['Filtrando grupos com vagas…','Calculando o encaixe ideal…','Cruzando histórico de lances…','Montando combinações de grupos…'];
+  let i=0;const t=setInterval(()=>{document.getElementById('lsub').innerText=msgs[i++%msgs.length];},650);
+  setTimeout(()=>{clearInterval(t);gerar(EST);},1600);
+}
+/* escolher proposta -> tela de taxa */
+function escolher(i){CHOSEN=RENDER[i];if(!CHOSEN)return;
+  document.getElementById('results').classList.remove('on');document.getElementById('results').style.display='none';
+  document.getElementById('detalhe').style.display='block';
+  const grs=[...new Set(CHOSEN.parts.map(p=>p.g.grupo))].join(', ');
+  document.getElementById('autoTaxa').innerHTML=`Grupo(s): <b>${grs}</b>. (Em breve a taxa será puxada automaticamente do site do banco.)`;
+  document.getElementById('dTaxa').value='16';onTaxa();window.scrollTo(0,0);}
+function onTaxa(){const tx=numero(document.getElementById('dTaxa').value)/100;
+  const p=recompute(CHOSEN.parts,tx);
+  document.getElementById('dTaxaInfo').innerText=tx?('= '+(tx*100).toFixed(2)+'% a.a. sobre o crédito'):'';
+  document.getElementById('dCard').innerHTML=card(p,{badge:CHOSEN.badge,bcls:CHOSEN.bcls,cls:CHOSEN.cls,dest:CHOSEN.dest,fixo:CHOSEN.fixo,noBtn:true});}
+function voltar(){document.getElementById('detalhe').style.display='none';
+  document.getElementById('results').style.display='block';document.getElementById('results').classList.add('on');}
+/* feedback */
+const CHIPS=['Parcela ficou alta','Quero crédito maior','Quero contemplar mais rápido','Prazo menor','Tirar o seguro'];
+function renderChips(){document.getElementById('chips').innerHTML=CHIPS.map(c=>`<span class="chip" onclick="addChip('${c}')">${c}</span>`).join('');}
+function addChip(t){const f=document.getElementById('feedback');f.value=(f.value?f.value+'. ':'')+t;f.focus();}
+function refinar(){const txt=(document.getElementById('feedback').value||'').toLowerCase();if(!txt.trim())return shake('feedback');
+  const st=Object.assign({},EST),aj=[];const has=re=>re.test(txt);
+  if(has(/parcela|mensal|car[oa]|alt[ao]|pesad|menos por m[eê]s|abaix/)){st.parcelaMax=Math.round(st.parcelaMax*0.8);aj.push('reduzi a parcela alvo para '+brl(st.parcelaMax));}
+  if(has(/cr[eé]dito maior|valor maior|mais cr[eé]dito|aumentar|pouco cr[eé]dito|maior valor/)){st.desejado=Math.round(st.desejado*1.2);aj.push('aumentei o crédito para '+brl(st.desejado));}
+  if(has(/cr[eé]dito menor|valor menor|menos cr[eé]dito/)){st.desejado=Math.round(st.desejado*0.8);aj.push('reduzi o crédito para '+brl(st.desejado));}
+  if(has(/r[aá]pid|contempl|demora|sorteio|chance|logo/)){st.desejado=Math.round(st.desejado*0.85);aj.push('priorizei contemplação rápida ('+brl(st.desejado)+')');}
+  if(has(/mais lance|tenho mais|aumentar lance/)){st.RP=Math.round(st.RP*1.3);aj.push('considerei mais lance ('+brl(st.RP)+')');}
+  if(has(/menos lance|n[aã]o tenho tanto|lance menor/)){st.RP=Math.round(st.RP*0.7);aj.push('considerei menos lance ('+brl(st.RP)+')');}
+  if(has(/im[oó]vel|casa|apart/)){st.aba='Imóvel';aj.push('mudei para imóvel');}
+  if(has(/autom[oó]vel|carro|ve[ií]culo|moto|caminh/)){st.aba='Rodas';aj.push('mudei para automóvel');}
+  if(!aj.length)aj.push('não identifiquei um ajuste claro — cite parcela, crédito, prazo, lance ou rapidez');
+  EST=st;document.getElementById('feedback').value='';
+  document.getElementById('results').classList.remove('on');document.getElementById('loading').classList.add('on');
+  setTimeout(()=>gerar(st,aj.join('; ')+'.'),900);}
+function reiniciar(){document.getElementById('results').classList.remove('on');document.getElementById('results').style.display='none';
+  document.getElementById('detalhe').style.display='none';document.getElementById('wizard').style.display='block';
+  document.querySelector('.wrap').classList.remove('wide');
+  document.querySelectorAll('.field').forEach(f=>f.value='');document.getElementById('feedback').value='';
+  document.getElementById('semLance').checked=false;document.getElementById('lance').disabled=false;show(0);}
+show(0);
+const ART={
+"Imóvel":`<svg viewBox="0 0 600 120" preserveAspectRatio="xMidYMid slice" width="100%" height="104" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="ig" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#17406f"/><stop offset="1" stop-color="#0b1a30"/></linearGradient></defs><rect width="600" height="120" fill="url(#ig)"/><circle cx="300" cy="14" r="66" fill="#ff7a18" opacity="0.16"/><g fill="#0d2240" stroke="#26426b"><rect x="18" y="50" width="60" height="70"/><rect x="90" y="32" width="50" height="88"/><rect x="300" y="58" width="66" height="62"/><rect x="452" y="40" width="54" height="80"/><rect x="516" y="60" width="62" height="60"/></g><g><rect x="168" y="60" width="108" height="60" fill="#102a4d" stroke="#26426b"/><polygon points="162,60 222,26 282,60" fill="#ff7a18"/><rect x="208" y="86" width="24" height="34" fill="#ff9d4d"/></g><g fill="#ffb066"><rect x="30" y="60" width="9" height="9"/><rect x="50" y="60" width="9" height="9"/><rect x="30" y="80" width="9" height="9"/><rect x="50" y="80" width="9" height="9"/><rect x="102" y="44" width="8" height="8"/><rect x="120" y="44" width="8" height="8"/><rect x="102" y="62" width="8" height="8"/><rect x="120" y="62" width="8" height="8"/><rect x="102" y="80" width="8" height="8"/><rect x="120" y="80" width="8" height="8"/><rect x="314" y="70" width="9" height="9"/><rect x="338" y="70" width="9" height="9"/><rect x="314" y="92" width="9" height="9"/><rect x="338" y="92" width="9" height="9"/><rect x="464" y="52" width="8" height="8"/><rect x="486" y="52" width="8" height="8"/><rect x="464" y="72" width="8" height="8"/><rect x="486" y="72" width="8" height="8"/></g></svg>`,
+"Rodas":`<svg viewBox="0 0 600 120" preserveAspectRatio="xMidYMid slice" width="100%" height="104" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="ag" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#17406f"/><stop offset="1" stop-color="#0b1a30"/></linearGradient></defs><rect width="600" height="120" fill="url(#ag)"/><circle cx="300" cy="14" r="66" fill="#ff7a18" opacity="0.16"/><line x1="0" y1="100" x2="600" y2="100" stroke="#26426b" stroke-width="3"/><line x1="30" y1="100" x2="120" y2="100" stroke="#ff9d4d" stroke-width="3" stroke-dasharray="20 22"/><line x1="300" y1="100" x2="420" y2="100" stroke="#ff9d4d" stroke-width="3" stroke-dasharray="20 22"/><g><path d="M150 86 q8 -32 44 -34 l78 -2 q34 0 58 28 l54 6 q26 4 26 18 l0 6 q0 6 -8 6 l-300 0 q-8 0 -8 -8 z" fill="#ff7a18"/><path d="M196 56 l66 -2 q24 0 40 22 l-150 2 q12 -22 44 -22 z" fill="#0d2240" opacity="0.65"/><circle cx="208" cy="98" r="15" fill="#0b1a30" stroke="#ff9d4d" stroke-width="4"/><circle cx="362" cy="98" r="15" fill="#0b1a30" stroke="#ff9d4d" stroke-width="4"/></g></svg>`};
+function setArt(id,aba){const el=document.getElementById(id);if(el)el.innerHTML=ART[aba]||ART["Imóvel"];}
+const MANUAL={aba:'Imóvel',items:[],taxa:0.16,mod:'livre'};let MANUAL_ORIG='wizard';
+let EMB=0.30;const embCfg={on:true,pct:0.30};
+function selEmb(b){document.querySelectorAll('#embToggle button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');embCfg.on=b.dataset.v==='sim';document.getElementById('embWrap').style.display=embCfg.on?'block':'none';}
+function onEmbRange(){const v=+document.getElementById('embRange').value;embCfg.pct=v/100;document.getElementById('embVal').innerText=v+'%';}
+function grupoByItem(it){return DADOS.grupos.find(g=>g.grupo==it.grupo&&g.aba==it.aba);}
+function mGrupoSel(){return DADOS.grupos.find(g=>g.grupo==document.getElementById('mGrupo').value&&g.aba==MANUAL.aba);}
+function mFilt(){return {min:numero(document.getElementById('fMin').value)||0,max:numero(document.getElementById('fMax').value)||1e12,pmax:parseInt(document.getElementById('fPrazoMax').value)||999999,medmax:(numero(document.getElementById('fMedMax').value)||100)/100,ord:document.getElementById('fOrder').value};}
+function mPopGrupos(){const f=mFilt();
+  let gs=elegiveis(MANUAL.aba).filter(g=>g.prazo<=f.pmax&&(lMed(g)==null||lMed(g)<=f.medmax)&&g.valores.some(v=>v>=f.min&&v<=f.max));
+  if(MANUAL.mod==='fixo')gs=gs.filter(g=>g.fixoOk);
+  const ord={med:(a,b)=>(lMed(a)||9)-(lMed(b)||9),vagas:(a,b)=>b.vagas-a.vagas,prazoA:(a,b)=>a.prazo-b.prazo,prazoD:(a,b)=>b.prazo-a.prazo}[f.ord]||((a,b)=>a.grupo-b.grupo);
+  gs.sort(ord);
+  document.getElementById('mGrupo').innerHTML=gs.length?gs.map(g=>`<option value="${g.grupo}">G${g.grupo} · ${g.prazo}m · média ${lMed(g)?Math.round(lMed(g)*100)+'%':'—'} · ${g.vagas} vagas</option>`).join(''):'<option value="">nenhum grupo com esses filtros</option>';
+  mPopValores();}
+function mPopValores(){const g=mGrupoSel();if(!g){document.getElementById('mValor').innerHTML='';return;}const f=mFilt();
+  const vals=g.valores.filter(v=>v>=f.min&&v<=f.max);const list=vals.length?vals:g.valores;
+  document.getElementById('mValor').innerHTML=list.map(v=>`<option value="${v}">${brl(v)}</option>`).join('');}
+function mSelTipo(b){document.querySelectorAll('#mTipo button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');MANUAL.aba=b.dataset.v;setArt('artManual',MANUAL.aba);mPopGrupos();}
+function mSelMod(b){document.querySelectorAll('#mMod button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');MANUAL.mod=b.dataset.v;
+  document.getElementById('mRecursoWrap').style.display=MANUAL.mod==='fixo'?'none':'block';document.getElementById('mEmbWrap').style.display=MANUAL.mod==='fixo'?'none':'block';mPopGrupos();}
+function addCarta(){const g=mGrupoSel();if(!g)return;const cu=+document.getElementById('mValor').value;
+  const cotas=Math.max(1,parseInt(document.getElementById('mCotas').value)||1);const mod=MANUAL.mod;
+  if(mod==='fixo'&&!g.fixoOk){alert('Este grupo não permite lance fixo. Escolha outro grupo ou use lance livre.');return;}
+  let embPct,RP;
+  if(mod==='fixo'){const f=fixoLance(g,cotas*cu);embPct=f.embPct;RP=f.RP;}
+  else{embPct=Math.min(0.30,Math.max(0,numero(document.getElementById('mEmb').value)/100));RP=numero(document.getElementById('mRecurso').value);}
+  MANUAL.items.push({grupo:g.grupo,aba:MANUAL.aba,cu,cotas,mod,RP,embPct});document.getElementById('mRecurso').value='';renderManual();}
+function rmCarta(i){MANUAL.items.splice(i,1);renderManual();}
+function editarCarta(i){const it=MANUAL.items[i];MANUAL.aba=it.aba;
+  document.querySelectorAll('#mTipo button').forEach(b=>b.classList.toggle('sel',b.dataset.v===it.aba));setArt('artManual',it.aba);
+  ['fMin','fMax','fPrazoMax','fMedMax'].forEach(id=>document.getElementById(id).value='');
+  mPopGrupos();document.getElementById('mGrupo').value=String(it.grupo);mPopValores();document.getElementById('mValor').value=String(it.cu);
+  document.getElementById('mCotas').value=it.cotas;MANUAL.mod=it.mod;
+  document.querySelectorAll('#mMod button').forEach(b=>b.classList.toggle('sel',b.dataset.v===it.mod));
+  document.getElementById('mRecursoWrap').style.display=it.mod==='fixo'?'none':'block';
+  document.getElementById('mEmbWrap').style.display=it.mod==='fixo'?'none':'block';
+  document.getElementById('mRecurso').value=it.mod==='fixo'?'':brl(it.RP);
+  document.getElementById('mEmb').value=Math.round((it.embPct!=null?it.embPct:0.30)*100);
+  MANUAL.items.splice(i,1);renderManual();document.getElementById('mGrupo').scrollIntoView({behavior:'smooth',block:'center'});}
+function renderManual(){
+  const legs=MANUAL.items.map(it=>{const g=grupoByItem(it);const x=legCalc(g,it.cotas,it.cu,(it.embPct!=null?it.embPct:0.30),it.mod==='fixo'?0.10*it.cotas*it.cu:it.RP,MANUAL.taxa);x.modalidade=it.mod;return x;});
+  document.getElementById('mLista').innerHTML=MANUAL.items.length?MANUAL.items.map((it,i)=>`<div class="mitem"><span>G<b>${it.grupo}</b> · <b>${it.cotas}</b>× ${brl(it.cu)} · <span class="lmod ${it.mod}">${it.mod}</span> · emb ${Math.round((it.embPct!=null?it.embPct:0.30)*100)}% · recurso ${brl(it.mod==='fixo'?0.10*it.cotas*it.cu:it.RP)}</span><button class="rm" onclick="editarCarta(${i})" style="color:var(--orange2);border-color:var(--orange)">editar</button> <button class="rm" onclick="rmCarta(${i})">remover</button></div>`).join(''):'<div class="empty">Nenhuma carta adicionada ainda.</div>';
+  if(!legs.length){document.getElementById('mTotais').innerHTML='';return;}
+  const p=aggFromLegs(legs);const hasFixo=legs.some(l=>l.modalidade==='fixo');
+  document.getElementById('mTotais').innerHTML=card(p,{noBtn:true,badge:'🛠️ Proposta manual',bcls:'b4',
+    note:hasFixo?'Inclui carta(s) no lance fixo (40%). A barra de chance considera a média de lance livre dos grupos.':''});}
+function abrirManual(origem){MANUAL_ORIG=origem;
+  document.getElementById('wizard').style.display='none';document.getElementById('results').classList.remove('on');document.getElementById('results').style.display='none';
+  document.getElementById('loading').classList.remove('on');document.getElementById('detalhe').style.display='none';
+  document.getElementById('manual').style.display='block';MANUAL.aba=tipoBem.v;
+  document.querySelectorAll('#mTipo button').forEach(b=>b.classList.toggle('sel',b.dataset.v===MANUAL.aba));
+  setArt('artManual',MANUAL.aba);mPopGrupos();renderManual();window.scrollTo(0,0);}
+function fecharManual(){document.getElementById('manual').style.display='none';
+  if(MANUAL_ORIG==='results'){document.getElementById('results').style.display='block';document.getElementById('results').classList.add('on');}
+  else document.getElementById('wizard').style.display='block';window.scrollTo(0,0);}
+(function(){try{setArt('artWizard',tipoBem.v);}catch(e){}var m=DADOS.meta,el=document.getElementById('guiaVer');if(el&&m){var dia=m.baixado_em||m.modificado_em||'';el.innerHTML='\ud83d\udccb Refer\u00eancia: Guia de Oportunidades'+(dia?' \u00b7 baixado dia <b>'+dia+'</b>':'');}})();
+</script>
+</body>
+</html>
