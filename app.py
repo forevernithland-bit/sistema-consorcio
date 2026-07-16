@@ -176,6 +176,7 @@ css = """
 # ==========================================
 simuladores_dict = {
     "🏍️ Simulador Yamaha": "yamaha.html",
+    "🚀 Simulador Itaú V 2.0": "itau_v2.html",
     "🏦 Simulador Itaú": "itau.html",
     "🎯 Oportunidades Itaú": "guia.html",
     "⚖️ Financiamento x Consórcio": "comparador.html"
