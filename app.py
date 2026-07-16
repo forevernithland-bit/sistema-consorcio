@@ -250,8 +250,12 @@ st.markdown(css, unsafe_allow_html=True)
 # 6. DISTRIBUIÇÃO DAS TELAS
 # ==========================================
 if menu_selecionado in simuladores_dict:
-    carregar_ferramenta(simuladores_dict[menu_selecionado], PASTA_ATUAL)
-    st.stop() 
+    if menu_selecionado == "🚀 Simulador Itaú V 2.0":
+        from modulos.itau_v2 import render_itau_v2
+        render_itau_v2(PASTA_ATUAL)
+    else:
+        carregar_ferramenta(simuladores_dict[menu_selecionado], PASTA_ATUAL)
+    st.stop()
 
 if not is_logado:
     if menu_selecionado == "🔐 Login (Área Restrita)":
