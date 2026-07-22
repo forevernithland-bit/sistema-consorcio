@@ -818,7 +818,12 @@ function mCustomChg(){
     valores:[valor],lances:[],contLivre:0,red:true,manual:true};
   mPopValores();mPreviewRed();}
 let EMB=0.30;const embCfg={on:true,pct:0.30};const redCfg={on:false,pct:0.50};
-function redQtdTxt(aba){const n=DADOS.grupos.filter(g=>g.aba===aba&&g.red&&g.vagas>=VAGAS_MIN).length;
+/* A base tem a coluna "Parcela Reduzida"? Se nenhum grupo trouxer o campo, o problema
+   nao e a Guia do dia — e o leitor (modulos/itau_v2.py no ERP) que nao esta gravando `red`. */
+const REDNABASE=DADOS.grupos.some(g=>Object.prototype.hasOwnProperty.call(g,'red'));
+function redQtdTxt(aba){
+  if(!REDNABASE)return '⚠️ a base veio SEM a coluna "Parcela Reduzida" — atualize modulos/itau_v2.py';
+  const n=DADOS.grupos.filter(g=>g.aba===aba&&g.red&&g.vagas>=VAGAS_MIN).length;
   return n?n+' grupo(s) com vaga em '+(aba==='Rodas'?'automóvel':'imóvel'):'nenhum grupo com vaga hoje';}
 function selRedW(b){document.querySelectorAll('#redToggle button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');
   redCfg.on=b.dataset.v==='sim';document.getElementById('redWrapW').style.display=redCfg.on?'block':'none';
