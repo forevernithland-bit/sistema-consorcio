@@ -232,6 +232,7 @@ def _parse_guia(xls_bytes, nome_arquivo, modified_iso):
             "fonte": nome_arquivo,
             "baixado_em": baixado,
             "total": len(grupos),
+            "red_total": sum(1 for g in grupos if g.get("red")),
         },
         "grupos": grupos,
     }
@@ -261,7 +262,8 @@ def _carregar_dados_itau():
         raise RuntimeError(f"Não consegui baixar '{guia['name']}' → {_msg_http(e)}")
 
     dados = _parse_guia(conteudo, guia["name"], guia.get("modifiedTime"))
-    log.append(f"Guia escolhida: {guia['name']} ({dados['meta']['total']} grupos).")
+    log.append(f"Guia escolhida: {guia['name']} ({dados['meta']['total']} grupos, "
+               f"{dados['meta'].get('red_total', 0)} com parcela reduzida).")
     return dados, log
 
 
