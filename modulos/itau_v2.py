@@ -98,6 +98,26 @@ def _msg_http(e):
     return f"HTTP {status}: {detalhe}{dica}"
 
 
+def _diagnostico_visibilidade(service):
+    """Lista o que o service account realmente enxerga — prova se o compartilhamento funcionou."""
+    try:
+        res = service.files().list(
+            q="trashed=false", fields="files(id, name, mimeType)", pageSize=30,
+            supportsAllDrives=True, includeItemsFromAllDrives=True,
+        ).execute()
+        itens = res.get("files", [])
+        if not itens:
+            return ("❌ O service account NÃO enxerga NENHUM arquivo ou pasta.\n"
+                    "Ou nada foi compartilhado com ele, ou a Google Drive API está desativada no projeto.")
+        linhas = []
+        for i in itens:
+            icone = "📁" if i.get("mimeType") == "application/vnd.google-apps.folder" else "📄"
+            linhas.append(f"{icone} {i['name']}   (id: {i['id']})")
+        return "✅ O service account enxerga estes itens:\n" + "\n".join(linhas)
+    except HttpError as e:
+        return f"Falha ao listar o que o service account enxerga → {_msg_http(e)}"
+
+
 def _so_guias(arquivos):
     return [a for a in arquivos
             if "oportunidad" in a.get("name", "").lower()
@@ -190,6 +210,8 @@ def _parse_guia(xls_bytes, nome_arquivo, modified_iso):
                 "fundo": _num(ws.cell(r, 14).value),
                 "vagas": vagas,
                 "fixoOk": fixo_ok, "fixoPct": fixo_pct,
+                # Coluna D (Parcela Reduzida): "S" = o grupo aceita parcela reduzida
+                "red": str(ws.cell(r, 4).value or "").strip().upper() == "S",
                 "valores": valores,
                 "lances": [_num(ws.cell(r, 18).value), _num(ws.cell(r, 19).value),
                            _num(ws.cell(r, 22).value), _num(ws.cell(r, 23).value)],
@@ -260,19 +282,24 @@ def render_itau_v2(pasta_atual):
     except Exception as e:
         st.error("⚠️ Não foi possível carregar a Guia de Oportunidades do Google Drive.")
         st.code(str(e), language="text")
-        with st.expander("🔎 Diagnóstico (o que verificar)"):
-            try:
-                email = dict(st.secrets["gcp_service_account"]).get("client_email", "(não encontrado)")
-            except Exception:
-                email = "(secret gcp_service_account ausente)"
-            st.markdown(f"""
+        try:
+            email = dict(st.secrets["gcp_service_account"]).get("client_email", "(não encontrado)")
+        except Exception:
+            email = "(secret gcp_service_account ausente)"
+        st.markdown(f"""
 - **Service account:** `{email}`
 - **DRIVE_FOLDER_ITAU:** `{st.secrets.get("DRIVE_FOLDER_ITAU", "(não definido)")}`
-
-**Checklist:**
-1. A pasta `Tabelas/ITAU` está compartilhada com o e-mail acima (como **Leitor**)?
-2. O ID em `DRIVE_FOLDER_ITAU` confere com a URL da pasta? (cuidado com **l** minúsculo × **I** maiúsculo)
-3. A **Google Drive API** está ativada no projeto do service account?
+""")
+        with st.expander("🔎 O que o service account enxerga hoje (clique para diagnosticar)", expanded=True):
+            svc = get_drive_service()
+            st.code(_diagnostico_visibilidade(svc) if svc else "Service account não configurado.", language="text")
+            st.markdown(f"""
+**Se a lista acima estiver vazia ou sem a pasta ITAU**, o compartilhamento não foi efetivado. Faça:
+1. Google Drive → botão direito na pasta **ITAU** (ou na pasta pai **Tabelas**) → **Compartilhar**.
+2. Cole `{email}` no campo de pessoas.
+3. Permissão **Leitor** → **desmarque** "Notificar pessoas" → clique em **Compartilhar/Enviar**
+   (⚠️ se não clicar no botão final, não salva!).
+4. Reabra esta tela e clique em **🔄 Recarregar Guia**.
 """)
         return
 
