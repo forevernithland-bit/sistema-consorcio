@@ -88,6 +88,8 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:
 .leg{background:#0a1a30;border-radius:9px;padding:7px 10px;font-size:12px;color:var(--mut)}.leg b{color:var(--txt)}
 .lmod{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:4px}
 .lmod.livre{background:rgba(34,197,94,.16);color:#4ade80}.lmod.fixo{background:rgba(167,139,250,.18);color:#c4b5fd}
+.lmod.red{background:rgba(56,189,248,.18);color:#7dd3fc}
+.redtag{display:inline-block;font-size:10px;font-weight:700;color:#7dd3fc}
 .note{font-size:12px;color:var(--mut);background:#0a1a30;border-radius:10px;padding:10px;line-height:1.45}
 .faltam{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);border-radius:10px;padding:9px;font-size:12.5px}.faltam b{color:#fca5a5}
 .tem{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:9px;font-size:12.5px}.tem b{color:#4ade80}
@@ -175,6 +177,11 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:
         <div class="minilbl">Usar lance embutido da carta? (padrão 30%)</div>
         <div class="toggle" id="embToggle"><button data-v="sim" class="sel" onclick="selEmb(this)">Sim</button><button data-v="nao" onclick="selEmb(this)">Não</button></div>
         <div id="embWrap" style="margin-top:10px"><div class="minilbl" style="margin:0 0 6px">Percentual do embutido: <b id="embVal" style="color:var(--orange2)">30%</b></div><input id="embRange" type="range" min="0" max="30" value="30" step="1" oninput="onEmbRange()" style="width:100%;accent-color:#ff7a18"></div>
+        <div class="minilbl">Quer ver também propostas com <b style="color:var(--blue)">parcela reduzida</b> até a contemplação?</div>
+        <div class="toggle" id="redToggle"><button data-v="nao" class="sel" onclick="selRedW(this)">Não, parcela cheia</button><button data-v="sim" onclick="selRedW(this)">🔻 Sim, quero</button></div>
+        <div id="redWrapW" style="display:none;margin-top:10px"><div class="minilbl" style="margin:0 0 6px">Redução da parcela: <b id="redValW" style="color:var(--orange2)">50%</b></div>
+          <input id="redRangeW" type="range" min="10" max="70" value="50" step="5" oninput="onRedRangeW()" style="width:100%;accent-color:#ff7a18">
+          <div class="note" style="margin-top:8px">Só vale nos grupos que a Guia marca com parcela reduzida (<b id="redQtdW">—</b>). Depois de contemplar, a parcela sobe: o que não foi pago volta diluído no prazo restante.</div></div>
         <div class="nav"><button class="btn ghost" onclick="prev(2)">← Voltar</button><button class="btn prim" onclick="next(2)">Continuar →</button></div></div>
       <div class="q" data-step="3"><div class="num">PASSO 4 DE 4</div><h2>Quanto pode pagar por mês?</h2><p class="hint">A parcela que cabe no seu orçamento.</p>
         <input class="field" id="parcela" inputmode="numeric" placeholder="R$ 0,00">
@@ -191,6 +198,9 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:
           <div class="gt">Ajustes</div>
           <div class="fctrl"><label>Tipo de bem</label><div class="sbtipo" id="fTipo"><button data-v="Imóvel" onclick="fTipoSel(this)">🏠 Imóvel</button><button data-v="Rodas" onclick="fTipoSel(this)">🚗 Auto</button></div></div>
           <div class="fctrl"><label>⚡ Foco da contemplação rápida</label><div class="sbtipo" id="fRapModo"><button data-v="credito" onclick="fRapModo(this)" title="Crédito o mais perto possível do desejado">Maior crédito</button><button data-v="media" onclick="fRapModo(this)" title="Grupo mais rodado (menor média de lance) — mais chance, crédito um pouco menor">Mais seguro</button></div></div>
+          <div class="fctrl"><label class="sbtoggle" style="padding:0;margin-bottom:0"><input type="checkbox" id="fRed" onchange="onRedFiltro()"> 🔻 Parcela reduzida até contemplar</label>
+            <div id="fRedWrap" style="display:none;margin-top:7px"><label>Redução da parcela <b id="fRedV">50%</b></label><input type="range" id="fRedPct" min="10" max="70" step="5" value="50" oninput="onRedFiltro()"><div class="sbsub" id="fRedInfo" style="margin-top:4px"></div></div>
+          </div>
           <div class="fctrl"><label>Crédito desejado</label><input type="text" id="fCredito" inputmode="numeric" oninput="onMoney(this,'desejado')"></div>
           <div class="fctrl"><label>Lance disponível (recursos próprios)</label><input type="text" id="fLance" inputmode="numeric" placeholder="R$ 0,00" oninput="onMoney(this,'RP')"></div>
           <div class="fctrl"><label>Parcela alvo (máx/mês)</label><input type="text" id="fParcela" inputmode="numeric" oninput="onMoney(this,'parcelaMax')"></div>
@@ -227,7 +237,7 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:
           <div class="nav"><span></span><button class="btn prim" onclick="refinar()">🔄 Refazer proposta</button></div>
         </div>
         <div class="actions"><button class="btn ghost" onclick="abrirManual('results')">✏️ Montar manualmente</button><button class="btn prim" onclick="window.print()">🖨️ Imprimir / PDF</button><button class="btn ghost" onclick="reiniciar()">↺ Nova simulação</button></div>
-        <div class="foot">Valores com as fórmulas oficiais do Simulador Estruturado Itaú (fundo conforme grupo, seguro 0,06711%/mês). Só grupos COM vagas. Contemplação depende de sorteio ou lance em assembleia. <span id="fontemeta"></span></div>
+        <div class="foot">Valores com as fórmulas oficiais do Simulador Estruturado Itaú (taxa total 16% até confirmação; proteção 0,09560%/mês no imóvel e 0,04700%/mês em auto, sobre a categoria). Só grupos COM vagas. Contemplação depende de sorteio ou lance em assembleia. <span id="fontemeta"></span></div>
       </div>
      </div>
     </div>
@@ -247,9 +257,27 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:
         <select id="fOrder" onchange="mPopGrupos()"><option value="med">Menor média de lance</option><option value="vagas">Mais vagas</option><option value="prazoA">Prazo menor</option><option value="prazoD">Prazo maior</option></select>
       </div>
       <div class="mform">
-        <div class="full"><label>Grupo (com vaga)</label><select id="mGrupo" onchange="mPopValores()"></select></div>
-        <div><label>Crédito da carta</label><select id="mValor"></select></div>
-        <div><label>Cotas</label><input id="mCotas" type="number" min="1" value="1"></div>
+        <div class="full"><label class="sbtoggle" style="padding:0;margin-bottom:6px"><input type="checkbox" id="mRed" onchange="mToggleRed()"> 🔻 Parcela reduzida até a contemplação</label>
+          <div id="mRedWrap" style="display:none">
+            <label>% de redução da parcela — padrão 50 (imóvel) / 30 (auto)</label>
+            <input id="mRedPct" inputmode="decimal" value="50" oninput="mPreviewRed()">
+            <div id="mRedInfo" class="sbsub" style="margin:6px 0 0"></div>
+          </div>
+        </div>
+        <div class="full"><label>Grupo (com vaga)</label><select id="mGrupo" onchange="mPopValores();mPreviewRed()"></select></div>
+        <div class="full"><label>…ou digite o nº do grupo (libera qualquer grupo, mesmo marcado "N" na Guia)</label>
+          <input id="mGrupoManual" inputmode="numeric" placeholder="Ex: 40215" oninput="mGrupoManualChg()">
+          <div id="mGrupoInfo" class="sbsub" style="margin:6px 0 0"></div>
+        </div>
+        <div class="full" id="mCustomWrap" style="display:none">
+          <div class="mfilters" style="margin:0">
+            <div><label>Prazo (meses)</label><input id="mcPrazo" inputmode="numeric" placeholder="Ex: 240" oninput="mCustomChg()"></div>
+            <div><label>Fundo reserva (%)</label><input id="mcFundo" inputmode="decimal" placeholder="Ex: 2" oninput="mCustomChg()"></div>
+            <div><label>Crédito da carta</label><input id="mcValor" inputmode="numeric" placeholder="R$ 0,00" oninput="this.value=maskMoeda(this.value);mCustomChg()"></div>
+          </div>
+        </div>
+        <div><label>Crédito da carta</label><select id="mValor" onchange="mPreviewRed()"></select></div>
+        <div><label>Cotas</label><input id="mCotas" type="number" min="1" value="1" oninput="mPreviewRed()"></div>
         <div class="full"><label>Modalidade do lance</label><div class="toggle" id="mMod"><button data-v="livre" class="sel" onclick="mSelMod(this)">Lance livre</button><button data-v="fixo" onclick="mSelMod(this)">Lance fixo (40%)</button></div></div>
         <div class="full" id="mRecursoWrap"><label>Recurso próprio desta carta (lance livre)</label><input id="mRecurso" inputmode="numeric" placeholder="R$ 0,00"></div>
         <div class="full" id="mEmbWrap"><label>Lance embutido desta carta (%) — padrão 30</label><input id="mEmb" inputmode="numeric" value="30"></div>
@@ -257,17 +285,22 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:
       </div>
       <div class="sechd">Cartas selecionadas</div>
       <div id="mLista"></div>
-      <div class="taxbox"><label>Taxa de administração (%)</label><input id="mTaxa" inputmode="decimal" value="16" oninput="MANUAL.taxa=numero(this.value)/100;renderManual()"></div>
+      <div class="taxbox"><label>Taxa de administração (%)</label><input id="mTaxa" inputmode="decimal" value="16" oninput="mTaxaChg()">
+        <label>Fundo reserva (%)</label><input id="mFundo" inputmode="decimal" placeholder="conforme grupo" oninput="this.dataset.touched='1';mTaxaChg()">
+        <span style="color:var(--mut);font-size:13px" id="mTaxaInfo"></span></div>
+      <div class="warn">⚠️ Taxa de administração padrão <b>16%</b> — confirme a real do(s) grupo(s) no site do banco. O fundo reserva já vem da Guia. <span id="mFundoGuia"></span></div>
       <div class="sechd">Resultado da proposta</div>
       <div id="mTotais"></div>
       <div class="actions"><button class="btn prim" onclick="window.print()">🖨️ Imprimir / PDF</button><button class="btn ghost" onclick="fecharManual()">← Voltar</button></div>
     </div>
     <div id="detalhe">
       <button class="btn ghost" onclick="voltar()">← Voltar às propostas</button>
-      <h2 style="font-size:22px;margin:16px 0 4px">Proposta escolhida — ajuste a taxa</h2>
-      <p style="color:var(--mut);font-size:13px;margin-bottom:6px">A simulação usa <b>16%</b> como padrão. Confirme a taxa exata do(s) grupo(s) e ajuste abaixo para recalcular.</p>
-      <div class="warn">⚠️ Confira a taxa de administração real do(s) grupo(s) no site do banco e ajuste o campo abaixo. <span id="autoTaxa"></span></div>
-      <div class="taxbox"><label>Taxa de administração (%)</label><input id="dTaxa" inputmode="decimal" value="16" oninput="onTaxa()"><span style="color:var(--mut);font-size:13px" id="dTaxaInfo"></span></div>
+      <h2 style="font-size:22px;margin:16px 0 4px">Proposta escolhida — confirme as taxas</h2>
+      <p style="color:var(--mut);font-size:13px;margin-bottom:6px">A taxa de administração roda com <b>16%</b> por padrão e o <b>fundo reserva já vem da Guia de Oportunidades</b>. Confirme ou altere abaixo para chegar ao número exato do Itaú.</p>
+      <div class="warn">⚠️ Confirme a <b>taxa de administração</b> do(s) grupo(s) no site do banco. O fundo reserva abaixo já veio da Guia. <span id="autoTaxa"></span></div>
+      <div class="taxbox"><label>Taxa de administração (%)</label><input id="dTaxa" inputmode="decimal" value="16" oninput="onTaxa()">
+        <label>Fundo reserva (%)</label><input id="dFundo" inputmode="decimal" placeholder="conforme grupo" oninput="DFR_TOUCH=true;onTaxa()">
+        <span style="color:var(--mut);font-size:13px" id="dTaxaInfo"></span></div>
       <div id="dCard"></div>
       <div class="actions"><button class="btn prim" onclick="window.print()">🖨️ Imprimir / PDF</button><button class="btn ghost" onclick="voltar()">← Voltar</button></div>
     </div>
@@ -275,18 +308,32 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:
 </div>
 <script>
 const DADOS = __DADOS__;
-const SEG=0.0006711,EMBMAX=0.30,TAXA_PADRAO=0.16,VAGAS_MIN=5,TOL=0.06,MAXLEGS=8;
+/* Taxas conforme o Simulador Estruturado oficial do Itau:
+   Categoria = Credito x (1 + Tx.Adm + Fundo Reserva)   |   Protecao (seguro) = % sobre a CATEGORIA
+   Tx.Adm padrao 16%; Fundo Reserva vem da Guia (por grupo) e pode ser confirmado/alterado pelo usuario. */
+const SEG_TX={"Imóvel":0.0009560,"Rodas":0.0004700};
+const EMBMAX=0.30,TAXA_PADRAO=0.16,VAGAS_MIN=5,TOL=0.06,MAXLEGS=8;
+const segTx=g=>SEG_TX[g&&g.aba]||SEG_TX["Imóvel"];
+/* Redutor no modo automatico: so nos grupos que a Guia marca com parcela reduzida */
+function redDe(g){const F=(typeof FILTROS!=='undefined')?FILTROS:null;
+  return (F&&F.red&&F.red.on&&g&&g.red)?F.red.pct:0;}
+const temRed=p=>!!(p&&p.legs&&p.legs.some(l=>l.red>0));
 const PRAZO={"Imóvel":[90,240],"Rodas":[24,140]};
 const lv=g=>g.lances.filter(x=>x>0);
 const lMed=g=>{const v=lv(g);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;};
 const lMax=g=>{const v=lv(g);return v.length?Math.max.apply(null,v):null;};
 const prazoCap=()=>FILTROS&&isFinite(FILTROS.prazoMax)?FILTROS.prazoMax:1e9;
 const elegiveis=aba=>{const p=PRAZO[aba]||[12,240];const cap=prazoCap();return DADOS.grupos.filter(g=>g.aba===aba&&g.vagas>=VAGAS_MIN&&g.prazo>=p[0]&&g.prazo<=Math.min(p[1],cap));};
-function legCalc(g,cotas,cu,embPct,RP,taxa){taxa=(taxa==null?TAXA_PADRAO:taxa);
-  const ct=cotas*cu,div=ct*(1+taxa+g.fundo),base=div/g.prazo,seg=SEG*ct;
-  const emb=embPct*ct,liq=ct-emb,lance=emb+RP,saldo=div-base-lance,pos=g.prazo>1?saldo/(g.prazo-1):0;
-  return {g,cotas,cu,prazo:g.prazo,embPct,RP,ct,emb,liq,lance,lancePct:ct?lance/ct:0,base,
-    pIniSem:base,pIniCom:base+seg,pPosSem:pos,pPosCom:pos+seg,med:lMed(g),mx:lMax(g),cont:g.contLivre,vagas:g.vagas};}
+function legCalc(g,cotas,cu,embPct,RP,taxa,redPct,fr){taxa=(taxa==null?TAXA_PADRAO:taxa);fr=(fr==null?(g.fundo||0):fr);
+  const red=Math.min(0.9,Math.max(0,redPct==null?redDe(g):redPct));
+  // div = Categoria = credito x (1 + Tx.Adm + Fundo Reserva); seguro incide sobre a Categoria
+  const ct=cotas*cu,div=ct*(1+taxa+fr),base=div/g.prazo,seg=segTx(g)*div;
+  // Parcela reduzida (logica do simulador Itau): o seguro entra ANTES do redutor
+  const iniSem=base*(1-red),iniCom=(base+seg)*(1-red);
+  // Pos-contemplacao: o que deixou de ser pago no redutor volta diluido no saldo
+  const emb=embPct*ct,liq=ct-emb,lance=emb+RP,saldo=div-iniSem-lance,pos=g.prazo>1?saldo/(g.prazo-1):0;
+  return {g,cotas,cu,prazo:g.prazo,embPct,RP,ct,emb,liq,lance,lancePct:ct?lance/ct:0,base,red,taxa,fr,div,seg,
+    pIniSem:iniSem,pIniCom:iniCom,pPosSem:pos,pPosCom:pos+seg,med:lMed(g),mx:lMax(g),cont:g.contLivre,vagas:g.vagas};}
 const _c={};
 function legsPool(aba,embPct){const k=aba+"|"+embPct+"|"+prazoCap();if(_c[k])return _c[k];
   const legs=[];for(const g of elegiveis(aba))for(const v of g.valores)for(let c=1;c<=2;c++){const ct=c*v;
@@ -295,24 +342,26 @@ function legsPool(aba,embPct){const k=aba+"|"+embPct+"|"+prazoCap();if(_c[k])ret
 function aggFromLegs(legs){const S=k=>legs.reduce((s,l)=>s+(l[k]||0),0);const ct=S('ct');
   return {legs,ct,emb:S('emb'),liq:S('liq'),RP:S('RP'),lance:S('lance'),lancePct:ct?S('lance')/ct:0,
     pIniCom:S('pIniCom'),pIniSem:S('pIniSem'),pPosCom:S('pPosCom'),pPosSem:S('pPosSem'),
+    pCheiaCom:legs.reduce((s,l)=>s+(l.red>0?l.pIniCom/(1-l.red):l.pIniCom),0),nRed:legs.filter(l=>l.red>0).length,
     medWorst:Math.max.apply(null,legs.map(l=>l.med||0)),mxWorst:Math.max.apply(null,legs.map(l=>l.mx||0)),
     cont:Math.min.apply(null,legs.map(l=>l.cont)),vagas:Math.min.apply(null,legs.map(l=>l.vagas)),
     nGrupos:new Set(legs.map(l=>l.g.grupo)).size};}
-function aggregate(parts,RP,taxa){const totCt=parts.reduce((s,p)=>s+p.cotas*p.cu,0);
-  return aggFromLegs(parts.map(p=>{const ct=p.cotas*p.cu;return legCalc(p.g,p.cotas,p.cu,p.embPct,totCt?RP*ct/totCt:0,taxa);}));}
+function aggregate(parts,RP,taxa,fr){const totCt=parts.reduce((s,p)=>s+p.cotas*p.cu,0);
+  return aggFromLegs(parts.map(p=>{const ct=p.cotas*p.cu;return legCalc(p.g,p.cotas,p.cu,p.embPct,totCt?RP*ct/totCt:0,taxa,p.red,fr);}));}
 function prazoMed(p){return p.legs.reduce((s,l)=>s+l.prazo,0)/p.legs.length;}
 function combosBeam(L,RP,aba,embPct,maxLegs,excl){maxLegs=maxLegs||MAXLEGS;
+  const redOn=!!(FILTROS&&FILTROS.red&&FILTROS.red.on);
   const legs=legsPool(aba,embPct);let beam=[{legs:[],gr:new Set(),liq:0}];const W=60,out=[];
   for(let d=0;d<maxLegs;d++){const next=[];
     for(const st of beam){const rem=L-st.liq;if(Math.abs(st.liq-L)<=L*TOL)out.push(st);if(rem<=L*0.03)continue;let added=0;
       for(const lg of legs){if(st.gr.has(lg.g.grupo))continue;if(excl&&excl.has(lg.g.grupo))continue;if(lg.liq>rem+L*0.06)continue;
         next.push({legs:st.legs.concat(lg),gr:new Set(st.gr).add(lg.g.grupo),liq:st.liq+lg.liq});if(++added>=8)break;}}
     if(!next.length)break;
-    const cb=x=>Math.round(Math.abs(x.liq-L)/(L*0.02)),sm=x=>x.legs.reduce((s,l)=>s+l.med,0),sp=x=>-x.legs.reduce((s,l)=>s+l.g.prazo,0);
-    next.sort((a,b)=>cb(a)-cb(b)||sm(a)-sm(b)||a.legs.length-b.legs.length||sp(a)-sp(b));beam=next.slice(0,W);}
+    const cb=x=>Math.round(Math.abs(x.liq-L)/(L*0.02)),sm=x=>x.legs.reduce((s,l)=>s+l.med,0),sp=x=>-x.legs.reduce((s,l)=>s+l.g.prazo,0),nr=x=>redOn?x.legs.filter(l=>!l.g.red).length:0;
+    next.sort((a,b)=>cb(a)-cb(b)||nr(a)-nr(b)||sm(a)-sm(b)||a.legs.length-b.legs.length||sp(a)-sp(b));beam=next.slice(0,W);}
   for(const st of beam)if(Math.abs(st.liq-L)<=L*TOL)out.push(st);
-  const seen=new Set(),props=[];const cb2=x=>Math.round(Math.abs(x.liq-L)/(L*0.02)),sm2=x=>x.legs.reduce((s,l)=>s+l.med,0),sp2=x=>-x.legs.reduce((s,l)=>s+l.g.prazo,0);
-  out.sort((a,b)=>cb2(a)-cb2(b)||sm2(a)-sm2(b)||a.legs.length-b.legs.length||sp2(a)-sp2(b));
+  const seen=new Set(),props=[];const cb2=x=>Math.round(Math.abs(x.liq-L)/(L*0.02)),sm2=x=>x.legs.reduce((s,l)=>s+l.med,0),sp2=x=>-x.legs.reduce((s,l)=>s+l.g.prazo,0),nr2=x=>redOn?x.legs.filter(l=>!l.g.red).length:0;
+  out.sort((a,b)=>cb2(a)-cb2(b)||nr2(a)-nr2(b)||sm2(a)-sm2(b)||a.legs.length-b.legs.length||sp2(a)-sp2(b));
   for(const st of out){const sig=st.legs.map(l=>l.g.grupo+":"+l.cotas+":"+l.cu).sort().join("|");if(seen.has(sig))continue;seen.add(sig);
     props.push(aggregate(st.legs.map(l=>({g:l.g,cotas:l.cotas,cu:l.cu,embPct})),RP));if(props.length>=16)break;}
   return props;}
@@ -361,6 +410,7 @@ function cenRapida(F,excl){const emb=F.emb,desired=F.desejado,aba=F.aba;
   if(!alta.length)alta=cands.filter(p=>p.cont>=1&&p.lancePct>=p.medWorst&&posOk(p));
   const teto1=F.parcelaMax,teto2=isFinite(F.parcelaMax)?F.parcelaMax*1.3:Infinity;
   const modo=F.rapidaModo||'credito';   // 'credito' = crédito perto do desejado | 'media' = menor lance/média
+  const redOn=!!(F.red&&F.red.on);
   function melhor(a,b){if(!b)return true;
     if(modo==='media'){
       if(a.medWorst<b.medWorst-0.005)return true;
@@ -369,6 +419,7 @@ function cenRapida(F,excl){const emb=F.emb,desired=F.desejado,aba=F.aba;
     const da=Math.abs(a.liq-desired),db=Math.abs(b.liq-desired);
     if(da<db-desired*0.005)return true;
     if(da>db+desired*0.005)return false;
+    if(redOn&&(a.nRed>0)!==(b.nRed>0))return a.nRed>0;   // com redutor ligado, prioriza quem realmente usa
     if(a.medWorst<b.medWorst-0.005)return true;
     if(a.medWorst>b.medWorst+0.005)return false;
     return a.pIniCom<b.pIniCom;}
@@ -376,6 +427,11 @@ function cenRapida(F,excl){const emb=F.emb,desired=F.desejado,aba=F.aba;
   function escolher(pool,teto){let best=null;for(const p of pool){if(p.pIniCom>teto||p.liq<floor)continue;if(melhor(p,best))best=p;}return best;}
   let pick=escolher(alta,teto1);
   if(!pick||(modo==='credito'&&pick.liq<desired*0.9))pick=escolher(alta,teto2)||pick;
+  // com o redutor ligado o objetivo e caber na parcela que o cliente digitou:
+  // se o escolhido estourou o alvo, troca por um com redutor que caiba, desde que nao perca muito credito
+  if(redOn&&pick&&isFinite(F.parcelaMax)&&pick.pIniCom>F.parcelaMax){
+    const alt=escolher(alta.filter(x=>x.nRed>0),F.parcelaMax);
+    if(alt&&alt.liq>=pick.liq*0.75)pick=alt;}
   if(!pick){let fb=null;for(const p of cands){if(p.pIniCom>teto2||!posOk(p))continue;if(!fb||(p.lancePct-p.medWorst)>(fb.lancePct-fb.medWorst))fb=p;}pick=fb;}
   if(!pick)return null;
   pick.altaChance=pick.lancePct>=pick.medWorst;
@@ -399,9 +455,14 @@ function propostaFixo(F,excl){const aba=F.aba,desired=F.desejado;
   if(!elig.length)return null;
   const pool=[];for(const g of elig)for(const v of g.valores)for(const c of[1,2])pool.push({g,cotas:c,cu:v,ct:c*v,liq:c*v*0.7});
   pool.sort((a,b)=>b.g.prazo-a.g.prazo||a.g.grupo-b.g.grupo||Math.abs(a.liq-desired*0.4)-Math.abs(b.liq-desired*0.4));
-  let rem=desired,used=new Set(),legs=[];
+  const redOn=!!(F.red&&F.red.on);
+  if(redOn)pool.sort((a,b)=>((b.g.red?1:0)-(a.g.red?1:0))||b.g.prazo-a.g.prazo||a.g.grupo-b.g.grupo);
+  const tetoFixo=(redOn&&isFinite(F.parcelaMax))?F.parcelaMax*1.1:Infinity;
+  let rem=desired,used=new Set(),legs=[],parc=0;
   for(const lg of pool){if(rem<=desired*0.06)break;if(legs.length>=F.maxLegs)break;if(used.has(lg.g.grupo))continue;if(lg.liq>rem+desired*0.12)continue;
-    const f=fixoLance(lg.g,lg.ct);const x=legCalc(lg.g,lg.cotas,lg.cu,f.embPct,f.RP);x.modalidade='fixo';legs.push(x);used.add(lg.g.grupo);rem-=lg.liq;}
+    const f=fixoLance(lg.g,lg.ct);const x=legCalc(lg.g,lg.cotas,lg.cu,f.embPct,f.RP);
+    if(parc+x.pIniCom>tetoFixo)continue;
+    x.modalidade='fixo';legs.push(x);used.add(lg.g.grupo);rem-=lg.liq;parc+=x.pIniCom;}
   if(!legs.length)return null;
   const p=aggFromLegs(legs);if(isFinite(F.parcelaPosMax)&&p.pPosCom>F.parcelaPosMax)return null;
   p.modalidade='fixo';p.ownCash=p.RP;return p;}
@@ -410,7 +471,7 @@ function propostaFixo(F,excl){const aba=F.aba,desired=F.desejado;
    mais NOVOS (maior prazo) -> derruba o lance total e a parcela antes de contemplar. */
 const MARGEM_ALTA=0.05;
 function propostaMix(F,excl){const aba=F.aba,emb=F.emb,desired=F.desejado;
-  const tetoMix=isFinite(F.parcelaMax)?F.parcelaMax*1.3:Infinity;   // livre+fixo: parcela total <= 1,3x o alvo
+  const tetoMix=isFinite(F.parcelaMax)?F.parcelaMax*((F.red&&F.red.on)?1.1:1.3):Infinity;   // com redutor, aperta o teto p/ ficar perto do alvo
   const elig=elegiveis(aba).filter(g=>!(excl&&excl.has(g.grupo)));
   if(!elig.length)return null;
   const sum=(a,k)=>a.reduce((s,l)=>s+(l[k]||0),0);
@@ -418,10 +479,11 @@ function propostaMix(F,excl){const aba=F.aba,emb=F.emb,desired=F.desejado;
   const livrePool=[];for(const g of elig){if(g.contLivre<1||lMed(g)==null)continue;const alvo=lMed(g)+MARGEM_ALTA;
     for(const v of g.valores)for(const c of[1,2]){const ct=c*v;
       livrePool.push({g,cotas:c,cu:v,ct,liq:ct*(1-emb),med:lMed(g),custo:Math.max(0,(alvo-emb))*ct});}}
-  livrePool.sort((a,b)=>a.med-b.med||b.g.prazo-a.g.prazo||b.liq-a.liq);
+  const redOn=!!(F.red&&F.red.on);
+  livrePool.sort((a,b)=>(redOn?((b.g.red?1:0)-(a.g.red?1:0)):0)||a.med-b.med||b.g.prazo-a.g.prazo||b.liq-a.liq);
   // pool FIXO: grupos mais NOVOS (maior prazo) primeiro; depois cartas maiores (+valor / +cota)
   const fixoPool=[];for(const g of elig){if(!g.fixoOk)continue;for(const v of g.valores)for(const c of[1,2])fixoPool.push({g,cotas:c,cu:v,ct:c*v});}
-  fixoPool.sort((a,b)=>b.g.prazo-a.g.prazo||b.ct-a.ct);
+  fixoPool.sort((a,b)=>(redOn?((b.g.red?1:0)-(a.g.red?1:0)):0)||b.g.prazo-a.g.prazo||b.ct-a.ct);
   // completa com FIXO (prazo longo) ate ~alvoLiq, sem estourar parcelaCap
   function fillFixo(base,baseUsed,alvoLiq,parcelaCap){const legs=base.slice(),used=new Set(baseUsed);
     let liq=sum(legs,'liq'),parc=sum(legs,'pIniCom');
@@ -450,10 +512,10 @@ function propostaMix(F,excl){const aba=F.aba,emb=F.emb,desired=F.desejado;
   p.modalidade='mix';p.ownCash=p.RP;p.livreLiq=sum(legs.filter(l=>l.modalidade==='livre'),'liq');
   p.nLivre=legs.filter(l=>l.modalidade==='livre').length;p.nFixo=legs.filter(l=>l.modalidade==='fixo').length;
   return p;}
-function recompute(parts,taxa){return aggFromLegs(parts.map(p=>legCalc(p.g,p.cotas,p.cu,p.embPct,p.RP,taxa)));}
+function recompute(parts,taxa,fr){return aggFromLegs(parts.map(p=>legCalc(p.g,p.cotas,p.cu,p.embPct,p.RP,taxa,p.red,fr)));}
 
 /* ---------- UI ---------- */
-let step=0;const tipoBem={v:"Imóvel"};const fixo={on:false};let EST=null,RENDER=[],CHOSEN=null,FILTROS=null;
+let DFR_TOUCH=false;let step=0;const tipoBem={v:"Imóvel"};const fixo={on:false};let EST=null,RENDER=[],CHOSEN=null,FILTROS=null;
 function selTipo(b){document.querySelectorAll('#tipoBem button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');tipoBem.v=b.dataset.v;setArt('artWizard',tipoBem.v);}
 function selFixo(b){document.querySelectorAll('#lanceFixo button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');fixo.on=b.dataset.v==='sim';}
 function show(s){document.querySelectorAll('.q').forEach(q=>q.classList.remove('on'));
@@ -487,12 +549,14 @@ function tagChance(p,o){const s=modStats(p);
   return '<span class="tag low">chance baixa</span>';}
 function legsHTML(p){return '<div class="legs">'+p.legs.map(l=>
   `<div class="leg">Grupo <b>${l.g.grupo}</b> · <b>${l.cotas}</b>×${brl(l.cu)} · prazo <b>${l.prazo}m</b> · vagas ${l.vagas}`+
-  (l.modalidade?`<span class="lmod ${l.modalidade}">${l.modalidade}</span>`:'')+`</div>`).join('')+'</div>';}
+  (l.modalidade?`<span class="lmod ${l.modalidade}">${l.modalidade}</span>`:'')+
+  (l.red>0?`<span class="lmod red">redutor ${Math.round(l.red*100)}%</span>`:'')+`</div>`).join('')+'</div>';}
 function barTherm(label,val,mark,color){const esc=Math.max(val,mark||0,0.9);return `<div class="therm"><div class="lbl"><span>${label}: <b style="color:${color}">${pct(val)}</b></span><span>${mark!=null?'Média do grupo: '+pct(mark):'(fila própria)'}</span></div><div class="bar"><div class="fill" style="width:${Math.min(100,val/esc*100)}%;background:${color}"></div>${mark!=null?`<div class="mark" style="left:${Math.min(100,mark/esc*100)}%"></div>`:''}</div></div>`;}
 function therm(p){const s=modStats(p);let h='';
   if(s.hasL)h+=barTherm('Lance livre',s.llancePct,s.lmed,'#ff9d4d');
   if(s.hasF)h+=barTherm('Lance fixo',0.40,null,'#c4b5fd');
   return h;}
+function dentroAlvo(v){const F=FILTROS;if(!F||!isFinite(F.parcelaMax))return '';return v<=F.parcelaMax*1.02?'g':'o';}
 function card(p,o){o=o||{};const vel=velocidade(p);
   return `<div class="rc ${o.cls||''} ${o.dest?'dest':''}" ${o.idx>=0?'id="rc-'+o.idx+'"':''}><div class="badge ${o.bcls||''}">${o.badge||''}</div><div class="body">
     <div><div class="tline">Crédito líquido (o que o cliente recebe)</div><div class="big">${brl(p.liq)}</div></div>
@@ -501,7 +565,7 @@ function card(p,o){o=o||{};const vel=velocidade(p);
     ${tagChance(p,o)}
     ${therm(p)}
     <div class="mgrid">
-      <div><span class="l">Parcela ANTES</span><b>${brl(p.pIniCom)}</b></div>
+      <div><span class="l">Parcela ANTES${temRed(p)?' 🔻':''}</span><b class="${dentroAlvo(p.pIniCom)}">${brl(p.pIniCom)}</b></div>
       <div><span class="l">Parcela DEPOIS</span><b class="g">${brl(p.pPosCom)}</b></div>
       <div><span class="l">Lance ofertado</span><b class="o">${brl(p.lance)} (${pct(p.lancePct)})</b></div>
       <div><span class="l">Crédito total</span><b>${brl(p.ct)}</b></div>
@@ -509,9 +573,12 @@ function card(p,o){o=o||{};const vel=velocidade(p);
       <div><span class="l">Velocidade</span><b>${vel}</b></div>
     </div>
     ${legsHTML(p)}
+    ${temRed(p)?`<div class="note" style="background:rgba(56,189,248,.10);border:1px solid rgba(56,189,248,.28)">🔻 <b>Parcela reduzida</b> em ${p.nRed} de ${p.legs.length} carta(s) até a contemplação — cheia seria <b>${brl(p.pCheiaCom)}</b>. Depois de contemplar a parcela sobe (veja "Parcela DEPOIS").</div>`:''}
     ${o.note?`<div class="note">${o.note}</div>`:''}
     ${o.noBtn?'':`<div class="cbtns"><button class="choose" onclick="escolher(${o.idx})">✓ Escolher</button>${o.scen?`<button class="swap" onclick="trocar(${o.idx})" title="Trocar automaticamente">↻ Auto</button><button class="swap" onclick="trocarManual(${o.idx})" title="Escolher o grupo">✎ Manual</button>`:''}</div>${o.scen?`<div class="swapedit" id="swapedit-${o.idx}"></div>`:''}`}</div></div>`;}
-function partsOf(p){return p.legs.map(l=>({g:l.g,cotas:l.cotas,cu:l.cu,embPct:l.embPct,RP:l.RP}));}
+function frDe(gs){return [...new Set(gs.filter(g=>g).map(g=>+(g.fundo||0)))];}
+function frCampo(gs){const f=frDe(gs);return f.length===1?String(+(f[0]*100).toFixed(2)):'';}
+function partsOf(p){return p.legs.map(l=>({g:l.g,cotas:l.cotas,cu:l.cu,embPct:l.embPct,RP:l.RP,red:l.red}));}
 
 function gerar(st,ajuste){
   if(st){EST=st;initFiltros();syncFiltrosUI();}
@@ -523,7 +590,7 @@ function gerar(st,ajuste){
   const R=document.getElementById('results');R.classList.add('on');R.style.display='block';
   const nome=EST.nome||'Cliente';
   document.getElementById('rtitle').innerHTML=`Olá, <b>${nome}</b>! Aqui estão as opções`;
-  document.getElementById('rsub').innerText=`Desejo: ${brl(F.desejado)} · Parcela alvo: ${brl(F.parcelaMax)} · Lance: ${brl(F.RP)} · ${F.aba==='Rodas'?'Automóvel':'Imóvel'}`;
+  document.getElementById('rsub').innerText=`Desejo: ${brl(F.desejado)} · Parcela alvo: ${brl(F.parcelaMax)} · Lance: ${brl(F.RP)} · ${F.aba==='Rodas'?'Automóvel':'Imóvel'}`+(F.red.on?` · 🔻 parcela reduzida ${Math.round(F.red.pct*100)}%`:'');
   document.getElementById('fontemeta').innerText=`Referência: Guia de Oportunidades · baixado dia ${DADOS.meta.baixado_em||DADOS.meta.modificado_em||''}.`;setArt('artResults',F.aba);
   document.getElementById('ajusteBox').innerHTML=ajuste?`<div class="ajuste">🔄 ${ajuste}</div>`:'';
   RENDER=[];
@@ -568,6 +635,7 @@ function regen(scen,excl){const F=FILTROS;
 /* ---------- Filtros dinâmicos (sidebar) ---------- */
 function initFiltros(){FILTROS={aba:EST.aba,desejado:EST.desejado,RP:EST.RP,parcelaMax:EST.parcelaMax||Infinity,
   parcelaPosMax:Infinity,prazoMax:Infinity,maxLegs:MAXLEGS,emb:(EST.emb!=null?EST.emb:0.30),rapidaModo:'credito',
+  red:{on:!!(EST.red&&EST.red.on),pct:(EST.red&&EST.red.pct)||0.50},
   show:{rapida:true,mix:true,fixo:true,ideal:false,c2:false,c3:false}};}
 function syncFiltrosUI(){const F=FILTROS;if(!document.getElementById('fCredito'))return;
   document.querySelectorAll('#fTipo button').forEach(b=>b.classList.toggle('sel',b.dataset.v===F.aba));
@@ -579,6 +647,9 @@ function syncFiltrosUI(){const F=FILTROS;if(!document.getElementById('fCredito')
   document.getElementById('fPrazo').value=isFinite(F.prazoMax)?F.prazoMax:240;
   document.getElementById('fPrazoV').innerText=isFinite(F.prazoMax)?F.prazoMax+'m':'sem limite';
   document.getElementById('fLegs').value=F.maxLegs;document.getElementById('fLegsV').innerText=F.maxLegs;
+  document.getElementById('fRed').checked=F.red.on;document.getElementById('fRedWrap').style.display=F.red.on?'block':'none';
+  document.getElementById('fRedPct').value=Math.round(F.red.pct*100);document.getElementById('fRedV').innerText=Math.round(F.red.pct*100)+'%';
+  document.getElementById('fRedInfo').innerText=redQtdTxt(F.aba);
   document.getElementById('pRapida').checked=F.show.rapida;document.getElementById('pMix').checked=F.show.mix;document.getElementById('pFixo').checked=F.show.fixo;
   document.getElementById('pIdeal').checked=F.show.ideal;document.getElementById('pC2').checked=F.show.c2;document.getElementById('pC3').checked=F.show.c3;}
 let _fdeb=null;
@@ -591,8 +662,14 @@ function onMoney(el,key){el.value=maskMoeda(el.value);const v=numero(el.value);
   else if(key==='parcelaPosMax')FILTROS.parcelaPosMax=v||Infinity;
   schedule();}
 function onPrazo(v){v=+v;FILTROS.prazoMax=(v>=240?Infinity:v);document.getElementById('fPrazoV').innerText=(v>=240?'sem limite':v+'m');clearCache();schedule();}
+function onRedFiltro(){const on=document.getElementById('fRed').checked,v=+document.getElementById('fRedPct').value;
+  FILTROS.red={on,pct:v/100};
+  document.getElementById('fRedWrap').style.display=on?'block':'none';
+  document.getElementById('fRedV').innerText=v+'%';
+  document.getElementById('fRedInfo').innerText=redQtdTxt(FILTROS.aba);
+  clearCache();schedule();}
 function onLegs(v){v=+v;FILTROS.maxLegs=v;document.getElementById('fLegsV').innerText=v;schedule();}
-function fTipoSel(b){document.querySelectorAll('#fTipo button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');FILTROS.aba=b.dataset.v;setArt('artResults',FILTROS.aba);clearCache();schedule();}
+function fTipoSel(b){document.querySelectorAll('#fTipo button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');FILTROS.aba=b.dataset.v;setArt('artResults',FILTROS.aba);document.getElementById('fRedInfo').innerText=redQtdTxt(FILTROS.aba);clearCache();schedule();}
 function fRapModo(b){document.querySelectorAll('#fRapModo button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');FILTROS.rapidaModo=b.dataset.v;schedule();}
 function togShow(){FILTROS.show={rapida:document.getElementById('pRapida').checked,mix:document.getElementById('pMix').checked,fixo:document.getElementById('pFixo').checked,ideal:document.getElementById('pIdeal').checked,c2:document.getElementById('pC2').checked,c3:document.getElementById('pC3').checked};schedule();}
 function toggleSidebar(){const sb=document.getElementById('sidebar'),fb=document.getElementById('fbtn');const hid=sb.classList.toggle('hidden');fb.classList.toggle('show',hid);}
@@ -625,7 +702,7 @@ function analisar(){
     desejado:numero(document.getElementById('credito').value),
     parcelaMax:numero(document.getElementById('parcela').value),
     RP:document.getElementById('semLance').checked?0:numero(document.getElementById('lance').value),
-    aba:tipoBem.v,emb:embCfg.on?embCfg.pct:0};
+    aba:tipoBem.v,emb:embCfg.on?embCfg.pct:0,red:{on:redCfg.on,pct:redCfg.pct}};
   document.getElementById('wizard').style.display='none';
   document.getElementById('loading').classList.add('on');
   const msgs=['Filtrando grupos com vagas…','Calculando o encaixe ideal…','Cruzando histórico de lances…','Montando combinações de grupos…'];
@@ -637,21 +714,26 @@ function escolher(i){CHOSEN=RENDER[i];if(!CHOSEN)return;
   document.getElementById('results').classList.remove('on');document.getElementById('results').style.display='none';
   document.getElementById('detalhe').style.display='block';
   const grs=[...new Set(CHOSEN.parts.map(p=>p.g.grupo))].join(', ');
-  document.getElementById('autoTaxa').innerHTML=`Grupo(s): <b>${grs}</b>. (Em breve a taxa será puxada automaticamente do site do banco.)`;
-  document.getElementById('dTaxa').value='16';onTaxa();window.scrollTo(0,0);}
+  const gs=CHOSEN.parts.map(p=>p.g),frs=frDe(gs).map(f=>pct(f)).join(' / ');
+  document.getElementById('autoTaxa').innerHTML=`Grupo(s): <b>${grs}</b> · fundo reserva na Guia: <b>${frs}</b>.`;
+  DFR_TOUCH=false;document.getElementById('dTaxa').value='16';document.getElementById('dFundo').value=frCampo(gs);
+  onTaxa();window.scrollTo(0,0);}
 function onTaxa(){const tx=numero(document.getElementById('dTaxa').value)/100;
-  const p=recompute(CHOSEN.parts,tx);
-  document.getElementById('dTaxaInfo').innerText=tx?('= '+(tx*100).toFixed(2)+'% a.a. sobre o crédito'):'';
+  const raw=document.getElementById('dFundo').value.trim();
+  const fr=(DFR_TOUCH&&raw!=='')?numero(raw)/100:(raw!==''?numero(raw)/100:null);
+  const p=recompute(CHOSEN.parts,tx,fr);
+  const frTxt=fr==null?frDe(CHOSEN.parts.map(x=>x.g)).map(f=>pct(f)).join(' / ')+' (da Guia)':pct(fr);
+  document.getElementById('dTaxaInfo').innerText='Categoria = crédito × (1 + '+(tx*100).toFixed(2)+'% + '+frTxt+')';
   document.getElementById('dCard').innerHTML=card(p,{badge:CHOSEN.badge,bcls:CHOSEN.bcls,cls:CHOSEN.cls,dest:CHOSEN.dest,fixo:CHOSEN.fixo,noBtn:true});}
 function voltar(){document.getElementById('detalhe').style.display='none';
   document.getElementById('results').style.display='block';document.getElementById('results').classList.add('on');}
 /* feedback */
-const CHIPS=['Parcela ficou alta','Quero crédito maior','Quero contemplar mais rápido','Prazo menor','Tirar o seguro'];
+const CHIPS=['quero parcela reduzida','Parcela ficou alta','Quero crédito maior','Quero contemplar mais rápido','Prazo menor','Tirar o seguro'];
 function renderChips(){document.getElementById('chips').innerHTML=CHIPS.map(c=>`<span class="chip" onclick="addChip('${c}')">${c}</span>`).join('');}
 function addChip(t){const f=document.getElementById('feedback');f.value=(f.value?f.value+'. ':'')+t;f.focus();}
 function refinar(){const txt=(document.getElementById('feedback').value||'').toLowerCase();if(!txt.trim())return shake('feedback');
   const st=Object.assign({},EST),aj=[];const has=re=>re.test(txt);
-  if(has(/parcela|mensal|car[oa]|alt[ao]|pesad|menos por m[eê]s|abaix/)){st.parcelaMax=Math.round(st.parcelaMax*0.8);aj.push('reduzi a parcela alvo para '+brl(st.parcelaMax));}
+  if(has(/car[oa]|alt[ao]|pesad|salgad|menos por m[eê]s|abaix|parcela menor|mensalidade menor/)){st.parcelaMax=Math.round(st.parcelaMax*0.8);aj.push('reduzi a parcela alvo para '+brl(st.parcelaMax));}
   if(has(/cr[eé]dito maior|valor maior|mais cr[eé]dito|aumentar|pouco cr[eé]dito|maior valor/)){st.desejado=Math.round(st.desejado*1.2);aj.push('aumentei o crédito para '+brl(st.desejado));}
   if(has(/cr[eé]dito menor|valor menor|menos cr[eé]dito/)){st.desejado=Math.round(st.desejado*0.8);aj.push('reduzi o crédito para '+brl(st.desejado));}
   if(has(/r[aá]pid|contempl|demora|sorteio|chance|logo/)){st.desejado=Math.round(st.desejado*0.85);aj.push('priorizei contemplação rápida ('+brl(st.desejado)+')');}
@@ -659,6 +741,8 @@ function refinar(){const txt=(document.getElementById('feedback').value||'').toL
   if(has(/menos lance|n[aã]o tenho tanto|lance menor/)){st.RP=Math.round(st.RP*0.7);aj.push('considerei menos lance ('+brl(st.RP)+')');}
   if(has(/im[oó]vel|casa|apart/)){st.aba='Imóvel';aj.push('mudei para imóvel');}
   if(has(/autom[oó]vel|carro|ve[ií]culo|moto|caminh/)){st.aba='Rodas';aj.push('mudei para automóvel');}
+  if(has(/parcela reduzida|meia parcela|reduzid|reduzir a parcela|metade da parcela/)){st.red={on:true,pct:(st.red&&st.red.pct)||0.5};aj.push('liguei a parcela reduzida');}
+  if(has(/parcela cheia|sem redutor|sem parcela reduzida|integral/)){st.red={on:false,pct:(st.red&&st.red.pct)||0.5};aj.push('voltei para parcela cheia');}
   if(!aj.length)aj.push('não identifiquei um ajuste claro — cite parcela, crédito, prazo, lance ou rapidez');
   EST=st;document.getElementById('feedback').value='';
   document.getElementById('results').classList.remove('on');document.getElementById('loading').classList.add('on');
@@ -667,43 +751,127 @@ function reiniciar(){document.getElementById('results').classList.remove('on');d
   document.getElementById('detalhe').style.display='none';document.getElementById('wizard').style.display='block';
   document.querySelector('.wrap').classList.remove('wide');
   document.querySelectorAll('.field').forEach(f=>f.value='');document.getElementById('feedback').value='';
+  redCfg.on=false;redCfg.pct=0.50;
+  document.querySelectorAll('#redToggle button').forEach(b=>b.classList.toggle('sel',b.dataset.v==='nao'));
+  document.getElementById('redWrapW').style.display='none';document.getElementById('redRangeW').value=50;document.getElementById('redValW').innerText='50%';
   document.getElementById('semLance').checked=false;document.getElementById('lance').disabled=false;show(0);}
 show(0);
 const ART={
 "Imóvel":`<svg viewBox="0 0 600 120" preserveAspectRatio="xMidYMid slice" width="100%" height="104" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="ig" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#17406f"/><stop offset="1" stop-color="#0b1a30"/></linearGradient></defs><rect width="600" height="120" fill="url(#ig)"/><circle cx="300" cy="14" r="66" fill="#ff7a18" opacity="0.16"/><g fill="#0d2240" stroke="#26426b"><rect x="18" y="50" width="60" height="70"/><rect x="90" y="32" width="50" height="88"/><rect x="300" y="58" width="66" height="62"/><rect x="452" y="40" width="54" height="80"/><rect x="516" y="60" width="62" height="60"/></g><g><rect x="168" y="60" width="108" height="60" fill="#102a4d" stroke="#26426b"/><polygon points="162,60 222,26 282,60" fill="#ff7a18"/><rect x="208" y="86" width="24" height="34" fill="#ff9d4d"/></g><g fill="#ffb066"><rect x="30" y="60" width="9" height="9"/><rect x="50" y="60" width="9" height="9"/><rect x="30" y="80" width="9" height="9"/><rect x="50" y="80" width="9" height="9"/><rect x="102" y="44" width="8" height="8"/><rect x="120" y="44" width="8" height="8"/><rect x="102" y="62" width="8" height="8"/><rect x="120" y="62" width="8" height="8"/><rect x="102" y="80" width="8" height="8"/><rect x="120" y="80" width="8" height="8"/><rect x="314" y="70" width="9" height="9"/><rect x="338" y="70" width="9" height="9"/><rect x="314" y="92" width="9" height="9"/><rect x="338" y="92" width="9" height="9"/><rect x="464" y="52" width="8" height="8"/><rect x="486" y="52" width="8" height="8"/><rect x="464" y="72" width="8" height="8"/><rect x="486" y="72" width="8" height="8"/></g></svg>`,
 "Rodas":`<svg viewBox="0 0 600 120" preserveAspectRatio="xMidYMid slice" width="100%" height="104" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="ag" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#17406f"/><stop offset="1" stop-color="#0b1a30"/></linearGradient></defs><rect width="600" height="120" fill="url(#ag)"/><circle cx="300" cy="14" r="66" fill="#ff7a18" opacity="0.16"/><line x1="0" y1="100" x2="600" y2="100" stroke="#26426b" stroke-width="3"/><line x1="30" y1="100" x2="120" y2="100" stroke="#ff9d4d" stroke-width="3" stroke-dasharray="20 22"/><line x1="300" y1="100" x2="420" y2="100" stroke="#ff9d4d" stroke-width="3" stroke-dasharray="20 22"/><g><path d="M150 86 q8 -32 44 -34 l78 -2 q34 0 58 28 l54 6 q26 4 26 18 l0 6 q0 6 -8 6 l-300 0 q-8 0 -8 -8 z" fill="#ff7a18"/><path d="M196 56 l66 -2 q24 0 40 22 l-150 2 q12 -22 44 -22 z" fill="#0d2240" opacity="0.65"/><circle cx="208" cy="98" r="15" fill="#0b1a30" stroke="#ff9d4d" stroke-width="4"/><circle cx="362" cy="98" r="15" fill="#0b1a30" stroke="#ff9d4d" stroke-width="4"/></g></svg>`};
 function setArt(id,aba){const el=document.getElementById(id);if(el)el.innerHTML=ART[aba]||ART["Imóvel"];}
-const MANUAL={aba:'Imóvel',items:[],taxa:0.16,mod:'livre'};let MANUAL_ORIG='wizard';
-let EMB=0.30;const embCfg={on:true,pct:0.30};
+const MANUAL={aba:'Imóvel',items:[],taxa:0.16,fr:null,mod:'livre',red:false};let MANUAL_ORIG='wizard';
+const RED_PADRAO={"Imóvel":50,"Rodas":30};
+let MCUSTOM=null,MFORCE=null;
+function mTaxaChg(){MANUAL.taxa=numero(document.getElementById('mTaxa').value)/100;
+  const raw=document.getElementById('mFundo').value.trim();
+  MANUAL.fr=raw===''?null:numero(raw)/100;
+  mTaxaInfoUpd();mFundoGuiaHint();renderManual();mPreviewRed();}
+function mTaxaInfoUpd(){const el=document.getElementById('mTaxaInfo');if(!el)return;
+  const frTxt=MANUAL.fr==null?(frDe(mGruposEmUso()).map(f=>pct(f)).join(' / ')||'—')+' (da Guia)':pct(MANUAL.fr);
+  el.innerText='Categoria = crédito × (1 + '+(MANUAL.taxa*100).toFixed(2)+'% + '+frTxt+')';}
+function mGruposEmUso(){const gs=MANUAL.items.map(it=>grupoByItem(it)).filter(g=>g);
+  if(!gs.length){const g=mGrupoSel();if(g)gs.push(g);}
+  return gs;}
+function mFundoGuiaHint(){const el=document.getElementById('mFundoGuia');if(!el)return;
+  const frs=frDe(mGruposEmUso()).map(f=>pct(f));
+  el.innerHTML=frs.length?`Fundo reserva na Guia: <b>${frs.join(' / ')}</b>.`:'';}
+/* mantem o campo de fundo espelhando a Guia enquanto o usuario nao digitar nada */
+function mSyncFundo(){const el=document.getElementById('mFundo');
+  if(el&&el.dataset.touched!=='1')el.value=frCampo(mGruposEmUso());
+  mTaxaInfoUpd();mFundoGuiaHint();}
+function mRedPctVal(){if(!MANUAL.red)return 0;return Math.min(0.9,Math.max(0,numero(document.getElementById('mRedPct').value)/100));}
+function mToggleRed(){MANUAL.red=document.getElementById('mRed').checked;
+  document.getElementById('mRedWrap').style.display=MANUAL.red?'block':'none';
+  if(MANUAL.red&&!numero(document.getElementById('mRedPct').value))document.getElementById('mRedPct').value=RED_PADRAO[MANUAL.aba]||50;
+  mPopGrupos();mPreviewRed();}
+function mPreviewRed(){mSyncFundo();const el=document.getElementById('mRedInfo');if(!el)return;
+  if(!MANUAL.red){el.innerHTML='';return;}
+  const g=mGrupoSel(),cu=+(document.getElementById('mValor').value||0);
+  if(!g||!cu){el.innerHTML='';return;}
+  const cotas=Math.max(1,parseInt(document.getElementById('mCotas').value)||1);
+  const cheia=legCalc(g,cotas,cu,0,0,MANUAL.taxa,0,MANUAL.fr),red=legCalc(g,cotas,cu,0,0,MANUAL.taxa,mRedPctVal(),MANUAL.fr);
+  el.innerHTML=`Parcela cheia ${brl(cheia.pIniCom)} → reduzida <b style="color:var(--orange2)">${brl(red.pIniCom)}</b>`
+    +(g.red===false?' · <span style="color:#fcd34d">atenção: grupo marcado "N" na Guia</span>':'');}
+function mGrupoManualChg(){
+  const raw=(document.getElementById('mGrupoManual').value||'').replace(/\D/g,'');
+  const info=document.getElementById('mGrupoInfo'),box=document.getElementById('mCustomWrap');
+  document.getElementById('mGrupoManual').value=raw;
+  if(!raw){MCUSTOM=null;MFORCE=null;box.style.display='none';info.innerHTML='';mPopGrupos();mPreviewRed();return;}
+  const g=DADOS.grupos.find(x=>String(x.grupo)===raw);
+  if(g){MCUSTOM=null;MFORCE=g;box.style.display='none';
+    if(MANUAL.aba!==g.aba){MANUAL.aba=g.aba;document.querySelectorAll('#mTipo button').forEach(b=>b.classList.toggle('sel',b.dataset.v===g.aba));setArt('artManual',g.aba);}
+    info.innerHTML=`Grupo <b>${g.grupo}</b> · ${g.aba} · ${g.prazo}m · fundo ${pct(g.fundo)} · ${g.vagas} vagas`
+      +(g.red?' · <b style="color:#7dd3fc">aceita parcela reduzida</b>':' · <span style="color:#fcd34d">Guia marca "N" para parcela reduzida (liberado assim mesmo)</span>');
+    mPopGrupos();document.getElementById('mGrupo').value=String(g.grupo);mPopValores();
+  }else{MFORCE=null;box.style.display='block';
+    info.innerHTML='Grupo não está na Guia importada — informe prazo, fundo e crédito abaixo.';
+    mCustomChg();}
+  mPreviewRed();}
+function mCustomChg(){
+  const raw=(document.getElementById('mGrupoManual').value||'').replace(/\D/g,'');
+  const prazo=parseInt(document.getElementById('mcPrazo').value)||0;
+  const fundo=(numero(document.getElementById('mcFundo').value)||0)/100;
+  const valor=Math.round(numero(document.getElementById('mcValor').value)||0);
+  if(!raw||!prazo||!valor){MCUSTOM=null;mPopValores();mPreviewRed();return;}
+  MCUSTOM={grupo:+raw,aba:MANUAL.aba,prazo,fundo,vagas:0,fixoOk:false,fixoPct:null,
+    valores:[valor],lances:[],contLivre:0,red:true,manual:true};
+  mPopValores();mPreviewRed();}
+let EMB=0.30;const embCfg={on:true,pct:0.30};const redCfg={on:false,pct:0.50};
+function redQtdTxt(aba){const n=DADOS.grupos.filter(g=>g.aba===aba&&g.red&&g.vagas>=VAGAS_MIN).length;
+  return n?n+' grupo(s) com vaga em '+(aba==='Rodas'?'automóvel':'imóvel'):'nenhum grupo com vaga hoje';}
+function selRedW(b){document.querySelectorAll('#redToggle button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');
+  redCfg.on=b.dataset.v==='sim';document.getElementById('redWrapW').style.display=redCfg.on?'block':'none';
+  document.getElementById('redQtdW').innerText=redQtdTxt(tipoBem.v);}
+function onRedRangeW(){const v=+document.getElementById('redRangeW').value;redCfg.pct=v/100;document.getElementById('redValW').innerText=v+'%';}
 function selEmb(b){document.querySelectorAll('#embToggle button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');embCfg.on=b.dataset.v==='sim';document.getElementById('embWrap').style.display=embCfg.on?'block':'none';}
 function onEmbRange(){const v=+document.getElementById('embRange').value;embCfg.pct=v/100;document.getElementById('embVal').innerText=v+'%';}
-function grupoByItem(it){return DADOS.grupos.find(g=>g.grupo==it.grupo&&g.aba==it.aba);}
-function mGrupoSel(){return DADOS.grupos.find(g=>g.grupo==document.getElementById('mGrupo').value&&g.aba==MANUAL.aba);}
+function grupoByItem(it){return it.gObj||DADOS.grupos.find(g=>g.grupo==it.grupo&&g.aba==it.aba);}
+function mGrupoSel(){if(MCUSTOM)return MCUSTOM;
+  return DADOS.grupos.find(g=>g.grupo==document.getElementById('mGrupo').value&&g.aba==MANUAL.aba);}
 function mFilt(){return {min:numero(document.getElementById('fMin').value)||0,max:numero(document.getElementById('fMax').value)||1e12,pmax:parseInt(document.getElementById('fPrazoMax').value)||999999,medmax:(numero(document.getElementById('fMedMax').value)||100)/100,ord:document.getElementById('fOrder').value};}
 function mPopGrupos(){const f=mFilt();
   let gs=elegiveis(MANUAL.aba).filter(g=>g.prazo<=f.pmax&&(lMed(g)==null||lMed(g)<=f.medmax)&&g.valores.some(v=>v>=f.min&&v<=f.max));
   if(MANUAL.mod==='fixo')gs=gs.filter(g=>g.fixoOk);
+  if(MANUAL.red)gs=gs.filter(g=>g.red);
   const ord={med:(a,b)=>(lMed(a)||9)-(lMed(b)||9),vagas:(a,b)=>b.vagas-a.vagas,prazoA:(a,b)=>a.prazo-b.prazo,prazoD:(a,b)=>b.prazo-a.prazo}[f.ord]||((a,b)=>a.grupo-b.grupo);
   gs.sort(ord);
-  document.getElementById('mGrupo').innerHTML=gs.length?gs.map(g=>`<option value="${g.grupo}">G${g.grupo} · ${g.prazo}m · média ${lMed(g)?Math.round(lMed(g)*100)+'%':'—'} · ${g.vagas} vagas</option>`).join(''):'<option value="">nenhum grupo com esses filtros</option>';
+  if(MFORCE&&MFORCE.aba===MANUAL.aba&&!gs.some(g=>g.grupo===MFORCE.grupo))gs.unshift(MFORCE);
+  const rot=g=>`G${g.grupo} · ${g.prazo}m · média ${lMed(g)?Math.round(lMed(g)*100)+'%':'—'} · ${g.vagas} vagas${g.red?' · 🔻 parcela reduzida':''}`;
+  const vazio=MANUAL.red?'nenhum grupo com parcela reduzida nesses filtros — digite o nº abaixo':'nenhum grupo com esses filtros';
+  document.getElementById('mGrupo').innerHTML=gs.length?gs.map(g=>`<option value="${g.grupo}">${rot(g)}</option>`).join(''):`<option value="">${vazio}</option>`;
   mPopValores();}
 function mPopValores(){const g=mGrupoSel();if(!g){document.getElementById('mValor').innerHTML='';return;}const f=mFilt();
-  const vals=g.valores.filter(v=>v>=f.min&&v<=f.max);const list=vals.length?vals:g.valores;
+  const vals=MCUSTOM?g.valores:g.valores.filter(v=>v>=f.min&&v<=f.max);const list=vals.length?vals:g.valores;
   document.getElementById('mValor').innerHTML=list.map(v=>`<option value="${v}">${brl(v)}</option>`).join('');}
-function mSelTipo(b){document.querySelectorAll('#mTipo button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');MANUAL.aba=b.dataset.v;setArt('artManual',MANUAL.aba);mPopGrupos();}
+function mSelTipo(b){document.querySelectorAll('#mTipo button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');MANUAL.aba=b.dataset.v;setArt('artManual',MANUAL.aba);
+  document.getElementById('mRedPct').value=RED_PADRAO[MANUAL.aba]||50;
+  if(MCUSTOM)mCustomChg();
+  mPopGrupos();mPreviewRed();}
 function mSelMod(b){document.querySelectorAll('#mMod button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');MANUAL.mod=b.dataset.v;
-  document.getElementById('mRecursoWrap').style.display=MANUAL.mod==='fixo'?'none':'block';document.getElementById('mEmbWrap').style.display=MANUAL.mod==='fixo'?'none':'block';mPopGrupos();}
+  document.getElementById('mRecursoWrap').style.display=MANUAL.mod==='fixo'?'none':'block';document.getElementById('mEmbWrap').style.display=MANUAL.mod==='fixo'?'none':'block';mPopGrupos();mPreviewRed();}
 function addCarta(){const g=mGrupoSel();if(!g)return;const cu=+document.getElementById('mValor').value;
   const cotas=Math.max(1,parseInt(document.getElementById('mCotas').value)||1);const mod=MANUAL.mod;
   if(mod==='fixo'&&!g.fixoOk){alert('Este grupo não permite lance fixo. Escolha outro grupo ou use lance livre.');return;}
   let embPct,RP;
   if(mod==='fixo'){const f=fixoLance(g,cotas*cu);embPct=f.embPct;RP=f.RP;}
   else{embPct=Math.min(0.30,Math.max(0,numero(document.getElementById('mEmb').value)/100));RP=numero(document.getElementById('mRecurso').value);}
-  MANUAL.items.push({grupo:g.grupo,aba:MANUAL.aba,cu,cotas,mod,RP,embPct});document.getElementById('mRecurso').value='';renderManual();}
+  MANUAL.items.push({grupo:g.grupo,aba:MANUAL.aba,cu,cotas,mod,RP,embPct,red:mRedPctVal(),gObj:(MCUSTOM||g.manual)?g:null});
+  document.getElementById('mRecurso').value='';renderManual();}
 function rmCarta(i){MANUAL.items.splice(i,1);renderManual();}
 function editarCarta(i){const it=MANUAL.items[i];MANUAL.aba=it.aba;
   document.querySelectorAll('#mTipo button').forEach(b=>b.classList.toggle('sel',b.dataset.v===it.aba));setArt('artManual',it.aba);
   ['fMin','fMax','fPrazoMax','fMedMax'].forEach(id=>document.getElementById(id).value='');
+  MANUAL.red=(it.red||0)>0;document.getElementById('mRed').checked=MANUAL.red;
+  document.getElementById('mRedWrap').style.display=MANUAL.red?'block':'none';
+  if(MANUAL.red)document.getElementById('mRedPct').value=+( (it.red*100).toFixed(2) );
+  if(it.gObj){MCUSTOM=it.gObj;MFORCE=null;document.getElementById('mGrupoManual').value=String(it.grupo);
+    document.getElementById('mCustomWrap').style.display='block';
+    document.getElementById('mcPrazo').value=it.gObj.prazo;document.getElementById('mcFundo').value=+(it.gObj.fundo*100).toFixed(2);
+    document.getElementById('mcValor').value=brl(it.cu);
+    document.getElementById('mGrupoInfo').innerHTML='Grupo digitado manualmente (fora da Guia).';
+  }else{MCUSTOM=null;MFORCE=DADOS.grupos.find(g=>g.grupo==it.grupo&&g.aba==it.aba)||null;
+    document.getElementById('mGrupoManual').value='';document.getElementById('mCustomWrap').style.display='none';document.getElementById('mGrupoInfo').innerHTML='';}
   mPopGrupos();document.getElementById('mGrupo').value=String(it.grupo);mPopValores();document.getElementById('mValor').value=String(it.cu);
   document.getElementById('mCotas').value=it.cotas;MANUAL.mod=it.mod;
   document.querySelectorAll('#mMod button').forEach(b=>b.classList.toggle('sel',b.dataset.v===it.mod));
@@ -711,20 +879,24 @@ function editarCarta(i){const it=MANUAL.items[i];MANUAL.aba=it.aba;
   document.getElementById('mEmbWrap').style.display=it.mod==='fixo'?'none':'block';
   document.getElementById('mRecurso').value=it.mod==='fixo'?'':brl(it.RP);
   document.getElementById('mEmb').value=Math.round((it.embPct!=null?it.embPct:0.30)*100);
-  MANUAL.items.splice(i,1);renderManual();document.getElementById('mGrupo').scrollIntoView({behavior:'smooth',block:'center'});}
+  MANUAL.items.splice(i,1);renderManual();mPreviewRed();document.getElementById('mGrupo').scrollIntoView({behavior:'smooth',block:'center'});}
 function renderManual(){
-  const legs=MANUAL.items.map(it=>{const g=grupoByItem(it);const x=legCalc(g,it.cotas,it.cu,(it.embPct!=null?it.embPct:0.30),it.mod==='fixo'?0.10*it.cotas*it.cu:it.RP,MANUAL.taxa);x.modalidade=it.mod;return x;});
-  document.getElementById('mLista').innerHTML=MANUAL.items.length?MANUAL.items.map((it,i)=>`<div class="mitem"><span>G<b>${it.grupo}</b> · <b>${it.cotas}</b>× ${brl(it.cu)} · <span class="lmod ${it.mod}">${it.mod}</span> · emb ${Math.round((it.embPct!=null?it.embPct:0.30)*100)}% · recurso ${brl(it.mod==='fixo'?0.10*it.cotas*it.cu:it.RP)}</span><button class="rm" onclick="editarCarta(${i})" style="color:var(--orange2);border-color:var(--orange)">editar</button> <button class="rm" onclick="rmCarta(${i})">remover</button></div>`).join(''):'<div class="empty">Nenhuma carta adicionada ainda.</div>';
+  const legs=MANUAL.items.map(it=>{const g=grupoByItem(it);const x=legCalc(g,it.cotas,it.cu,(it.embPct!=null?it.embPct:0.30),it.mod==='fixo'?0.10*it.cotas*it.cu:it.RP,MANUAL.taxa,it.red||0,MANUAL.fr);x.modalidade=it.mod;return x;});
+  document.getElementById('mLista').innerHTML=MANUAL.items.length?MANUAL.items.map((it,i)=>`<div class="mitem"><span>G<b>${it.grupo}</b> · <b>${it.cotas}</b>× ${brl(it.cu)} · <span class="lmod ${it.mod}">${it.mod}</span>${it.red>0?` <span class="lmod red">redutor ${Math.round(it.red*100)}%</span>`:''} · emb ${Math.round((it.embPct!=null?it.embPct:0.30)*100)}% · recurso ${brl(it.mod==='fixo'?0.10*it.cotas*it.cu:it.RP)}</span><button class="rm" onclick="editarCarta(${i})" style="color:var(--orange2);border-color:var(--orange)">editar</button> <button class="rm" onclick="rmCarta(${i})">remover</button></div>`).join(''):'<div class="empty">Nenhuma carta adicionada ainda.</div>';
   if(!legs.length){document.getElementById('mTotais').innerHTML='';return;}
   const p=aggFromLegs(legs);const hasFixo=legs.some(l=>l.modalidade==='fixo');
-  document.getElementById('mTotais').innerHTML=card(p,{noBtn:true,badge:'🛠️ Proposta manual',bcls:'b4',
-    note:hasFixo?'Inclui carta(s) no lance fixo (40%). A barra de chance considera a média de lance livre dos grupos.':''});}
+  const notas=[];
+  if(hasFixo)notas.push('Inclui carta(s) no lance fixo (40%). A barra de chance considera a média de lance livre dos grupos.');
+  document.getElementById('mTotais').innerHTML=card(p,{noBtn:true,badge:'🛠️ Proposta manual',bcls:'b4',note:notas.join('<br>')});mSyncFundo();mFundoGuiaHint();}
 function abrirManual(origem){MANUAL_ORIG=origem;
   document.getElementById('wizard').style.display='none';document.getElementById('results').classList.remove('on');document.getElementById('results').style.display='none';
   document.getElementById('loading').classList.remove('on');document.getElementById('detalhe').style.display='none';
   document.getElementById('manual').style.display='block';MANUAL.aba=tipoBem.v;
   document.querySelectorAll('#mTipo button').forEach(b=>b.classList.toggle('sel',b.dataset.v===MANUAL.aba));
-  setArt('artManual',MANUAL.aba);mPopGrupos();renderManual();window.scrollTo(0,0);}
+  document.getElementById('mRedPct').value=RED_PADRAO[MANUAL.aba]||50;
+  document.getElementById('mTaxa').value='16';
+  const mf=document.getElementById('mFundo');mf.value='';mf.dataset.touched='';MANUAL.fr=null;
+  setArt('artManual',MANUAL.aba);mTaxaChg();mPopGrupos();renderManual();mPreviewRed();window.scrollTo(0,0);}
 function fecharManual(){document.getElementById('manual').style.display='none';
   if(MANUAL_ORIG==='results'){document.getElementById('results').style.display='block';document.getElementById('results').classList.add('on');}
   else document.getElementById('wizard').style.display='block';window.scrollTo(0,0);}
