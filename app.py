@@ -148,6 +148,9 @@ css = """
     [data-testid="stSidebar"] p, [data-testid="stSidebar"] span, [data-testid="stSidebar"] div { color: #0f172a !important; }
     [data-testid="stSidebar"] hr { border-bottom-color: #e2e8f0 !important; margin-top: 0.5rem !important; margin-bottom: 0.5rem !important; }
     [data-testid="stSidebar"] button { border: 1px solid #cbd5e1 !important; background-color: #f8fafc !important; }
+    /* Links externos no menu (ex: Cartas Contempladas) com o mesmo visual dos botões */
+    [data-testid="stSidebar"] [data-testid="stLinkButton"] a, [data-testid="stSidebar"] a[kind="secondary"] { border: 1px solid #cbd5e1 !important; background-color: #f8fafc !important; color: #0f172a !important; text-decoration: none !important; }
+    [data-testid="stSidebar"] [data-testid="stLinkButton"] a:hover, [data-testid="stSidebar"] a[kind="secondary"]:hover { border-color: #e74c3c !important; color: #e74c3c !important; }
     header[data-testid="stHeader"] { background-color: transparent !important; }
     button[data-baseweb="tab"] { font-size: 16px !important; font-weight: bold !important; }
     button[kind="primary"] { background-color: #239b56 !important; border-color: #239b56 !important; color: #ffffff !important; font-weight: bold !important; }
@@ -220,6 +223,7 @@ else:
         
     st.sidebar.write("")
     with st.sidebar.expander("🛠️ Simuladores", expanded=(st.session_state['menu_lateral'] in simuladores_dict)):
+        st.link_button("📄 Cartas Contempladas", "https://consorbensmg.com.br/admin/", use_container_width=True)
         for sim in simuladores_dict.keys():
             btn_type = "primary" if st.session_state['menu_lateral'] == sim else "secondary"
             if st.button(sim, use_container_width=True, type=btn_type):
