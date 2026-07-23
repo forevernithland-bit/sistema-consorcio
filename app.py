@@ -151,6 +151,15 @@ css = """
     /* Links externos no menu (ex: Cartas Contempladas) com o mesmo visual dos botões */
     [data-testid="stSidebar"] [data-testid="stLinkButton"] a, [data-testid="stSidebar"] a[kind="secondary"] { border: 1px solid #cbd5e1 !important; background-color: #f8fafc !important; color: #0f172a !important; text-decoration: none !important; }
     [data-testid="stSidebar"] [data-testid="stLinkButton"] a:hover, [data-testid="stSidebar"] a[kind="secondary"]:hover { border-color: #e74c3c !important; color: #e74c3c !important; }
+    /* Link externo no menu de visitante, com o mesmo visual das opções (bolinha + texto).
+       As margens negativas encostam o link nas opções de cima e de baixo. */
+    [data-testid="stSidebar"] .st-key-cartas_link { margin-top: -2.1rem !important; }
+    [data-testid="stSidebar"] .st-key-menu_sim { margin-top: -1.7rem !important; }
+    [data-testid="stSidebar"] .menu-link-externo { display: flex !important; align-items: center; gap: 9px; text-decoration: none !important; padding: 0 0 0 1px; height: 22.4px; }
+    [data-testid="stSidebar"] .menu-link-bolinha { width: 14px; height: 14px; border-radius: 50%; background-color: #f0f2f6; flex: 0 0 auto; box-sizing: border-box; }
+    [data-testid="stSidebar"] .menu-link-texto { color: #0f172a !important; font-size: 14px; line-height: 22.4px; }
+    [data-testid="stSidebar"] .menu-link-externo:hover .menu-link-bolinha { background-color: #e2e8f0; }
+    [data-testid="stSidebar"] .menu-link-externo:hover .menu-link-texto { color: #e74c3c !important; }
     header[data-testid="stHeader"] { background-color: transparent !important; }
     button[data-baseweb="tab"] { font-size: 16px !important; font-weight: bold !important; }
     button[kind="primary"] { background-color: #239b56 !important; border-color: #239b56 !important; color: #ffffff !important; font-weight: bold !important; }
@@ -191,13 +200,40 @@ if os.path.exists(logo_path):
 st.sidebar.markdown("<br>", unsafe_allow_html=True) 
 
 if not is_logado:
-    opcoes_menu = ["🔐 Login (Área Restrita)"] + list(simuladores_dict.keys())
-    try: idx_menu = opcoes_menu.index(st.session_state['menu_lateral'])
-    except ValueError: idx_menu = 0
-    selecao = st.sidebar.radio(" ", opcoes_menu, index=idx_menu, label_visibility="collapsed")
-    if selecao != st.session_state['menu_lateral']:
-        st.session_state['menu_lateral'] = selecao
-        st.rerun()
+    OPC_LOGIN = "🔐 Login (Área Restrita)"
+    opcoes_sim = list(simuladores_dict.keys())
+
+    if st.session_state['menu_lateral'] not in [OPC_LOGIN] + opcoes_sim:
+        st.session_state['menu_lateral'] = OPC_LOGIN
+    menu_atual = st.session_state['menu_lateral']
+
+    # O menu é dividido em dois blocos para encaixar o link externo entre eles.
+    # Só um dos dois fica marcado por vez (o outro é zerado no on_change).
+    if 'menu_login' not in st.session_state:
+        st.session_state['menu_login'] = OPC_LOGIN if menu_atual == OPC_LOGIN else None
+    if 'menu_sim' not in st.session_state:
+        st.session_state['menu_sim'] = menu_atual if menu_atual in opcoes_sim else None
+
+    def _selecionou_login():
+        st.session_state['menu_lateral'] = OPC_LOGIN
+        st.session_state['menu_sim'] = None
+
+    def _selecionou_simulador():
+        st.session_state['menu_lateral'] = st.session_state['menu_sim']
+        st.session_state['menu_login'] = None
+
+    link_cartas = """
+    <div class="menu-link-wrap">
+        <a href="https://consorbensmg.com.br/admin/" target="_blank" class="menu-link-externo">
+            <span class="menu-link-bolinha"></span><span class="menu-link-texto">📄 Cartas Contempladas</span>
+        </a>
+    </div>
+    """
+
+    st.sidebar.radio(" ", [OPC_LOGIN], key="menu_login", label_visibility="collapsed", on_change=_selecionou_login)
+    with st.sidebar.container(key="cartas_link"):
+        st.markdown(link_cartas, unsafe_allow_html=True)
+    st.sidebar.radio(" ", opcoes_sim, key="menu_sim", label_visibility="collapsed", on_change=_selecionou_simulador)
 else:
     st.sidebar.divider() 
     
