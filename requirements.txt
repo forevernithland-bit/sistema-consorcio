@@ -8,3 +8,4 @@ google-auth
 google-generativeai
 python-docx
 openpyxl
+pdfplumber
