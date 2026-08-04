@@ -372,7 +372,7 @@ elif menu_selecionado == "Relatórios":
 elif menu_selecionado == "Mídias":
     render_midias()
 elif menu_selecionado == "Baixar Parcelas":
-    render_baixas(supabase, df_vendas_global, df_admin, cfg, status_dict)
+    render_baixas(supabase, df_vendas_global, df_admin, cfg, status_dict, lista_admin_bd)
 elif menu_selecionado == "Configurações de Sistema":
     render_configuracoes(supabase, df_admin_cad, df_admin, lista_admin_bd, cfg, cfg_id)
 elif menu_selecionado == "Senhas":
