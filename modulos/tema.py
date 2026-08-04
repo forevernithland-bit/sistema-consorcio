@@ -72,6 +72,8 @@ def montar_css(chave_tema=None):
         --ink: #0f172a;
         --muted: #64748b;
         --line: #e9eef5;
+        --field-line: #d5dde8;
+        --field-line-hover: #b6c2d2;
         --card: #ffffff;
         --shadow-sm: 0 1px 2px rgba(15,23,42,0.04), 0 4px 14px rgba(15,23,42,0.04);
         --shadow-md: 0 6px 24px rgba(15,23,42,0.07), 0 1px 2px rgba(15,23,42,0.04);
@@ -126,17 +128,37 @@ def montar_css(chave_tema=None):
         color: #fff !important;
     }}
 
-    /* ---- Inputs ---- */
-    .stTextInput input, .stNumberInput input, .stDateInput input, .stTextArea textarea,
-    [data-baseweb="input"], [data-baseweb="select"] > div, [data-baseweb="base-input"] {{
+    /* ---- Inputs: fundo branco + contorno nítido ---- */
+    [data-baseweb="input"], [data-baseweb="base-input"], [data-baseweb="select"] > div,
+    [data-baseweb="textarea"], .stTextArea textarea, .stMultiSelect div[data-baseweb="select"] > div {{
+        background-color: #ffffff !important;
+        border: 1px solid var(--field-line) !important;
         border-radius: 11px !important;
-        transition: border-color 0.16s var(--ease), box-shadow 0.16s var(--ease) !important;
+        box-shadow: 0 1px 2px rgba(15,23,42,0.04) !important;
+        transition: border-color 0.16s var(--ease), box-shadow 0.16s var(--ease), background-color 0.16s var(--ease) !important;
     }}
+    /* Campos internos herdam o fundo do contêiner (sem retângulo cinza duplo) */
+    .stTextInput input, .stNumberInput input, .stDateInput input,
+    [data-baseweb="input"] input, [data-baseweb="base-input"] input, .stTextArea textarea {{
+        background-color: transparent !important;
+        color: var(--ink) !important;
+    }}
+    /* Hover: contorno escurece de leve */
+    [data-baseweb="input"]:hover, [data-baseweb="base-input"]:hover,
+    [data-baseweb="select"] > div:hover, .stTextArea textarea:hover {{
+        border-color: var(--field-line-hover) !important;
+    }}
+    /* Foco: contorno na cor do tema + anel suave */
     [data-baseweb="input"]:focus-within, [data-baseweb="select"] > div:focus-within,
     .stTextArea textarea:focus, [data-baseweb="base-input"]:focus-within {{
         border-color: var(--brand) !important;
         box-shadow: 0 0 0 3.5px var(--brand-soft) !important;
     }}
+    /* Botões de +/- do number input e ícones acompanham a borda */
+    .stNumberInput button {{ border-color: var(--field-line) !important; background: #fff !important; }}
+    .stNumberInput button:hover {{ border-color: var(--brand) !important; color: var(--brand) !important; }}
+    /* Placeholder um pouco mais legível */
+    input::placeholder, textarea::placeholder {{ color: #94a3b8 !important; opacity: 1 !important; }}
     [data-testid="stFileUploader"] section {{
         border-radius: 14px !important; border: 1.5px dashed #cbd5e1 !important;
         transition: border-color 0.2s var(--ease), background-color 0.2s var(--ease);
