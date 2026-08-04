@@ -21,7 +21,7 @@ from modulos.baixas import render_baixas
 from modulos.configuracoes import render_configuracoes
 from modulos.senhas import render_senhas
 from modulos.assistente import render_widget_ia, render_config_ia
-from modulos.tema import montar_css, render_seletor_tema
+from modulos.tema import montar_css, render_seletor_tema, css_fundo_login
 
 # ==========================================
 # 1. CONFIGURAÇÃO DA PÁGINA E SESSÕES
@@ -242,8 +242,11 @@ else:
 menu_selecionado = st.session_state['menu_lateral']
 
 # Aplicando cor de fundo dependendo da área
-if menu_selecionado in simuladores_dict: 
+if menu_selecionado in simuladores_dict:
     css += """ <style>.stApp { background-color: #0f172a !important; }</style> """
+elif (not is_logado) and menu_selecionado == "🔐 Login (Área Restrita)":
+    # Tela de login: fundo ilustrado com os produtos da Consorbens
+    css += css_fundo_login()
 else:
     # O brilho superior usa a cor do tema escolhido pelo usuário
     css += """ <style>.stApp { background: radial-gradient(1150px 500px at 100% -8%, var(--brand-soft), transparent 58%), linear-gradient(180deg, #f7f9fc 0%, #eaeef4 100%) !important; background-attachment: fixed !important; }</style> """
