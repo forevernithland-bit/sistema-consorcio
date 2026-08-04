@@ -440,9 +440,16 @@ def render_historico_comissoes(supabase):
             titulo = datetime.strptime(mes, "%Y-%m").strftime("%m/%Y")
         except (ValueError, TypeError):
             titulo = mes
-        with st.expander(f"📅 {titulo}  —  {len(dfm)} cota(s)  |  "
-                         f"Notas {formatar_brl_puro(tot_nota)}  |  "
-                         f"Breno {formatar_brl_puro(tot_breno)}  |  Uriel {formatar_brl_puro(tot_uriel)}"):
+        # Escapa o "$" para o Streamlit não interpretar como fórmula (LaTeX)
+        def _rs(v):
+            return formatar_brl_puro(v).replace("$", "\\$")
+        titulo_exp = (
+            f"📅 {titulo}  —  {len(dfm)} cota(s)  |  "
+            f"**Nota Total:** {_rs(tot_nota)}  |  "
+            f"**Breno:** {_rs(tot_breno)}  |  "
+            f"**Uriel:** {_rs(tot_uriel)}"
+        )
+        with st.expander(titulo_exp):
             show = pd.DataFrame({
                 "Grupo/Cota": dfm["grupo"].astype(str) + "/" + dfm["cota"].astype(str),
                 "Parc.": dfm["parcela"],
