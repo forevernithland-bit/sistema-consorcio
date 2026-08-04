@@ -72,8 +72,12 @@ def montar_css(chave_tema=None):
         --ink: #0f172a;
         --muted: #64748b;
         --line: #e9eef5;
-        --field-line: #d5dde8;
-        --field-line-hover: #b6c2d2;
+        /* Borda dos campos: cinza mais nítido, levemente tingido pela cor do tema.
+           A 1ª linha é o fallback (navegadores sem color-mix); a 2ª tinge pelo tema. */
+        --field-line: #aeb9c9;
+        --field-line: color-mix(in srgb, var(--brand) 22%, #94a3b8);
+        --field-line-hover: #8b98ab;
+        --field-line-hover: color-mix(in srgb, var(--brand) 45%, #7c8a9e);
         --card: #ffffff;
         --shadow-sm: 0 1px 2px rgba(15,23,42,0.04), 0 4px 14px rgba(15,23,42,0.04);
         --shadow-md: 0 6px 24px rgba(15,23,42,0.07), 0 1px 2px rgba(15,23,42,0.04);
@@ -128,36 +132,56 @@ def montar_css(chave_tema=None):
         color: #fff !important;
     }}
 
-    /* ---- Inputs: fundo branco + contorno nítido ---- */
-    [data-baseweb="input"], [data-baseweb="base-input"], [data-baseweb="select"] > div,
-    [data-baseweb="textarea"], .stTextArea textarea, .stMultiSelect div[data-baseweb="select"] > div {{
+    /* ---- Inputs: fundo branco + contorno nítido ----
+       Mira em TODOS os invólucros usados pelas várias versões do Streamlit. */
+    .stTextInput div[data-baseweb="input"],
+    .stNumberInput div[data-baseweb="input"],
+    .stDateInput div[data-baseweb="input"],
+    .stTextInput div[data-baseweb="base-input"],
+    .stNumberInput div[data-baseweb="base-input"],
+    div[data-baseweb="select"] > div,
+    div[data-baseweb="input"],
+    div[data-baseweb="base-input"],
+    .stTextArea textarea,
+    .stDateInput > div > div {{
         background-color: #ffffff !important;
-        border: 1px solid var(--field-line) !important;
+        border: 1.5px solid var(--field-line) !important;
         border-radius: 11px !important;
-        box-shadow: 0 1px 2px rgba(15,23,42,0.04) !important;
-        transition: border-color 0.16s var(--ease), box-shadow 0.16s var(--ease), background-color 0.16s var(--ease) !important;
+        box-shadow: 0 1px 2px rgba(15,23,42,0.05) !important;
+        transition: border-color 0.16s var(--ease), box-shadow 0.16s var(--ease) !important;
     }}
-    /* Campos internos herdam o fundo do contêiner (sem retângulo cinza duplo) */
+    /* Campos internos SEM borda/fundo próprios (evita retângulo cinza duplo) */
     .stTextInput input, .stNumberInput input, .stDateInput input,
-    [data-baseweb="input"] input, [data-baseweb="base-input"] input, .stTextArea textarea {{
+    div[data-baseweb="input"] input, div[data-baseweb="base-input"] input,
+    div[data-baseweb="select"] input {{
         background-color: transparent !important;
+        border: none !important;
         color: var(--ink) !important;
     }}
-    /* Hover: contorno escurece de leve */
-    [data-baseweb="input"]:hover, [data-baseweb="base-input"]:hover,
-    [data-baseweb="select"] > div:hover, .stTextArea textarea:hover {{
+    .stTextArea textarea {{ color: var(--ink) !important; }}
+    /* Hover */
+    .stTextInput div[data-baseweb="input"]:hover,
+    .stNumberInput div[data-baseweb="input"]:hover,
+    .stDateInput div[data-baseweb="input"]:hover,
+    div[data-baseweb="select"] > div:hover,
+    div[data-baseweb="base-input"]:hover,
+    .stTextArea textarea:hover {{
         border-color: var(--field-line-hover) !important;
     }}
     /* Foco: contorno na cor do tema + anel suave */
-    [data-baseweb="input"]:focus-within, [data-baseweb="select"] > div:focus-within,
-    .stTextArea textarea:focus, [data-baseweb="base-input"]:focus-within {{
+    .stTextInput div[data-baseweb="input"]:focus-within,
+    .stNumberInput div[data-baseweb="input"]:focus-within,
+    .stDateInput div[data-baseweb="input"]:focus-within,
+    div[data-baseweb="select"] > div:focus-within,
+    div[data-baseweb="base-input"]:focus-within,
+    .stTextArea textarea:focus {{
         border-color: var(--brand) !important;
         box-shadow: 0 0 0 3.5px var(--brand-soft) !important;
     }}
-    /* Botões de +/- do number input e ícones acompanham a borda */
-    .stNumberInput button {{ border-color: var(--field-line) !important; background: #fff !important; }}
+    /* Botões +/- do number input acompanham a borda */
+    .stNumberInput button {{ border: 1.5px solid var(--field-line) !important; background: #fff !important; }}
     .stNumberInput button:hover {{ border-color: var(--brand) !important; color: var(--brand) !important; }}
-    /* Placeholder um pouco mais legível */
+    /* Placeholder mais legível */
     input::placeholder, textarea::placeholder {{ color: #94a3b8 !important; opacity: 1 !important; }}
     [data-testid="stFileUploader"] section {{
         border-radius: 14px !important; border: 1.5px dashed #cbd5e1 !important;
