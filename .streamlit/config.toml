@@ -1,9 +1,16 @@
+# ==========================================================
+# Tema base do Streamlit — Portal Consorbens
+# Define o contorno e o fundo branco dos campos de entrada.
+# O restante do visual (cores da marca, sombras, animações)
+# vem do CSS em modulos/tema.py.
+# ==========================================================
 [theme]
 base = "light"
-primaryColor = "#e74c3c"
+primaryColor = "#2c7a73"
 secondaryBackgroundColor = "#ffffff"
 textColor = "#0f172a"
 
+# Contorno visível em todos os widgets (campos, selects, etc.)
 showWidgetBorder = true
 borderColor = "#aeb9c9"
 baseRadius = "large"
