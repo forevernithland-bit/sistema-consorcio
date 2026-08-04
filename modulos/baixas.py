@@ -3,11 +3,27 @@ import pandas as pd
 from datetime import datetime
 from utils import formatar_brl_puro
 from regras import gerar_tabela_parcelas
+from modulos.importar_comissoes import render_importar_comissoes, render_historico_comissoes
 
-def render_baixas(supabase, df_vendas_global, df_admin, cfg, status_dict):
+def render_baixas(supabase, df_vendas_global, df_admin, cfg, status_dict, lista_admin_bd=None):
     st.markdown("### 💰 Baixar Parcelas de Comissão")
-    
-    if 'cart_baixas' not in st.session_state: 
+
+    aba_import, aba_manual, aba_hist = st.tabs(
+        ["📥 Importar Resumo (NF)", "✍️ Baixa Manual", "📚 Histórico"]
+    )
+
+    with aba_import:
+        render_importar_comissoes(supabase, df_vendas_global, cfg, lista_admin_bd or [])
+
+    with aba_hist:
+        render_historico_comissoes(supabase)
+
+    with aba_manual:
+        _render_baixa_manual(supabase, df_vendas_global, df_admin, cfg, status_dict)
+
+
+def _render_baixa_manual(supabase, df_vendas_global, df_admin, cfg, status_dict):
+    if 'cart_baixas' not in st.session_state:
         st.session_state['cart_baixas'] = []
 
     st.subheader("1. Buscar Cota")
