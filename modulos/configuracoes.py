@@ -109,15 +109,23 @@ def render_configuracoes(supabase, df_admin_cad, df_admin, lista_admin_bd, cfg, 
         imp_in = st.number_input("Imposto Nota (%)", value=parse_float_safe(cfg.get("Imposto", 7.16)), step=0.01)
 
         if st.button("Salvar Regras", type="primary", use_container_width=True):
+            # Converte tudo para tipos nativos do Python (evita numpy.int64/float64,
+            # que o banco pode rejeitar). Percentuais/valores = float; qtd parcelas = int.
             n_c = {
-                "Breno_Breno": b_b, "Breno_Uriel": b_u, "Uriel_Uriel": u_u, "Uriel_Breno": u_b, 
-                "Cons_Breno": c_b, "Cons_Uriel": c_u, "T1_Max": t1_max, "T1_Pct": t1_pct, "T1_Parc": t1_parc, 
-                "T2_Max": t2_max, "T2_Pct": t2_pct, "T2_Parc": t2_parc, "T3_Pct": t3_pct, "T3_Parc": t3_parc, 
-                "Imposto": imp_in
+                "Breno_Breno": float(b_b), "Breno_Uriel": float(b_u),
+                "Uriel_Uriel": float(u_u), "Uriel_Breno": float(u_b),
+                "Cons_Breno": float(c_b), "Cons_Uriel": float(c_u),
+                "T1_Max": float(t1_max), "T1_Pct": float(t1_pct), "T1_Parc": int(t1_parc),
+                "T2_Max": float(t2_max), "T2_Pct": float(t2_pct), "T2_Parc": int(t2_parc),
+                "T3_Pct": float(t3_pct), "T3_Parc": int(t3_parc),
+                "Imposto": float(imp_in)
             }
-            if cfg_id: 
-                supabase.table("config_interna").update(n_c).eq("id", cfg_id).execute()
-            else: 
-                supabase.table("config_interna").insert(n_c).execute()
-            st.success("Atualizado!")
-            st.rerun()
+            try:
+                if cfg_id:
+                    supabase.table("config_interna").update(n_c).eq("id", int(cfg_id)).execute()
+                else:
+                    supabase.table("config_interna").insert(n_c).execute()
+                st.success("✅ Regras atualizadas!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"❌ Erro ao salvar as regras: {e}")
