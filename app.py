@@ -319,6 +319,42 @@ css = """
     .media-card { background: white; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .media-img { max-width: 100%; max-height: 120px; object-fit: contain; border-radius: 4px; margin-bottom: 10px; }
     .media-title { font-size: 13px; font-weight: 500; color: #334155; margin-bottom: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ==========================================================
+       CAMADA PREMIUM v2 — mais profundidade e identidade
+       ========================================================== */
+    /* Sidebar com leve gradiente e respiro */
+    [data-testid="stSidebar"] > div:first-child { background: linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%) !important; }
+    [data-testid="stSidebar"] [data-testid="stImage"] { padding: 4px 6px 2px; }
+
+    /* Menu lateral em PÍLULAS com item ativo destacado (marca) */
+    [data-testid="stSidebar"] div[role="radiogroup"] label {
+        padding: 3px 12px !important;
+        border-radius: 10px !important;
+        margin: 1px 0 !important;
+        transition: background-color 0.15s ease, color 0.15s ease !important;
+    }
+    [data-testid="stSidebar"] div[role="radiogroup"] label:hover { background-color: #f1f5f9 !important; }
+    [data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) { background-color: var(--brand-soft) !important; }
+    [data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) p { color: var(--brand) !important; font-weight: 700 !important; }
+
+    /* Cards com sombra mais rica */
+    [data-testid="stMetric"] { border-radius: 16px !important; box-shadow: 0 6px 22px rgba(15,23,42,0.06), 0 1px 2px rgba(15,23,42,0.04) !important; }
+    [data-testid="stMetric"]:hover { box-shadow: 0 16px 40px rgba(15,23,42,0.12) !important; }
+    [data-testid="stExpander"] { border-radius: 16px !important; box-shadow: 0 6px 22px rgba(15,23,42,0.05) !important; }
+    [data-testid="stForm"] { border-radius: 18px !important; box-shadow: 0 10px 30px rgba(15,23,42,0.07) !important; }
+    [data-testid="stDataFrame"] { box-shadow: 0 6px 22px rgba(15,23,42,0.05) !important; }
+
+    /* Abas com destaque de fundo no item ativo */
+    button[data-baseweb="tab"] { color: #64748b !important; }
+    button[data-baseweb="tab"][aria-selected="true"] { background: var(--brand-soft) !important; color: var(--brand) !important; }
+
+    /* Títulos das telas com mais presença */
+    [data-testid="stMain"] h1, [data-testid="stMain"] h2 { font-weight: 800 !important; letter-spacing: -0.025em !important; }
+    [data-testid="stMain"] h3 { font-weight: 700 !important; }
+
+    /* Divider mais suave */
+    [data-testid="stMain"] hr { border-color: var(--line) !important; margin: 1.1rem 0 !important; }
 </style>
 """
 
@@ -421,8 +457,8 @@ menu_selecionado = st.session_state['menu_lateral']
 # Aplicando cor de fundo dependendo da área
 if menu_selecionado in simuladores_dict: 
     css += """ <style>.stApp { background-color: #0f172a !important; }</style> """
-else: 
-    css += """ <style>.stApp { background-color: #f8fafc !important; }</style> """
+else:
+    css += """ <style>.stApp { background: radial-gradient(1100px 480px at 100% -6%, rgba(231,76,60,0.06), transparent 55%), linear-gradient(180deg, #f7f9fc 0%, #eaeef4 100%) !important; background-attachment: fixed !important; }</style> """
 st.markdown(css, unsafe_allow_html=True)
 
 # ==========================================
