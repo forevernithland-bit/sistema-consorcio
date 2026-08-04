@@ -276,6 +276,20 @@ def montar_css(chave_tema=None):
     [data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked)::before {{ transform: scaleY(1); }}
     [data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) p {{ color: var(--brand) !important; font-weight: 700 !important; }}
 
+    /* MENU DO VISITANTE (antes de logar): tem layout próprio com margens
+       ajustadas — não pode receber as pílulas altas (senão o link "Cartas
+       Contempladas" sobrepõe). Aqui neutralizamos o espaçamento extra. */
+    [data-testid="stSidebar"] .st-key-menu_login div[role="radiogroup"] label,
+    [data-testid="stSidebar"] .st-key-menu_sim div[role="radiogroup"] label {{
+        padding: 0 !important;
+        margin: 0 !important;
+        transform: none !important;
+    }}
+    [data-testid="stSidebar"] .st-key-menu_login div[role="radiogroup"] label::before,
+    [data-testid="stSidebar"] .st-key-menu_sim div[role="radiogroup"] label::before {{
+        display: none !important;
+    }}
+
     /* Links externos no menu (ex: Cartas Contempladas) com o mesmo visual dos botões */
     [data-testid="stSidebar"] [data-testid="stLinkButton"] a, [data-testid="stSidebar"] a[kind="secondary"] {{ border: 1px solid #cbd5e1 !important; background-color: #f8fafc !important; color: #0f172a !important; text-decoration: none !important; }}
     [data-testid="stSidebar"] [data-testid="stLinkButton"] a:hover, [data-testid="stSidebar"] a[kind="secondary"]:hover {{ border-color: var(--brand) !important; color: var(--brand) !important; }}
