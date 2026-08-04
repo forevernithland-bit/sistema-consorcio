@@ -143,11 +143,155 @@ if st.session_state['tela_cheia_relatorio']:
 # ==========================================
 css = """
 <style>
-    .block-container { padding-top: 1rem; padding-bottom: 0rem; padding-left: 1rem; padding-right: 1rem; }
-    [data-testid="stSidebar"] { background-color: #ffffff !important; border-right: 2px solid #e2e8f0 !important; }
+    /* ==========================================================
+       DESIGN SYSTEM — Portal Consorbens (apenas visual)
+       Fonte, cores, sombras, transições e componentes premium.
+       ========================================================== */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    :root {
+        --brand: #e74c3c;
+        --brand-dark: #c0392b;
+        --brand-soft: rgba(231, 76, 60, 0.12);
+        --green: #22a559;
+        --green-dark: #178a47;
+        --ink: #0f172a;
+        --muted: #64748b;
+        --line: #eef2f7;
+        --card: #ffffff;
+        --shadow-sm: 0 1px 3px rgba(15,23,42,0.04);
+        --shadow-md: 0 4px 20px rgba(15,23,42,0.06);
+        --shadow-lg: 0 12px 34px rgba(15,23,42,0.10);
+        --radius: 14px;
+    }
+
+    /* ---- Tipografia global ---- */
+    html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stSidebar"],
+    input, textarea, button, select, [class*="css"] {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+        -webkit-font-smoothing: antialiased;
+    }
+    .block-container { padding-top: 1.6rem; padding-bottom: 2rem; padding-left: 2rem; padding-right: 2rem; max-width: 1400px; }
+    h1, h2, h3, h4, h5 { font-family: 'Inter', sans-serif !important; color: var(--ink); letter-spacing: -0.015em; font-weight: 700 !important; }
+    h3 { margin-bottom: 0.5rem !important; margin-top: 0.5rem !important; }
+
+    /* ---- Suave fade-in no conteúdo principal ---- */
+    [data-testid="stMain"] .block-container { animation: cbFade 0.35s ease; }
+    @keyframes cbFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+    /* ---- Botões (transição + arredondado + elevação no hover) ---- */
+    .stButton > button, .stFormSubmitButton > button, .stDownloadButton > button,
+    [data-testid="stLinkButton"] a {
+        border-radius: 10px !important;
+        font-weight: 600 !important;
+        padding: 0.5rem 1rem !important;
+        transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease !important;
+    }
+    .stButton > button:hover, .stDownloadButton > button:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+        border-color: var(--brand) !important;
+        color: var(--brand) !important;
+    }
+    button[kind="primary"], .stFormSubmitButton > button[kind="primary"] {
+        background: linear-gradient(135deg, var(--green), var(--green-dark)) !important;
+        border: none !important; color: #fff !important; font-weight: 700 !important;
+        box-shadow: 0 4px 14px rgba(34,165,89,0.30) !important;
+    }
+    button[kind="primary"]:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 22px rgba(34,165,89,0.42) !important;
+        color: #fff !important;
+    }
+
+    /* ---- Inputs / Selects / Datas (foco na cor da marca) ---- */
+    .stTextInput input, .stNumberInput input, .stDateInput input, .stTextArea textarea,
+    [data-baseweb="input"], [data-baseweb="select"] > div, [data-baseweb="base-input"] {
+        border-radius: 10px !important;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+    }
+    [data-baseweb="input"]:focus-within, [data-baseweb="select"] > div:focus-within,
+    .stTextArea textarea:focus, [data-baseweb="base-input"]:focus-within {
+        border-color: var(--brand) !important;
+        box-shadow: 0 0 0 3px var(--brand-soft) !important;
+    }
+
+    /* ---- Métricas viram cards elegantes ---- */
+    [data-testid="stMetric"] {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 16px 18px;
+        box-shadow: var(--shadow-sm);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    [data-testid="stMetric"]:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+    [data-testid="stMetricValue"] { font-size: 1.7rem !important; font-weight: 800 !important; color: var(--ink); }
+    [data-testid="stMetricLabel"] { color: var(--muted) !important; font-weight: 600 !important; }
+
+    /* ---- Abas (tabs) modernas ---- */
+    [data-baseweb="tab-list"] { gap: 6px; border-bottom: 1px solid var(--line); }
+    button[data-baseweb="tab"] {
+        font-size: 15px !important; font-weight: 600 !important;
+        border-radius: 10px 10px 0 0 !important; padding: 8px 16px !important;
+        transition: background-color 0.18s ease, color 0.18s ease !important;
+    }
+    button[data-baseweb="tab"]:hover { background: #f1f5f9; color: var(--brand) !important; }
+    button[data-baseweb="tab"][aria-selected="true"] { color: var(--brand) !important; }
+    [data-baseweb="tab-highlight"] { background: var(--brand) !important; height: 3px !important; border-radius: 3px; }
+
+    /* ---- Expanders viram cards ---- */
+    [data-testid="stExpander"] {
+        border: 1px solid var(--line) !important;
+        border-radius: var(--radius) !important;
+        box-shadow: var(--shadow-sm);
+        background: var(--card);
+        overflow: hidden;
+        transition: box-shadow 0.2s ease;
+    }
+    [data-testid="stExpander"]:hover { box-shadow: var(--shadow-md); }
+    [data-testid="stExpander"] summary { font-weight: 600 !important; }
+    [data-testid="stExpander"] summary:hover { color: var(--brand) !important; }
+
+    /* ---- Formulários viram cards ---- */
+    [data-testid="stForm"] {
+        border: 1px solid var(--line) !important;
+        border-radius: 16px !important;
+        padding: 22px !important;
+        box-shadow: var(--shadow-md);
+        background: var(--card);
+    }
+
+    /* ---- Tabelas / DataFrames arredondados ---- */
+    [data-testid="stDataFrame"], [data-testid="stTable"] {
+        border-radius: 12px !important;
+        overflow: hidden;
+        border: 1px solid var(--line) !important;
+        box-shadow: var(--shadow-sm);
+    }
+
+    /* ---- Alertas (success/info/warning/error) ---- */
+    [data-testid="stAlert"] {
+        border-radius: 12px !important;
+        border: none !important;
+        box-shadow: var(--shadow-sm);
+    }
+
+    /* ---- Barra de rolagem premium ---- */
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    /* ==========================================================
+       SIDEBAR
+       ========================================================== */
+    [data-testid="stSidebar"] { background-color: #ffffff !important; border-right: 1px solid var(--line) !important; box-shadow: 4px 0 24px rgba(15,23,42,0.03); }
     [data-testid="stSidebar"] p, [data-testid="stSidebar"] span, [data-testid="stSidebar"] div { color: #0f172a !important; }
     [data-testid="stSidebar"] hr { border-bottom-color: #e2e8f0 !important; margin-top: 0.5rem !important; margin-bottom: 0.5rem !important; }
     [data-testid="stSidebar"] button { border: 1px solid #cbd5e1 !important; background-color: #f8fafc !important; }
+    [data-testid="stSidebar"] [role="radiogroup"] label { transition: color 0.15s ease; border-radius: 8px; }
+    [data-testid="stSidebar"] [role="radiogroup"] label:hover { color: var(--brand) !important; }
     /* Links externos no menu (ex: Cartas Contempladas) com o mesmo visual dos botões */
     [data-testid="stSidebar"] [data-testid="stLinkButton"] a, [data-testid="stSidebar"] a[kind="secondary"] { border: 1px solid #cbd5e1 !important; background-color: #f8fafc !important; color: #0f172a !important; text-decoration: none !important; }
     [data-testid="stSidebar"] [data-testid="stLinkButton"] a:hover, [data-testid="stSidebar"] a[kind="secondary"]:hover { border-color: #e74c3c !important; color: #e74c3c !important; }
@@ -161,12 +305,7 @@ css = """
     [data-testid="stSidebar"] .menu-link-externo:hover .menu-link-bolinha { background-color: #e2e8f0; }
     [data-testid="stSidebar"] .menu-link-externo:hover .menu-link-texto { color: #e74c3c !important; }
     header[data-testid="stHeader"] { background-color: transparent !important; }
-    button[data-baseweb="tab"] { font-size: 16px !important; font-weight: bold !important; }
-    button[kind="primary"] { background-color: #239b56 !important; border-color: #239b56 !important; color: #ffffff !important; font-weight: bold !important; }
-    button[kind="primary"]:hover { background-color: #1b7a43 !important; border-color: #1b7a43 !important; color: #ffffff !important; transform: scale(1.02); transition: all 0.2s; }
-    [data-testid="stMetricValue"] { font-size: 1.8rem !important; }
-    h3 { margin-bottom: 0.5rem !important; margin-top: 0.5rem !important; }
-    
+
     /* Calendário Customizado Menor */
     .cal-table { width: 100%; border-collapse: collapse; text-align: center; font-family: sans-serif; background-color: white; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); font-size: 14px; }
     .cal-table th { background-color: #f8fafc; padding: 8px; font-weight: bold; color: #475569; border-bottom: 1px solid #e2e8f0; }
