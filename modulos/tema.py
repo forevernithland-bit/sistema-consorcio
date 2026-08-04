@@ -3,21 +3,25 @@ Design System do Portal Consorbens.
 Centraliza cores, tipografia e componentes visuais.
 Permite ao usuário trocar a cor do sistema pelo seletor no topo.
 """
+import os
+import base64
 import streamlit as st
 
 # ==========================================
 # PALETAS DISPONÍVEIS
+# O tema padrão "Consorbens" usa o teal (verde-petróleo) da logo/site.
 # ==========================================
 TEMAS = {
-    "vermelho": {"nome": "Consorbens",  "emoji": "🔴", "brand": "#e74c3c", "dark": "#c0392b", "glow": "231,76,60"},
+    "teal":     {"nome": "Consorbens",  "emoji": "🟢", "brand": "#2c7a73", "dark": "#1f5b55", "glow": "44,122,115"},
     "azul":     {"nome": "Corporativo", "emoji": "🔵", "brand": "#2563eb", "dark": "#1d4ed8", "glow": "37,99,235"},
-    "verde":    {"nome": "Esmeralda",   "emoji": "🟢", "brand": "#059669", "dark": "#047857", "glow": "5,150,105"},
+    "verde":    {"nome": "Esmeralda",   "emoji": "🟩", "brand": "#059669", "dark": "#047857", "glow": "5,150,105"},
     "roxo":     {"nome": "Violeta",     "emoji": "🟣", "brand": "#7c3aed", "dark": "#6d28d9", "glow": "124,58,237"},
     "laranja":  {"nome": "Âmbar",       "emoji": "🟠", "brand": "#ea580c", "dark": "#c2410c", "glow": "234,88,12"},
+    "vermelho": {"nome": "Rubi",        "emoji": "🔴", "brand": "#e74c3c", "dark": "#c0392b", "glow": "231,76,60"},
     "grafite":  {"nome": "Grafite",     "emoji": "⚫", "brand": "#334155", "dark": "#1e293b", "glow": "51,65,85"},
 }
 
-TEMA_PADRAO = "vermelho"
+TEMA_PADRAO = "teal"
 
 
 def tema_atual():
@@ -43,6 +47,45 @@ def render_seletor_tema():
                              key=f"tema_{chave}", use_container_width=True):
                     st.session_state["tema_cor"] = chave
                     st.rerun()
+
+
+# ==========================================
+# FUNDO ILUSTRADO DA TELA DE LOGIN
+# ==========================================
+def _svg_login_b64():
+    """Lê a ilustração de fundo (assets/fundo_login.svg) e devolve em base64."""
+    raiz = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    caminho = os.path.join(raiz, "assets", "fundo_login.svg")
+    try:
+        with open(caminho, "rb") as f:
+            return base64.b64encode(f.read()).decode("ascii")
+    except Exception:
+        return ""
+
+
+def css_fundo_login():
+    """CSS aplicado só na tela de login: gradiente da marca + montagem ilustrada."""
+    b64 = _svg_login_b64()
+    camada_img = f'url("data:image/svg+xml;base64,{b64}"), ' if b64 else ""
+    return f"""
+<style>
+    .stApp {{
+        background-color: #e6f1ef !important;
+        background-image: {camada_img}
+            radial-gradient(1100px 460px at 85% -10%, rgba(44,122,115,0.14), transparent 60%),
+            linear-gradient(180deg, #f1f7f6 0%, #dfeeeb 100%) !important;
+        background-position: bottom center, center, center !important;
+        background-size: 100% auto, cover, cover !important;
+        background-repeat: no-repeat, no-repeat, no-repeat !important;
+        background-attachment: fixed, fixed, fixed !important;
+    }}
+    /* Cartão do login com mais destaque sobre o fundo */
+    [data-testid="stMain"] [data-testid="stForm"] {{
+        box-shadow: 0 24px 55px rgba(15,23,42,0.16) !important;
+        border-radius: 20px !important;
+    }}
+</style>
+"""
 
 
 # ==========================================
