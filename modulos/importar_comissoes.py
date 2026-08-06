@@ -469,19 +469,51 @@ def render_historico_comissoes(supabase):
             })
             st.dataframe(show, use_container_width=True, hide_index=True)
 
-            opts = dfm.apply(lambda r: f"ID:{r['id']} | {r['grupo']}/{r['cota']} - {r['cliente']}", axis=1).tolist()
-            sel = st.selectbox("Remover um lançamento (desfaz a baixa):", [""] + opts, key=f"del_hist_{mes}")
-            if sel and st.button("🚨 Remover lançamento", key=f"btn_del_{mes}"):
-                rid = int(sel.split(" | ")[0].replace("ID:", ""))
-                linha = dfm[dfm["id"] == rid].iloc[0]
-                try:
-                    supabase.table("comissoes_pagas").delete().eq("id", rid).execute()
-                    # reverte o status para Pendente no fluxo de parcelas
-                    chave = linha.get("chave_unica")
-                    if chave:
-                        supabase.table("status_comissoes").update(
-                            {"Status": "Pendente"}).eq("Chave_Unica", chave).execute()
-                    st.success("Lançamento removido e parcela revertida para Pendente.")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Erro ao remover: {e}")
+            # ----- TOTAIS DO MÊS (rodapé, igual à baixa manual) -----
+            tot_liquido = dfm["valor_liquido"].sum()
+            st.markdown("##### 📊 Totais do mês")
+            mt1, mt2, mt3, mt4 = st.columns(4)
+            mt1.metric("Nota Total", formatar_brl_puro(tot_nota))
+            mt2.metric("Líquido", formatar_brl_puro(tot_liquido))
+            mt3.metric("Breno", formatar_brl_puro(tot_breno))
+            mt4.metric("Uriel", formatar_brl_puro(tot_uriel))
+
+            st.divider()
+            col_rem, col_mes = st.columns(2)
+
+            # ----- REMOVER UM LANÇAMENTO -----
+            with col_rem:
+                st.markdown("**Remover um lançamento** (desfaz a baixa)")
+                opts = dfm.apply(lambda r: f"ID:{r['id']} | {r['grupo']}/{r['cota']} - {r['cliente']}", axis=1).tolist()
+                sel = st.selectbox("Selecione o lançamento:", [""] + opts, key=f"del_hist_{mes}", label_visibility="collapsed")
+                if sel and st.button("🚨 Remover lançamento", key=f"btn_del_{mes}", use_container_width=True):
+                    rid = int(sel.split(" | ")[0].replace("ID:", ""))
+                    linha = dfm[dfm["id"] == rid].iloc[0]
+                    try:
+                        supabase.table("comissoes_pagas").delete().eq("id", rid).execute()
+                        chave = linha.get("chave_unica")
+                        if chave:
+                            supabase.table("status_comissoes").update(
+                                {"Status": "Pendente"}).eq("Chave_Unica", chave).execute()
+                        st.success("Lançamento removido e parcela revertida para Pendente.")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Erro ao remover: {e}")
+
+            # ----- EXCLUIR O MÊS INTEIRO -----
+            with col_mes:
+                st.markdown("**Excluir o registro completo do mês**")
+                st.caption(f"Remove os {len(dfm)} lançamentos de {titulo} e reverte todas as baixas.")
+                conf = st.checkbox(f"Confirmo excluir tudo de {titulo}", key=f"conf_del_mes_{mes}")
+                if st.button("🗑️ Excluir mês inteiro", key=f"btn_del_mes_{mes}",
+                             use_container_width=True, disabled=not conf):
+                    try:
+                        chaves = [c for c in dfm["chave_unica"].dropna().tolist() if c]
+                        supabase.table("comissoes_pagas").delete().eq("mes_competencia", mes).execute()
+                        if chaves:
+                            supabase.table("status_comissoes").update(
+                                {"Status": "Pendente"}).in_("Chave_Unica", chaves).execute()
+                        st.success(f"Mês {titulo} excluído ({len(dfm)} lançamentos) e baixas revertidas.")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Erro ao excluir o mês: {e}")
