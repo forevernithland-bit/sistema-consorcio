@@ -16,7 +16,7 @@ RE_INT_PEQ    = re.compile(r"^\d{1,2}$")                      # nº da parcela (
 RE_TOTAL      = re.compile(r"Total de Comiss.o do Per.odo:\s*\(\s*(\d+)\s*\)\s*([\d\.]+,\d{2})\s+([\d\.]+,\d{2})")
 RE_PERIODO    = re.compile(r"Encerramento de:\s*(\d{2}/\d{2}/\d{4})\s*a\s*(\d{2}/\d{2}/\d{4})")
 
-VENDEDORES = ["BRENO LIMA", "URIEL GOMES", "Consorbens", "Vendedor Terceiro"]
+VENDEDORES = ["BRENO LIMA", "URIEL GOMES", "Particular Breno", "Particular Uriel", "Consorbens", "Vendedor Terceiro"]
 PRODUTOS = ["Auto", "Imóvel", "Moto", "Caminhão", "Serviços"]
 
 
@@ -97,6 +97,12 @@ def dividir_socios(vendedor, liquido, cfg):
     elif v == "CONSORBENS":
         b = liquido * parse_float_safe(cfg.get("Cons_Breno", 50.0)) / 100.0
         u = liquido * parse_float_safe(cfg.get("Cons_Uriel", 50.0)) / 100.0
+    elif v == "PARTICULAR BRENO":   # cota particular: 100% Breno
+        b = liquido
+        u = 0.0
+    elif v == "PARTICULAR URIEL":   # cota particular: 100% Uriel
+        u = liquido
+        b = 0.0
     else:  # Vendedor Terceiro ou não identificado -> revisar manualmente (50/50 por padrão)
         b = liquido * 0.5
         u = liquido * 0.5
