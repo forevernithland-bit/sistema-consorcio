@@ -74,6 +74,12 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict):
             elif vendedor == "Consorbens":
                 breno_rec = corretora_liq * (parse_float_safe(cfg.get('Cons_Breno', 50))/100.0)
                 uriel_rec = corretora_liq * (parse_float_safe(cfg.get('Cons_Uriel', 50))/100.0)
+            elif vendedor == "Particular Breno":
+                breno_rec = corretora_liq  # 100% Breno
+                uriel_rec = 0.0
+            elif vendedor == "Particular Uriel":
+                uriel_rec = corretora_liq  # 100% Uriel
+                breno_rec = 0.0
             else:
                 if i <= tier_parc: vend_rec = val_venda * (tier_pct/100.0) / tier_parc
                 sobra = corretora_liq - vend_rec
