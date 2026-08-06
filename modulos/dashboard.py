@@ -162,7 +162,7 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
                         c_ed1, c_ed2, c_ed3 = st.columns(3)
                         with c_ed1: novo_status = st.selectbox("Status", opcoes_status, index=opcoes_status.index(status_atual))
                         with c_ed2:
-                            opts_v = ["BRENO LIMA", "URIEL GOMES", "Consorbens", "Vendedor Terceiro"]
+                            opts_v = ["BRENO LIMA", "URIEL GOMES", "Particular Breno", "Particular Uriel", "Consorbens", "Vendedor Terceiro"]
                             novo_vendedor = st.selectbox("Vendedor", opts_v, index=opts_v.index(vendedor_atual) if vendedor_atual in opts_v else 0) if is_master else st.text_input("Vendedor", value=vendedor_atual, disabled=True)
                         with c_ed3: nova_data = st.date_input("Data da Venda", value=data_atual_obj, format="DD/MM/YYYY") if is_master else st.text_input("Data da Venda", value=formatar_data_br(cota_info['Data_Real']), disabled=True)
 
