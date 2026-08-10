@@ -22,6 +22,7 @@ from modulos.configuracoes import render_configuracoes
 from modulos.senhas import render_senhas
 from modulos.assistente import render_widget_ia, render_config_ia
 from modulos.tema import montar_css, render_seletor_tema, css_fundo_login
+from modulos.ofertar_lance import render_ofertar_lance
 
 # ==========================================
 # 1. CONFIGURAÇÃO DA PÁGINA E SESSÕES
@@ -201,9 +202,9 @@ else:
     
     # Condicional que adiciona a aba "Senhas" e "Base de Conhecimento" dependendo do perfil
     if is_master:
-        opcoes_principais = ["Dashboard", "Nova Venda", "Assembleias", "Relatórios", "Mídias", "Baixar Parcelas", "Configurações de Sistema", "Senhas", "Base de Conhecimento"] 
+        opcoes_principais = ["Dashboard", "Ofertar Lance", "Nova Venda", "Assembleias", "Relatórios", "Mídias", "Baixar Parcelas", "Configurações de Sistema", "Senhas", "Base de Conhecimento"]
     else:
-        opcoes_principais = ["Dashboard", "Nova Venda", "Assembleias", "Relatórios", "Mídias"]
+        opcoes_principais = ["Dashboard", "Ofertar Lance", "Nova Venda", "Assembleias", "Relatórios", "Mídias"]
         
     try: idx_principal = opcoes_principais.index(st.session_state['menu_lateral'])
     except ValueError: idx_principal = None 
@@ -332,6 +333,8 @@ render_seletor_tema()
 # --- ROTEAMENTO PARA OS MÓDULOS ---
 if menu_selecionado == "Dashboard":
     render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd, df_admin, status_dict, cfg)
+elif menu_selecionado == "Ofertar Lance":
+    render_ofertar_lance(supabase, df_vendas_global)
 elif menu_selecionado == "Nova Venda":
     render_nova_venda(supabase, df_cli, lista_admin_bd)
 elif menu_selecionado == "Assembleias":
