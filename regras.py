@@ -30,7 +30,11 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict):
         cliente = r.get('Nome do cliente', 'Desconhecido')
         grupo = r.get('GRUPO', '')
         cota = r.get('COTA', '')
-        
+
+        # Consórcio Contemplado não gera comissão por parcela — a renda é o ágio.
+        if normalizar_string(r.get('TIPO_PRODUTO', '')) == "CONSORCIOCONTEMPLADO":
+            continue
+
         if pd.isna(data_venda):
             vendas_sem_data.append(f"{cliente} (Gr: {grupo}/Cota: {cota})")
             continue 
