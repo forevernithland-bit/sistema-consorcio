@@ -304,7 +304,13 @@ def _painel_status(supabase, is_master):
         axis=1,
     )
 
-    cols = ['cliente', 'Grupo/Cota', 'tipo_lance', 'Lance (E/P)', 'Situação', 'mensagem', 'Solicitado em']
+    if 'protocolo' not in df_f.columns:
+        df_f['protocolo'] = ""
+    df_f['Comprovante'] = df_f['protocolo'].apply(
+        lambda p: f"📄 {p}" if p and str(p) not in ("None", "nan", "SIMULACAO") else ""
+    )
+
+    cols = ['cliente', 'Grupo/Cota', 'tipo_lance', 'Lance (E/P)', 'Situação', 'Comprovante', 'mensagem', 'Solicitado em']
     ren = {'cliente': 'Cliente', 'tipo_lance': 'Tipo', 'mensagem': 'Mensagem'}
     df_show = df_f[cols].rename(columns=ren)
     st.dataframe(df_show, use_container_width=True, hide_index=True)
