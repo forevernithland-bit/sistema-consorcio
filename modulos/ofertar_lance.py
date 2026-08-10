@@ -1,16 +1,32 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from utils import formatar_brl_puro, normalizar_string
+from utils import formatar_brl_puro, normalizar_string, normalizar_produto
 
 # Administradoras que já têm automação de lance configurada no Worker.
 # Por enquanto só a Yamaha (site newkey.cny.com.br).
 ADMINS_COM_LANCE = ["YAMAHA"]
 
-OPCOES_TIPO_LANCE = ["Lance Fixo", "Lance Livre"]
+# Regras do LANCE FIXO por produto (Yamaha, out/2026).
+#   lance    = % total do lance fixo
+#   embutido = % que pode sair do próprio crédito (embutido)
+#   próprios = lance - embutido  (o que o cliente paga de recurso próprio)
+# O usuário pode ajustar linha a linha, pois alguns grupos têm ajuste.
+LANCE_FIXO_DEFAULTS = {
+    "IMOVEL":   {"lance": 30.0, "embutido": 25.0},  # -> 5% próprios
+    "MOTO":     {"lance": 35.0, "embutido": 15.0},  # -> 20% próprios
+    "AUTO":     {"lance": 25.0, "embutido": 15.0},  # -> 10% próprios
+    "CAMINHAO": {"lance": 25.0, "embutido": 25.0},  # -> 0% próprios (grupo permite até 30%)
+}
+DEFAULT_LANCE = {"lance": 0.0, "embutido": 0.0}
 
 # Status da cota que NÃO deve aparecer para ofertar lance
 STATUS_OCULTAR = ["CONTEMPLADA"]
+
+
+def _regra_lance(produto):
+    """Retorna o dict de default (lance/embutido) para o produto da cota."""
+    return LANCE_FIXO_DEFAULTS.get(normalizar_produto(produto), DEFAULT_LANCE)
 
 
 def _mapa_ultimo_lance(supabase, venda_ids):
@@ -107,6 +123,9 @@ def render_ofertar_lance(supabase, df_vendas_global):
         pedido = mapa_ultimo.get(vid)
         status_atual = (pedido.get("status") or "").upper() if pedido else ""
         na_fila = status_atual in ("PENDENTE", "PROCESSANDO")
+        regra = _regra_lance(r.get('PRODUTO', ''))
+        lance = regra["lance"]
+        embutido = regra["embutido"]
         linhas.append({
             "venda_id": vid,
             "Selecionar": False,
@@ -115,8 +134,9 @@ def render_ofertar_lance(supabase, df_vendas_global):
             "Produto": r.get('PRODUTO', ''),
             "Grupo/Cota": f"{r.get('GRUPO','')}/{r.get('COTA','')}",
             "Valor": formatar_brl_puro(r.get('Valor_Numerico', 0)),
-            "Tipo de Lance": "Lance Fixo",
-            "Lance Livre (%)": 0.0,
+            "Lance Fixo (%)": lance,
+            "Embutido (%)": embutido,
+            "Próprios (%)": max(0.0, lance - embutido),
             "Situação": _rotulo_situacao(pedido),
             "_na_fila": na_fila,
         })
@@ -126,7 +146,11 @@ def render_ofertar_lance(supabase, df_vendas_global):
     with c_top1:
         marcar_todos = st.checkbox("Marcar todos", value=False, key="lance_marcar_todos")
     with c_top2:
-        st.caption("💡 O campo **Lance Livre (%)** só é usado quando o tipo for *Lance Livre*.")
+        st.caption(
+            "💡 Só **Lance Fixo** por enquanto. Os percentuais já vêm pré-preenchidos por produto; "
+            "você pode ajustar **Lance Fixo (%)** e **Embutido (%)** por linha se o grupo exigir. "
+            "**Próprios (%) = Lance Fixo − Embutido** (recalcula ao atualizar a tela)."
+        )
 
     if marcar_todos:
         # Só marca os que ainda não estão na fila (evita repetir pedido)
@@ -141,8 +165,9 @@ def render_ofertar_lance(supabase, df_vendas_global):
         "Produto": st.column_config.TextColumn("Produto", disabled=True),
         "Grupo/Cota": st.column_config.TextColumn("Grupo/Cota", disabled=True),
         "Valor": st.column_config.TextColumn("Valor da Carta", disabled=True),
-        "Tipo de Lance": st.column_config.SelectboxColumn("Tipo de Lance", options=OPCOES_TIPO_LANCE, required=True),
-        "Lance Livre (%)": st.column_config.NumberColumn("Lance Livre (%)", min_value=0.0, max_value=100.0, step=0.5, format="%.2f%%"),
+        "Lance Fixo (%)": st.column_config.NumberColumn("Lance Fixo (%)", min_value=0.0, max_value=100.0, step=0.5, format="%.2f%%", help="% total do lance fixo"),
+        "Embutido (%)": st.column_config.NumberColumn("Embutido (%)", min_value=0.0, max_value=100.0, step=0.5, format="%.2f%%", help="% que sai do próprio crédito"),
+        "Próprios (%)": st.column_config.NumberColumn("Próprios (%)", format="%.2f%%", help="Recursos próprios = Lance Fixo − Embutido (calculado)"),
         "Situação": st.column_config.TextColumn("Situação", disabled=True),
     }
 
@@ -151,7 +176,7 @@ def render_ofertar_lance(supabase, df_vendas_global):
     df_result = st.data_editor(
         df_edit,
         column_config=col_config,
-        disabled=["Cliente", "Vendedor", "Produto", "Grupo/Cota", "Valor", "Situação"],
+        disabled=["Cliente", "Vendedor", "Produto", "Grupo/Cota", "Valor", "Próprios (%)", "Situação"],
         hide_index=True,
         use_container_width=True,
         key=editor_key,
@@ -192,8 +217,9 @@ def _enfileirar(supabase, selecionados, mapa_ultimo):
             pulados += 1
             continue
 
-        tipo_lance = r['Tipo de Lance']
-        valor_lance = float(r['Lance Livre (%)']) if tipo_lance == "Lance Livre" else None
+        pct_lance = float(r['Lance Fixo (%)'])
+        pct_embutido = float(r['Embutido (%)'])
+        pct_proprio = max(0.0, pct_lance - pct_embutido)
 
         grupo, cota = "", ""
         gc = str(r.get('Grupo/Cota', ''))
@@ -209,8 +235,10 @@ def _enfileirar(supabase, selecionados, mapa_ultimo):
             "administradora": "Yamaha",
             "grupo": grupo.strip(),
             "cota": cota.strip(),
-            "tipo_lance": tipo_lance,
-            "valor_lance": valor_lance,
+            "tipo_lance": "Lance Fixo",
+            "pct_lance": pct_lance,
+            "pct_embutido": pct_embutido,
+            "pct_proprio": pct_proprio,
             "status": "PENDENTE",
             "solicitado_por": usuario,
         }
@@ -266,7 +294,17 @@ def _painel_status(supabase, is_master):
     df_f['Solicitado em'] = df_f['criado_em'].apply(_dt)
     df_f['Grupo/Cota'] = df_f['grupo'].fillna('').astype(str) + "/" + df_f['cota'].fillna('').astype(str)
 
-    cols = ['cliente', 'Grupo/Cota', 'tipo_lance', 'Situação', 'mensagem', 'Solicitado em']
+    def _pct(v):
+        try:
+            return f"{float(v):g}%"
+        except Exception:
+            return "—"
+    df_f['Lance (E/P)'] = df_f.apply(
+        lambda x: f"{_pct(x.get('pct_lance'))} (emb {_pct(x.get('pct_embutido'))} / próp {_pct(x.get('pct_proprio'))})",
+        axis=1,
+    )
+
+    cols = ['cliente', 'Grupo/Cota', 'tipo_lance', 'Lance (E/P)', 'Situação', 'mensagem', 'Solicitado em']
     ren = {'cliente': 'Cliente', 'tipo_lance': 'Tipo', 'mensagem': 'Mensagem'}
     df_show = df_f[cols].rename(columns=ren)
     st.dataframe(df_show, use_container_width=True, hide_index=True)
