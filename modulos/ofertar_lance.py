@@ -29,9 +29,17 @@ def _regra_lance(produto):
     return LANCE_FIXO_DEFAULTS.get(normalizar_produto(produto), DEFAULT_LANCE)
 
 
+def _inicio_mes_atual():
+    """Primeiro dia do mês atual (ex: '2026-08-01') — a conferência é mensal."""
+    hoje = datetime.today()
+    return f"{hoje.year}-{hoje.month:02d}-01"
+
+
 def _mapa_ultimo_lance(supabase, venda_ids):
-    """Retorna {venda_id: dict_do_ultimo_pedido} lendo a fila_automacao.
-    Serve para mostrar a 'Situação' de cada cota e evitar pedidos duplicados."""
+    """Retorna {venda_id: dict_do_ultimo_pedido} DO MÊS ATUAL lendo a fila_automacao.
+    Pedidos de meses anteriores são ignorados aqui (viram histórico), para que,
+    ao virar o mês, as cotas não contempladas voltem a aparecer como disponíveis.
+    Serve para mostrar a 'Situação' de cada cota e evitar pedidos duplicados no mês."""
     if not venda_ids:
         return {}
     try:
@@ -39,6 +47,7 @@ def _mapa_ultimo_lance(supabase, venda_ids):
                .select("*")
                .eq("tipo", "LANCE")
                .in_("venda_id", list(venda_ids))
+               .gte("criado_em", _inicio_mes_atual())
                .order("criado_em", desc=True)
                .execute())
     except Exception:
@@ -70,6 +79,8 @@ def _rotulo_situacao(pedido):
         except Exception:
             dt = str(dt)[:10]
         return f"✅ Ofertado {dt}"
+    if status == "JA_OFERTADO":
+        return "☑️ Já estava ofertado"
     return status or "—"
 
 
@@ -77,11 +88,14 @@ def render_ofertar_lance(supabase, df_vendas_global):
     is_master = (st.session_state.get('perfil_logado') == "Master") or \
                 (st.session_state.get('usuario_logado') in ['breno', 'uriel'])
 
+    mes_atual = datetime.today().strftime("%m/%Y")
     st.markdown("### 🎯 Ofertar Lance (Yamaha)")
     st.caption(
-        "Marque as cotas, escolha o tipo de lance e clique em **Ofertar Lance**. "
-        "O sistema envia os pedidos para a fila e o robô do escritório oferta cota a cota no Newcon, "
-        "aguardando a confirmação de cada uma antes de seguir. Cotas **Contempladas** não aparecem."
+        f"Marque as cotas e clique em **Ofertar Lance**. O robô do escritório oferta cota a cota "
+        f"no Newcon, aguardando a confirmação de cada uma. Cotas **Contempladas** não aparecem. "
+        f"A conferência é **mensal** (referência: **{mes_atual}**): ao virar o mês, as cotas não "
+        f"contempladas voltam a aparecer como disponíveis, e os lances dos meses anteriores ficam "
+        f"guardados no histórico abaixo."
     )
 
     if df_vendas_global is None or df_vendas_global.empty:
@@ -122,7 +136,9 @@ def render_ofertar_lance(supabase, df_vendas_global):
         vid = int(r['id'])
         pedido = mapa_ultimo.get(vid)
         status_atual = (pedido.get("status") or "").upper() if pedido else ""
-        na_fila = status_atual in ("PENDENTE", "PROCESSANDO")
+        # "Já tratado no mês": na fila, em processamento, ofertado ou já-ofertado.
+        # (ERRO fica de fora, pois precisa de atenção / pode ser reofertado.)
+        na_fila = status_atual in ("PENDENTE", "PROCESSANDO", "SUCESSO", "JA_OFERTADO")
         regra = _regra_lance(r.get('PRODUTO', ''))
         lance = regra["lance"]
         embutido = regra["embutido"]
@@ -211,9 +227,11 @@ def _enfileirar(supabase, selecionados, mapa_ultimo):
     for _, r in selecionados.iterrows():
         vid = int(r['venda_id'])
 
-        # Evita duplicar: se já tem um pedido PENDENTE/PROCESSANDO, pula
+        # Evita duplicar no mês: se a cota já está na fila, em processamento,
+        # ofertada ou já-ofertada NESTE mês, pula (a conferência é mensal).
         pedido_ant = mapa_ultimo.get(vid)
-        if pedido_ant and (pedido_ant.get("status") or "").upper() in ("PENDENTE", "PROCESSANDO"):
+        if pedido_ant and (pedido_ant.get("status") or "").upper() in (
+                "PENDENTE", "PROCESSANDO", "SUCESSO", "JA_OFERTADO"):
             pulados += 1
             continue
 
@@ -252,27 +270,47 @@ def _enfileirar(supabase, selecionados, mapa_ultimo):
     if inseridos:
         st.success(f"✅ {inseridos} lance(s) enviados para a fila! O robô vai processar em seguida.")
     if pulados:
-        st.warning(f"⚠️ {pulados} cota(s) já estavam na fila e foram ignoradas.")
+        st.warning(f"⚠️ {pulados} cota(s) já tratada(s) neste mês (na fila ou ofertada) foram ignoradas.")
     if inseridos:
         st.rerun()
 
 
 def _painel_status(supabase, is_master):
-    """Mostra os últimos pedidos da fila e como está cada um."""
+    """Mostra os pedidos da fila do mês escolhido (padrão: mês atual)."""
+    st.subheader("📋 Andamento dos Lances")
+
+    # Seletor de mês (mês atual + históricos dos meses anteriores)
+    hoje = datetime.today()
+    meses = []
+    y, m = hoje.year, hoje.month
+    for _ in range(12):
+        meses.append((y, m))
+        m -= 1
+        if m == 0:
+            m, y = 12, y - 1
+    labels = [f"{mm:02d}/{yy}" for (yy, mm) in meses]
+
     cab1, cab2 = st.columns([3, 1])
     with cab1:
-        st.subheader("📋 Andamento dos Lances")
+        sel = st.selectbox("📅 Mês", labels, index=0, key="lance_hist_mes")
     with cab2:
         st.write("")
         if st.button("🔄 Atualizar", use_container_width=True):
             st.rerun()
 
+    y_sel, m_sel = meses[labels.index(sel)]
+    ini = f"{y_sel}-{m_sel:02d}-01"
+    ny, nm = (y_sel + 1, 1) if m_sel == 12 else (y_sel, m_sel + 1)
+    fim = f"{ny}-{nm:02d}-01"
+
     try:
         res = (supabase.table("fila_automacao")
                .select("*")
                .eq("tipo", "LANCE")
+               .gte("criado_em", ini)
+               .lt("criado_em", fim)
                .order("criado_em", desc=True)
-               .limit(50)
+               .limit(1000)
                .execute())
         dados = res.data or []
     except Exception as e:
@@ -280,7 +318,7 @@ def _painel_status(supabase, is_master):
         return
 
     if not dados:
-        st.info("Nenhum lance na fila ainda.")
+        st.info(f"Nenhum lance registrado em {sel}.")
         return
 
     df_f = pd.DataFrame(dados)
