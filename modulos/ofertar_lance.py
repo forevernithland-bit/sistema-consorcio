@@ -125,6 +125,21 @@ def render_ofertar_lance(supabase, df_vendas_global):
 
     df = df.sort_values(by="Data_Real", ascending=False)
 
+    # Campo de busca (cliente, grupo ou cota)
+    busca = st.text_input("🔍 Buscar cliente, grupo ou cota", key="busca_ofertar",
+                          placeholder="Digite parte do nome, o grupo ou a cota…")
+    if busca and busca.strip():
+        b = busca.strip()
+        df = df[
+            df['Nome do cliente'].astype(str).str.contains(b, case=False, na=False) |
+            df['GRUPO'].astype(str).str.contains(b, case=False, na=False) |
+            df['COTA'].astype(str).str.contains(b, case=False, na=False)
+        ]
+        if df.empty:
+            st.info(f"Nenhuma cota encontrada para “{b}”.")
+            _painel_status(supabase, is_master)
+            return
+
     # ------------------------------------------------------------------
     # 2. Situação atual de cada cota (lida da fila)
     # ------------------------------------------------------------------
@@ -354,6 +369,20 @@ def _painel_status(supabase, is_master):
     cols = ['cliente', 'Grupo/Cota', 'tipo_lance', 'Lance (E/P)', 'Situação', 'Comprovante', 'mensagem', 'Solicitado em']
     ren = {'cliente': 'Cliente', 'tipo_lance': 'Tipo', 'mensagem': 'Mensagem'}
     df_show = df_f[cols].rename(columns=ren)
+
+    # Campo de busca (cliente, grupo/cota, protocolo ou situação)
+    busca_h = st.text_input("🔍 Buscar no andamento (cliente, grupo/cota, protocolo…)",
+                            key="busca_andamento", placeholder="Digite parte do nome, grupo/cota ou protocolo…")
+    if busca_h and busca_h.strip():
+        b = busca_h.strip()
+        mask = False
+        for c in ['Cliente', 'Grupo/Cota', 'Comprovante', 'Situação', 'Mensagem']:
+            mask = mask | df_show[c].astype(str).str.contains(b, case=False, na=False)
+        df_show = df_show[mask]
+
+    if df_show.empty:
+        st.info(f"Nenhum lance encontrado para “{busca_h}”.")
+        return
     st.dataframe(df_show, use_container_width=True, hide_index=True)
 
     st.caption(
