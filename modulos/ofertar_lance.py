@@ -1,3 +1,4 @@
+import re
 import streamlit as st
 import pandas as pd
 from datetime import datetime
@@ -20,8 +21,8 @@ LANCE_FIXO_DEFAULTS = {
 }
 DEFAULT_LANCE = {"lance": 0.0, "embutido": 0.0}
 
-# Status da cota que NÃO deve aparecer para ofertar lance
-STATUS_OCULTAR = ["CONTEMPLADA"]
+# Canceladas e contempladas NÃO aparecem. Em Andamento e Em Atraso aparecem.
+STATUS_OCULTAR = ["CANCELADA", "CONTEMPLADA"]
 
 
 def _regra_lance(produto):
@@ -80,7 +81,8 @@ def _rotulo_situacao(pedido):
             dt = str(dt)[:10]
         return f"✅ Ofertado {dt}"
     if status == "JA_OFERTADO":
-        return "☑️ Já estava ofertado"
+        m = re.search(r"(\d{2}/\d{2}/\d{4})", pedido.get("mensagem") or "")
+        return f"☑️ Já ofertado em {m.group(1)}" if m else "☑️ Já estava ofertado"
     return status or "—"
 
 
@@ -92,7 +94,8 @@ def render_ofertar_lance(supabase, df_vendas_global):
     st.markdown("### 🎯 Ofertar Lance (Yamaha)")
     st.caption(
         f"Marque as cotas e clique em **Ofertar Lance**. O robô do escritório oferta cota a cota "
-        f"no Newcon, aguardando a confirmação de cada uma. Cotas **Contempladas** não aparecem. "
+        f"no Newcon, aguardando a confirmação de cada uma. **Canceladas e contempladas não aparecem** "
+        f"(Em Andamento e Em Atraso aparecem). "
         f"A conferência é **mensal** (referência: **{mes_atual}**): ao virar o mês, as cotas não "
         f"contempladas voltam a aparecer como disponíveis, e os lances dos meses anteriores ficam "
         f"guardados no histórico abaixo."
