@@ -3,11 +3,33 @@ import requests
 from datetime import datetime
 from utils import formatar_telefone, formatar_data, formatar_moeda
 
+PRODUTOS = ["Auto", "Imóvel", "Moto", "Caminhão", "Serviços"]
+VENDEDORES = ["BRENO LIMA", "URIEL GOMES", "Particular Breno", "Particular Uriel", "Consorbens", "Vendedor Terceiro"]
+# No Contemplado o vendedor vem pré-selecionado como Consorbens (por isso ele é o 1º da lista)
+VENDEDORES_CONTEMPLADO = ["Consorbens", "BRENO LIMA", "URIEL GOMES", "Particular Breno", "Particular Uriel", "Vendedor Terceiro"]
+
+
+def _salvar_cliente_se_novo(supabase, df_cli, cliente, telefone, email, end_completo, aniversario, profissao, renda):
+    """Insere o cliente na tabela de clientes, se ainda não existir."""
+    try:
+        if df_cli.empty or cliente not in df_cli['Nome'].tolist():
+            supabase.table("clientes").insert([{
+                "Nome": cliente, "Telefone": telefone, "Email": email, "Endereco": end_completo,
+                "Aniversario": aniversario, "Profissao": profissao, "Renda": renda,
+                "Data_Cadastro": datetime.today().strftime("%d/%m/%Y")
+            }]).execute()
+    except Exception:
+        pass
+
+
 def render_nova_venda(supabase, df_cli, lista_admin_bd):
     st.markdown("### 📝 Cadastrar Nova Venda")
-    
+
     is_master = (st.session_state.get('perfil_logado') == "Master") or (st.session_state.get('usuario_logado') in ['breno', 'uriel'])
 
+    # ==========================================================
+    # 1. DADOS DO CLIENTE
+    # ==========================================================
     col_c1, col_c2 = st.columns(2)
     with col_c1:
         cliente = st.text_input("Nome do Cliente *", key="v_cli")
@@ -17,12 +39,12 @@ def render_nova_venda(supabase, df_cli, lista_admin_bd):
         email = st.text_input("Email", key="v_email")
         aniversario = st.text_input("Data de Aniversário (DD/MM/AAAA)", key="v_ani", on_change=lambda: st.session_state.update({'v_ani': formatar_data(st.session_state.get('v_ani',''))}), placeholder="DD/MM/AAAA", max_chars=10)
         renda = st.text_input("Renda Mensal (R$)", key="v_ren", on_change=lambda: st.session_state.update({'v_ren': formatar_moeda(st.session_state.get('v_ren',''))}), placeholder="R$ 0,00")
-        
+
     st.markdown("##### Busca Rápida de Endereço")
     col_cep1, col_cep2 = st.columns([1, 3])
-    with col_cep1: 
+    with col_cep1:
         cep = st.text_input("CEP (Digite e clique fora)", max_chars=9)
-        
+
     if cep and cep != st.session_state.get('last_cep', ''):
         c_limpo = ''.join(filter(str.isdigit, cep))
         if len(c_limpo) == 8:
@@ -32,7 +54,7 @@ def render_nova_venda(supabase, df_cli, lista_admin_bd):
                     d_cep = res.json()
                     st.session_state.update({'v_rua': d_cep.get("logradouro", ""), 'v_bai': d_cep.get("bairro", ""), 'v_cid': d_cep.get("localidade", ""), 'v_uf': d_cep.get("uf", "")})
                     st.success("✅ CEP Encontrado!")
-            except: 
+            except:
                 st.warning("⚠️ Serviço de CEP indisponível.")
         st.session_state['last_cep'] = cep
 
@@ -46,72 +68,116 @@ def render_nova_venda(supabase, df_cli, lista_admin_bd):
     cidade = ce5.text_input("Cidade", key="v_cid" if 'v_cid' in st.session_state else None)
     uf = ce6.text_input("UF", max_chars=2, key="v_uf" if 'v_uf' in st.session_state else None)
 
-    st.subheader("2. Dados da Venda")
-    col_v1, col_v2 = st.columns(2)
-    with col_v1:
-        data = st.date_input("Data da Venda", format="DD/MM/YYYY")
-        vendedor = st.selectbox("Vendedor *", ["BRENO LIMA", "URIEL GOMES", "Particular Breno", "Particular Uriel", "Consorbens", "Vendedor Terceiro"]) if is_master else st.session_state['nome_vendedor']
-    with col_v2:
-        admin = st.selectbox("Administradora *", lista_admin_bd)
-        produto = st.selectbox("Produto *", ["Auto", "Imóvel", "Moto", "Caminhão", "Serviços"])
-        
-    st.markdown("##### Cotas Adquiridas")
-    if 'qtd_cotas' not in st.session_state: 
-        st.session_state['qtd_cotas'] = 1
-        
-    cotas_data = []
-    for i in range(st.session_state['qtd_cotas']):
-        st.markdown(f"**Cota {i+1}**")
-        cq1, cq2, cq3 = st.columns(3)
-        with cq1: grp = st.text_input(f"Grupo *", key=f"g_{i}")
-        with cq2: cta = st.text_input(f"Cota *", key=f"c_{i}")
-        with cq3: val_str = st.text_input(f"Valor (R$) *", key=f"v_{i}", on_change=lambda idx=i: st.session_state.update({f'v_{idx}': formatar_moeda(st.session_state.get(f'v_{idx}',''))}), placeholder="R$ 0,00")
-        cotas_data.append({"grupo": grp, "cota": cta, "valor_str": val_str})
+    end_completo = ", ".join([p for p in [rua, numero, complemento, bairro, cidade, uf] if p]) + (f" (CEP: {cep})" if cep else "")
 
-    if st.button("➕ Adicionar mais uma Cota"): 
-        st.session_state['qtd_cotas'] += 1
-        st.rerun()
-        
-    st.markdown("---")
-    if st.button("Salvar Venda(s)", type="primary", use_container_width=True):
-        if not cliente.strip() or not cotas_data[0]['grupo'].strip() or not cotas_data[0]['cota'].strip():
-            st.error("❌ Preencha os campos obrigatórios (*).")
-        else:
-            erros_cotas = []
-            for i, c in enumerate(cotas_data):
-                val_limpo = ''.join(filter(str.isdigit, str(c['valor_str'])))
-                if not c['grupo'].strip() or not c['cota'].strip() or (float(val_limpo)/100 if val_limpo else 0) <= 0: 
-                    erros_cotas.append(str(i+1))
-            
-            if erros_cotas: 
-                st.error(f"❌ Preencha os dados da Cota: {', '.join(erros_cotas)}")
+    # ==========================================================
+    # 2. DADOS DA VENDA
+    # ==========================================================
+    st.subheader("2. Dados da Venda")
+    tipo_produto = st.selectbox("Tipo de Produto *", ["Consórcio Tradicional", "Consórcio Contemplado"])
+
+    # ----------------------------------------------------------
+    # 2A. CONSÓRCIO TRADICIONAL (fluxo original: cotas com grupo/cota)
+    # ----------------------------------------------------------
+    if tipo_produto == "Consórcio Tradicional":
+        col_v1, col_v2 = st.columns(2)
+        with col_v1:
+            data = st.date_input("Data da Venda", format="DD/MM/YYYY")
+            vendedor = st.selectbox("Vendedor *", VENDEDORES) if is_master else st.session_state['nome_vendedor']
+        with col_v2:
+            admin = st.selectbox("Administradora *", lista_admin_bd)
+            produto = st.selectbox("Produto *", PRODUTOS)
+
+        st.markdown("##### Cotas Adquiridas")
+        if 'qtd_cotas' not in st.session_state:
+            st.session_state['qtd_cotas'] = 1
+
+        cotas_data = []
+        for i in range(st.session_state['qtd_cotas']):
+            st.markdown(f"**Cota {i+1}**")
+            cq1, cq2, cq3 = st.columns(3)
+            with cq1: grp = st.text_input(f"Grupo *", key=f"g_{i}")
+            with cq2: cta = st.text_input(f"Cota *", key=f"c_{i}")
+            with cq3: val_str = st.text_input(f"Valor (R$) *", key=f"v_{i}", on_change=lambda idx=i: st.session_state.update({f'v_{idx}': formatar_moeda(st.session_state.get(f'v_{idx}',''))}), placeholder="R$ 0,00")
+            cotas_data.append({"grupo": grp, "cota": cta, "valor_str": val_str})
+
+        if st.button("➕ Adicionar mais uma Cota"):
+            st.session_state['qtd_cotas'] += 1
+            st.rerun()
+
+        st.markdown("---")
+        if st.button("Salvar Venda(s)", type="primary", use_container_width=True):
+            if not cliente.strip() or not cotas_data[0]['grupo'].strip() or not cotas_data[0]['cota'].strip():
+                st.error("❌ Preencha os campos obrigatórios (*).")
             else:
-                end_completo = ", ".join([p for p in [rua, numero, complemento, bairro, cidade, uf] if p]) + (f" (CEP: {cep})" if cep else "")
-                vendas_insert = []
-                for c in cotas_data:
-                    vf = float(''.join(filter(str.isdigit, str(c['valor_str']))))/100
-                    vendas_insert.append({
-                        "NOME": cliente, 
-                        "DATA": data.strftime("%d/%m/%Y"), 
-                        "PRODUTO": produto, 
-                        "VENDEDOR": vendedor, 
-                        "GRUPO": c['grupo'], 
-                        "COTA": c['cota'], 
-                        "ADMINISTRADORA": admin, 
-                        "STATUS": "Em Andamento", 
-                        "VALOR": vf
-                    })
-                
-                supabase.table("vendas").insert(vendas_insert).execute()
-                
-                try:
-                    if df_cli.empty or cliente not in df_cli['Nome'].tolist():
-                        supabase.table("clientes").insert([{
-                            "Nome": cliente, "Telefone": telefone, "Email": email, "Endereco": end_completo,
-                            "Aniversario": aniversario, "Profissao": profissao, "Renda": renda, "Data_Cadastro": datetime.today().strftime("%d/%m/%Y")
-                        }]).execute()
-                except Exception: 
-                    pass
-                    
-                st.success(f"✅ {len(cotas_data)} Venda(s) salvas!")
-                st.session_state['qtd_cotas'] = 1
+                erros_cotas = []
+                for i, c in enumerate(cotas_data):
+                    val_limpo = ''.join(filter(str.isdigit, str(c['valor_str'])))
+                    if not c['grupo'].strip() or not c['cota'].strip() or (float(val_limpo)/100 if val_limpo else 0) <= 0:
+                        erros_cotas.append(str(i+1))
+
+                if erros_cotas:
+                    st.error(f"❌ Preencha os dados da Cota: {', '.join(erros_cotas)}")
+                else:
+                    vendas_insert = []
+                    for c in cotas_data:
+                        vf = float(''.join(filter(str.isdigit, str(c['valor_str']))))/100
+                        vendas_insert.append({
+                            "NOME": cliente,
+                            "DATA": data.strftime("%d/%m/%Y"),
+                            "PRODUTO": produto,
+                            "VENDEDOR": vendedor,
+                            "GRUPO": c['grupo'],
+                            "COTA": c['cota'],
+                            "ADMINISTRADORA": admin,
+                            "STATUS": "Em Andamento",
+                            "TIPO_PRODUTO": "Consórcio Tradicional",
+                            "VALOR": vf
+                        })
+
+                    supabase.table("vendas").insert(vendas_insert).execute()
+                    _salvar_cliente_se_novo(supabase, df_cli, cliente, telefone, email, end_completo, aniversario, profissao, renda)
+                    st.success(f"✅ {len(cotas_data)} Venda(s) salvas!")
+                    st.session_state['qtd_cotas'] = 1
+
+    # ----------------------------------------------------------
+    # 2B. CONSÓRCIO CONTEMPLADO (venda de carta contemplada, com ágio)
+    # ----------------------------------------------------------
+    else:
+        st.caption("💡 Consórcio Contemplado: a renda da Consorbens é o **Ágio**. Não entra no Ofertar Lance nem gera comissão por parcela.")
+        col_v1, col_v2 = st.columns(2)
+        with col_v1:
+            data = st.date_input("Data da Venda", format="DD/MM/YYYY", key="ct_data")
+            admin = st.selectbox("Administradora *", lista_admin_bd, key="ct_admin")
+            valor_consorcio = st.number_input("Valor do Consórcio (R$) *", min_value=0.0, step=1000.0, format="%.2f", key="ct_vc")
+        with col_v2:
+            vendedor = st.selectbox("Vendedor *", VENDEDORES_CONTEMPLADO, index=0, key="ct_vend") if is_master else st.session_state['nome_vendedor']
+            produto = st.selectbox("Produto *", PRODUTOS, key="ct_prod")
+            valor_entrada = st.number_input("Valor da Entrada (R$)", min_value=0.0, step=1000.0, format="%.2f", key="ct_ve")
+
+        agio = st.number_input("Ágio (R$) — renda da Consorbens *", min_value=0.0, step=500.0, format="%.2f", key="ct_agio")
+
+        st.markdown("---")
+        if st.button("Salvar Venda (Contemplado)", type="primary", use_container_width=True):
+            if not cliente.strip():
+                st.error("❌ Preencha o Nome do Cliente.")
+            elif valor_consorcio <= 0 or agio <= 0:
+                st.error("❌ Preencha o Valor do Consórcio e o Ágio.")
+            else:
+                venda = {
+                    "NOME": cliente,
+                    "DATA": data.strftime("%d/%m/%Y"),
+                    "PRODUTO": produto,
+                    "VENDEDOR": vendedor,
+                    "GRUPO": "",
+                    "COTA": "",
+                    "ADMINISTRADORA": admin,
+                    "STATUS": "Contemplada",
+                    "TIPO_PRODUTO": "Consórcio Contemplado",
+                    "VALOR": valor_consorcio,
+                    "VALOR_ENTRADA": valor_entrada,
+                    "AGIO": agio
+                }
+                supabase.table("vendas").insert([venda]).execute()
+                _salvar_cliente_se_novo(supabase, df_cli, cliente, telefone, email, end_completo, aniversario, profissao, renda)
+                st.success("✅ Venda de Consórcio Contemplado salva!")
