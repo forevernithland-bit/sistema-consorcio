@@ -115,6 +115,10 @@ def render_ofertar_lance(supabase, df_vendas_global):
     df = df[df['_admin_norm'].isin(ADMINS_COM_LANCE)]
     df = df[~df['_status_norm'].isin(STATUS_OCULTAR)]
 
+    # Consórcio Contemplado não oferta lance — fica de fora da lista
+    if 'TIPO_PRODUTO' in df.columns:
+        df = df[df['TIPO_PRODUTO'].apply(normalizar_string) != "CONSORCIOCONTEMPLADO"]
+
     if not is_master:
         df = df[df['VENDEDOR'] == st.session_state.get('nome_vendedor')]
 
