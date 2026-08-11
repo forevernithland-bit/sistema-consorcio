@@ -6,44 +6,80 @@ from regras import gerar_tabela_parcelas
 from modulos.importar_comissoes import dividir_socios
 
 # Brecha para imposto sobre o ÁGIO (Consórcio Contemplado).
-# Por enquanto 0 (ágio entra líquido). Quando a contabilidade definir, é só mudar aqui.
+# Por enquanto 0 (ágio entra líquido). Quando a contabilidade definir, mude aqui.
 AGIO_IMPOSTO_PCT = 0.0
+
+# Recebimento da carta contemplada ocorre ~10 dias APÓS a data da venda.
+PRAZO_RECEBIMENTO_CONTEMPLADO_DIAS = 10
 
 
 # ==========================================================
 # HELPERS DE DATA
 # ==========================================================
 def _ym(data_str):
-    """Converte uma data (dd/mm/aaaa ou texto) em 'AAAA-MM'. Retorna None se inválida."""
+    """Data (dd/mm/aaaa ou texto) -> 'AAAA-MM'. None se inválida."""
     try:
         d = pd.to_datetime(data_str, dayfirst=True, errors="coerce")
-        if pd.isna(d):
-            return None
-        return d.strftime("%Y-%m")
+        return None if pd.isna(d) else d.strftime("%Y-%m")
     except Exception:
         return None
 
 
 def _label_mes(ym):
-    """'2026-08' -> '08/2026'."""
     try:
         return datetime.strptime(ym, "%Y-%m").strftime("%m/%Y")
     except Exception:
         return ym
 
 
+def _ddmmaaaa(valor):
+    """Converte qualquer data (timestamp/str) para 'dd/mm/aaaa' ('' se inválida)."""
+    try:
+        d = pd.to_datetime(valor, dayfirst=True, errors="coerce")
+        return "" if pd.isna(d) else d.strftime("%d/%m/%Y")
+    except Exception:
+        return ""
+
+
+def _mais_dias(data_str, dias):
+    """Soma 'dias' a uma data dd/mm/aaaa e devolve dd/mm/aaaa ('' se inválida)."""
+    try:
+        d = pd.to_datetime(data_str, dayfirst=True, errors="coerce")
+        if pd.isna(d):
+            return ""
+        return (d + pd.Timedelta(days=dias)).strftime("%d/%m/%Y")
+    except Exception:
+        return ""
+
+
+def _carregar_datas_financeiro(supabase):
+    """Datas exclusivas do Financeiro (tabela financeiro_datas). {chave: 'dd/mm/aaaa'}."""
+    try:
+        rows = supabase.table("financeiro_datas").select("*").execute().data or []
+        return {r["chave_unica"]: r.get("data") for r in rows if r.get("data")}
+    except Exception:
+        return {}
+
+
+def _salvar_data_financeiro(supabase, chave, data):
+    """Grava a data SÓ no Financeiro (não mexe em nenhum outro módulo)."""
+    supabase.table("financeiro_datas").upsert(
+        {"chave_unica": chave, "data": data}, on_conflict="chave_unica"
+    ).execute()
+
+
 # ==========================================================
 # FONTES DE DADOS (sem duplicidade)
 # ==========================================================
-def _recebidos_tradicional(supabase, df_vendas_global, df_admin, cfg, status_dict):
-    """Comissões efetivamente RECEBIDAS do Consórcio Tradicional.
-    Fonte 1: comissoes_pagas (Importar Resumo NF) — detalhe real.
-    Fonte 2: baixas manuais (parcelas PAGAS que NÃO vieram por NF), via motor de regras.
-    Dedup por chave_unica (uma parcela conta uma vez só)."""
+def _recebidos_tradicional(supabase, df_vendas_global, df_admin, cfg, status_dict, datas_fin):
+    """Comissões recebidas do Consórcio Tradicional.
+    Fonte 1: comissoes_pagas (NF). Fonte 2: baixas manuais (PAGO fora do NF).
+    Data usada = data do Financeiro (financeiro_datas) OU, por padrão, a data em que
+    foi LANÇADO no sistema (data_importacao da NF / data de recebimento da baixa)."""
     regs = []
     chaves_nf = set()
 
-    # Fonte 1 — histórico detalhado das NFs
+    # Fonte 1 — histórico NF
     try:
         cp = supabase.table("comissoes_pagas").select("*").execute().data or []
     except Exception:
@@ -52,32 +88,34 @@ def _recebidos_tradicional(supabase, df_vendas_global, df_admin, cfg, status_dic
         ch = r.get("chave_unica")
         if ch:
             chaves_nf.add(ch)
+        # padrão = data em que lançamos no sistema (import); reserva = data de pagamento
+        padrao = _ddmmaaaa(r.get("data_importacao")) or (r.get("data_pagamento") or "")
+        data_fin = datas_fin.get(ch) or padrao
         regs.append({
-            "origem": "NF", "id": r.get("id"), "chave": ch,
+            "key": ch, "origem": "NF",
             "cliente": r.get("cliente", "") or "—",
             "grupo_cota": f"{r.get('grupo','')}/{r.get('cota','')}",
-            "data": r.get("data_pagamento", "") or "",
-            "ym": _ym(r.get("data_pagamento", "")),
+            "data": data_fin, "ym": _ym(data_fin),
             "bruto": parse_float_safe(r.get("valor_nota", 0)),
             "liquido": parse_float_safe(r.get("valor_liquido", 0)),
             "breno": parse_float_safe(r.get("breno", 0)),
             "uriel": parse_float_safe(r.get("uriel", 0)),
         })
 
-    # Fonte 2 — baixas manuais (PAGO) que não estão no histórico NF
+    # Fonte 2 — baixas manuais (PAGO) fora do NF
     if df_vendas_global is not None and not df_vendas_global.empty:
         df_parc, _ = gerar_tabela_parcelas(df_vendas_global, df_vendas_global, df_admin, cfg, status_dict)
         if not df_parc.empty:
-            pagos = df_parc[df_parc["Status"] == "PAGO"]
-            for _, p in pagos.iterrows():
+            for _, p in df_parc[df_parc["Status"] == "PAGO"].iterrows():
                 if p["Chave"] in chaves_nf:
-                    continue  # já contado pela NF
+                    continue
+                padrao = str(p["Data Recebimento"])
+                data_fin = datas_fin.get(p["Chave"]) or padrao
                 regs.append({
-                    "origem": "Manual", "id": None, "chave": p["Chave"],
+                    "key": p["Chave"], "origem": "Manual",
                     "cliente": p["Cliente"],
                     "grupo_cota": f"{p['Grupo']}/{p['Cota']}",
-                    "data": p["Data Recebimento"],
-                    "ym": _ym(p["Data Recebimento"]),
+                    "data": data_fin, "ym": _ym(data_fin),
                     "bruto": parse_float_safe(p["Comissão (Bruta)"]),
                     "liquido": parse_float_safe(p["Comissão (s/ Imposto)"]),
                     "breno": parse_float_safe(p["Breno"]),
@@ -86,8 +124,9 @@ def _recebidos_tradicional(supabase, df_vendas_global, df_admin, cfg, status_dic
     return pd.DataFrame(regs)
 
 
-def _recebidos_contemplado(df_vendas_global, cfg):
-    """Receita de Cartas Contempladas = ÁGIO. Dividido pela regra do vendedor."""
+def _recebidos_contemplado(df_vendas_global, cfg, datas_fin):
+    """Receita de Cartas Contempladas = ÁGIO. O RECEBIMENTO cai ~10 dias após a venda
+    (configurável). A data pode ser sobrescrita no Financeiro (financeiro_datas)."""
     regs = []
     if (df_vendas_global is None or df_vendas_global.empty
             or 'TIPO_PRODUTO' not in df_vendas_global.columns):
@@ -95,20 +134,23 @@ def _recebidos_contemplado(df_vendas_global, cfg):
 
     df = df_vendas_global[df_vendas_global['TIPO_PRODUTO'].apply(normalizar_string) == "CONSORCIOCONTEMPLADO"]
     for _, r in df.iterrows():
+        key = f"CONT_{r.get('id')}"
+        data_venda = r.get("DATA", "") or ""
+        recebimento_padrao = _mais_dias(data_venda, PRAZO_RECEBIMENTO_CONTEMPLADO_DIAS)
+        data_fin = datas_fin.get(key) or recebimento_padrao or data_venda
+
         agio = parse_float_safe(r.get("AGIO", 0))
         imposto = agio * AGIO_IMPOSTO_PCT / 100.0
         liquido = agio - imposto
         breno, uriel = dividir_socios(r.get("VENDEDOR", ""), liquido, cfg)
-        data_str = r.get("DATA", "") or ""
         regs.append({
-            "id": r.get("id"),
+            "key": key,
             "cliente": r.get("Nome do cliente", "") or "—",
             "vendedor": r.get("VENDEDOR", "") or "—",
             "produto": r.get("PRODUTO", "") or "",
-            "data": data_str, "ym": _ym(data_str),
+            "data_venda": data_venda,
+            "data": data_fin, "ym": _ym(data_fin),
             "agio": agio, "liquido": liquido, "breno": breno, "uriel": uriel,
-            "valor_consorcio": parse_float_safe(r.get("Valor_Numerico", 0)),
-            "entrada": parse_float_safe(r.get("VALOR_ENTRADA", 0)),
         })
     return pd.DataFrame(regs)
 
@@ -117,27 +159,22 @@ def _recebidos_contemplado(df_vendas_global, cfg):
 # TRAVA ANTI-DUPLICIDADE
 # ==========================================================
 def _alertas_duplicidade(trad, cont):
-    """Procura valores contabilizados mais de uma vez e devolve uma lista de alertas."""
     alertas = []
-
-    # Tradicional: a MESMA parcela (mesma chave) lançada mais de uma vez
-    if trad is not None and not trad.empty and 'chave' in trad.columns:
-        dup = trad[trad['chave'].notna()]
-        contagem = dup.groupby('chave').size()
-        for chave, n in contagem[contagem > 1].items():
-            linha = dup[dup['chave'] == chave].iloc[0]
-            alertas.append(
-                f"🏦 Comissão lançada **{n}x** — {linha['cliente']} ({linha['grupo_cota']}). "
-                f"A mesma parcela aparece mais de uma vez."
-            )
-
-    # Contemplado: a MESMA venda (cliente + ágio + data) aparece mais de uma vez
+    if trad is not None and not trad.empty and 'key' in trad.columns:
+        dup = trad[trad['key'].notna()]
+        for chave, n in dup.groupby('key').size().items():
+            if n > 1:
+                linha = dup[dup['key'] == chave].iloc[0]
+                alertas.append(
+                    f"🏦 Comissão lançada **{n}x** — {linha['cliente']} ({linha['grupo_cota']}). "
+                    f"A mesma parcela aparece mais de uma vez."
+                )
     if cont is not None and not cont.empty:
-        for (cli, agio, data), n in cont.groupby(['cliente', 'agio', 'data']).size().items():
+        for (cli, agio, dv), n in cont.groupby(['cliente', 'agio', 'data_venda']).size().items():
             if n > 1:
                 alertas.append(
                     f"🎯 Carta contemplada possivelmente **duplicada ({n}x)** — {cli}, "
-                    f"ágio {formatar_brl_puro(agio)}, em {data}."
+                    f"ágio {formatar_brl_puro(agio)}, venda em {dv}."
                 )
     return alertas
 
@@ -150,23 +187,22 @@ def render_financeiro(supabase, df_vendas_global, df_admin, cfg, status_dict):
     st.caption("Faturamento da Consorbens por mês: comissões recebidas (Consórcio Tradicional) "
                "+ ágio das Cartas Contempladas. Selecione o ano e um ou mais meses para comparar.")
 
-    trad = _recebidos_tradicional(supabase, df_vendas_global, df_admin, cfg, status_dict)
-    cont = _recebidos_contemplado(df_vendas_global, cfg)
+    datas_fin = _carregar_datas_financeiro(supabase)
+    trad = _recebidos_tradicional(supabase, df_vendas_global, df_admin, cfg, status_dict, datas_fin)
+    cont = _recebidos_contemplado(df_vendas_global, cfg, datas_fin)
 
-    # TRAVA ANTI-DUPLICIDADE — avisa se algo está contabilizado mais de uma vez
+    # TRAVA ANTI-DUPLICIDADE
     alertas = _alertas_duplicidade(trad, cont)
     if alertas:
-        st.error("⚠️ **Possível duplicidade detectada — confira e corrija os lançamentos:**")
+        st.error("⚠️ **Possível duplicidade detectada — confira e corrija:**")
         for a in alertas:
             st.markdown(f"- {a}")
-        st.caption("Nas comissões (Tradicional), cada parcela repetida é contada **uma vez só** nos "
-                   "totais — mas vale corrigir na origem. Nas cartas contempladas, confira se não "
-                   "cadastrou a mesma venda duas vezes (apague a repetida em Nova Venda/Dashboard).")
+        st.caption("Nos totais, cada comissão repetida conta uma vez só; nas contempladas, confira "
+                   "se não cadastrou a mesma venda duas vezes.")
 
-    # Para os cálculos, cada parcela de comissão conta uma única vez (dedup por chave)
-    trad_calc = trad.drop_duplicates('chave', keep='first') if not trad.empty else trad
+    trad_calc = trad.drop_duplicates('key', keep='first') if not trad.empty else trad
 
-    # Anos disponíveis (dos dados) + ano atual
+    # Anos disponíveis
     anos = set()
     for d in (trad, cont):
         if not d.empty:
@@ -177,7 +213,6 @@ def render_financeiro(supabase, df_vendas_global, df_admin, cfg, status_dict):
     c_ano, c_mes = st.columns([1, 3])
     with c_ano:
         ano = st.selectbox("📅 Ano", anos, index=0, key="fin_ano")
-
     labels_mes = [f"{m:02d}/{ano}" for m in range(1, 13)]
     mes_atual_lbl = f"{datetime.today().month:02d}/{ano}"
     default_mes = [mes_atual_lbl] if mes_atual_lbl in labels_mes else [labels_mes[-1]]
@@ -189,13 +224,10 @@ def render_financeiro(supabase, df_vendas_global, df_admin, cfg, status_dict):
         st.info("Selecione ao menos um mês.")
         return
 
-    # Ordena os meses selecionados cronologicamente
     sel_meses = [lbl for lbl in labels_mes if lbl in sel_meses]
     yms = [f"{ano}-{lbl[:2]}" for lbl in sel_meses]
 
-    # ------------------------------------------------------------------
-    # QUADRO COMPARATIVO (meses nas colunas)
-    # ------------------------------------------------------------------
+    # QUADRO COMPARATIVO (soma tudo do mês — inclusive várias notas)
     linhas = ["💵 Faturamento Total", "   • Consórcio Tradicional", "   • Cartas Contempladas (ágio)",
               "🧾 Receita Líquida", "👤 Breno", "👤 Uriel"]
     dados = {}
@@ -212,42 +244,38 @@ def render_financeiro(supabase, df_vendas_global, df_admin, cfg, status_dict):
     df_sum = pd.DataFrame(dados, index=linhas)
     if len(sel_meses) > 1:
         df_sum["TOTAL"] = df_sum.sum(axis=1)
-
     df_fmt = df_sum.copy()
     for col in df_fmt.columns:
         df_fmt[col] = df_fmt[col].apply(formatar_brl_puro)
     st.dataframe(df_fmt, use_container_width=True)
 
-    st.caption("ℹ️ Ágio hoje entra **sem imposto** (a definir com a contabilidade). "
-               "Receita Líquida = comissões líquidas (após imposto) + ágio.")
+    st.caption(f"ℹ️ Tradicional entra no mês em que foi **lançado no sistema**. Contemplado entra "
+               f"**{PRAZO_RECEBIMENTO_CONTEMPLADO_DIAS} dias após a venda** (recebimento). Ágio hoje "
+               f"sem imposto. Você pode corrigir qualquer data no detalhamento abaixo — isso só afeta "
+               f"o Financeiro.")
 
-    # ------------------------------------------------------------------
-    # DETALHAMENTO POR MÊS (clique para ver as vendas e corrigir datas)
-    # ------------------------------------------------------------------
+    # DETALHAMENTO POR MÊS
     st.divider()
     st.markdown("#### 🔎 Detalhar um mês")
     mes_det = st.selectbox("Escolha o mês para ver as vendas que compõem o valor:", sel_meses, key="fin_det_mes")
     ym_det = f"{ano}-{mes_det[:2]}"
 
     aba_t, aba_c = st.tabs(["🏦 Consórcio Tradicional", "🎯 Cartas Contempladas"])
-
     with aba_t:
         _detalhe_tradicional(supabase, trad[trad['ym'] == ym_det] if not trad.empty else pd.DataFrame(), mes_det)
-
     with aba_c:
         _detalhe_contemplado(supabase, cont[cont['ym'] == ym_det] if not cont.empty else pd.DataFrame(), mes_det)
 
 
 # ==========================================================
-# DETALHAMENTO — TRADICIONAL (edita data de pagamento)
+# DETALHAMENTO — TRADICIONAL (edita a data SÓ do Financeiro)
 # ==========================================================
 def _detalhe_tradicional(supabase, df, mes_lbl):
     if df is None or df.empty:
         st.info(f"Nenhuma comissão de Consórcio Tradicional recebida em {mes_lbl}.")
         return
 
-    st.caption("Comissões recebidas neste mês. Você pode **corrigir a Data** e salvar "
-               "(o valor vai para o mês certo).")
+    st.caption("Comissões recebidas neste mês. Você pode **corrigir a Data** (só afeta o Financeiro).")
     view = pd.DataFrame({
         "Cliente": df["cliente"].values,
         "Grupo/Cota": df["grupo_cota"].values,
@@ -264,43 +292,35 @@ def _detalhe_tradicional(supabase, df, mes_lbl):
                        for c in ["Cliente", "Grupo/Cota", "Origem", "Bruto", "Líquido", "Breno", "Uriel"]}
         | {"Data": st.column_config.TextColumn("Data (DD/MM/AAAA)")},
     )
-
-    tot = df["bruto"].sum()
-    st.markdown(f"**Total Tradicional em {mes_lbl}:** {formatar_brl_puro(tot)}")
+    st.markdown(f"**Total Tradicional em {mes_lbl}:** {formatar_brl_puro(df['bruto'].sum())}")
 
     if st.button("💾 Salvar datas (Tradicional)", key=f"fin_save_trad_{mes_lbl}"):
-        alterados = 0
+        n = 0
         for i in range(len(df)):
-            nova_data = str(edit.iloc[i]["Data"]).strip()
-            antiga = str(df.iloc[i]["data"]).strip()
-            if nova_data and nova_data != antiga:
-                origem = df.iloc[i]["origem"]
+            nova = str(edit.iloc[i]["Data"]).strip()
+            if nova and nova != str(df.iloc[i]["data"]).strip():
                 try:
-                    if origem == "NF" and pd.notna(df.iloc[i]["id"]):
-                        supabase.table("comissoes_pagas").update(
-                            {"data_pagamento": nova_data}).eq("id", int(df.iloc[i]["id"])).execute()
-                    else:  # Manual -> status_comissoes pela chave
-                        supabase.table("status_comissoes").update(
-                            {"Data_Pagamento": nova_data}).eq("Chave_Unica", df.iloc[i]["chave"]).execute()
-                    alterados += 1
+                    _salvar_data_financeiro(supabase, df.iloc[i]["key"], nova)
+                    n += 1
                 except Exception as e:
                     st.error(f"Erro ao salvar {df.iloc[i]['cliente']}: {e}")
-        if alterados:
-            st.success(f"✅ {alterados} data(s) atualizada(s).")
+        if n:
+            st.success(f"✅ {n} data(s) atualizada(s) no Financeiro.")
             st.rerun()
         else:
             st.info("Nenhuma data alterada.")
 
 
 # ==========================================================
-# DETALHAMENTO — CONTEMPLADO (edita data da venda)
+# DETALHAMENTO — CONTEMPLADO (edita a data de recebimento SÓ do Financeiro)
 # ==========================================================
 def _detalhe_contemplado(supabase, df, mes_lbl):
     if df is None or df.empty:
-        st.info(f"Nenhuma Carta Contemplada vendida em {mes_lbl}.")
+        st.info(f"Nenhuma Carta Contemplada com recebimento em {mes_lbl}.")
         return
 
-    st.caption("Cartas contempladas vendidas neste mês. Você pode **corrigir a Data** e salvar.")
+    st.caption("Cartas contempladas com **recebimento** neste mês (≈10 dias após a venda). "
+               "Você pode corrigir a Data de Recebimento (só afeta o Financeiro).")
     view = pd.DataFrame({
         "Cliente": df["cliente"].values,
         "Vendedor": df["vendedor"].values,
@@ -308,32 +328,29 @@ def _detalhe_contemplado(supabase, df, mes_lbl):
         "Ágio": df["agio"].apply(formatar_brl_puro).values,
         "Breno": df["breno"].apply(formatar_brl_puro).values,
         "Uriel": df["uriel"].apply(formatar_brl_puro).values,
-        "Data": df["data"].astype(str).values,
+        "Data Venda": df["data_venda"].astype(str).values,
+        "Data Recebimento": df["data"].astype(str).values,
     })
     edit = st.data_editor(
         view, key=f"fin_edit_cont_{mes_lbl}", hide_index=True, use_container_width=True,
         column_config={c: st.column_config.TextColumn(c, disabled=True)
-                       for c in ["Cliente", "Vendedor", "Produto", "Ágio", "Breno", "Uriel"]}
-        | {"Data": st.column_config.TextColumn("Data (DD/MM/AAAA)")},
+                       for c in ["Cliente", "Vendedor", "Produto", "Ágio", "Breno", "Uriel", "Data Venda"]}
+        | {"Data Recebimento": st.column_config.TextColumn("Data Recebimento (DD/MM/AAAA)")},
     )
-
-    tot = df["agio"].sum()
-    st.markdown(f"**Total Ágio em {mes_lbl}:** {formatar_brl_puro(tot)}")
+    st.markdown(f"**Total Ágio em {mes_lbl}:** {formatar_brl_puro(df['agio'].sum())}")
 
     if st.button("💾 Salvar datas (Contemplado)", key=f"fin_save_cont_{mes_lbl}"):
-        alterados = 0
+        n = 0
         for i in range(len(df)):
-            nova_data = str(edit.iloc[i]["Data"]).strip()
-            antiga = str(df.iloc[i]["data"]).strip()
-            if nova_data and nova_data != antiga and pd.notna(df.iloc[i]["id"]):
+            nova = str(edit.iloc[i]["Data Recebimento"]).strip()
+            if nova and nova != str(df.iloc[i]["data"]).strip():
                 try:
-                    supabase.table("vendas").update(
-                        {"DATA": nova_data}).eq("id", int(df.iloc[i]["id"])).execute()
-                    alterados += 1
+                    _salvar_data_financeiro(supabase, df.iloc[i]["key"], nova)
+                    n += 1
                 except Exception as e:
                     st.error(f"Erro ao salvar {df.iloc[i]['cliente']}: {e}")
-        if alterados:
-            st.success(f"✅ {alterados} data(s) atualizada(s).")
+        if n:
+            st.success(f"✅ {n} data(s) atualizada(s) no Financeiro.")
             st.rerun()
         else:
             st.info("Nenhuma data alterada.")
