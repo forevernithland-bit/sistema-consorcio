@@ -23,6 +23,7 @@ from modulos.senhas import render_senhas
 from modulos.assistente import render_widget_ia, render_config_ia
 from modulos.tema import montar_css, render_seletor_tema, css_fundo_login
 from modulos.ofertar_lance import render_ofertar_lance
+from modulos.financeiro import render_financeiro
 
 # ==========================================
 # 1. CONFIGURAÇÃO DA PÁGINA E SESSÕES
@@ -200,11 +201,12 @@ if not is_logado:
 else:
     st.sidebar.divider() 
     
-    # Condicional que adiciona a aba "Senhas" e "Base de Conhecimento" dependendo do perfil
+    # Menu principal. Senhas e Base de Conhecimento agora ficam DENTRO de
+    # "Configurações de Sistema" (abas). Assembleias está oculto por enquanto.
     if is_master:
-        opcoes_principais = ["Dashboard", "Ofertar Lance", "Nova Venda", "Assembleias", "Relatórios", "Mídias", "Baixar Parcelas", "Configurações de Sistema", "Senhas", "Base de Conhecimento"]
+        opcoes_principais = ["Dashboard", "Nova Venda", "Ofertar Lance", "Financeiro", "Baixar Parcelas", "Relatórios", "Mídias", "Configurações de Sistema"]
     else:
-        opcoes_principais = ["Dashboard", "Ofertar Lance", "Nova Venda", "Assembleias", "Relatórios", "Mídias"]
+        opcoes_principais = ["Dashboard", "Nova Venda", "Ofertar Lance", "Relatórios", "Mídias"]
         
     try: idx_principal = opcoes_principais.index(st.session_state['menu_lateral'])
     except ValueError: idx_principal = None 
@@ -337,6 +339,8 @@ elif menu_selecionado == "Ofertar Lance":
     render_ofertar_lance(supabase, df_vendas_global)
 elif menu_selecionado == "Nova Venda":
     render_nova_venda(supabase, df_cli, lista_admin_bd)
+elif menu_selecionado == "Financeiro":
+    render_financeiro(supabase, df_vendas_global)
 elif menu_selecionado == "Assembleias":
     render_assembleias(supabase, df_ass)
 elif menu_selecionado == "Relatórios":
@@ -346,8 +350,11 @@ elif menu_selecionado == "Mídias":
 elif menu_selecionado == "Baixar Parcelas":
     render_baixas(supabase, df_vendas_global, df_admin, cfg, status_dict, lista_admin_bd)
 elif menu_selecionado == "Configurações de Sistema":
-    render_configuracoes(supabase, df_admin_cad, df_admin, lista_admin_bd, cfg, cfg_id)
-elif menu_selecionado == "Senhas":
-    render_senhas(supabase)
-elif menu_selecionado == "Base de Conhecimento":
-    render_config_ia(supabase)
+    # Senhas e Base de Conhecimento agora vivem aqui dentro, como abas.
+    tab_sis, tab_senhas, tab_ia = st.tabs(["⚙️ Sistema", "🔐 Senhas", "🧠 Base de Conhecimento"])
+    with tab_sis:
+        render_configuracoes(supabase, df_admin_cad, df_admin, lista_admin_bd, cfg, cfg_id)
+    with tab_senhas:
+        render_senhas(supabase)
+    with tab_ia:
+        render_config_ia(supabase)
