@@ -340,7 +340,7 @@ elif menu_selecionado == "Ofertar Lance":
 elif menu_selecionado == "Nova Venda":
     render_nova_venda(supabase, df_cli, lista_admin_bd)
 elif menu_selecionado == "Financeiro":
-    render_financeiro(supabase, df_vendas_global)
+    render_financeiro(supabase, df_vendas_global, df_admin, cfg, status_dict)
 elif menu_selecionado == "Assembleias":
     render_assembleias(supabase, df_ass)
 elif menu_selecionado == "Relatórios":
