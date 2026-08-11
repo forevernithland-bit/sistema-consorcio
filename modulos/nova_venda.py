@@ -148,7 +148,12 @@ def render_nova_venda(supabase, df_cli, lista_admin_bd):
         col_v1, col_v2 = st.columns(2)
         with col_v1:
             data = st.date_input("Data da Venda", format="DD/MM/YYYY", key="ct_data")
-            admin = st.selectbox("Administradora *", lista_admin_bd, key="ct_admin")
+            # No Contemplado a administradora pode ser digitada (caso não esteja na base)
+            admin_sel = st.selectbox("Administradora *", lista_admin_bd + ["✏️ Outra (digitar)"], key="ct_admin")
+            if admin_sel == "✏️ Outra (digitar)":
+                admin = st.text_input("Digite a Administradora *", key="ct_admin_txt").strip()
+            else:
+                admin = admin_sel
             valor_consorcio = st.number_input("Valor do Consórcio (R$) *", min_value=0.0, step=1000.0, format="%.2f", key="ct_vc")
         with col_v2:
             vendedor = st.selectbox("Vendedor *", VENDEDORES_CONTEMPLADO, index=0, key="ct_vend") if is_master else st.session_state['nome_vendedor']
@@ -161,6 +166,8 @@ def render_nova_venda(supabase, df_cli, lista_admin_bd):
         if st.button("Salvar Venda (Contemplado)", type="primary", use_container_width=True):
             if not cliente.strip():
                 st.error("❌ Preencha o Nome do Cliente.")
+            elif not admin:
+                st.error("❌ Preencha a Administradora.")
             elif valor_consorcio <= 0 or agio <= 0:
                 st.error("❌ Preencha o Valor do Consórcio e o Ágio.")
             else:
@@ -169,8 +176,8 @@ def render_nova_venda(supabase, df_cli, lista_admin_bd):
                     "DATA": data.strftime("%d/%m/%Y"),
                     "PRODUTO": produto,
                     "VENDEDOR": vendedor,
-                    "GRUPO": "",
-                    "COTA": "",
+                    "GRUPO": None,   # Contemplado não tem grupo/cota (colunas são numéricas)
+                    "COTA": None,
                     "ADMINISTRADORA": admin,
                     "STATUS": "Contemplada",
                     "TIPO_PRODUTO": "Consórcio Contemplado",
