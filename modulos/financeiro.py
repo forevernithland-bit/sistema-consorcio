@@ -33,9 +33,15 @@ def _label_mes(ym):
 
 
 def _ddmmaaaa(valor):
-    """Converte qualquer data (timestamp/str) para 'dd/mm/aaaa' ('' se inválida)."""
+    """Converte qualquer data para 'dd/mm/aaaa' ('' se inválida).
+    Detecta automaticamente ISO (2026-08-06T...) x brasileiro (dd/mm/aaaa):
+    no ISO NÃO se usa dayfirst (senão o pandas troca dia/mês)."""
+    if valor is None or str(valor).strip() == "":
+        return ""
+    s = str(valor).strip()
+    iso = len(s) >= 10 and s[4] == "-" and s[7] == "-"   # 'AAAA-MM-DD...'
     try:
-        d = pd.to_datetime(valor, dayfirst=True, errors="coerce")
+        d = pd.to_datetime(s, dayfirst=not iso, errors="coerce")
         return "" if pd.isna(d) else d.strftime("%d/%m/%Y")
     except Exception:
         return ""
@@ -254,17 +260,40 @@ def render_financeiro(supabase, df_vendas_global, df_admin, cfg, status_dict):
                f"sem imposto. Você pode corrigir qualquer data no detalhamento abaixo — isso só afeta "
                f"o Financeiro.")
 
-    # DETALHAMENTO POR MÊS
+    # DETALHAMENTO POR MÊS (em popup)
     st.divider()
-    st.markdown("#### 🔎 Detalhar um mês")
-    mes_det = st.selectbox("Escolha o mês para ver as vendas que compõem o valor:", sel_meses, key="fin_det_mes")
+    st.markdown("#### 🔎 Detalhar")
+    mes_det = st.selectbox("Mês para detalhar:", sel_meses, key="fin_det_mes")
     ym_det = f"{ano}-{mes_det[:2]}"
+    t_det = trad_calc[trad_calc['ym'] == ym_det] if not trad_calc.empty else pd.DataFrame()
+    c_det = cont[cont['ym'] == ym_det] if not cont.empty else pd.DataFrame()
 
-    aba_t, aba_c = st.tabs(["🏦 Consórcio Tradicional", "🎯 Cartas Contempladas"])
-    with aba_t:
-        _detalhe_tradicional(supabase, trad[trad['ym'] == ym_det] if not trad.empty else pd.DataFrame(), mes_det)
-    with aba_c:
-        _detalhe_contemplado(supabase, cont[cont['ym'] == ym_det] if not cont.empty else pd.DataFrame(), mes_det)
+    @st.dialog(f"🏦 Consórcio Tradicional — {mes_det}", width="large")
+    def _pop_trad():
+        _detalhe_tradicional(supabase, t_det, mes_det)
+
+    @st.dialog(f"🎯 Cartas Contempladas — {mes_det}", width="large")
+    def _pop_cont():
+        _detalhe_contemplado(supabase, c_det, mes_det)
+
+    @st.dialog(f"👤 Breno — {mes_det}", width="large")
+    def _pop_breno():
+        _detalhe_socio("Breno", "breno", t_det, c_det, mes_det)
+
+    @st.dialog(f"👤 Uriel — {mes_det}", width="large")
+    def _pop_uriel():
+        _detalhe_socio("Uriel", "uriel", t_det, c_det, mes_det)
+
+    st.caption("Clique para conferir/editar em uma janela:")
+    bt1, bt2, bt3, bt4 = st.columns(4)
+    if bt1.button("🏦 Consórcio Tradicional", use_container_width=True):
+        _pop_trad()
+    if bt2.button("🎯 Cartas Contempladas", use_container_width=True):
+        _pop_cont()
+    if bt3.button("👤 Breno recebe", use_container_width=True):
+        _pop_breno()
+    if bt4.button("👤 Uriel recebe", use_container_width=True):
+        _pop_uriel()
 
 
 # ==========================================================
@@ -354,3 +383,29 @@ def _detalhe_contemplado(supabase, df, mes_lbl):
             st.rerun()
         else:
             st.info("Nenhuma data alterada.")
+
+
+# ==========================================================
+# DETALHAMENTO — SÓCIO (Breno / Uriel): o que cada um recebe no mês
+# ==========================================================
+def _detalhe_socio(nome, col, t_det, c_det, mes_lbl):
+    linhas = []
+    if t_det is not None and not t_det.empty:
+        for _, r in t_det.iterrows():
+            linhas.append({"Origem": "Consórcio Tradicional", "Cliente": r["cliente"],
+                           "_v": parse_float_safe(r[col])})
+    if c_det is not None and not c_det.empty:
+        for _, r in c_det.iterrows():
+            linhas.append({"Origem": "Carta Contemplada", "Cliente": r["cliente"],
+                           "_v": parse_float_safe(r[col])})
+
+    if not linhas:
+        st.info(f"{nome} não recebeu nada em {mes_lbl}.")
+        return
+
+    df = pd.DataFrame(linhas)
+    total = df["_v"].sum()
+    df["Recebe"] = df["_v"].apply(formatar_brl_puro)
+    st.caption(f"O que **{nome}** recebe em {mes_lbl}, por venda:")
+    st.dataframe(df[["Origem", "Cliente", "Recebe"]], use_container_width=True, hide_index=True)
+    st.markdown(f"### 💰 Total {nome} em {mes_lbl}: {formatar_brl_puro(total)}")
