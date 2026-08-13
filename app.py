@@ -162,7 +162,7 @@ simuladores_dict = {
 # ---- Bolinha "SERVER" (status do robô do escritório) ----
 # O worker bate o ponto em robo_status.atualizado_em a cada ciclo (~30s).
 # Verde se o último ponto foi há pouco; vermelho se está sem sinal.
-LIMITE_SERVER_SEG = 300  # até 5 min sem sinal ainda conta como ligado
+LIMITE_SERVER_SEG = 90  # sem sinal por mais que isso => robô desligado (vermelho)
 
 
 def _status_robo(sb):
@@ -182,8 +182,8 @@ _cor = "#22c55e" if _online else "#ef4444"          # verde / vermelho
 _titulo = "Robô ligado" if _online else "Robô desligado"
 st.sidebar.markdown(
     f"""
-    <div style="display:flex;align-items:center;justify-content:center;gap:7px;margin:2px 0 6px 0;"
-         title="{_titulo}">
+    <div style="display:flex;align-items:center;justify-content:flex-start;gap:7px;
+                margin:-4px 0 4px 2px;" title="{_titulo}">
         <span style="width:11px;height:11px;border-radius:50%;background:{_cor};
                      box-shadow:0 0 6px {_cor};display:inline-block;"></span>
         <span style="font-size:12px;font-weight:700;letter-spacing:1px;color:{_cor};">SERVER</span>
