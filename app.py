@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timezone
 import calendar
 import os
 import base64  # Necessário para codificar imagens caso use futuramente
@@ -159,10 +159,43 @@ simuladores_dict = {
     "⚖️ Financiamento x Consórcio": "comparador.html"
 }
 
+# ---- Bolinha "SERVER" (status do robô do escritório) ----
+# O worker bate o ponto em robo_status.atualizado_em a cada ciclo (~30s).
+# Verde se o último ponto foi há pouco; vermelho se está sem sinal.
+LIMITE_SERVER_SEG = 300  # até 5 min sem sinal ainda conta como ligado
+
+
+def _status_robo(sb):
+    try:
+        res = sb.table("robo_status").select("atualizado_em").eq("id", 1).execute()
+        if not res.data:
+            return False
+        dt = pd.to_datetime(res.data[0]["atualizado_em"], utc=True)
+        idade = (datetime.now(timezone.utc) - dt.to_pydatetime()).total_seconds()
+        return idade <= LIMITE_SERVER_SEG
+    except Exception:
+        return False
+
+
+_online = _status_robo(supabase)
+_cor = "#22c55e" if _online else "#ef4444"          # verde / vermelho
+_titulo = "Robô ligado" if _online else "Robô desligado"
+st.sidebar.markdown(
+    f"""
+    <div style="display:flex;align-items:center;justify-content:center;gap:7px;margin:2px 0 6px 0;"
+         title="{_titulo}">
+        <span style="width:11px;height:11px;border-radius:50%;background:{_cor};
+                     box-shadow:0 0 6px {_cor};display:inline-block;"></span>
+        <span style="font-size:12px;font-weight:700;letter-spacing:1px;color:{_cor};">SERVER</span>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
 logo_path = os.path.join(PASTA_ATUAL, "logo.png")
 if os.path.exists(logo_path):
     st.sidebar.image(logo_path, use_container_width=True)
-st.sidebar.markdown("<br>", unsafe_allow_html=True) 
+st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
 if not is_logado:
     OPC_LOGIN = "🔐 Login (Área Restrita)"
@@ -339,7 +372,7 @@ if menu_selecionado == "Dashboard":
 elif menu_selecionado == "Ofertar Lance":
     render_ofertar_lance(supabase, df_vendas_global)
 elif menu_selecionado == "Emissão de Boletos":
-    render_emitir_boleto(supabase, df_vendas_global)
+    render_emitir_boleto(supabase, df_vendas_global, df_cli)
 elif menu_selecionado == "Nova Venda":
     render_nova_venda(supabase, df_cli, lista_admin_bd)
 elif menu_selecionado == "Financeiro":
