@@ -182,8 +182,13 @@ _cor = "#22c55e" if _online else "#ef4444"          # verde / vermelho
 _titulo = "Robô ligado" if _online else "Robô desligado"
 st.sidebar.markdown(
     f"""
+    <style>
+      /* Encosta o conteúdo da sidebar no topo (sobe a bolinha SERVER o máximo possível) */
+      [data-testid="stSidebarUserContent"] {{ padding-top: 0.6rem !important; }}
+      section[data-testid="stSidebar"] > div:first-child {{ padding-top: 0.6rem !important; }}
+    </style>
     <div style="display:flex;align-items:center;justify-content:flex-start;gap:7px;
-                margin:-4px 0 4px 2px;" title="{_titulo}">
+                margin:-6px 0 4px 2px;" title="{_titulo}">
         <span style="width:11px;height:11px;border-radius:50%;background:{_cor};
                      box-shadow:0 0 6px {_cor};display:inline-block;"></span>
         <span style="font-size:12px;font-weight:700;letter-spacing:1px;color:{_cor};">SERVER</span>
