@@ -1,8 +1,31 @@
+import re
+import unicodedata
 import urllib.parse
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from utils import formatar_brl_puro, normalizar_string
+from utils import formatar_brl_puro, normalizar_string, listar_arquivos_drive
+
+
+def _nome_arquivo_boleto(cliente, grupo, cota):
+    """Mesmo padrão que o robô usa para salvar: primeiroNome_grupo_cota.pdf (minúsculo)."""
+    prim = str(cliente or "").strip().split(" ")[0]
+    prim = unicodedata.normalize("NFKD", prim).encode("ascii", "ignore").decode()
+    prim = re.sub(r"[^A-Za-z0-9]", "", prim) or "cliente"
+    return f"{prim}_{grupo}_{cota}.pdf".lower()
+
+
+def _mapa_boletos_drive():
+    """{'arquivo.pdf' (minúsculo): link de download}. Vazio se o Drive não estiver configurado."""
+    try:
+        folder = st.secrets.get("BOLETOS_DRIVE_FOLDER_ID", "")
+        if not folder:
+            return {}
+        arquivos = listar_arquivos_drive(folder)
+        return {str(a.get("name", "")).lower(): (a.get("webContentLink") or a.get("webViewLink") or "")
+                for a in arquivos}
+    except Exception:
+        return {}
 
 
 def _tel_wa(tel):
@@ -340,7 +363,17 @@ def _painel_status(supabase, is_master):
         return f"https://wa.me/{tel}?text={urllib.parse.quote(msg)}"
     df_f['WhatsApp'] = df_f.apply(_wa_link, axis=1)
 
-    cols = ['cliente', 'Grupo/Cota', 'Situação', 'vencimento', 'codigo_barras', 'Atraso', 'WhatsApp', 'mensagem', 'Solicitado em']
+    # Link para baixar o PDF do boleto (do Google Drive)
+    mapa_pdf = _mapa_boletos_drive()
+
+    def _link_pdf(row):
+        if (row.get('status') or '').upper() != "SUCESSO":
+            return ""
+        nome = _nome_arquivo_boleto(row.get('cliente'), row.get('grupo'), row.get('cota'))
+        return mapa_pdf.get(nome, "")
+    df_f['Baixar'] = df_f.apply(_link_pdf, axis=1)
+
+    cols = ['cliente', 'Grupo/Cota', 'Situação', 'vencimento', 'codigo_barras', 'Atraso', 'Baixar', 'WhatsApp', 'mensagem', 'Solicitado em']
     ren = {'cliente': 'Cliente', 'vencimento': 'Vencimento', 'codigo_barras': 'Código de Barras', 'mensagem': 'Mensagem'}
     df_show = df_f[cols].rename(columns=ren)
 
@@ -360,6 +393,7 @@ def _painel_status(supabase, is_master):
         df_show, use_container_width=True, hide_index=True,
         column_config={
             "Código de Barras": st.column_config.TextColumn("Código de Barras", width="large"),
+            "Baixar": st.column_config.LinkColumn("Baixar", display_text="📥 PDF"),
             "WhatsApp": st.column_config.LinkColumn("WhatsApp", display_text="📲 Enviar"),
         },
     )
