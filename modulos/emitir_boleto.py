@@ -1,10 +1,12 @@
+import io
 import re
+import zipfile
 import unicodedata
 import urllib.parse
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from utils import formatar_brl_puro, normalizar_string, listar_arquivos_drive
+from utils import formatar_brl_puro, normalizar_string, listar_arquivos_drive, get_drive_service
 
 
 def _nome_arquivo_boleto(cliente, grupo, cota):
@@ -16,16 +18,34 @@ def _nome_arquivo_boleto(cliente, grupo, cota):
 
 
 def _mapa_boletos_drive():
-    """{'arquivo.pdf' (minúsculo): link de download}. Vazio se o Drive não estiver configurado."""
+    """{'arquivo.pdf' (minúsculo): {'link':..., 'id':...}}. Vazio se o Drive não estiver configurado."""
     try:
         folder = st.secrets.get("BOLETOS_DRIVE_FOLDER_ID", "")
         if not folder:
             return {}
         arquivos = listar_arquivos_drive(folder)
-        return {str(a.get("name", "")).lower(): (a.get("webContentLink") or a.get("webViewLink") or "")
+        return {str(a.get("name", "")).lower():
+                {"link": (a.get("webContentLink") or a.get("webViewLink") or ""), "id": a.get("id")}
                 for a in arquivos}
     except Exception:
         return {}
+
+
+def _gerar_zip(itens):
+    """itens = [(nome_arquivo, file_id)]. Baixa os PDFs do Drive e devolve um .zip em bytes."""
+    service = get_drive_service()
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for nome, fid in itens:
+            if not fid:
+                continue
+            try:
+                dados = service.files().get_media(fileId=fid).execute()
+                z.writestr(nome, dados)
+            except Exception:
+                pass
+    buf.seek(0)
+    return buf.getvalue()
 
 
 def _tel_wa(tel):
@@ -337,52 +357,30 @@ def _painel_status(supabase, is_master):
         df_f['vencimento'] = ""
     if 'em_atraso' not in df_f.columns:
         df_f['em_atraso'] = None
-    df_f['Atraso'] = df_f['em_atraso'].apply(lambda v: "⚠️ Sim" if v else "")
-
-    def _dt(v):
-        try:
-            return pd.to_datetime(v).strftime("%d/%m/%Y %H:%M")
-        except Exception:
-            return ""
-    df_f['Solicitado em'] = df_f['criado_em'].apply(_dt)
-
-    # Link de WhatsApp com o código de barras (só para boletos já gerados)
-    tel_por_cliente = st.session_state.get('_bol_tel', {})
-
-    def _wa_link(row):
-        cod = str(row.get('codigo_barras') or "")
-        if not cod or (row.get('status') or '').upper() != "SUCESSO":
-            return ""
-        tel = _tel_wa(tel_por_cliente.get(str(row.get('cliente') or ''), ''))
-        if not tel:
-            return ""
-        venc = row.get('vencimento') or ""
-        msg = (f"Olá! Segue o seu boleto Yamaha.\n"
-               f"Vencimento: {venc}\n"
-               f"Código de barras (copie e cole no app do seu banco):\n{cod}")
-        return f"https://wa.me/{tel}?text={urllib.parse.quote(msg)}"
-    df_f['WhatsApp'] = df_f.apply(_wa_link, axis=1)
-
-    # Link para baixar o PDF do boleto (do Google Drive)
+    # Link para baixar o PDF do boleto (Google Drive) e coleta dos itens p/ ZIP em lote
     mapa_pdf = _mapa_boletos_drive()
+    itens_zip = []  # (label, nome_arquivo, file_id)
 
     def _link_pdf(row):
         if (row.get('status') or '').upper() != "SUCESSO":
             return ""
         nome = _nome_arquivo_boleto(row.get('cliente'), row.get('grupo'), row.get('cota'))
-        return mapa_pdf.get(nome, "")
+        info = mapa_pdf.get(nome)
+        if info and info.get("id"):
+            itens_zip.append((f"{row.get('cliente')} — {row.get('grupo')}/{row.get('cota')}", nome, info["id"]))
+        return (info or {}).get("link", "")
     df_f['Baixar'] = df_f.apply(_link_pdf, axis=1)
 
-    cols = ['cliente', 'Grupo/Cota', 'Situação', 'vencimento', 'codigo_barras', 'Atraso', 'Baixar', 'WhatsApp', 'mensagem', 'Solicitado em']
-    ren = {'cliente': 'Cliente', 'vencimento': 'Vencimento', 'codigo_barras': 'Código de Barras', 'mensagem': 'Mensagem'}
-    df_show = df_f[cols].rename(columns=ren)
+    cols = ['cliente', 'Grupo/Cota', 'Situação', 'vencimento', 'codigo_barras', 'Baixar']
+    df_show = df_f[cols].rename(columns={'cliente': 'Cliente', 'vencimento': 'Vencimento',
+                                         'codigo_barras': 'Código de Barras'})
 
     busca_h = st.text_input("🔍 Buscar no andamento (cliente, grupo/cota, código…)",
                             key="busca_boleto_hist", placeholder="Digite parte do nome, grupo/cota ou código…")
     if busca_h and busca_h.strip():
         b = busca_h.strip()
         mask = False
-        for c in ['Cliente', 'Grupo/Cota', 'Código de Barras', 'Situação', 'Mensagem']:
+        for c in ['Cliente', 'Grupo/Cota', 'Código de Barras', 'Situação']:
             mask = mask | df_show[c].astype(str).str.contains(b, case=False, na=False)
         df_show = df_show[mask]
 
@@ -394,9 +392,21 @@ def _painel_status(supabase, is_master):
         column_config={
             "Código de Barras": st.column_config.TextColumn("Código de Barras", width="large"),
             "Baixar": st.column_config.LinkColumn("Baixar", display_text="📥 PDF"),
-            "WhatsApp": st.column_config.LinkColumn("WhatsApp", display_text="📲 Enviar"),
         },
     )
     st.caption("ℹ️ Os boletos são gerados quando o **robô do escritório** está ligado. "
-               "Clique em **📲 Enviar** para abrir o WhatsApp do cliente já com o código de barras. "
-               "Os boletos deste mês somem sozinhos quando virar o mês.")
+               "Clique em **📥 PDF** para baixar. Os boletos deste mês somem sozinhos ao virar o mês.")
+
+    # --- Baixar vários boletos de uma vez (ZIP) ---
+    if itens_zip:
+        st.markdown("##### 📦 Baixar vários boletos de uma vez")
+        labels = [it[0] for it in itens_zip]
+        sel_zip = st.multiselect("Selecione (deixe vazio = baixar TODOS):", labels, key="bol_sel_zip")
+        escolhidos = [it for it in itens_zip if it[0] in sel_zip] or itens_zip
+        if st.button(f"📦 Preparar ZIP ({len(escolhidos)} boleto(s))", key="bol_zip_btn"):
+            with st.spinner("Baixando os PDFs do Drive e montando o ZIP…"):
+                st.session_state['bol_zip_bytes'] = _gerar_zip([(n, fid) for (_, n, fid) in escolhidos])
+        if st.session_state.get('bol_zip_bytes'):
+            st.download_button("⬇️ Baixar ZIP", st.session_state['bol_zip_bytes'],
+                               file_name=f"boletos_{sel.replace('/', '-')}.zip",
+                               mime="application/zip", key="bol_zip_dl")
