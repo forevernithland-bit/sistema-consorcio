@@ -140,7 +140,8 @@ def render_emitir_boleto(supabase, df_vendas_global, df_cli=None):
         f"Marque as cotas e clique em **Gerar Boletos**. O robô do escritório entra no Newcon, "
         f"gera o boleto e o **código de barras** de cada cota (para envio ao cliente). Aparecem cotas "
         f"**Em Andamento e Em Atraso** (as em atraso são sinalizadas). Marque **Envio Mensal** para "
-        f"incluir a cota automaticamente todo mês. Referência: **{mes_atual}**."
+        f"gerar o boleto da cota **automaticamente todo dia 05** (o robô do escritório precisa estar "
+        f"ligado). Referência: **{mes_atual}**."
     )
 
     if df_vendas_global is None or df_vendas_global.empty:
