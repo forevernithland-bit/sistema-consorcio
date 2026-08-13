@@ -328,6 +328,10 @@ def _painel_status(supabase, is_master):
     with cab2:
         st.write("")
         if st.button("🔄 Atualizar", use_container_width=True, key="bol_refresh"):
+            try:
+                listar_arquivos_drive.clear()  # busca os PDFs novos do Drive na hora
+            except Exception:
+                pass
             st.rerun()
 
     y_sel, m_sel = meses[labels.index(sel)]
