@@ -1,7 +1,27 @@
+import urllib.parse
 import streamlit as st
 import pandas as pd
 from datetime import datetime
 from utils import formatar_brl_puro, normalizar_string
+
+
+def _tel_wa(tel):
+    """Telefone -> formato do wa.me (só dígitos, com 55 na frente)."""
+    d = ''.join(filter(str.isdigit, str(tel or "")))
+    if not d:
+        return ""
+    if not d.startswith("55"):
+        d = "55" + d
+    return d
+
+
+def _limpar_boletos_antigos(supabase):
+    """Ao virar o mês, apaga os boletos dos meses anteriores (housekeeping)."""
+    try:
+        supabase.table("fila_automacao").delete() \
+            .eq("tipo", "BOLETO").lt("criado_em", _inicio_mes_atual()).execute()
+    except Exception:
+        pass
 
 # Administradoras com automação de boleto configurada (por enquanto Yamaha/Newcon)
 ADMINS_COM_BOLETO = ["YAMAHA"]
@@ -51,12 +71,25 @@ def _rotulo_situacao(pedido):
         except Exception:
             dt = str(dt)[:10]
         return f"🧾 Gerado {dt}"
+    if s == "JA_PAGO":
+        return "✅ Já pago"
+    if s == "SEM_BOLETO":
+        return "📭 Sem boleto no mês"
     return s or "—"
 
 
-def render_emitir_boleto(supabase, df_vendas_global):
+def render_emitir_boleto(supabase, df_vendas_global, df_cli=None):
     is_master = (st.session_state.get('perfil_logado') == "Master") or \
                 (st.session_state.get('usuario_logado') in ['breno', 'uriel'])
+
+    _limpar_boletos_antigos(supabase)  # ao virar o mês, some com os boletos antigos
+
+    # mapa nome do cliente -> telefone (para o link do WhatsApp)
+    tel_por_cliente = {}
+    if df_cli is not None and not df_cli.empty and 'Nome' in df_cli.columns:
+        for _, c in df_cli.iterrows():
+            tel_por_cliente[str(c.get('Nome', ''))] = c.get('Telefone', '')
+    st.session_state['_bol_tel'] = tel_por_cliente
 
     mes_atual = datetime.today().strftime("%m/%Y")
     st.markdown("### 🧾 Emissão de Boletos (Yamaha)")
@@ -112,7 +145,7 @@ def render_emitir_boleto(supabase, df_vendas_global):
         vid = int(r['id'])
         pedido = mapa_ultimo.get(vid)
         status_atual = (pedido.get("status") or "").upper() if pedido else ""
-        ja_tratado = status_atual in ("PENDENTE", "PROCESSANDO", "SUCESSO")
+        ja_tratado = status_atual in ("PENDENTE", "PROCESSANDO", "SUCESSO", "JA_PAGO", "SEM_BOLETO")
         mensal = bool(r.get('BOLETO_MENSAL', False)) if 'BOLETO_MENSAL' in df.columns else False
         atraso = r.get('_status_norm') == "EMATRASO"
         linhas.append({
@@ -186,7 +219,8 @@ def _enfileirar(supabase, selecionados, mapa_ultimo):
     for _, r in selecionados.iterrows():
         vid = int(r['venda_id'])
         pedido_ant = mapa_ultimo.get(vid)
-        if pedido_ant and (pedido_ant.get("status") or "").upper() in ("PENDENTE", "PROCESSANDO", "SUCESSO"):
+        if pedido_ant and (pedido_ant.get("status") or "").upper() in (
+                "PENDENTE", "PROCESSANDO", "SUCESSO", "JA_PAGO", "SEM_BOLETO"):
             pulados += 1
             continue
         grupo, cota = "", ""
@@ -289,7 +323,24 @@ def _painel_status(supabase, is_master):
             return ""
     df_f['Solicitado em'] = df_f['criado_em'].apply(_dt)
 
-    cols = ['cliente', 'Grupo/Cota', 'Situação', 'vencimento', 'codigo_barras', 'Atraso', 'mensagem', 'Solicitado em']
+    # Link de WhatsApp com o código de barras (só para boletos já gerados)
+    tel_por_cliente = st.session_state.get('_bol_tel', {})
+
+    def _wa_link(row):
+        cod = str(row.get('codigo_barras') or "")
+        if not cod or (row.get('status') or '').upper() != "SUCESSO":
+            return ""
+        tel = _tel_wa(tel_por_cliente.get(str(row.get('cliente') or ''), ''))
+        if not tel:
+            return ""
+        venc = row.get('vencimento') or ""
+        msg = (f"Olá! Segue o seu boleto Yamaha.\n"
+               f"Vencimento: {venc}\n"
+               f"Código de barras (copie e cole no app do seu banco):\n{cod}")
+        return f"https://wa.me/{tel}?text={urllib.parse.quote(msg)}"
+    df_f['WhatsApp'] = df_f.apply(_wa_link, axis=1)
+
+    cols = ['cliente', 'Grupo/Cota', 'Situação', 'vencimento', 'codigo_barras', 'Atraso', 'WhatsApp', 'mensagem', 'Solicitado em']
     ren = {'cliente': 'Cliente', 'vencimento': 'Vencimento', 'codigo_barras': 'Código de Barras', 'mensagem': 'Mensagem'}
     df_show = df_f[cols].rename(columns=ren)
 
@@ -305,5 +356,13 @@ def _painel_status(supabase, is_master):
     if df_show.empty:
         st.info(f"Nenhum boleto encontrado para “{busca_h}”.")
         return
-    st.dataframe(df_show, use_container_width=True, hide_index=True)
-    st.caption("ℹ️ Os boletos só são gerados quando o **robô do escritório** está ligado.")
+    st.dataframe(
+        df_show, use_container_width=True, hide_index=True,
+        column_config={
+            "Código de Barras": st.column_config.TextColumn("Código de Barras", width="large"),
+            "WhatsApp": st.column_config.LinkColumn("WhatsApp", display_text="📲 Enviar"),
+        },
+    )
+    st.caption("ℹ️ Os boletos são gerados quando o **robô do escritório** está ligado. "
+               "Clique em **📲 Enviar** para abrir o WhatsApp do cliente já com o código de barras. "
+               "Os boletos deste mês somem sozinhos quando virar o mês.")
