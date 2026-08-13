@@ -23,6 +23,7 @@ from modulos.senhas import render_senhas
 from modulos.assistente import render_widget_ia, render_config_ia
 from modulos.tema import montar_css, render_seletor_tema, css_fundo_login
 from modulos.ofertar_lance import render_ofertar_lance
+from modulos.emitir_boleto import render_emitir_boleto
 from modulos.financeiro import render_financeiro
 
 # ==========================================
@@ -204,9 +205,9 @@ else:
     # Menu principal. Senhas e Base de Conhecimento agora ficam DENTRO de
     # "Configurações de Sistema" (abas). Assembleias está oculto por enquanto.
     if is_master:
-        opcoes_principais = ["Dashboard", "Nova Venda", "Ofertar Lance", "Financeiro", "Baixar Parcelas", "Relatórios", "Mídias", "Configurações de Sistema"]
+        opcoes_principais = ["Dashboard", "Nova Venda", "Ofertar Lance", "Emissão de Boletos", "Financeiro", "Baixar Parcelas", "Relatórios", "Mídias", "Configurações de Sistema"]
     else:
-        opcoes_principais = ["Dashboard", "Nova Venda", "Ofertar Lance", "Relatórios", "Mídias"]
+        opcoes_principais = ["Dashboard", "Nova Venda", "Ofertar Lance", "Emissão de Boletos", "Relatórios", "Mídias"]
         
     try: idx_principal = opcoes_principais.index(st.session_state['menu_lateral'])
     except ValueError: idx_principal = None 
@@ -337,6 +338,8 @@ if menu_selecionado == "Dashboard":
     render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd, df_admin, status_dict, cfg)
 elif menu_selecionado == "Ofertar Lance":
     render_ofertar_lance(supabase, df_vendas_global)
+elif menu_selecionado == "Emissão de Boletos":
+    render_emitir_boleto(supabase, df_vendas_global)
 elif menu_selecionado == "Nova Venda":
     render_nova_venda(supabase, df_cli, lista_admin_bd)
 elif menu_selecionado == "Financeiro":
