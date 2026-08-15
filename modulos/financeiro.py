@@ -129,6 +129,20 @@ def _alertas_duplicidade(trad):
     return alertas
 
 
+def _publicar_resultado_socios(supabase, ym, breno, uriel):
+    """Grava o resultado do mês (Breno/Uriel) em resultado_socios_mensal, para o
+    ERP_ECOCLIM ler (linha 'CONS INVESTIMENTOS' do Controle Financeiro) sem
+    duplicar a lógica de comissionamento. Nunca deve travar a tela Financeiro."""
+    try:
+        ano, mes = ym.split("-")
+        supabase.table("resultado_socios_mensal").upsert(
+            {"ano": int(ano), "mes": int(mes), "breno": round(float(breno), 2), "uriel": round(float(uriel), 2)},
+            on_conflict="ano,mes",
+        ).execute()
+    except Exception:
+        pass
+
+
 def _render_previsao_site(site_prev):
     """Bloco de PREVISÃO: operações do Site ainda EM ANÁLISE (não entram no
     resultado do mês; entram quando concluídas). Independente do seletor de mês."""
@@ -222,6 +236,7 @@ def render_financeiro(supabase, df_vendas_global, df_admin, cfg, status_dict):
         breno = (t['breno'].sum() if not t.empty else 0.0) + (s['breno'].sum() if not s.empty else 0.0)
         uriel = (t['uriel'].sum() if not t.empty else 0.0) + (s['uriel'].sum() if not s.empty else 0.0)
         dados[lbl] = [fat_t + fat_s, fat_t, fat_s, liq, breno, uriel]
+        _publicar_resultado_socios(supabase, ym, breno, uriel)
 
     df_sum = pd.DataFrame(dados, index=linhas)
     if len(sel_meses) > 1:
