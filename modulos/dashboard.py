@@ -7,6 +7,42 @@ from utils import (formatar_telefone, formatar_data, formatar_data_br,
                    formatar_moeda, formatar_brl_puro, normalizar_produto)
 from regras import gerar_tabela_parcelas
 from database import salvar_status_comissoes
+from modulos.integracao_site import carregar_operacoes_site
+
+
+def _render_cartas_site(busca_nome=""):
+    """Lista (só leitura) as operações de carta contemplada vindas do SITE.
+    A edição continua no admin do Site — aqui é apenas visão."""
+    try:
+        site = carregar_operacoes_site()
+    except Exception:
+        site = None
+    if site is None or site.empty:
+        return
+
+    st.divider()
+    st.subheader("🌐 Cartas Contempladas — Clientes do Site")
+    st.caption("Operações cadastradas no admin do Site (consorbensmg.com.br/admin). "
+               "Visão somente leitura — para editar, use o painel do Site.")
+
+    df = site.copy()
+    if busca_nome:
+        df = df[df['cliente'].astype(str).str.contains(busca_nome.strip(), case=False, na=False)]
+    if df.empty:
+        st.info("Nenhum cliente do Site para essa busca.")
+        return
+
+    view = pd.DataFrame({
+        "Cliente": df['cliente'].values,
+        "Vendedor": df['representante'].values,
+        "Produto": df['produto'].values,
+        "Administradora": df['administradora'].values,
+        "Crédito": df['credito_total'].apply(formatar_brl_puro).values,
+        "Status": df['status_label'].values,
+        "Ágio": df['agio'].apply(formatar_brl_puro).values,
+    })
+    st.dataframe(view, use_container_width=True, hide_index=True)
+
 
 def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd, df_admin, status_dict, cfg):
     is_master = (st.session_state.get('perfil_logado') == "Master") or (st.session_state.get('usuario_logado') in ['breno', 'uriel'])
@@ -299,6 +335,9 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
             m1.metric("Volume Total (Filtro)", formatar_brl_puro(vol_total))
             m2.metric("Qtd. Cotas (Filtro)", len(df_view))
             m3.metric("Ticket Médio", formatar_brl_puro(vol_total/len(df_view) if len(df_view)>0 else 0))
+
+            # ---- Cartas Contempladas vindas do SITE (só leitura) ----
+            _render_cartas_site(busca_nome)
 
             st.write("")
             st.subheader("📊 Gráficos Globais (Filtro Independente)")
