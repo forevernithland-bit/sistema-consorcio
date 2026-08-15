@@ -8,6 +8,27 @@ from utils import (formatar_telefone, formatar_data, formatar_data_br,
 from regras import gerar_tabela_parcelas
 from database import salvar_status_comissoes
 from modulos.integracao_site import carregar_operacoes_site
+from modulos.financeiro import calcular_resumo_mes_atual
+
+
+def _render_resumo_mes(supabase, df_vendas_global, df_admin, cfg, status_dict):
+    """Quadrinho 'Resumo do mês' no topo do Dashboard — faturamento
+    Tradicional + Cotas Contempladas (realizado e previsto), reaproveitando
+    a mesma lógica do Financeiro. Só para Master (valores sensíveis)."""
+    try:
+        r = calcular_resumo_mes_atual(supabase, df_vendas_global, df_admin, cfg, status_dict)
+    except Exception:
+        return
+    mes_lbl = datetime.today().strftime("%m/%Y")
+    st.markdown(f"##### 📊 Resumo do mês ({mes_lbl})")
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("🏦 Consórcio Tradicional", formatar_brl_puro(r["tradicional"]))
+    c2.metric("🎯 Cotas Contempladas", formatar_brl_puro(r["contemplado_realizado"]))
+    c3.metric("🔮 Previsto (em andamento)", formatar_brl_puro(r["contemplado_previsto"]))
+    c4.metric("💰 Faturamento Total", formatar_brl_puro(r["total"]))
+    st.caption("Tradicional e Cotas Contempladas = recebido/concluído até agora no mês. "
+               "Previsto = ágio das Cotas Contempladas ainda Em análise no Site.")
+    st.divider()
 
 
 def _render_cartas_site(busca_nome=""):
@@ -46,6 +67,10 @@ def _render_cartas_site(busca_nome=""):
 
 def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd, df_admin, status_dict, cfg):
     is_master = (st.session_state.get('perfil_logado') == "Master") or (st.session_state.get('usuario_logado') in ['breno', 'uriel'])
+
+    # Resumo do mês (Tradicional + Cotas Contempladas) — só Master, valores sensíveis
+    if is_master:
+        _render_resumo_mes(supabase, df_vendas_global, df_admin, cfg, status_dict)
 
     # Alerta de Assembleias
     hoje_date = datetime.today().date()
