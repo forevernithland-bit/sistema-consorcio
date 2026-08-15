@@ -13,6 +13,22 @@ def iniciar_conexao() -> Client:
     key = st.secrets["SUPABASE_KEY"]
     return create_client(url, key)
 
+
+@st.cache_resource
+def iniciar_conexao_site():
+    """Conexão de LEITURA com o Supabase do SITE (cartas contempladas).
+    Projeto/banco diferente do ERP. Usa SITE_SUPABASE_URL / SITE_SUPABASE_KEY
+    (chave service_role, só nos secrets do servidor). Retorna None se não
+    configurado — a integração fica desligada e o ERP segue normal."""
+    try:
+        url = st.secrets["SITE_SUPABASE_URL"]
+        key = st.secrets["SITE_SUPABASE_KEY"]
+        if not url or not key:
+            return None
+        return create_client(url, key)
+    except Exception:
+        return None
+
 def carregar_tabela(supabase: Client, nome_tabela: str) -> pd.DataFrame:
     """Busca todos os dados de uma tabela específica"""
     try:
