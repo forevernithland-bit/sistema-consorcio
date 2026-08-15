@@ -129,6 +129,48 @@ def _alertas_duplicidade(trad):
     return alertas
 
 
+# ==========================================================
+# RESUMO DO MÊS ATUAL (usado pelo card do Dashboard)
+# ==========================================================
+def calcular_resumo_mes_atual(supabase, df_vendas_global, df_admin, cfg, status_dict):
+    """Faturamento do mês atual, para o quadrinho do Dashboard: Tradicional
+    (recebido até agora), Cotas Contempladas concluídas até agora, previsto
+    das Contempladas em andamento (Site), e o total. Reusa exatamente as
+    mesmas fontes/fórmulas do quadro do Financeiro — evita números divergentes
+    entre as duas telas."""
+    hoje = datetime.today()
+    ym_atual = f"{hoje.year:04d}-{hoje.month:02d}"
+
+    datas_fin = _carregar_datas_financeiro(supabase)
+    trad = _recebidos_tradicional(supabase, df_vendas_global, df_admin, cfg, status_dict, datas_fin)
+    trad_calc = trad.drop_duplicates('key', keep='first') if not trad.empty else trad
+    t_mes = trad_calc[trad_calc['ym'] == ym_atual] if not trad_calc.empty else trad_calc
+    fat_tradicional = t_mes['bruto'].sum() if not t_mes.empty else 0.0
+
+    try:
+        site = carregar_operacoes_site()
+    except Exception:
+        site = pd.DataFrame()
+    if site is None:
+        site = pd.DataFrame()
+
+    site_ok_mes = site[(site['status'] == 'concluido') & (site['ym'] == ym_atual)] if not site.empty else site
+    fat_contemplado = site_ok_mes['agio'].sum() if not site_ok_mes.empty else 0.0
+
+    site_prev = site[site['status'] == 'em_analise'] if not site.empty else site
+    fat_previsto = site_prev['agio'].sum() if not site_prev.empty else 0.0
+
+    fat_tradicional = float(fat_tradicional)
+    fat_contemplado = float(fat_contemplado)
+    fat_previsto = float(fat_previsto)
+    return {
+        "tradicional": round(fat_tradicional, 2),
+        "contemplado_realizado": round(fat_contemplado, 2),
+        "contemplado_previsto": round(fat_previsto, 2),
+        "total": round(fat_tradicional + fat_contemplado + fat_previsto, 2),
+    }
+
+
 def _publicar_resultado_socios(supabase, ym, breno, uriel):
     """Grava o resultado do mês (Breno/Uriel) em resultado_socios_mensal, para o
     ERP_ECOCLIM ler (linha 'CONS INVESTIMENTOS' do Controle Financeiro) sem
