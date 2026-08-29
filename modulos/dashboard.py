@@ -7,9 +7,70 @@ from utils import (formatar_telefone, formatar_data, formatar_data_br,
                    formatar_moeda, formatar_brl_puro, normalizar_produto)
 from regras import gerar_tabela_parcelas
 from database import salvar_status_comissoes
+from modulos.integracao_site import carregar_operacoes_site
+from modulos.financeiro import calcular_resumo_mes_atual
+
+
+def _render_resumo_mes(supabase, df_vendas_global, df_admin, cfg, status_dict):
+    """Quadrinho 'Resumo do mês' no topo do Dashboard — faturamento
+    Tradicional + Cotas Contempladas (realizado e previsto), reaproveitando
+    a mesma lógica do Financeiro. Só para Master (valores sensíveis)."""
+    try:
+        r = calcular_resumo_mes_atual(supabase, df_vendas_global, df_admin, cfg, status_dict)
+    except Exception:
+        return
+    mes_lbl = datetime.today().strftime("%m/%Y")
+    st.markdown(f"##### 📊 Resumo do mês ({mes_lbl})")
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("🏦 Consórcio Tradicional", formatar_brl_puro(r["tradicional"]))
+    c2.metric("🎯 Cotas Contempladas", formatar_brl_puro(r["contemplado_realizado"]))
+    c3.metric("🔮 Previsto (em andamento)", formatar_brl_puro(r["contemplado_previsto"]))
+    c4.metric("💰 Faturamento Total", formatar_brl_puro(r["total"]))
+    st.caption("Tradicional e Cotas Contempladas = recebido/concluído até agora no mês. "
+               "Previsto = ágio das Cotas Contempladas ainda Em análise no Site.")
+    st.divider()
+
+
+def _render_cartas_site(busca_nome=""):
+    """Lista (só leitura) as operações de carta contemplada vindas do SITE.
+    A edição continua no admin do Site — aqui é apenas visão."""
+    try:
+        site = carregar_operacoes_site()
+    except Exception:
+        site = None
+    if site is None or site.empty:
+        return
+
+    st.divider()
+    st.subheader("🌐 Cartas Contempladas — Clientes do Site")
+    st.caption("Operações cadastradas no admin do Site (consorbensmg.com.br/admin). "
+               "Visão somente leitura — para editar, use o painel do Site.")
+
+    df = site.copy()
+    if busca_nome:
+        df = df[df['cliente'].astype(str).str.contains(busca_nome.strip(), case=False, na=False)]
+    if df.empty:
+        st.info("Nenhum cliente do Site para essa busca.")
+        return
+
+    view = pd.DataFrame({
+        "Cliente": df['cliente'].values,
+        "Vendedor": df['representante'].values,
+        "Produto": df['produto'].values,
+        "Administradora": df['administradora'].values,
+        "Crédito": df['credito_total'].apply(formatar_brl_puro).values,
+        "Status": df['status_label'].values,
+        "Ágio": df['agio'].apply(formatar_brl_puro).values,
+    })
+    st.dataframe(view, use_container_width=True, hide_index=True)
+
 
 def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd, df_admin, status_dict, cfg):
     is_master = (st.session_state.get('perfil_logado') == "Master") or (st.session_state.get('usuario_logado') in ['breno', 'uriel'])
+
+    # Resumo do mês (Tradicional + Cotas Contempladas) — só Master, valores sensíveis
+    if is_master:
+        _render_resumo_mes(supabase, df_vendas_global, df_admin, cfg, status_dict)
 
     # Alerta de Assembleias
     hoje_date = datetime.today().date()
@@ -129,7 +190,56 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
                 ficha_display = cotas_cliente[['Data da Venda', 'ADMINISTRADORA', 'PRODUTO', 'GRUPO', 'COTA', 'Valor Formatado', 'STATUS', 'VENDEDOR']].rename(columns={'ADMINISTRADORA': 'Administradora', 'PRODUTO': 'Produto', 'GRUPO': 'Grupo', 'COTA': 'Cota', 'Valor Formatado': 'Valor (R$)', 'STATUS': 'Status', 'VENDEDOR': 'Vendedor'})
                 estilo_ficha = ficha_display.style.set_properties(**{'text-align': 'center'}).set_table_styles([{'selector': 'th', 'props': [('text-align', 'center')]}])
                 st.dataframe(estilo_ficha, use_container_width=True, hide_index=True)
-                
+
+                # --- Adicionar nova cota a ESTE cliente (reaproveita o cadastro) ---
+                if is_master:
+                    with st.expander("➕ Adicionar Nova Cota a este Cliente", expanded=False):
+                        st.caption("Inclui só a cota — o cadastro do cliente já existe e é reaproveitado. "
+                                   "A cota entra automaticamente neste mesmo perfil.")
+                        kp = f"addcota_{cliente_nome}_"
+                        opts_v_add = ["BRENO LIMA", "URIEL GOMES", "Particular Breno", "Particular Uriel", "Consorbens", "Vendedor Terceiro"]
+                        lista_prod_add = ["Auto", "Imóvel", "Moto", "Caminhão", "Serviços"]
+                        ca1, ca2, ca3 = st.columns(3)
+                        with ca1:
+                            add_data = st.date_input("Data da Venda", format="DD/MM/YYYY", key=kp + "data")
+                            add_grupo = st.text_input("Grupo *", key=kp + "grupo")
+                        with ca2:
+                            add_vend = st.selectbox("Vendedor *", opts_v_add, key=kp + "vend")
+                            add_cota = st.text_input("Cota *", key=kp + "cota")
+                        with ca3:
+                            add_admin = st.selectbox("Administradora *", lista_admin_bd, key=kp + "admin")
+                            add_valor = st.number_input("Valor da Carta (R$) *", min_value=0.0, step=1000.0, format="%.2f", key=kp + "valor")
+                        add_produto = st.selectbox("Tipo do Bem *", lista_prod_add, key=kp + "prod")
+
+                        if st.button("➕ Salvar Nova Cota", type="primary", use_container_width=True, key=kp + "btn"):
+                            g, c = str(add_grupo).strip(), str(add_cota).strip()
+                            if not g or not c or add_valor <= 0:
+                                st.error("❌ Preencha Grupo, Cota e um Valor maior que zero.")
+                            elif ((df_vendas_global['GRUPO'].astype(str).str.strip() == g) &
+                                  (df_vendas_global['COTA'].astype(str).str.strip() == c)).any():
+                                dono = df_vendas_global[(df_vendas_global['GRUPO'].astype(str).str.strip() == g) &
+                                                        (df_vendas_global['COTA'].astype(str).str.strip() == c)].iloc[0]['Nome do cliente']
+                                st.error(f"❌ Já existe a cota {g}/{c} (cadastrada em '{dono}'). "
+                                         "Para mudar algo nela, use '⚙️ Atualizar Status, Data e Gerenciar Cota'.")
+                            else:
+                                try:
+                                    supabase.table("vendas").insert([{
+                                        "NOME": cliente_nome,   # texto idêntico ao do perfil → cota cai neste cliente
+                                        "DATA": add_data.strftime("%d/%m/%Y"),
+                                        "PRODUTO": add_produto,
+                                        "VENDEDOR": add_vend,
+                                        "GRUPO": g,
+                                        "COTA": c,
+                                        "ADMINISTRADORA": add_admin,
+                                        "STATUS": "Em Andamento",
+                                        "TIPO_PRODUTO": "Consórcio Tradicional",
+                                        "VALOR": float(add_valor),
+                                    }]).execute()
+                                    st.success(f"✅ Cota {g}/{c} adicionada ao perfil de {cliente_nome}!")
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"❌ Erro ao salvar a cota: {e}")
+
                 with st.expander("⚙️ Atualizar Status, Data e Gerenciar Cota", expanded=False):
                     opcoes_cotas = cotas_cliente.apply(lambda r: f"ID:{r['id']} | Grupo: {r['GRUPO']} / Cota: {r['COTA']} - Valor: {r['Valor Formatado']}", axis=1).tolist()
                     c_sel, _ = st.columns([3, 1])
@@ -299,6 +409,9 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
             m1.metric("Volume Total (Filtro)", formatar_brl_puro(vol_total))
             m2.metric("Qtd. Cotas (Filtro)", len(df_view))
             m3.metric("Ticket Médio", formatar_brl_puro(vol_total/len(df_view) if len(df_view)>0 else 0))
+
+            # ---- Cartas Contempladas vindas do SITE (só leitura) ----
+            _render_cartas_site(busca_nome)
 
             st.write("")
             st.subheader("📊 Gráficos Globais (Filtro Independente)")

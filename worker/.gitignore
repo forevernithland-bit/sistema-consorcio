@@ -1,0 +1,7 @@
+# NUNCA versionar segredos/sessão
+.env
+newcon_sessao.json
+roteiro_newcon.py
+comprovantes/
+__pycache__/
+*.pyc

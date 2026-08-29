@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timezone
 import calendar
 import os
 import base64  # Necessário para codificar imagens caso use futuramente
@@ -23,6 +23,7 @@ from modulos.senhas import render_senhas
 from modulos.assistente import render_widget_ia, render_config_ia
 from modulos.tema import montar_css, render_seletor_tema, css_fundo_login
 from modulos.ofertar_lance import render_ofertar_lance
+from modulos.emitir_boleto import render_emitir_boleto
 from modulos.financeiro import render_financeiro
 
 # ==========================================
@@ -158,10 +159,48 @@ simuladores_dict = {
     "⚖️ Financiamento x Consórcio": "comparador.html"
 }
 
+# ---- Bolinha "SERVER" (status do robô do escritório) ----
+# O worker bate o ponto em robo_status.atualizado_em a cada ciclo (~30s).
+# Verde se o último ponto foi há pouco; vermelho se está sem sinal.
+LIMITE_SERVER_SEG = 90  # sem sinal por mais que isso => robô desligado (vermelho)
+
+
+def _status_robo(sb):
+    try:
+        res = sb.table("robo_status").select("atualizado_em").eq("id", 1).execute()
+        if not res.data:
+            return False
+        dt = pd.to_datetime(res.data[0]["atualizado_em"], utc=True)
+        idade = (datetime.now(timezone.utc) - dt.to_pydatetime()).total_seconds()
+        return idade <= LIMITE_SERVER_SEG
+    except Exception:
+        return False
+
+
+_online = _status_robo(supabase)
+_cor = "#22c55e" if _online else "#ef4444"          # verde / vermelho
+_titulo = "Robô ligado" if _online else "Robô desligado"
+st.sidebar.markdown(
+    f"""
+    <style>
+      /* Encosta o conteúdo da sidebar no topo (sobe a bolinha SERVER o máximo possível) */
+      [data-testid="stSidebarUserContent"] {{ padding-top: 0.6rem !important; }}
+      section[data-testid="stSidebar"] > div:first-child {{ padding-top: 0.6rem !important; }}
+    </style>
+    <div style="display:flex;align-items:center;justify-content:flex-start;gap:7px;
+                margin:-6px 0 4px 2px;" title="{_titulo}">
+        <span style="width:11px;height:11px;border-radius:50%;background:{_cor};
+                     box-shadow:0 0 6px {_cor};display:inline-block;"></span>
+        <span style="font-size:12px;font-weight:700;letter-spacing:1px;color:{_cor};">SERVER</span>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
 logo_path = os.path.join(PASTA_ATUAL, "logo.png")
 if os.path.exists(logo_path):
     st.sidebar.image(logo_path, use_container_width=True)
-st.sidebar.markdown("<br>", unsafe_allow_html=True) 
+st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
 if not is_logado:
     OPC_LOGIN = "🔐 Login (Área Restrita)"
@@ -204,9 +243,9 @@ else:
     # Menu principal. Senhas e Base de Conhecimento agora ficam DENTRO de
     # "Configurações de Sistema" (abas). Assembleias está oculto por enquanto.
     if is_master:
-        opcoes_principais = ["Dashboard", "Nova Venda", "Ofertar Lance", "Financeiro", "Baixar Parcelas", "Relatórios", "Mídias", "Configurações de Sistema"]
+        opcoes_principais = ["Dashboard", "Nova Venda", "Ofertar Lance", "Emissão de Boletos", "Financeiro", "Baixar Parcelas", "Relatórios", "Mídias", "Configurações de Sistema"]
     else:
-        opcoes_principais = ["Dashboard", "Nova Venda", "Ofertar Lance", "Relatórios", "Mídias"]
+        opcoes_principais = ["Dashboard", "Nova Venda", "Ofertar Lance", "Emissão de Boletos", "Relatórios", "Mídias"]
         
     try: idx_principal = opcoes_principais.index(st.session_state['menu_lateral'])
     except ValueError: idx_principal = None 
@@ -337,6 +376,8 @@ if menu_selecionado == "Dashboard":
     render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd, df_admin, status_dict, cfg)
 elif menu_selecionado == "Ofertar Lance":
     render_ofertar_lance(supabase, df_vendas_global)
+elif menu_selecionado == "Emissão de Boletos":
+    render_emitir_boleto(supabase, df_vendas_global, df_cli)
 elif menu_selecionado == "Nova Venda":
     render_nova_venda(supabase, df_cli, lista_admin_bd)
 elif menu_selecionado == "Financeiro":

@@ -1,0 +1,28 @@
+# ===== Segredos — NUNCA versionar =====
+# O repositório sistema-consorcio é PÚBLICO. Tudo abaixo contém credencial,
+# sessão logada ou dado de cliente. Se entrar num commit, vaza para a internet.
+.streamlit/secrets.toml
+.streamlit/
+worker/.env
+worker/newcon_sessao.json
+worker/comprovantes/
+
+# Roteiros gravados pelo `playwright codegen`: guardam login e SENHA do Newcon
+# em texto puro (page.locator("#edtSenha").fill("...")). Nenhum deles sobe.
+worker/roteiro_*.py
+
+# ===== Saídas de execução do robô (dados de cliente / telas logadas) =====
+worker/*.txt
+worker/*.log
+worker/diag_*.png
+worker/*.png
+worker/relatorios/
+worker/Comissoes*/
+
+# ===== Cache / lixo do Python =====
+__pycache__/
+*.pyc
+*.pyo
+
+# ===== Config local do Claude Code =====
+.claude/

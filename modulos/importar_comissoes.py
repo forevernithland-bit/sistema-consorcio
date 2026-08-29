@@ -13,7 +13,10 @@ RE_GRUPO_COTA = re.compile(r"(\d{6})-(\d{4})-\d{2}")          # 009045-0105-00
 RE_PCT        = re.compile(r"^\d{1,2},\d{4}$")                # 1,0000 / 0,7000
 RE_MOEDA      = re.compile(r"^\d{1,3}(?:\.\d{3})*,\d{2}$")    # 60.070,00 / 600,70
 RE_INT_PEQ    = re.compile(r"^\d{1,2}$")                      # nº da parcela (Pcl)
-RE_TOTAL      = re.compile(r"Total de Comiss.o do Per.odo:\s*\(\s*(\d+)\s*\)\s*([\d\.]+,\d{2})\s+([\d\.]+,\d{2})")
+# Rodapé do total: modelo "Comissionado" imprime "Total de Comissão do Período:";
+# modelo "Filial" imprime "Total Geral:". Nos dois vem "( N )" e depois os valores
+# (1º = base/crédito, 2º = comissão). Aceita os dois.
+RE_TOTAL      = re.compile(r"Total (?:de Comiss.o do Per.odo|Geral):\s*\(\s*(\d+)\s*\)\s*([\d\.]+,\d{2})\s+([\d\.]+,\d{2})")
 RE_PERIODO    = re.compile(r"Encerramento de:\s*(\d{2}/\d{2}/\d{4})\s*a\s*(\d{2}/\d{2}/\d{4})")
 
 VENDEDORES = ["BRENO LIMA", "URIEL GOMES", "Particular Breno", "Particular Uriel", "Consorbens", "Vendedor Terceiro"]

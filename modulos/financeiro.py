@@ -1,16 +1,9 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from utils import formatar_brl_puro, parse_float_safe, normalizar_string
+from utils import formatar_brl_puro, parse_float_safe
 from regras import gerar_tabela_parcelas
-from modulos.importar_comissoes import dividir_socios
-
-# Brecha para imposto sobre o ÁGIO (Consórcio Contemplado).
-# Por enquanto 0 (ágio entra líquido). Quando a contabilidade definir, mude aqui.
-AGIO_IMPOSTO_PCT = 0.0
-
-# Recebimento da carta contemplada ocorre ~10 dias APÓS a data da venda.
-PRAZO_RECEBIMENTO_CONTEMPLADO_DIAS = 10
+from modulos.integracao_site import carregar_operacoes_site
 
 
 # ==========================================================
@@ -43,17 +36,6 @@ def _ddmmaaaa(valor):
     try:
         d = pd.to_datetime(s, dayfirst=not iso, errors="coerce")
         return "" if pd.isna(d) else d.strftime("%d/%m/%Y")
-    except Exception:
-        return ""
-
-
-def _mais_dias(data_str, dias):
-    """Soma 'dias' a uma data dd/mm/aaaa e devolve dd/mm/aaaa ('' se inválida)."""
-    try:
-        d = pd.to_datetime(data_str, dayfirst=True, errors="coerce")
-        if pd.isna(d):
-            return ""
-        return (d + pd.Timedelta(days=dias)).strftime("%d/%m/%Y")
     except Exception:
         return ""
 
@@ -130,41 +112,10 @@ def _recebidos_tradicional(supabase, df_vendas_global, df_admin, cfg, status_dic
     return pd.DataFrame(regs)
 
 
-def _recebidos_contemplado(df_vendas_global, cfg, datas_fin):
-    """Receita de Cartas Contempladas = ÁGIO. O RECEBIMENTO cai ~10 dias após a venda
-    (configurável). A data pode ser sobrescrita no Financeiro (financeiro_datas)."""
-    regs = []
-    if (df_vendas_global is None or df_vendas_global.empty
-            or 'TIPO_PRODUTO' not in df_vendas_global.columns):
-        return pd.DataFrame(regs)
-
-    df = df_vendas_global[df_vendas_global['TIPO_PRODUTO'].apply(normalizar_string) == "CONSORCIOCONTEMPLADO"]
-    for _, r in df.iterrows():
-        key = f"CONT_{r.get('id')}"
-        data_venda = r.get("DATA", "") or ""
-        recebimento_padrao = _mais_dias(data_venda, PRAZO_RECEBIMENTO_CONTEMPLADO_DIAS)
-        data_fin = datas_fin.get(key) or recebimento_padrao or data_venda
-
-        agio = parse_float_safe(r.get("AGIO", 0))
-        imposto = agio * AGIO_IMPOSTO_PCT / 100.0
-        liquido = agio - imposto
-        breno, uriel = dividir_socios(r.get("VENDEDOR", ""), liquido, cfg)
-        regs.append({
-            "key": key,
-            "cliente": r.get("Nome do cliente", "") or "—",
-            "vendedor": r.get("VENDEDOR", "") or "—",
-            "produto": r.get("PRODUTO", "") or "",
-            "data_venda": data_venda,
-            "data": data_fin, "ym": _ym(data_fin),
-            "agio": agio, "liquido": liquido, "breno": breno, "uriel": uriel,
-        })
-    return pd.DataFrame(regs)
-
-
 # ==========================================================
 # TRAVA ANTI-DUPLICIDADE
 # ==========================================================
-def _alertas_duplicidade(trad, cont):
+def _alertas_duplicidade(trad):
     alertas = []
     if trad is not None and not trad.empty and 'key' in trad.columns:
         dup = trad[trad['key'].notna()]
@@ -175,14 +126,85 @@ def _alertas_duplicidade(trad, cont):
                     f"🏦 Comissão lançada **{n}x** — {linha['cliente']} ({linha['grupo_cota']}). "
                     f"A mesma parcela aparece mais de uma vez."
                 )
-    if cont is not None and not cont.empty:
-        for (cli, agio, dv), n in cont.groupby(['cliente', 'agio', 'data_venda']).size().items():
-            if n > 1:
-                alertas.append(
-                    f"🎯 Carta contemplada possivelmente **duplicada ({n}x)** — {cli}, "
-                    f"ágio {formatar_brl_puro(agio)}, venda em {dv}."
-                )
     return alertas
+
+
+# ==========================================================
+# RESUMO DO MÊS ATUAL (usado pelo card do Dashboard)
+# ==========================================================
+def calcular_resumo_mes_atual(supabase, df_vendas_global, df_admin, cfg, status_dict):
+    """Faturamento do mês atual, para o quadrinho do Dashboard: Tradicional
+    (recebido até agora), Cotas Contempladas concluídas até agora, previsto
+    das Contempladas em andamento (Site), e o total. Reusa exatamente as
+    mesmas fontes/fórmulas do quadro do Financeiro — evita números divergentes
+    entre as duas telas."""
+    hoje = datetime.today()
+    ym_atual = f"{hoje.year:04d}-{hoje.month:02d}"
+
+    datas_fin = _carregar_datas_financeiro(supabase)
+    trad = _recebidos_tradicional(supabase, df_vendas_global, df_admin, cfg, status_dict, datas_fin)
+    trad_calc = trad.drop_duplicates('key', keep='first') if not trad.empty else trad
+    t_mes = trad_calc[trad_calc['ym'] == ym_atual] if not trad_calc.empty else trad_calc
+    fat_tradicional = t_mes['bruto'].sum() if not t_mes.empty else 0.0
+
+    try:
+        site = carregar_operacoes_site()
+    except Exception:
+        site = pd.DataFrame()
+    if site is None:
+        site = pd.DataFrame()
+
+    site_ok_mes = site[(site['status'] == 'concluido') & (site['ym'] == ym_atual)] if not site.empty else site
+    fat_contemplado = site_ok_mes['agio'].sum() if not site_ok_mes.empty else 0.0
+
+    site_prev = site[site['status'] == 'em_analise'] if not site.empty else site
+    fat_previsto = site_prev['agio'].sum() if not site_prev.empty else 0.0
+
+    fat_tradicional = float(fat_tradicional)
+    fat_contemplado = float(fat_contemplado)
+    fat_previsto = float(fat_previsto)
+    return {
+        "tradicional": round(fat_tradicional, 2),
+        "contemplado_realizado": round(fat_contemplado, 2),
+        "contemplado_previsto": round(fat_previsto, 2),
+        "total": round(fat_tradicional + fat_contemplado + fat_previsto, 2),
+    }
+
+
+def _publicar_resultado_socios(supabase, ym, breno, uriel):
+    """Grava o resultado do mês (Breno/Uriel) em resultado_socios_mensal, para o
+    ERP_ECOCLIM ler (linha 'CONS INVESTIMENTOS' do Controle Financeiro) sem
+    duplicar a lógica de comissionamento. Nunca deve travar a tela Financeiro."""
+    try:
+        ano, mes = ym.split("-")
+        supabase.table("resultado_socios_mensal").upsert(
+            {"ano": int(ano), "mes": int(mes), "breno": round(float(breno), 2), "uriel": round(float(uriel), 2)},
+            on_conflict="ano,mes",
+        ).execute()
+    except Exception:
+        pass
+
+
+def _render_previsao_site(site_prev):
+    """Bloco de PREVISÃO: operações do Site ainda EM ANÁLISE (não entram no
+    resultado do mês; entram quando concluídas). Independente do seletor de mês."""
+    if site_prev is None or site_prev.empty:
+        return
+    st.divider()
+    st.markdown("#### 🔮 Previsão — operações em andamento (Site)")
+    st.caption("Cartas contempladas ainda **Em análise** no admin do Site. Não entram no resultado do mês — "
+               "entram quando a operação for **concluída**.")
+    p1, p2, p3 = st.columns(3)
+    p1.metric("Ágio previsto (total)", formatar_brl_puro(site_prev['agio'].sum()))
+    p2.metric("Breno (50%)", formatar_brl_puro(site_prev['breno'].sum()))
+    p3.metric("Uriel (50%)", formatar_brl_puro(site_prev['uriel'].sum()))
+    view = pd.DataFrame({
+        "Cliente": site_prev['cliente'].values,
+        "Vendedor": site_prev['representante'].values,
+        "Produto": site_prev['produto'].values,
+        "Ágio previsto": site_prev['agio'].apply(formatar_brl_puro).values,
+    })
+    st.dataframe(view, use_container_width=True, hide_index=True)
 
 
 # ==========================================================
@@ -195,10 +217,20 @@ def render_financeiro(supabase, df_vendas_global, df_admin, cfg, status_dict):
 
     datas_fin = _carregar_datas_financeiro(supabase)
     trad = _recebidos_tradicional(supabase, df_vendas_global, df_admin, cfg, status_dict, datas_fin)
-    cont = _recebidos_contemplado(df_vendas_global, cfg, datas_fin)
+
+    # Cartas contempladas: fonte única é o SITE (só leitura). concluído = realizado
+    # no mês da conclusão; em análise = previsão.
+    try:
+        site = carregar_operacoes_site()
+    except Exception:
+        site = pd.DataFrame()
+    if site is None:
+        site = pd.DataFrame()
+    site_ok = site[site['status'] == 'concluido'] if not site.empty else site      # realizado
+    site_prev = site[site['status'] == 'em_analise'] if not site.empty else site    # previsão
 
     # TRAVA ANTI-DUPLICIDADE
-    alertas = _alertas_duplicidade(trad, cont)
+    alertas = _alertas_duplicidade(trad)
     if alertas:
         st.error("⚠️ **Possível duplicidade detectada — confira e corrija:**")
         for a in alertas:
@@ -210,7 +242,7 @@ def render_financeiro(supabase, df_vendas_global, df_admin, cfg, status_dict):
 
     # Anos disponíveis
     anos = set()
-    for d in (trad, cont):
+    for d in (trad, site_ok):
         if not d.empty:
             anos |= {ym[:4] for ym in d['ym'].dropna().tolist()}
     anos.add(str(datetime.today().year))
@@ -234,18 +266,19 @@ def render_financeiro(supabase, df_vendas_global, df_admin, cfg, status_dict):
     yms = [f"{ano}-{lbl[:2]}" for lbl in sel_meses]
 
     # QUADRO COMPARATIVO (soma tudo do mês — inclusive várias notas)
-    linhas = ["💵 Faturamento Total", "   • Consórcio Tradicional", "   • Cartas Contempladas (ágio)",
+    linhas = ["💵 Faturamento Total", "   • Consórcio Tradicional", "   • Cartas Contempladas — Site",
               "🧾 Receita Líquida", "👤 Breno", "👤 Uriel"]
     dados = {}
     for lbl, ym in zip(sel_meses, yms):
         t = trad_calc[trad_calc['ym'] == ym] if not trad_calc.empty else trad_calc
-        c = cont[cont['ym'] == ym] if not cont.empty else cont
+        s = site_ok[site_ok['ym'] == ym] if not site_ok.empty else site_ok
         fat_t = t['bruto'].sum() if not t.empty else 0.0
-        fat_c = c['agio'].sum() if not c.empty else 0.0
-        liq = (t['liquido'].sum() if not t.empty else 0.0) + (c['liquido'].sum() if not c.empty else 0.0)
-        breno = (t['breno'].sum() if not t.empty else 0.0) + (c['breno'].sum() if not c.empty else 0.0)
-        uriel = (t['uriel'].sum() if not t.empty else 0.0) + (c['uriel'].sum() if not c.empty else 0.0)
-        dados[lbl] = [fat_t + fat_c, fat_t, fat_c, liq, breno, uriel]
+        fat_s = s['agio'].sum() if not s.empty else 0.0        # ágio do Site (concluído no mês)
+        liq = (t['liquido'].sum() if not t.empty else 0.0) + fat_s
+        breno = (t['breno'].sum() if not t.empty else 0.0) + (s['breno'].sum() if not s.empty else 0.0)
+        uriel = (t['uriel'].sum() if not t.empty else 0.0) + (s['uriel'].sum() if not s.empty else 0.0)
+        dados[lbl] = [fat_t + fat_s, fat_t, fat_s, liq, breno, uriel]
+        _publicar_resultado_socios(supabase, ym, breno, uriel)
 
     df_sum = pd.DataFrame(dados, index=linhas)
     if len(sel_meses) > 1:
@@ -255,10 +288,12 @@ def render_financeiro(supabase, df_vendas_global, df_admin, cfg, status_dict):
         df_fmt[col] = df_fmt[col].apply(formatar_brl_puro)
     st.dataframe(df_fmt, use_container_width=True)
 
-    st.caption(f"ℹ️ Tradicional entra no mês em que foi **lançado no sistema**. Contemplado entra "
-               f"**{PRAZO_RECEBIMENTO_CONTEMPLADO_DIAS} dias após a venda** (recebimento). Ágio hoje "
-               f"sem imposto. Você pode corrigir qualquer data no detalhamento abaixo — isso só afeta "
-               f"o Financeiro.")
+    st.caption("ℹ️ Tradicional entra no mês em que foi **lançado no sistema**. "
+               "“Cartas Contempladas — Site” são as operações **concluídas** no admin do Site, "
+               "no mês da conclusão. Ágio hoje sem imposto.")
+
+    # ---- PREVISÃO (operações do Site ainda EM ANÁLISE) ----
+    _render_previsao_site(site_prev)
 
     # DETALHAMENTO POR MÊS (em popup)
     st.divider()
@@ -266,30 +301,30 @@ def render_financeiro(supabase, df_vendas_global, df_admin, cfg, status_dict):
     mes_det = st.selectbox("Mês para detalhar:", sel_meses, key="fin_det_mes")
     ym_det = f"{ano}-{mes_det[:2]}"
     t_det = trad_calc[trad_calc['ym'] == ym_det] if not trad_calc.empty else pd.DataFrame()
-    c_det = cont[cont['ym'] == ym_det] if not cont.empty else pd.DataFrame()
+    s_det = site_ok[site_ok['ym'] == ym_det] if not site_ok.empty else pd.DataFrame()
 
     @st.dialog(f"🏦 Consórcio Tradicional — {mes_det}", width="large")
     def _pop_trad():
         _detalhe_tradicional(supabase, t_det, mes_det)
 
-    @st.dialog(f"🎯 Cartas Contempladas — {mes_det}", width="large")
-    def _pop_cont():
-        _detalhe_contemplado(supabase, c_det, mes_det)
+    @st.dialog(f"🌐 Cartas Contempladas — Site — {mes_det}", width="large")
+    def _pop_site():
+        _detalhe_site(s_det, mes_det)
 
     @st.dialog(f"👤 Breno — {mes_det}", width="large")
     def _pop_breno():
-        _detalhe_socio("Breno", "breno", t_det, c_det, mes_det)
+        _detalhe_socio("Breno", "breno", t_det, s_det, mes_det)
 
     @st.dialog(f"👤 Uriel — {mes_det}", width="large")
     def _pop_uriel():
-        _detalhe_socio("Uriel", "uriel", t_det, c_det, mes_det)
+        _detalhe_socio("Uriel", "uriel", t_det, s_det, mes_det)
 
     st.caption("Clique para conferir/editar em uma janela:")
     bt1, bt2, bt3, bt4 = st.columns(4)
     if bt1.button("🏦 Consórcio Tradicional", use_container_width=True):
         _pop_trad()
-    if bt2.button("🎯 Cartas Contempladas", use_container_width=True):
-        _pop_cont()
+    if bt2.button("🌐 Cartas Contempladas — Site", use_container_width=True):
+        _pop_site()
     if bt3.button("👤 Breno recebe", use_container_width=True):
         _pop_breno()
     if bt4.button("👤 Uriel recebe", use_container_width=True):
@@ -341,62 +376,41 @@ def _detalhe_tradicional(supabase, df, mes_lbl):
 
 
 # ==========================================================
-# DETALHAMENTO — CONTEMPLADO (edita a data de recebimento SÓ do Financeiro)
+# DETALHAMENTO — CARTAS CONTEMPLADAS (SITE, só leitura)
 # ==========================================================
-def _detalhe_contemplado(supabase, df, mes_lbl):
+def _detalhe_site(df, mes_lbl):
+    """Operações CONCLUÍDAS no admin do Site, neste mês. Só leitura — a edição
+    (status, data de conclusão, valores) é feita no próprio admin do Site."""
     if df is None or df.empty:
-        st.info(f"Nenhuma Carta Contemplada com recebimento em {mes_lbl}.")
+        st.info(f"Nenhuma Carta Contemplada concluída (no Site) em {mes_lbl}.")
         return
 
-    st.caption("Cartas contempladas com **recebimento** neste mês (≈10 dias após a venda). "
-               "Você pode corrigir a Data de Recebimento (só afeta o Financeiro).")
+    st.caption("Operações **concluídas** no admin do Site neste mês. Para editar, use o painel do Site.")
     view = pd.DataFrame({
         "Cliente": df["cliente"].values,
-        "Vendedor": df["vendedor"].values,
+        "Vendedor": df["representante"].values,
         "Produto": df["produto"].values,
         "Ágio": df["agio"].apply(formatar_brl_puro).values,
         "Breno": df["breno"].apply(formatar_brl_puro).values,
         "Uriel": df["uriel"].apply(formatar_brl_puro).values,
-        "Data Venda": df["data_venda"].astype(str).values,
-        "Data Recebimento": df["data"].astype(str).values,
+        "Data Conclusão": df["data_conclusao"].astype(str).values,
     })
-    edit = st.data_editor(
-        view, key=f"fin_edit_cont_{mes_lbl}", hide_index=True, use_container_width=True,
-        column_config={c: st.column_config.TextColumn(c, disabled=True)
-                       for c in ["Cliente", "Vendedor", "Produto", "Ágio", "Breno", "Uriel", "Data Venda"]}
-        | {"Data Recebimento": st.column_config.TextColumn("Data Recebimento (DD/MM/AAAA)")},
-    )
+    st.dataframe(view, use_container_width=True, hide_index=True)
     st.markdown(f"**Total Ágio em {mes_lbl}:** {formatar_brl_puro(df['agio'].sum())}")
-
-    if st.button("💾 Salvar datas (Contemplado)", key=f"fin_save_cont_{mes_lbl}"):
-        n = 0
-        for i in range(len(df)):
-            nova = str(edit.iloc[i]["Data Recebimento"]).strip()
-            if nova and nova != str(df.iloc[i]["data"]).strip():
-                try:
-                    _salvar_data_financeiro(supabase, df.iloc[i]["key"], nova)
-                    n += 1
-                except Exception as e:
-                    st.error(f"Erro ao salvar {df.iloc[i]['cliente']}: {e}")
-        if n:
-            st.success(f"✅ {n} data(s) atualizada(s) no Financeiro.")
-            st.rerun()
-        else:
-            st.info("Nenhuma data alterada.")
 
 
 # ==========================================================
 # DETALHAMENTO — SÓCIO (Breno / Uriel): o que cada um recebe no mês
 # ==========================================================
-def _detalhe_socio(nome, col, t_det, c_det, mes_lbl):
+def _detalhe_socio(nome, col, t_det, s_det, mes_lbl):
     linhas = []
     if t_det is not None and not t_det.empty:
         for _, r in t_det.iterrows():
             linhas.append({"Origem": "Consórcio Tradicional", "Cliente": r["cliente"],
                            "_v": parse_float_safe(r[col])})
-    if c_det is not None and not c_det.empty:
-        for _, r in c_det.iterrows():
-            linhas.append({"Origem": "Carta Contemplada", "Cliente": r["cliente"],
+    if s_det is not None and not s_det.empty:
+        for _, r in s_det.iterrows():
+            linhas.append({"Origem": "Carta Contemplada — Site", "Cliente": r["cliente"],
                            "_v": parse_float_safe(r[col])})
 
     if not linhas:
