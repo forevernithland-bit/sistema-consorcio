@@ -62,8 +62,13 @@ def _salvar_data_financeiro(supabase, chave, data):
 def _recebidos_tradicional(supabase, df_vendas_global, df_admin, cfg, status_dict, datas_fin):
     """Comissões recebidas do Consórcio Tradicional.
     Fonte 1: comissoes_pagas (NF). Fonte 2: baixas manuais (PAGO fora do NF).
-    Data usada = data do Financeiro (financeiro_datas) OU, por padrão, a data em que
-    foi LANÇADO no sistema (data_importacao da NF / data de recebimento da baixa)."""
+
+    Data usada = data do Financeiro (financeiro_datas) OU, por padrão, a DATA DE
+    PAGAMENTO da nota (fim do período do relatório da administradora). É o mesmo
+    critério do "Histórico de Pagamentos" (mes_competencia), então as duas telas
+    batem mês a mês. Antes o padrão era `data_importacao` (o dia em que a linha
+    entrou no banco) — isso jogava um histórico inteiro, importado de uma vez,
+    todo para o mês da importação."""
     regs = []
     chaves_nf = set()
 
@@ -76,8 +81,9 @@ def _recebidos_tradicional(supabase, df_vendas_global, df_admin, cfg, status_dic
         ch = r.get("chave_unica")
         if ch:
             chaves_nf.add(ch)
-        # padrão = data em que lançamos no sistema (import); reserva = data de pagamento
-        padrao = _ddmmaaaa(r.get("data_importacao")) or (r.get("data_pagamento") or "")
+        # padrão = data de pagamento da nota (mês de referência do relatório);
+        # reserva = data em que a linha foi lançada no sistema
+        padrao = _ddmmaaaa(r.get("data_pagamento")) or _ddmmaaaa(r.get("data_importacao"))
         data_fin = datas_fin.get(ch) or padrao
         regs.append({
             "key": ch, "origem": "NF",
@@ -288,7 +294,8 @@ def render_financeiro(supabase, df_vendas_global, df_admin, cfg, status_dict):
         df_fmt[col] = df_fmt[col].apply(formatar_brl_puro)
     st.dataframe(df_fmt, use_container_width=True)
 
-    st.caption("ℹ️ Tradicional entra no mês em que foi **lançado no sistema**. "
+    st.caption("ℹ️ Tradicional entra no **mês de referência do relatório da administradora** "
+               "(data de pagamento da nota) — igual ao Histórico de Pagamentos. "
                "“Cartas Contempladas — Site” são as operações **concluídas** no admin do Site, "
                "no mês da conclusão. Ágio hoje sem imposto.")
 
