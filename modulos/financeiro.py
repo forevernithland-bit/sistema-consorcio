@@ -81,12 +81,18 @@ def _recebidos_tradicional(supabase, df_vendas_global, df_admin, cfg, status_dic
         ch = r.get("chave_unica")
         if ch:
             chaves_nf.add(ch)
+        # `key` identifica um EVENTO, não a parcela. A mesma parcela pode
+        # aparecer em períodos diferentes (pagamento, depois estorno por
+        # cancelamento da cota, depois reativação) — são lançamentos distintos e
+        # todos entram no faturamento. Duplicidade de verdade = a MESMA parcela
+        # no MESMO período, e essa continua sendo pega (mesma key).
+        key = f"{ch}|{r.get('periodo_fim') or ''}"
         # padrão = data de pagamento da nota (mês de referência do relatório);
         # reserva = data em que a linha foi lançada no sistema
         padrao = _ddmmaaaa(r.get("data_pagamento")) or _ddmmaaaa(r.get("data_importacao"))
-        data_fin = datas_fin.get(ch) or padrao
+        data_fin = datas_fin.get(key) or datas_fin.get(ch) or padrao
         regs.append({
-            "key": ch, "origem": "NF",
+            "key": key, "origem": "NF",
             "cliente": r.get("cliente", "") or "—",
             "grupo_cota": f"{r.get('grupo','')}/{r.get('cota','')}",
             "data": data_fin, "ym": _ym(data_fin),
@@ -122,6 +128,10 @@ def _recebidos_tradicional(supabase, df_vendas_global, df_admin, cfg, status_dic
 # TRAVA ANTI-DUPLICIDADE
 # ==========================================================
 def _alertas_duplicidade(trad):
+    """Duplicidade = a MESMA parcela lançada duas vezes NO MESMO período do
+    relatório (a `key` já carrega o período). Uma parcela que reaparece em
+    outro período — estorno por cancelamento de cota, reativação — é um
+    lançamento legítimo e NÃO é duplicidade."""
     alertas = []
     if trad is not None and not trad.empty and 'key' in trad.columns:
         dup = trad[trad['key'].notna()]
@@ -129,8 +139,9 @@ def _alertas_duplicidade(trad):
             if n > 1:
                 linha = dup[dup['key'] == chave].iloc[0]
                 alertas.append(
-                    f"🏦 Comissão lançada **{n}x** — {linha['cliente']} ({linha['grupo_cota']}). "
-                    f"A mesma parcela aparece mais de uma vez."
+                    f"🏦 Comissão lançada **{n}x** — {linha['cliente']} "
+                    f"({linha['grupo_cota']}) em {linha['data']}. "
+                    f"A mesma parcela foi importada mais de uma vez no mesmo período."
                 )
     return alertas
 
