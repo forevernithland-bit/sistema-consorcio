@@ -26,3 +26,4 @@ __pycache__/
 
 # ===== Config local do Claude Code =====
 .claude/
+backups/

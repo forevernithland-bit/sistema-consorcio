@@ -98,8 +98,10 @@ def carregar_contexto():
 
     cfg = (sb().table("config_interna").select("*").execute().data or [{}])[0]
 
-    ja = sb().table("comissoes_pagas").select("chave_unica").execute().data or []
-    chaves = {r.get("chave_unica") for r in ja}
+    # marca de idempotencia = (chave_unica, periodo_fim). A mesma parcela pode
+    # reaparecer noutro periodo como estorno/reativacao — sao eventos distintos.
+    ja = sb().table("comissoes_pagas").select("chave_unica,periodo_fim").execute().data or []
+    chaves = {(r.get("chave_unica"), r.get("periodo_fim")) for r in ja}
     return idx, cfg, chaves
 
 
@@ -273,18 +275,24 @@ def gravar(linhas, info, chaves_existentes):
                 "credito": c["credito"], "valor_nota": c["valor_nota"],
                 "imposto_pct": c["imposto_pct"], "valor_imposto": c["imposto"],
                 "valor_liquido": c["liquido"], "breno": c["breno"], "uriel": c["uriel"],
-                "data_pagamento": data_pgto, "origem": "NF", "chave_unica": c["chave"],
+                "data_pagamento": data_pgto,
+                "origem": ("AJUSTE: " + c["motivo"]) if c["ajuste"] else "NF",
+                "chave_unica": c["chave"],
             }).execute()
 
-            ex = sb().table("status_comissoes").select("id").eq("Chave_Unica", c["chave"]).execute()
-            payload = {"Chave_Unica": c["chave"], "Status": "PAGO",
-                       "Valor_Pago": c["valor_nota"], "Data_Pagamento": data_pgto}
-            if ex.data:
-                sb().table("status_comissoes").update(payload).eq("id", ex.data[0]["id"]).execute()
-            else:
-                sb().table("status_comissoes").insert(payload).execute()
+            # A baixa da parcela so e dada pela linha de comissao de verdade.
+            # Estorno/reativacao entram no historico, mas nao mexem no status
+            # (senao a parcela "desmarcaria" no ERP por causa de um ajuste).
+            if not c["ajuste"]:
+                ex = sb().table("status_comissoes").select("id").eq("Chave_Unica", c["chave"]).execute()
+                payload = {"Chave_Unica": c["chave"], "Status": "PAGO",
+                           "Valor_Pago": c["valor_nota"], "Data_Pagamento": data_pgto}
+                if ex.data:
+                    sb().table("status_comissoes").update(payload).eq("id", ex.data[0]["id"]).execute()
+                else:
+                    sb().table("status_comissoes").insert(payload).execute()
 
-            chaves_existentes.add(c["chave"])
+            chaves_existentes.add(marca)
             ok += 1
         except Exception as e:
             erro += 1
@@ -335,15 +343,20 @@ def main():
         per = f"{info.get('periodo_ini','?')} a {info.get('periodo_fim','?')}"
         soma = sum(l["valor_nota"] for l in linhas)
         sb_, su_ = sum(l["breno"] for l in linhas), sum(l["uriel"] for l in linhas)
-        nf = info.get("total_nf")
 
+
+        nf = info.get("total_liquido")   # confere contra o $ Liquido do rodape
         marcas = []
         if nf is not None and abs(soma - nf) > 0.01:
-            marcas.append(f"nota difere {brl(abs(soma-nf))}")
+            marcas.append(f"rodape difere {brl(abs(soma-nf))}")
         nao_ach = [l for l in linhas if not l["encontrado"]]
         if nao_ach:
             marcas.append(f"{len(nao_ach)} cota(s) fora do sistema")
-        ja_imp = sum(1 for l in linhas if l["chave"] in chaves)
+        ajustes = [l for l in linhas if l["ajuste"]]
+        if ajustes:
+            marcas.append(f"{len(ajustes)} ajuste(s): " +
+                          ", ".join(f"{a['grupo']}/{a['cota']} {brl(a['valor_nota'])}" for a in ajustes))
+        ja_imp = sum(1 for l in linhas if (l["chave"], info.get("periodo_fim")) in chaves)
         if ja_imp:
             marcas.append(f"{ja_imp} ja importada(s)")
 
