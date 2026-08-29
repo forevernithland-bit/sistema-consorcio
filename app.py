@@ -385,7 +385,7 @@ elif menu_selecionado == "Financeiro":
 elif menu_selecionado == "Assembleias":
     render_assembleias(supabase, df_ass)
 elif menu_selecionado == "Relatórios":
-    render_relatorios(df_vendas_global)
+    render_relatorios(supabase, df_vendas_global, df_admin, cfg, status_dict)
 elif menu_selecionado == "Mídias":
     render_midias()
 elif menu_selecionado == "Baixar Parcelas":

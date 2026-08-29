@@ -55,6 +55,10 @@ def formatar_brl_puro(val):
     return f"R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 def parse_float_safe(v):
+    # NaN é float, então passava direto e contaminava as contas (uma célula
+    # vazia na tabela de regras virava comissão NaN em vez de 0).
+    if isinstance(v, float) and v != v: return 0.0
+    if v is None: return 0.0
     if isinstance(v, (int, float)): return float(v)
     try:
         v_str = str(v).replace('%', '').replace('R$', '').strip()

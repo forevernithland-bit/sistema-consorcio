@@ -58,7 +58,10 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict):
         
         for i in range(1, 26):
             p_val = parse_float_safe(regra.get(f"P{i}", 0)) / 100.0
-            if p_val <= 0: continue
+            # `not (p_val > 0)` cobre 0, negativo E NaN (célula vazia na regra).
+            # Sem isso a cota gerava as 25 parcelas, e as não definidas pela
+            # administradora vinham com comissão NaN.
+            if not (p_val > 0): continue
             
             comissao_bruta = val_venda * p_val
             imposto_val = comissao_bruta * (parse_float_safe(cfg.get('Imposto', 7.16)) / 100.0)
@@ -149,5 +152,117 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict):
                 "Status": status_pagamento,
                 "Data Recebimento": data_str
             })
-            
+
     return pd.DataFrame(parcelas_finais), vendas_sem_data
+
+
+# ==========================================================
+# PREVISÃO DE RECEBIMENTO (usada pelo Financeiro e pelos Relatórios)
+# ==========================================================
+# Status que significam "cota viva, ainda vai gerar comissão". O banco tem
+# formas legadas em caixa alta ("VENDIDO") que precisam entrar aqui, senão a
+# cota some da previsão sem ninguém perceber.
+STATUS_ATIVOS = {"em andamento", "vendido", ""}
+
+
+def _gc(v):
+    """Grupo/cota comparável: '009045', '9045', 9045.0 -> '9045'."""
+    s = str(v if v is not None else "").strip()
+    if s.lower() in ("nan", "none", "<na>", "nat"):
+        return ""
+    try:
+        return str(int(float(s)))
+    except (ValueError, TypeError):
+        return s
+
+
+def cotas_duplicadas(df_vendas):
+    """Grupo/cota cadastrado mais de uma vez em `vendas`.
+    Duplicata infla a previsão (a mesma cota projeta duas vezes), por isso as
+    telas avisam em vez de somar em silêncio. Retorna {'grupo/cota': [linhas]}."""
+    if df_vendas is None or df_vendas.empty:
+        return {}
+    vistos = {}
+    for _, v in df_vendas.iterrows():
+        gc = f"{_gc(v.get('GRUPO'))}/{_gc(v.get('COTA'))}"
+        if gc == "/":
+            continue          # Consórcio Contemplado não tem grupo/cota
+        vistos.setdefault(gc, []).append(v)
+    return {k: v for k, v in vistos.items() if len(v) > 1}
+
+
+def gerar_previsao_pendente(df_vendas, df_admin, cfg, status_dict):
+    """Comissões que ainda NÃO entraram, das cotas vivas.
+
+    Fonte única da previsão — Financeiro e Relatórios chamam esta função para
+    não divergirem. Regras aplicadas:
+      • só cotas com status ativo (STATUS_ATIVOS), pois Cancelada/Contemplada
+        não geram parcela futura;
+      • cada grupo/cota entra UMA vez (cota cadastrada em duplicidade contaria
+        a comissão duas vezes);
+      • só parcelas ainda não baixadas (status_comissoes ≠ PAGO);
+      • valor e data vêm de `gerar_tabela_parcelas`, ou seja, da regra da
+        administradora + produto.
+
+    Retorna (DataFrame, avisos). Colunas: ym, cliente, gc, admin, produto,
+    vendedor, parcela, data, bruto, liquido, breno, uriel, atrasada.
+    """
+    colunas = ["ym", "cliente", "gc", "admin", "produto", "vendedor", "parcela",
+               "data", "bruto", "liquido", "breno", "uriel", "atrasada"]
+    vazio = pd.DataFrame(columns=colunas)
+    avisos = []
+    if df_vendas is None or df_vendas.empty:
+        return vazio, avisos
+
+    st_norm = df_vendas["STATUS"].astype(str).str.strip().str.lower()
+    ativas = df_vendas[st_norm.isin(STATUS_ATIVOS)].copy()
+    if ativas.empty:
+        return vazio, avisos
+
+    # uma linha por grupo/cota (a mais recente vence)
+    dups = cotas_duplicadas(ativas)
+    if dups:
+        avisos.append(
+            f"{len(dups)} cota(s) cadastrada(s) em duplicidade — contei uma vez só: "
+            + ", ".join(sorted(dups)))
+        ativas["_gc"] = [f"{_gc(r.get('GRUPO'))}/{_gc(r.get('COTA'))}"
+                         for _, r in ativas.iterrows()]
+        ativas = ativas.sort_values("Data_Real").drop_duplicates("_gc", keep="last")
+        ativas = ativas.drop(columns=["_gc"])
+
+    df_parc, sem_data = gerar_tabela_parcelas(ativas, df_vendas, df_admin, cfg, status_dict)
+    if sem_data:
+        avisos.append(f"{len(sem_data)} venda(s) sem data ficaram fora da previsão: "
+                      + ", ".join(sem_data[:5]) + ("…" if len(sem_data) > 5 else ""))
+    if df_parc.empty:
+        return vazio, avisos
+
+    pend = df_parc[df_parc["Status"].astype(str).str.upper() != "PAGO"].copy()
+    if pend.empty:
+        return vazio, avisos
+    pend["dt"] = pd.to_datetime(pend["data_pagamento_dt"], errors="coerce")
+    pend = pend[pend["dt"].notna()]
+    if pend.empty:
+        return vazio, avisos
+
+    info = {}
+    for _, v in ativas.iterrows():
+        info[f"{_gc(v.get('GRUPO'))}/{_gc(v.get('COTA'))}"] = (
+            str(v.get("ADMINISTRADORA") or "—").strip().upper(),
+            normalizar_produto(v.get("PRODUTO")) or "—")
+
+    hoje = pd.Timestamp.today().normalize()
+    regs = []
+    for _, p in pend.iterrows():
+        gc = f"{_gc(p['Grupo'])}/{_gc(p['Cota'])}"
+        adm, prod = info.get(gc, ("—", "—"))
+        regs.append({
+            "ym": p["dt"].strftime("%Y-%m"), "cliente": p["Cliente"], "gc": gc,
+            "admin": adm, "produto": prod, "vendedor": p["Vendedor"],
+            "parcela": p["Parcela"], "data": p["dt"].strftime("%d/%m/%Y"),
+            "bruto": parse_float_safe(p["Comissão (Bruta)"]),
+            "liquido": parse_float_safe(p["Comissão (s/ Imposto)"]),
+            "breno": parse_float_safe(p["Breno"]), "uriel": parse_float_safe(p["Uriel"]),
+            "atrasada": bool(p["dt"] < hoje),
+        })
+    return pd.DataFrame(regs, columns=colunas), avisos

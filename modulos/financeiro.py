@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 from utils import formatar_brl_puro, parse_float_safe
-from regras import gerar_tabela_parcelas
+from regras import gerar_tabela_parcelas, gerar_previsao_pendente
 from modulos.integracao_site import carregar_operacoes_site
 
 
@@ -94,7 +94,7 @@ def _recebidos_tradicional(supabase, df_vendas_global, df_admin, cfg, status_dic
         regs.append({
             "key": key, "origem": "NF",
             "cliente": r.get("cliente", "") or "—",
-            "grupo_cota": f"{r.get('grupo','')}/{r.get('cota','')}",
+            "gc": f"{r.get('grupo','')}/{r.get('cota','')}",
             "data": data_fin, "ym": _ym(data_fin),
             "bruto": parse_float_safe(r.get("valor_nota", 0)),
             "liquido": parse_float_safe(r.get("valor_liquido", 0)),
@@ -114,7 +114,7 @@ def _recebidos_tradicional(supabase, df_vendas_global, df_admin, cfg, status_dic
                 regs.append({
                     "key": p["Chave"], "origem": "Manual",
                     "cliente": p["Cliente"],
-                    "grupo_cota": f"{p['Grupo']}/{p['Cota']}",
+                    "gc": f"{p['Grupo']}/{p['Cota']}",
                     "data": data_fin, "ym": _ym(data_fin),
                     "bruto": parse_float_safe(p["Comissão (Bruta)"]),
                     "liquido": parse_float_safe(p["Comissão (s/ Imposto)"]),
@@ -140,7 +140,7 @@ def _alertas_duplicidade(trad):
                 linha = dup[dup['key'] == chave].iloc[0]
                 alertas.append(
                     f"🏦 Comissão lançada **{n}x** — {linha['cliente']} "
-                    f"({linha['grupo_cota']}) em {linha['data']}. "
+                    f"({linha['gc']}) em {linha['data']}. "
                     f"A mesma parcela foi importada mais de uma vez no mesmo período."
                 )
     return alertas
@@ -229,6 +229,14 @@ def _render_previsao_site(site_prev):
 # ==========================================================
 def render_financeiro(supabase, df_vendas_global, df_admin, cfg, status_dict):
     st.markdown("### 💰 Financeiro")
+    aba_real, aba_prev = st.tabs(["📊 Realizado", "🔮 Faturamento Previsto"])
+    with aba_real:
+        _aba_realizado(supabase, df_vendas_global, df_admin, cfg, status_dict)
+    with aba_prev:
+        _aba_previsto(df_vendas_global, df_admin, cfg, status_dict)
+
+
+def _aba_realizado(supabase, df_vendas_global, df_admin, cfg, status_dict):
     st.caption("Faturamento da Consorbens por mês: comissões recebidas (Consórcio Tradicional) "
                "+ ágio das Cartas Contempladas. Selecione o ano e um ou mais meses para comparar.")
 
@@ -350,6 +358,117 @@ def render_financeiro(supabase, df_vendas_global, df_admin, cfg, status_dict):
 
 
 # ==========================================================
+# ABA — FATURAMENTO PREVISTO
+# ==========================================================
+def _previsto_tradicional(df_vendas_global, df_admin, cfg, status_dict):
+    """Comissões ainda NÃO recebidas das cotas ativas.
+
+    Fonte única: `regras.gerar_previsao_pendente` — a mesma função que os
+    Relatórios usam, para as duas telas nunca mostrarem números diferentes.
+    Ela já aplica a regra da administradora + produto, ignora cota cadastrada
+    em duplicidade e devolve os avisos do que ficou de fora."""
+    return gerar_previsao_pendente(df_vendas_global, df_admin, cfg, status_dict)
+
+
+def _aba_previsto(df_vendas_global, df_admin, cfg, status_dict):
+    st.caption("Comissões **ainda não recebidas** das cotas ativas (Em Andamento), "
+               "projetadas pela regra de comissionamento de cada administradora. "
+               "Já vem marcado o mês atual e o próximo.")
+
+    prev, avisos = _previsto_tradicional(df_vendas_global, df_admin, cfg, status_dict)
+    if prev.empty:
+        st.info("Nenhuma comissão prevista: não há cotas Em Andamento com parcelas pendentes.")
+        return
+    for a in avisos:
+        st.warning(f"⚠️ {a}")
+
+    # ---- Seletor de meses (padrão: mês atual + o seguinte) ----
+    meses = sorted(prev["ym"].unique())
+    hoje = datetime.today()
+    ym_atual = f"{hoje.year:04d}-{hoje.month:02d}"
+    prox_m, prox_a = (hoje.month + 1, hoje.year) if hoje.month < 12 else (1, hoje.year + 1)
+    ym_prox = f"{prox_a:04d}-{prox_m:02d}"
+    padrao = [m for m in (ym_atual, ym_prox) if m in meses] or meses[:1]
+
+    opcoes = ["Todos"] + [_label_mes(m) for m in meses]
+    default = [_label_mes(m) for m in padrao]
+    sel = st.multiselect("📆 Meses previstos (ou 'Todos')", opcoes,
+                         default=default, key="fin_prev_meses")
+    if not sel:
+        st.info("Selecione ao menos um mês (ou 'Todos').")
+        return
+    yms = meses if "Todos" in sel else [m for m in meses if _label_mes(m) in sel]
+    df = prev[prev["ym"].isin(yms)]
+    if df.empty:
+        st.info("Nada previsto para o período escolhido.")
+        return
+
+    # ---- Totais do período escolhido ----
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("🔮 Faturamento Previsto", formatar_brl_puro(df["bruto"].sum()))
+    m2.metric("🧾 Líquido (s/ imposto)", formatar_brl_puro(df["liquido"].sum()))
+    m3.metric("👤 Breno", formatar_brl_puro(df["breno"].sum()))
+    m4.metric("👤 Uriel", formatar_brl_puro(df["uriel"].sum()))
+
+    atrasadas = df[df["atrasada"]]
+    if not atrasadas.empty:
+        st.warning(f"⏰ {len(atrasadas)} parcela(s) com data prevista já vencida e ainda "
+                   f"sem baixa — {formatar_brl_puro(atrasadas['bruto'].sum())}.")
+
+    # ---- Quadro mês a mês ----
+    st.markdown("##### 📅 Previsto mês a mês")
+    linhas = []
+    for ym in yms:
+        d = prev[prev["ym"] == ym]
+        if d.empty:
+            continue
+        linhas.append({
+            "Mês": _label_mes(ym), "Parcelas": len(d),
+            "Faturamento Previsto": d["bruto"].sum(), "Líquido": d["liquido"].sum(),
+            "Breno": d["breno"].sum(), "Uriel": d["uriel"].sum(),
+        })
+    resumo = pd.DataFrame(linhas)
+    if len(linhas) > 1:
+        resumo.loc[len(resumo)] = {
+            "Mês": "TOTAL", "Parcelas": resumo["Parcelas"].sum(),
+            "Faturamento Previsto": resumo["Faturamento Previsto"].sum(),
+            "Líquido": resumo["Líquido"].sum(),
+            "Breno": resumo["Breno"].sum(), "Uriel": resumo["Uriel"].sum(),
+        }
+    fmt = resumo.copy()
+    for col in ["Faturamento Previsto", "Líquido", "Breno", "Uriel"]:
+        fmt[col] = fmt[col].apply(formatar_brl_puro)
+    st.dataframe(fmt, use_container_width=True, hide_index=True)
+
+    # ---- Detalhe parcela a parcela ----
+    st.markdown("##### 🔎 Detalhe das parcelas previstas")
+    det = df.sort_values(["ym", "data", "cliente"])
+    view = pd.DataFrame({
+        "Mês": det["ym"].apply(_label_mes).values,
+        "Vencimento": det["data"].values,
+        "Cliente": det["cliente"].values,
+        "Grupo/Cota": det["gc"].values,
+        "Adm.": det["admin"].values,
+        "Produto": det["produto"].values,
+        "Parcela": det["parcela"].values,
+        "Vendedor": det["vendedor"].values,
+        "Bruto": det["bruto"].apply(formatar_brl_puro).values,
+        "Líquido": det["liquido"].apply(formatar_brl_puro).values,
+        "Breno": det["breno"].apply(formatar_brl_puro).values,
+        "Uriel": det["uriel"].apply(formatar_brl_puro).values,
+        "Situação": det["atrasada"].apply(lambda x: "⏰ Vencida" if x else "A vencer").values,
+    })
+    st.dataframe(view, use_container_width=True, hide_index=True)
+
+    st.caption("ℹ️ Só entram cotas **Em Andamento** com parcelas ainda **não baixadas**. "
+               "O valor sai da regra de comissão da administradora + produto "
+               "(Configurações → Administradoras) e a data prevista é "
+               "*data da venda + 7 dias + (nº da parcela − 1) meses*. "
+               "Quando a comissão for importada pela NF, a parcela é baixada e sai daqui, "
+               "passando a contar na aba **Realizado**.")
+
+
+# ==========================================================
 # DETALHAMENTO — TRADICIONAL (edita a data SÓ do Financeiro)
 # ==========================================================
 def _detalhe_tradicional(supabase, df, mes_lbl):
@@ -360,7 +479,7 @@ def _detalhe_tradicional(supabase, df, mes_lbl):
     st.caption("Comissões recebidas neste mês. Você pode **corrigir a Data** (só afeta o Financeiro).")
     view = pd.DataFrame({
         "Cliente": df["cliente"].values,
-        "Grupo/Cota": df["grupo_cota"].values,
+        "Grupo/Cota": df["gc"].values,
         "Origem": df["origem"].values,
         "Bruto": df["bruto"].apply(formatar_brl_puro).values,
         "Líquido": df["liquido"].apply(formatar_brl_puro).values,
