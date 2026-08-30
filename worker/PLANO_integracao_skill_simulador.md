@@ -167,3 +167,83 @@ embaixo deste documento com os itens acima resolvidos.**
 - Itaú / outros simuladores (só Yamaha por enquanto).
 - Envio automático da proposta por WhatsApp API (hoje: link `wa.me` + PDF).
 - Tela "Planejador de Contemplação" no ERP (a resposta pode viver só no chat + PDF no começo).
+
+---
+
+## 6. Pareceres TI + Dados (2026-08-30) e lista conjunta
+
+Rodada 1 rodou os dois pareceres. **Ambos aprovaram a direção**, condicionados a
+fechar uma lista conjunta antes de codar.
+
+- **TI / Arquitetura:** *ARQUITETURA OK PARA A PRÓXIMA RODADA (após acordo com Dados).*
+  Direção aprovada: estender o `worker_lances.py` num **supervisor único** com
+  handlers; **2 navegadores por função** (um Newcon serializado + um só para o
+  `yamaha.html`); **"cede a vez" cooperativo** (coleta em blocos suspende se
+  entrar LANCE/BOLETO); coluna `prioridade`; **poll na `fila_automacao`**, sem
+  HTTP; **migração 20** com `payload`/`resultado` jsonb + `chave_idempotencia`;
+  extrair um **`core/fila_contrato.py`** único (hoje as regras de lance/dedup
+  estão duplicadas ERP↔skill). "Sempre ligado": **Task Scheduler headful +
+  auto-logon + watchdog**, NÃO Windows Service (sessão 0 = só headless, e o
+  Newcon headless não foi validado).
+- **Analista de Dados:** *DADOS OK PARA A PRÓXIMA RODADA (após acordo com TI).*
+  Definições fechadas: média de lance = **mediana (p50) do `pct_lance`** direto
+  de `yamaha_contemplacoes` (não a média-de-médias da view), janela de **3
+  assembleias** (expande p/ 6 se < 6 contemplações); **assembleia normal ×
+  mega** separadas; referência de folga = **percentil que depende de quantas
+  cotas de lance livre o grupo contempla** (p50 se ≥5, p75 se 2–4, p90 se 1);
+  **score 0–100** com 5 componentes (folga .40 / assembleia .20 / parcela .20 /
+  liberado .15 / confiança .05), re-pesados pelo critério do cliente, guardados
+  em tabela `score_config` versionada; **assertividade** = `p_ll × ECDF(lance)`
+  como faixa, só exibe % com ≥ 8 contemplações; grupo novo entra 🟡 e nunca em
+  1º; **4 tabelas novas** de histórico de simulados + job de calibração mensal.
+
+### Lista conjunta — resolver antes de codar (dono do item entre colchetes)
+
+**A. Contrato de dados / schema (trava a migração 20 e o `fila_contrato.py`)**
+1. **Schema exato de `payload` e `resultado` por `tipo`**, principalmente o de
+   `PLANEJAR_SIMULACAO` = espelho de `simulados_yamaha_cenarios`. [TI + Dados]
+2. **Migração 20** (`fila_automacao`): `prioridade`, `payload/resultado jsonb`,
+   `chave_idempotencia`, `origem`, `progresso`, `heartbeat_em` + índices. [TI]
+3. **4 tabelas de histórico** (`simulados_yamaha`, `_cenarios`, `_resultado`,
+   `score_config`): quem grava (handler direto ou via `resultado` da fila?),
+   FKs. [TI + Dados]
+4. **PII:** `cliente_ref` = **CPF hasheado**, nunca cru. Formato do hash. [TI]
+
+**B. Chave de junção simulado → venda → contemplação (o mais crítico p/ Dados)**
+5. Sem um campo "originou-se do simulado #" no cadastro de venda, **não há
+   calibração**. Definir a chave (cota? lead_id? CPF hash?) e onde ela entra no
+   fluxo de venda do ERP. [Dados + TI + decisão de produto]
+
+**C. Atributos de grupo que hoje não coletamos (travam score de custo/split/assertividade)**
+6. `fundo_reserva` por grupo — está na proposta antiga, **não** na migração 17
+   aplicada (só `taxa`). [mapear tela Newcon]
+7. **Teto de lance embutido** por grupo e se aceita embutido. [mapear tela Newcon]
+8. **`prox_assembleia` como `date`** (hoje text `DD/MM/AAAA`) + flag
+   `prox_assembleia_mega`. [TI, migração]
+9. **`is_mega`** por linha em `yamaha_assembleias` (hoje só dá p/ inferir por
+   contagem) — idealmente calendário oficial de megas. [mapear + Uriel]
+10. Nº de cotas de lance livre / sorteados **por regra do grupo** (regulamento),
+    separado do observado `n_lance_livre`. [mapear + Uriel]
+
+**D. Regras / política**
+11. **Split lance R$ → %:** o robô otimiza embutido × recurso próprio (dentro
+    dos tetos) pelo objetivo do cliente; regra fixa `LANCE_FIXO_DEFAULTS` só
+    como default. Colar os valores reais por produto. [Uriel + Dados]
+12. **Fonte única de frescor:** a "regra do Uriel por nº de vagas" + catálogo 30
+    dias + "não recoletar assembleia já no banco" numa função só
+    (`precisa_reconsultar` já existe) chamada pelo handler. [TI]
+13. **Coleta de fundo:** quem dispara `COLETA_ASSEMBLEIAS` de 6 assembleias p/
+    todos os grupos ativos — cron? primeira vez que o grupo entra num ranking?
+    (casa com a serialização de navegador). [TI + Dados]
+14. **Qual `yamaha.html` o driver abre** — arquivo local ou app publicado (taxa
+    sempre atual)? Define se o driver precisa de sessão logada no ERP. [TI]
+15. **Newcon aceita 2 logins simultâneos?** Resposta define se há qualquer
+    paralelismo possível. [Uriel]
+16. **Onde vivem pesos/versão do modelo:** `score_config` lida a cada run
+    (recalibra sem deploy) — confirmado pelos dois. [fechado]
+17. **View/função `yamaha_grupo_lance_stats`** (p25/p50/p75/p90 + n) para HTML e
+    handler usarem a mesma fonte — hoje a view só dá média. [TI + Dados]
+
+**Gate:** codar a rodada 2 **só** depois desta lista fechada num spec assinado
+por TI e Dados, com prioridade para os itens **5** (chave simulado→resultado) e
+**6–10** (atributos de grupo, dependem de mapear telas novas do Newcon).

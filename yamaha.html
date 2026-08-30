@@ -43,7 +43,7 @@ body{
 .logo-box .logo-fallback{font-weight:900;font-size:18px;letter-spacing:1px;color:#123f3e;}
 .logo-divider{width:1.5px;height:36px;background:rgba(255,255,255,.22);border-radius:2px;}
 .logo-tag{font-size:13px;font-weight:800;color:#fff;line-height:1.25;}
-.logo-tag small{display:block;font-size:10.5px;font-weight:600;color:#f9c99b;letter-spacing:.3px;}
+.logo-tag small{display:block;font-size:10.5px;font-weight:600;color:#a7d5d5;letter-spacing:.3px;}
 .hero-actions{display:flex;align-items:center;gap:9px;}
 .btn-ghost{padding:10px 15px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);color:#fff;font-weight:800;border-radius:999px;cursor:pointer;font-size:12px;letter-spacing:.4px;text-transform:uppercase;transition:.18s;}
 .btn-ghost:hover{background:#fff;color:var(--navy);}
@@ -56,6 +56,7 @@ body{
 /* ---------- Passo 1: produto ---------- */
 .step{margin-bottom:16px;}
 .step-label{font-size:12px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#94a3b8;margin-bottom:9px;display:flex;align-items:center;gap:8px;}
+.step:last-child .step-label{color:#cbd5e1;}
 .step-num{width:20px;height:20px;border-radius:50%;background:var(--teal);color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center;font-weight:900;}
 .prod-btns{display:flex;gap:10px;flex-wrap:wrap;}
 .btnProduto{flex:1;min-width:150px;padding:16px 14px;border:1.5px solid var(--line);background:var(--panel);color:#e2e8f0;cursor:pointer;border-radius:14px;font-weight:800;font-size:15px;transition:.18s;display:flex;align-items:center;justify-content:center;gap:9px;}
@@ -85,10 +86,10 @@ body{
 .media-linha{display:none;align-items:center;gap:9px;flex-wrap:wrap;margin-top:11px;}
 .media-linha.show{display:flex;}
 .media-badge{font-size:12.5px;font-weight:800;padding:6px 13px;border-radius:999px;background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok-line);}
-.media-badge.none{background:#fff4e8;color:#c2410c;border-color:#fed7aa;font-weight:700;}
+.media-badge.none{background:#eef2f7;color:#556070;border-color:#dbe3f0;font-weight:700;}
 .btn-media{font-size:11.5px;font-weight:800;padding:7px 13px;border-radius:999px;border:none;background:linear-gradient(135deg,var(--teal),var(--teal-d));color:#fff;cursor:pointer;}
 .btn-media:hover{filter:brightness(1.06);}
-.lances-mes{display:none;margin-top:11px;background:#fff;border-radius:13px;padding:12px 14px;max-width:460px;color:#111;box-shadow:var(--shadow-sm);}
+.lances-mes{display:none;margin-top:11px;background:#fff;border-radius:13px;padding:12px 14px;max-width:460px;color:#111;box-shadow:0 4px 14px -10px rgba(0,0,0,.35);}
 .lances-mes.show{display:block;}
 .lm-titulo{font-size:11px;font-weight:800;color:var(--teal-d);text-transform:uppercase;letter-spacing:.4px;margin-bottom:9px;display:flex;justify-content:space-between;gap:8px;align-items:center;}
 .lm-fechar{border:1px solid var(--field-line);background:#f5f7fb;color:#64748b;border-radius:999px;padding:3px 9px;font-size:10px;font-weight:800;cursor:pointer;}
@@ -100,7 +101,7 @@ body{
 .lm-media b{color:var(--ok);font-size:14px;}
 
 /* painel info do grupo */
-.info-grupo{display:none;background:#fff;border-left:5px solid var(--teal);border-radius:14px;padding:15px 17px;margin-top:12px;color:#111;box-shadow:var(--shadow-sm);}
+.info-grupo{display:none;background:#fff;border-left:4px solid var(--teal);border-radius:14px;padding:15px 17px;margin-top:12px;color:#111;box-shadow:0 4px 14px -10px rgba(0,0,0,.35);}
 .info-grupo.show{display:block;}
 .ig-header{display:flex;align-items:center;justify-content:space-between;gap:10px;}
 .ig-header h4{margin:0;font-size:15px;color:var(--navy);font-weight:800;display:flex;align-items:center;gap:8px;}
@@ -111,7 +112,7 @@ body{
 .info-item .rotulo{font-size:10px;text-transform:uppercase;color:#64748b;font-weight:800;letter-spacing:.4px;}
 .info-item .valor{font-size:13.5px;color:#111;font-weight:700;}
 .info-grupo.collapsed .ig-body{display:none;}
-.ig-foot{margin-top:11px;font-size:10.5px;color:#94a3b8;font-weight:700;}
+.ig-foot{margin-top:11px;font-size:10.5px;color:#5b6675;font-weight:700;}
 
 /* ---------- Card do formulário ---------- */
 .card{
@@ -141,46 +142,49 @@ body{
   padding:15px;border-radius:14px;display:grid;grid-template-columns:repeat(4,1fr);gap:11px;
 }
 .footer .stat{display:flex;flex-direction:column;gap:3px;padding:9px 11px;border-radius:11px;background:rgba(255,255,255,.07);}
-.footer .lbl{font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:#a9c1e6;font-weight:800;}
+.footer .lbl{font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:#a7cfcf;font-weight:800;}
 .footer .val{font-size:15px;font-weight:800;}
 .footer .stat.d-lance{background:rgba(46,110,110,.20);box-shadow:inset 0 0 0 1.5px rgba(46,110,110,.5);}
-.footer .stat.d-lance .lbl{color:#fed7aa;} .footer .stat.d-lance .val{color:#fdba74;}
+.footer .stat.d-lance .lbl{color:#cfe9e9;} .footer .stat.d-lance .val{color:#7fd4d4;}
 .footer .stat.d-liq{background:rgba(16,185,129,.20);box-shadow:inset 0 0 0 1.5px rgba(16,185,129,.5);}
 .footer .stat.d-liq .lbl{color:#a7f3d0;} .footer .stat.d-liq .val{color:#6ee7b7;}
-.footer .full{grid-column:span 4;font-size:12px;color:#a9c1e6;font-weight:700;display:flex;flex-wrap:wrap;gap:6px 18px;}
+.footer .full{grid-column:span 4;font-size:12px;color:#a7cfcf;font-weight:700;display:flex;flex-wrap:wrap;gap:6px 18px;}
 .footer .full b{color:#fff;}
 
 /* ---------- Proposta (cliente) ---------- */
-.summary{display:none;background:#fff;margin-top:16px;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+.summary{display:none;background:#fff;margin:16px auto 0;max-width:600px;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
 .summary.show{display:block;}
 .proposta-head{display:flex;align-items:center;justify-content:space-between;gap:12px;background:linear-gradient(135deg,var(--navy),#1c5e5b);color:#fff;padding:16px 20px;}
 .proposta-head img{height:42px;width:auto;background:#fff;border-radius:8px;padding:5px 9px;}
 .proposta-head .ph-fallback{font-weight:900;font-size:18px;letter-spacing:1.5px;background:#fff;color:var(--navy);border-radius:8px;padding:6px 12px;}
-.proposta-titulo{text-align:right;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:#a9c1e6;font-weight:800;line-height:1.3;}
+.proposta-titulo{text-align:right;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:#a7cfcf;font-weight:800;line-height:1.3;}
 .proposta-titulo b{display:block;font-size:17px;color:#fff;margin-top:2px;}
-.proposta-pessoal-top{display:none;background:#e3edfb;color:var(--blue);text-align:center;padding:9px 14px;}
-.proposta-pessoal-top .pp-rotulo{display:block;font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:#5b7fb0;font-weight:800;}
+.proposta-pessoal-top{display:none;background:#e6f2f1;color:var(--teal-d);text-align:center;padding:9px 14px;}
+.proposta-pessoal-top .pp-rotulo{display:block;font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:#4f8a8a;font-weight:800;}
 .proposta-pessoal-top b{font-size:15px;color:var(--navy);}
 .proposta-img-wrap{position:relative;line-height:0;background:#e8eef8;}
-.proposta-img{display:block;width:100%;height:190px;object-fit:cover;}
-.proposta-img-label{position:absolute;left:16px;bottom:14px;background:rgba(10,35,80,.85);color:#fff;font-size:12px;font-weight:800;padding:6px 15px;border-radius:999px;letter-spacing:.5px;text-transform:uppercase;}
+.proposta-img{display:block;width:100%;height:200px;object-fit:cover;}
+.proposta-img-label{position:absolute;left:16px;bottom:14px;background:rgba(18,63,62,.9);color:#fff;font-size:12px;font-weight:800;padding:6px 15px;border-radius:999px;letter-spacing:.5px;text-transform:uppercase;}
 .proposta-credito{text-align:center;padding:16px;background:#eef6f5;}
 .proposta-credito span{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--teal-d);font-weight:800;}
-.proposta-credito b{font-size:28px;color:var(--teal-d);font-weight:900;}
+.proposta-credito b{font-size:28px;color:var(--teal-d);font-weight:900;font-variant-numeric:tabular-nums;}
 .proposta-body{padding:0 20px;}
 .proposta-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px 0 6px;}
 .pg-item{background:#f5f7fb;border:1px solid var(--field-line);border-radius:11px;padding:10px 13px;}
-.pg-item span{display:block;font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:#64748b;font-weight:800;margin-bottom:3px;}
-.pg-item b{font-size:16px;color:#111;font-weight:800;}
+.pg-item span{display:block;font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:#576372;font-weight:800;margin-bottom:3px;}
+.pg-item b{font-size:16px;color:#111;font-weight:800;font-variant-numeric:tabular-nums;}
+.pg-item b.pg-pay{font-size:13px;color:var(--teal-d);}
 .pg-item.d-pos{background:#eef6f5;border-color:#b8d8d6;}
 .pg-item.d-pos b{color:var(--teal-d);}
 .proposta-liquido{display:flex;align-items:center;justify-content:space-between;gap:12px;background:linear-gradient(135deg,#0f9d6b,#0c8a5e);color:#fff;border-radius:13px;padding:15px 18px;margin:8px 0 16px;}
 .proposta-liquido span{font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;font-weight:800;color:#d6fff0;max-width:55%;}
-.proposta-liquido b{font-size:24px;font-weight:900;text-align:right;}
+.proposta-liquido b{font-size:24px;font-weight:900;text-align:right;font-variant-numeric:tabular-nums;}
 .proposta-pessoal-bottom{display:none;text-align:center;font-size:12.5px;color:#111;padding-bottom:6px;}
 .proposta-pessoal-bottom .pp-rotulo{display:block;font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:#64748b;font-weight:800;}
 .proposta-pessoal-bottom b{color:var(--teal-d);}
-.proposta-disc{text-align:center;font-size:11.5px;color:#c2410c;font-weight:700;padding:0 20px 18px;}
+.proposta-disc{text-align:center;font-size:10.5px;color:#5b6675;font-weight:600;letter-spacing:.1px;padding:0 20px 14px;}
+.proposta-rodape{border-top:1px solid var(--field-line);margin:0 20px;padding:12px 0 16px;text-align:center;font-size:10.5px;line-height:1.5;color:#5b6675;font-weight:600;}
+.proposta-rodape b{color:var(--teal-d);font-weight:800;}
 
 .resumo-acoes{display:none;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:12px;}
 .resumo-acoes.show{display:flex;}
@@ -228,12 +232,19 @@ table.baseTbl tr:hover td{background:#fafafa}
 .baseVazio{padding:18px;color:#666;font-size:13px}
 
 @media(max-width:768px){
+  .container{padding:0 11px 50px;}
+  .hero{margin:0 -11px 20px;padding:20px 16px 16px;}
+  .logo-divider,.logo-tag{display:none;}
+  .tabbar{width:100%;flex-wrap:wrap;}
+  .tabBtn{flex:1;padding:10px 10px;font-size:13px;white-space:nowrap;}
   .card{grid-template-columns:1fr}
   .buttons,.footer{grid-column:span 1}
   .footer{grid-template-columns:1fr 1fr}
   .footer .full{grid-column:span 2}
   .info-grid,.proposta-grid{grid-template-columns:1fr}
   .proposta-head{flex-direction:column;gap:12px;text-align:center}
+  .proposta-img{height:150px;}
+  .proposta-credito b{font-size:24px;}
   .proposta-liquido{flex-direction:column;align-items:flex-start}
   .proposta-liquido span{max-width:100%}
 }
@@ -243,9 +254,17 @@ table.baseTbl tr:hover td{background:#fafafa}
   html,body{background:#fff !important;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
   body.printing > *{display:none !important;}
   body.printing > .print-target{display:block !important;}
-  .print-target{margin:0 !important;border-radius:0 !important;box-shadow:none !important;max-width:100% !important;width:100% !important;}
+  .print-target{margin:0 auto !important;border-radius:0 !important;box-shadow:none !important;max-width:100% !important;width:100% !important;}
   .print-target *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
-  .print-target .proposta-img{height:150px !important;}
+  .print-target .proposta-img{height:132px !important;}
+  .print-target .proposta-credito{padding:10px !important;}
+  .print-target .proposta-credito b{font-size:24px !important;}
+  .print-target .proposta-grid{padding:10px 0 4px !important;gap:8px !important;}
+  .print-target .pg-item{padding:8px 11px !important;}
+  .print-target .pg-item b{font-size:14px !important;}
+  .print-target .proposta-liquido{padding:11px 16px !important;margin:6px 0 10px !important;}
+  .print-target .proposta-liquido b{font-size:20px !important;}
+  .print-target .proposta-rodape{padding:8px 0 6px !important;}
   .print-target .resumo-acoes{display:none !important;}
   @page{size:A4 portrait;margin:9mm;}
 }
@@ -580,7 +599,9 @@ resultado.innerHTML=`
     </div>
     <div class="proposta-pessoal-top" id="ppTop"></div>
     <div class="proposta-img-wrap">
-      <img class="proposta-img" src="${img}" alt="Produto">
+      <img class="proposta-img" src="${img}" alt="${label}" width="800" height="400"
+           referrerpolicy="no-referrer" loading="eager"
+           onerror="this.style.display='none';this.parentNode.style.background='linear-gradient(135deg,#123f3e,#2e6e6e)';this.parentNode.style.height='120px'">
       <span class="proposta-img-label">${label}</span>
     </div>
     <div class="proposta-credito">
@@ -596,7 +617,7 @@ resultado.innerHTML=`
         <div class="pg-item"><span>Lance embutido (valor)</span><b>${embRef.innerText.replace('Equivale a ','')||'-'}</b></div>
         <div class="pg-item d-pos"><span>Parcela após contemplação</span><b>${parcelaPosTxt}</b></div>
         <div class="pg-item d-pos"><span>Prazo após contemplação (meses)</span><b>${(prazo.value-1)||'-'}</b></div>
-        <div class="pg-item"><span>Forma de pagamento do lance</span><b style="font-size:13px;color:#2563eb">${parcelamento||'—'}</b></div>
+        <div class="pg-item"><span>Forma de pagamento do lance</span><b class="pg-pay">${parcelamento||'—'}</b></div>
       </div>
       <div class="proposta-liquido">
         <span>Crédito líquido na contemplação</span>
@@ -605,7 +626,11 @@ resultado.innerHTML=`
       <div class="proposta-pessoal-bottom" id="ppBottom"></div>
     </div>
     <div class="proposta-disc">
-      SIMULADO COM VALORES APROXIMADOS · NÃO É GARANTIA DE CONTEMPLAÇÃO
+      Simulado com valores aproximados · não é garantia de contemplação
+    </div>
+    <div class="proposta-rodape">
+      <b>CONSORBENS</b> · Consórcio de veículos e imóveis<br>
+      consorbensmg.com.br
     </div>
   </div>
 </div>`;
@@ -693,11 +718,10 @@ function _setManual(on){
   modoManual=on;
   // No modo manual, esconde os selects auxiliares. Fora dele, quem controla a
   // visibilidade é o onGrupoSel (mostra só quando um grupo da base é escolhido).
+  // Os inputs (#grupo/#credito/#prazo/#taxa/#prazoGrupo) ficam sempre editáveis
+  // — mesmo com grupo da base o vendedor pode ajustar à mão.
   if(on){ document.getElementById('creditoSel').style.display='none';
           document.getElementById('prazoSel').style.display='none'; }
-  document.getElementById('credito').readOnly = false;
-  document.getElementById('prazo').readOnly = false;
-  document.getElementById('grupo').readOnly = false;
 }
 
 function onGrupoSel(){
