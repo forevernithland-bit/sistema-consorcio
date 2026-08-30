@@ -22,6 +22,9 @@ MODOS:
         da tela (e some). Use isto p/ preencher o dict SELETORES abaixo com precisao.
 
     python baixar_comissoes.py                 # baixa todos os periodos que faltam
+    python baixar_comissoes.py --mes-atual     # as 2 quinzenas do mes corrente
+    python baixar_comissoes.py --mes 2026-08   # as 2 quinzenas de agosto/2026
+    python baixar_comissoes.py --desde 16/10/2024  # de tal data ate hoje
     python baixar_comissoes.py --so 01/10/2024 # baixa so esse periodo (teste)
     python baixar_comissoes.py --geral         # baixa 1 relatorio 01/10/2024 -> hoje
     python baixar_comissoes.py --refazer       # rebaixa mesmo os PDFs ja existentes
@@ -672,6 +675,26 @@ def main():
         periodos = [p for p in periodos
                     if datetime.datetime.strptime(p["ini"], "%d/%m/%Y").date() >= d0]
         print(f">>> comecando de {desde} ({len(periodos)} periodos)")
+    if "--mes" in args or "--mes-atual" in args:
+        # "--mes AAAA-MM" (ou --mes-atual) = as 2 quinzenas daquele mes.
+        # Se o mes ainda nao esta no periodos_comissao.json (mes recente), gera na hora.
+        if "--mes-atual" in args:
+            alvo = datetime.date.today().strftime("%Y-%m")
+        else:
+            alvo = args[args.index("--mes") + 1]              # ex.: 2026-08
+        ano, mes = int(alvo[:4]), int(alvo[5:7])
+        import calendar
+        ult = calendar.monthrange(ano, mes)[1]
+        do_mes = [p for p in periodos if p["ini"][3:10] == f"{mes:02d}/{ano}"]
+        if not do_mes:                                        # mes fora do JSON -> monta
+            do_mes = [
+                {"ini": f"01/{mes:02d}/{ano}", "fim": f"15/{mes:02d}/{ano}",
+                 "arquivo": f"{ano}-{mes:02d}-1a-quinzena - Comissoes Yamaha CCY10852.pdf"},
+                {"ini": f"16/{mes:02d}/{ano}", "fim": f"{ult:02d}/{mes:02d}/{ano}",
+                 "arquivo": f"{ano}-{mes:02d}-2a-quinzena - Comissoes Yamaha CCY10852.pdf"},
+            ]
+        periodos = do_mes
+        print(f">>> mes {alvo}: {len(periodos)} quinzena(s)")
     refazer = "--refazer" in args
 
     sb = _conectar_sb()

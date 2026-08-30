@@ -1,3 +1,4 @@
+import re
 import pandas as pd
 from utils import parse_float_safe, normalizar_string, normalizar_produto
 
@@ -191,6 +192,33 @@ def cotas_duplicadas(df_vendas):
     return {k: v for k, v in vistos.items() if len(v) > 1}
 
 
+def _parc_num(p):
+    """'3ª Parcela' / 3 / 'Antecip...' -> '3' ou '' (não numérica)."""
+    m = re.search(r"\d+", str(p))
+    return m.group(0) if m else ""
+
+
+def _pagas_por_gc_parcela(status_dict):
+    """Conjunto de (grupo, cota, parcela) já pagas, IGNORANDO o nome do cliente.
+
+    A `chave_unica` do status inclui o nome do cliente; quando a mesma cota foi
+    cadastrada com o nome em grafias diferentes (ex.: 'Uriel Gomes Junior' x
+    'URIEL GOMES JUNIOR'), a parcela paga sob uma grafia não é reconhecida pela
+    outra e a previsão a conta como pendente. Aqui reduzimos a chave a
+    grupo/cota/parcela para não deixar isso passar."""
+    pagas = set()
+    for chave, info in (status_dict or {}).items():
+        status = info if isinstance(info, str) else (info or {}).get("Status", "")
+        if str(status).upper() != "PAGO":
+            continue
+        partes = str(chave).split("_")
+        if len(partes) >= 3:
+            g, c, parc = _gc(partes[-4]) if len(partes) >= 4 else "", _gc(partes[-3]), _gc(partes[-1])
+            # formato: Cliente_GRUPO_COTA_ADMIN_PARCELA  -> índices -4,-3,-1
+            pagas.add((_gc(partes[-4]), _gc(partes[-3]), _gc(partes[-1])))
+    return pagas
+
+
 def gerar_previsao_pendente(df_vendas, df_admin, cfg, status_dict):
     """Comissões que ainda NÃO entraram, das cotas vivas.
 
@@ -200,7 +228,8 @@ def gerar_previsao_pendente(df_vendas, df_admin, cfg, status_dict):
         não geram parcela futura;
       • cada grupo/cota entra UMA vez (cota cadastrada em duplicidade contaria
         a comissão duas vezes);
-      • só parcelas ainda não baixadas (status_comissoes ≠ PAGO);
+      • só parcelas ainda não baixadas — checando por grupo/cota/parcela, sem
+        depender do nome do cliente na chave;
       • valor e data vêm de `gerar_tabela_parcelas`, ou seja, da regra da
         administradora + produto.
 
@@ -213,6 +242,8 @@ def gerar_previsao_pendente(df_vendas, df_admin, cfg, status_dict):
     avisos = []
     if df_vendas is None or df_vendas.empty:
         return vazio, avisos
+
+    pagas_gcp = _pagas_por_gc_parcela(status_dict)
 
     st_norm = df_vendas["STATUS"].astype(str).str.strip().str.lower()
     ativas = df_vendas[st_norm.isin(STATUS_ATIVOS)].copy()
@@ -253,8 +284,13 @@ def gerar_previsao_pendente(df_vendas, df_admin, cfg, status_dict):
 
     hoje = pd.Timestamp.today().normalize()
     regs = []
+    puladas_pagas = 0
     for _, p in pend.iterrows():
         gc = f"{_gc(p['Grupo'])}/{_gc(p['Cota'])}"
+        # já paga sob outra grafia do nome do cliente? não é previsão.
+        if (_gc(p["Grupo"]), _gc(p["Cota"]), _parc_num(p["Parcela"])) in pagas_gcp:
+            puladas_pagas += 1
+            continue
         adm, prod = info.get(gc, ("—", "—"))
         regs.append({
             "ym": p["dt"].strftime("%Y-%m"), "cliente": p["Cliente"], "gc": gc,
@@ -265,4 +301,7 @@ def gerar_previsao_pendente(df_vendas, df_admin, cfg, status_dict):
             "breno": parse_float_safe(p["Breno"]), "uriel": parse_float_safe(p["Uriel"]),
             "atrasada": bool(p["dt"] < hoje),
         })
+    if puladas_pagas:
+        avisos.append(f"{puladas_pagas} parcela(s) já paga(s) sob outra grafia do nome "
+                      f"do cliente foram excluídas da previsão.")
     return pd.DataFrame(regs, columns=colunas), avisos
