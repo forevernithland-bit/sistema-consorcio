@@ -11,10 +11,23 @@ Este módulo só:
 """
 import os
 import json
+import base64
 import datetime
 
 import streamlit as st
 import streamlit.components.v1 as components
+
+
+def _logo_data_uri(pasta_atual):
+    """logo.png da raiz do projeto (a mesma logo Consorbens da sidebar do ERP)
+    convertida em data URI base64, pra renderizar offline dentro do iframe."""
+    caminho = os.path.join(pasta_atual, "logo.png")
+    try:
+        with open(caminho, "rb") as f:
+            b64 = base64.b64encode(f.read()).decode("ascii")
+        return "data:image/png;base64," + b64
+    except Exception:
+        return ""
 
 
 def _rows(supabase, tabela, colunas="*", ordem=None, desc=False):
@@ -91,4 +104,16 @@ def render_yamaha_sim(supabase, pasta_atual):
             "</head>", f"<script>window.BASE_DADOS={payload};</script></head>", 1
         )
 
-    components.html(html_code, height=1200, scrolling=True)
+    # logo Consorbens (base64) — troca o marcador "__LOGO_CONSORBENS__"
+    logo_uri = _logo_data_uri(pasta_atual)
+    if logo_uri:
+        if "__LOGO_CONSORBENS__" in html_code:
+            html_code = html_code.replace("__LOGO_CONSORBENS__", logo_uri)
+        else:
+            html_code = html_code.replace(
+                "</head>",
+                f'<script>window.LOGO_CONSORBENS={json.dumps(logo_uri)};</script></head>',
+                1,
+            )
+
+    components.html(html_code, height=1600, scrolling=True)
