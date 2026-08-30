@@ -204,26 +204,10 @@ st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
 if not is_logado:
     OPC_LOGIN = "🔐 Login (Área Restrita)"
-    opcoes_sim = list(simuladores_dict.keys())
 
-    if st.session_state['menu_lateral'] not in [OPC_LOGIN] + opcoes_sim:
-        st.session_state['menu_lateral'] = OPC_LOGIN
-    menu_atual = st.session_state['menu_lateral']
-
-    # O menu é dividido em dois blocos para encaixar o link externo entre eles.
-    # Só um dos dois fica marcado por vez (o outro é zerado no on_change).
-    if 'menu_login' not in st.session_state:
-        st.session_state['menu_login'] = OPC_LOGIN if menu_atual == OPC_LOGIN else None
-    if 'menu_sim' not in st.session_state:
-        st.session_state['menu_sim'] = menu_atual if menu_atual in opcoes_sim else None
-
-    def _selecionou_login():
-        st.session_state['menu_lateral'] = OPC_LOGIN
-        st.session_state['menu_sim'] = None
-
-    def _selecionou_simulador():
-        st.session_state['menu_lateral'] = st.session_state['menu_sim']
-        st.session_state['menu_login'] = None
+    # Sem login, o ÚNICO destino é a tela de login. Os simuladores só aparecem
+    # para usuário autenticado (regra definida pelo Breno/Uriel, ago/2026).
+    st.session_state['menu_lateral'] = OPC_LOGIN
 
     link_cartas = """
     <div class="menu-link-wrap">
@@ -233,10 +217,9 @@ if not is_logado:
     </div>
     """
 
-    st.sidebar.radio(" ", [OPC_LOGIN], key="menu_login", label_visibility="collapsed", on_change=_selecionou_login)
+    st.sidebar.radio(" ", [OPC_LOGIN], key="menu_login", label_visibility="collapsed")
     with st.sidebar.container(key="cartas_link"):
         st.markdown(link_cartas, unsafe_allow_html=True)
-    st.sidebar.radio(" ", opcoes_sim, key="menu_sim", label_visibility="collapsed", on_change=_selecionou_simulador)
 else:
     st.sidebar.divider() 
     
@@ -283,6 +266,12 @@ else:
 
 menu_selecionado = st.session_state['menu_lateral']
 
+# Trava de segurança: simulador só com login. Se cair aqui sem estar logado
+# (sessão antiga, link direto), volta para a tela de login.
+if (menu_selecionado in simuladores_dict) and not is_logado:
+    menu_selecionado = "🔐 Login (Área Restrita)"
+    st.session_state['menu_lateral'] = menu_selecionado
+
 # Aplicando cor de fundo dependendo da área
 if menu_selecionado in simuladores_dict:
     css += """ <style>.stApp { background-color: #0f172a !important; }</style> """
@@ -301,6 +290,9 @@ if menu_selecionado in simuladores_dict:
     if menu_selecionado == "🚀 Simulador Itaú V 2.0":
         from modulos.itau_v2 import render_itau_v2
         render_itau_v2(PASTA_ATUAL)
+    elif menu_selecionado == "🏍️ Simulador Yamaha":
+        from modulos.yamaha_sim import render_yamaha_sim
+        render_yamaha_sim(supabase, PASTA_ATUAL)
     else:
         carregar_ferramenta(simuladores_dict[menu_selecionado], PASTA_ATUAL)
     st.stop()

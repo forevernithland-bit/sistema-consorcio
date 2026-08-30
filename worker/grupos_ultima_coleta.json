@@ -1,46 +1,1438 @@
 {
  "metas": [
   {
-   "plano_cod": "76",
-   "plano_txt": "074 - S GRUPO PRIME IPCA + TX 11,6",
+   "plano_cod": "039",
+   "plano_txt": "039 - SUPER GRUPO MASTER IPCA",
+   "parcela_reduzida": false,
    "creditos": [
     {
-     "bem_cod": "9688",
-     "texto": "1403TX - AUTOMÓVEL R$ 100.000,00 - R$ 100.000,00",
-     "credito": 100000.0
+     "bem_cod": "9378",
+     "texto": "1141TX - AUTOMÓVEL R$ 25.000,00 - R$ 25.000,00",
+     "credito": 25000.0,
+     "base_parcela": 25000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
     },
     {
-     "bem_cod": "9690",
-     "texto": "1405TX - AUTOMÓVEL R$ 110.000,00 - R$ 110.000,00",
-     "credito": 110000.0
+     "bem_cod": "9380",
+     "texto": "1143TX - AUTOMÓVEL R$ 27.000,00 - R$ 27.000,00",
+     "credito": 27000.0,
+     "base_parcela": 27000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
     },
     {
-     "bem_cod": "9692",
-     "texto": "1407TX - AUTOMÓVEL R$ 120.000,00 - R$ 120.000,00",
-     "credito": 120000.0
+     "bem_cod": "9382",
+     "texto": "1145TX - AUTOMÓVEL R$ 29.000,00 - R$ 29.000,00",
+     "credito": 29000.0,
+     "base_parcela": 29000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
     },
     {
-     "bem_cod": "9694",
-     "texto": "1409TX - AUTOMÓVEL R$ 130.000,00 - R$ 130.000,00",
-     "credito": 130000.0
+     "bem_cod": "9384",
+     "texto": "1147TX - AUTOMÓVEL R$ 31.000,00 - R$ 31.000,00",
+     "credito": 31000.0,
+     "base_parcela": 31000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
     },
     {
-     "bem_cod": "9696",
-     "texto": "1411TX - AUTOMÓVEL R$ 140.000,00 - R$ 140.000,00",
-     "credito": 140000.0
+     "bem_cod": "9386",
+     "texto": "1149TX - AUTOMÓVEL R$ 33.000,00 - R$ 33.000,00",
+     "credito": 33000.0,
+     "base_parcela": 33000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
     },
     {
-     "bem_cod": "9698",
-     "texto": "1413TX - AUTOMÓVEL R$ 150.000,00 - R$ 150.000,00",
-     "credito": 150000.0
+     "bem_cod": "9388",
+     "texto": "1151TX - AUTOMÓVEL R$ 35.000,00 - R$ 35.000,00",
+     "credito": 35000.0,
+     "base_parcela": 35000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9390",
+     "texto": "1153TX - AUTOMÓVEL R$ 37.000,00 - R$ 37.000,00",
+     "credito": 37000.0,
+     "base_parcela": 37000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9392",
+     "texto": "1155TX - AUTOMÓVEL R$ 39.000,00 - R$ 39.000,00",
+     "credito": 39000.0,
+     "base_parcela": 39000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9394",
+     "texto": "1157TX - AUTOMÓVEL R$ 41.000,00 - R$ 41.000,00",
+     "credito": 41000.0,
+     "base_parcela": 41000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9396",
+     "texto": "1159TX - AUTOMÓVEL R$ 43.000,00 - R$ 43.000,00",
+     "credito": 43000.0,
+     "base_parcela": 43000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9398",
+     "texto": "1161TX - AUTOMÓVEL R$ 45.000,00 - R$ 45.000,00",
+     "credito": 45000.0,
+     "base_parcela": 45000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9412",
+     "texto": "1175TX - AUTOMÓVEL R$ 47.000,00 - R$ 47.000,00",
+     "credito": 47000.0,
+     "base_parcela": 47000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9414",
+     "texto": "1177TX - AUTOMÓVEL R$ 49.000,00 - R$ 49.000,00",
+     "credito": 49000.0,
+     "base_parcela": 49000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9416",
+     "texto": "1179TX - AUTOMÓVEL R$ 51.000,00 - R$ 51.000,00",
+     "credito": 51000.0,
+     "base_parcela": 51000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9417",
+     "texto": "1180TX - AUTOMÓVEL R$ 52.000,00 - R$ 52.000,00",
+     "credito": 52000.0,
+     "base_parcela": 52000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9418",
+     "texto": "1181TX - AUTOMÓVEL R$ 53.000,00 - R$ 53.000,00",
+     "credito": 53000.0,
+     "base_parcela": 53000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9419",
+     "texto": "1182TX - AUTOMÓVEL R$ 54.000,00 - R$ 54.000,00",
+     "credito": 54000.0,
+     "base_parcela": 54000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9420",
+     "texto": "1183TX - AUTOMÓVEL R$ 55.000,00 - R$ 55.000,00",
+     "credito": 55000.0,
+     "base_parcela": 55000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9421",
+     "texto": "1184TX - AUTOMÓVEL R$ 56.000,00 - R$ 56.000,00",
+     "credito": 56000.0,
+     "base_parcela": 56000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9422",
+     "texto": "1185TX - AUTOMÓVEL R$ 57.000,00 - R$ 57.000,00",
+     "credito": 57000.0,
+     "base_parcela": 57000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9423",
+     "texto": "1186TX - AUTOMÓVEL R$ 58.000,00 - R$ 58.000,00",
+     "credito": 58000.0,
+     "base_parcela": 58000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9424",
+     "texto": "1187TX - AUTOMÓVEL R$ 59.000,00 - R$ 59.000,00",
+     "credito": 59000.0,
+     "base_parcela": 59000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9425",
+     "texto": "1188TX - AUTOMÓVEL R$ 60.000,00 - R$ 60.000,00",
+     "credito": 60000.0,
+     "base_parcela": 60000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9426",
+     "texto": "1189TX - AUTOMÓVEL R$ 61.000,00 - R$ 61.000,00",
+     "credito": 61000.0,
+     "base_parcela": 61000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9427",
+     "texto": "1190TX - AUTOMÓVEL R$ 62.000,00 - R$ 62.000,00",
+     "credito": 62000.0,
+     "base_parcela": 62000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9428",
+     "texto": "1191TX - AUTOMÓVEL R$ 63.000,00 - R$ 63.000,00",
+     "credito": 63000.0,
+     "base_parcela": 63000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9429",
+     "texto": "1192TX - AUTOMÓVEL R$ 64.000,00 - R$ 64.000,00",
+     "credito": 64000.0,
+     "base_parcela": 64000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9430",
+     "texto": "1193TX - AUTOMÓVEL R$ 65.000,00 - R$ 65.000,00",
+     "credito": 65000.0,
+     "base_parcela": 65000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9431",
+     "texto": "1194TX - AUTOMÓVEL R$ 66.000,00 - R$ 66.000,00",
+     "credito": 66000.0,
+     "base_parcela": 66000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9432",
+     "texto": "1195TX - AUTOMÓVEL R$ 67.000,00 - R$ 67.000,00",
+     "credito": 67000.0,
+     "base_parcela": 67000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9433",
+     "texto": "1196TX - AUTOMÓVEL R$ 68.000,00 - R$ 68.000,00",
+     "credito": 68000.0,
+     "base_parcela": 68000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9434",
+     "texto": "1197TX - AUTOMÓVEL R$ 69.000,00 - R$ 69.000,00",
+     "credito": 69000.0,
+     "base_parcela": 69000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9435",
+     "texto": "1198TX - AUTOMÓVEL R$ 70.000,00 - R$ 70.000,00",
+     "credito": 70000.0,
+     "base_parcela": 70000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9436",
+     "texto": "1199TX - AUTOMÓVEL R$ 71.000,00 - R$ 71.000,00",
+     "credito": 71000.0,
+     "base_parcela": 71000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9437",
+     "texto": "1200TX - AUTOMÓVEL R$ 72.000,00 - R$ 72.000,00",
+     "credito": 72000.0,
+     "base_parcela": 72000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9438",
+     "texto": "1201TX - AUTOMÓVEL R$ 73.000,00 - R$ 73.000,00",
+     "credito": 73000.0,
+     "base_parcela": 73000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9439",
+     "texto": "1202TX - AUTOMÓVEL R$ 74.000,00 - R$ 74.000,00",
+     "credito": 74000.0,
+     "base_parcela": 74000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9440",
+     "texto": "1203TX - AUTOMÓVEL R$ 75.000,00 - R$ 75.000,00",
+     "credito": 75000.0,
+     "base_parcela": 75000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9441",
+     "texto": "1204TX - AUTOMÓVEL R$ 76.000,00 - R$ 76.000,00",
+     "credito": 76000.0,
+     "base_parcela": 76000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9442",
+     "texto": "1205TX - AUTOMÓVEL R$ 77.000,00 - R$ 77.000,00",
+     "credito": 77000.0,
+     "base_parcela": 77000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9443",
+     "texto": "1206TX - AUTOMÓVEL R$ 78.000,00 - R$ 78.000,00",
+     "credito": 78000.0,
+     "base_parcela": 78000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9444",
+     "texto": "1207TX - AUTOMÓVEL R$ 79.000,00 - R$ 79.000,00",
+     "credito": 79000.0,
+     "base_parcela": 79000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9445",
+     "texto": "1208TX - AUTOMÓVEL R$ 80.000,00 - R$ 80.000,00",
+     "credito": 80000.0,
+     "base_parcela": 80000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9446",
+     "texto": "1209TX - AUTOMÓVEL R$ 81.000,00 - R$ 81.000,00",
+     "credito": 81000.0,
+     "base_parcela": 81000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9447",
+     "texto": "1210TX - AUTOMÓVEL R$ 82.000,00 - R$ 82.000,00",
+     "credito": 82000.0,
+     "base_parcela": 82000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9448",
+     "texto": "1211TX - AUTOMÓVEL R$ 83.000,00 - R$ 83.000,00",
+     "credito": 83000.0,
+     "base_parcela": 83000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9449",
+     "texto": "1212TX - AUTOMÓVEL R$ 84.000,00 - R$ 84.000,00",
+     "credito": 84000.0,
+     "base_parcela": 84000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9450",
+     "texto": "1213TX - AUTOMÓVEL R$ 85.000,00 - R$ 85.000,00",
+     "credito": 85000.0,
+     "base_parcela": 85000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9451",
+     "texto": "1214TX - AUTOMÓVEL R$ 86.000,00 - R$ 86.000,00",
+     "credito": 86000.0,
+     "base_parcela": 86000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9452",
+     "texto": "1215TX - AUTOMÓVEL R$ 87.000,00 - R$ 87.000,00",
+     "credito": 87000.0,
+     "base_parcela": 87000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9453",
+     "texto": "1216TX - AUTOMÓVEL R$ 88.000,00 - R$ 88.000,00",
+     "credito": 88000.0,
+     "base_parcela": 88000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9454",
+     "texto": "1217TX - AUTOMÓVEL R$ 89.000,00 - R$ 89.000,00",
+     "credito": 89000.0,
+     "base_parcela": 89000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
     },
     {
      "bem_cod": "9455",
      "texto": "1218TX - AUTOMÓVEL R$ 90.000,00 - R$ 90.000,00",
-     "credito": 90000.0
+     "credito": 90000.0,
+     "base_parcela": 90000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9456",
+     "texto": "1219TX - AUTOMÓVEL R$ 91.000,00 - R$ 91.000,00",
+     "credito": 91000.0,
+     "base_parcela": 91000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9457",
+     "texto": "1220TX - AUTOMÓVEL R$ 92.000,00 - R$ 92.000,00",
+     "credito": 92000.0,
+     "base_parcela": 92000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9458",
+     "texto": "1221TX - AUTOMÓVEL R$ 93.000,00 - R$ 93.000,00",
+     "credito": 93000.0,
+     "base_parcela": 93000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9459",
+     "texto": "1222TX - AUTOMÓVEL R$ 94.000,00 - R$ 94.000,00",
+     "credito": 94000.0,
+     "base_parcela": 94000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    }
+   ]
+  },
+  {
+   "plano_cod": "042",
+   "plano_txt": "042 - SUPER GRUPO MASTER IPCA PR",
+   "parcela_reduzida": true,
+   "creditos": [
+    {
+     "bem_cod": "9635",
+     "texto": "1372TX - AUTOMÓVEL R$30 MIL (70% = R$21 MIL) - R$ 30.000,00",
+     "credito": 30000.0,
+     "base_parcela": 30000.0,
+     "reducao_pct": 30,
+     "parcela_reduzida": true,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9636",
+     "texto": "1373TX - AUTOMÓVEL R$31 MIL (70% = R$21.700 MIL) - R$ 31.000,00",
+     "credito": 31000.0,
+     "base_parcela": 31000.0,
+     "reducao_pct": 30,
+     "parcela_reduzida": true,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9637",
+     "texto": "1374TX - AUTOMÓVEL R$32 MIL (70% = R$22.400 MIL) - R$ 32.000,00",
+     "credito": 32000.0,
+     "base_parcela": 32000.0,
+     "reducao_pct": 30,
+     "parcela_reduzida": true,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9638",
+     "texto": "1375TX - AUTOMÓVEL R$33 MIL (70% = R$23.100 MIL) - R$ 33.000,00",
+     "credito": 33000.0,
+     "base_parcela": 33000.0,
+     "reducao_pct": 30,
+     "parcela_reduzida": true,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9639",
+     "texto": "1376TX - AUTOMÓVEL R$34 MIL (70% = R$23.800 MIL) - R$ 34.000,00",
+     "credito": 34000.0,
+     "base_parcela": 34000.0,
+     "reducao_pct": 30,
+     "parcela_reduzida": true,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9640",
+     "texto": "1377TX - AUTOMÓVEL R$35 MIL (70% = R$24.500 MIL) - R$ 35.000,00",
+     "credito": 35000.0,
+     "base_parcela": 35000.0,
+     "reducao_pct": 30,
+     "parcela_reduzida": true,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9641",
+     "texto": "1378TX - AUTOMÓVEL R$36 MIL (70% = R$25.200 MIL) - R$ 36.000,00",
+     "credito": 36000.0,
+     "base_parcela": 36000.0,
+     "reducao_pct": 30,
+     "parcela_reduzida": true,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9642",
+     "texto": "1379TX - AUTOMÓVEL R$37 MIL (70% = R$25.900 MIL) - R$ 37.000,00",
+     "credito": 37000.0,
+     "base_parcela": 37000.0,
+     "reducao_pct": 30,
+     "parcela_reduzida": true,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9643",
+     "texto": "1380TX - AUTOMÓVEL R$38 MIL (70% = R$26.600 MIL) - R$ 38.000,00",
+     "credito": 38000.0,
+     "base_parcela": 38000.0,
+     "reducao_pct": 30,
+     "parcela_reduzida": true,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9644",
+     "texto": "1381TX - AUTOMÓVEL R$39 MIL (70% = R$27.300 MIL) - R$ 39.000,00",
+     "credito": 39000.0,
+     "base_parcela": 39000.0,
+     "reducao_pct": 30,
+     "parcela_reduzida": true,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9645",
+     "texto": "1382TX - AUTOMÓVEL R$40 MIL (70% = R$28 MIL) - R$ 40.000,00",
+     "credito": 40000.0,
+     "base_parcela": 40000.0,
+     "reducao_pct": 30,
+     "parcela_reduzida": true,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9585",
+     "texto": "1322TX - AUTOMÓVEL R$58 MIL (70% = R$40.600 MIL) - R$ 58.000,00",
+     "credito": 58000.0,
+     "base_parcela": 58000.0,
+     "reducao_pct": 30,
+     "parcela_reduzida": true,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9587",
+     "texto": "1324TX - AUTOMÓVEL R$60 MIL (70% = R$42 MIL) - R$ 60.000,00",
+     "credito": 60000.0,
+     "base_parcela": 60000.0,
+     "reducao_pct": 30,
+     "parcela_reduzida": true,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9589",
+     "texto": "1326TX - AUTOMÓVEL R$62 MIL (70% = R$43.400 MIL) - R$ 62.000,00",
+     "credito": 62000.0,
+     "base_parcela": 62000.0,
+     "reducao_pct": 30,
+     "parcela_reduzida": true,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9591",
+     "texto": "1328TX - AUTOMÓVEL R$64 MIL (70% = R$44.800 MIL) - R$ 64.000,00",
+     "credito": 64000.0,
+     "base_parcela": 64000.0,
+     "reducao_pct": 30,
+     "parcela_reduzida": true,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9593",
+     "texto": "1330TX - AUTOMÓVEL R$66 MIL (70% = R$46.200 MIL) - R$ 66.000,00",
+     "credito": 66000.0,
+     "base_parcela": 66000.0,
+     "reducao_pct": 30,
+     "parcela_reduzida": true,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9595",
+     "texto": "1332TX - AUTOMÓVEL R$68 MIL (70% = R$47.600 MIL) - R$ 68.000,00",
+     "credito": 68000.0,
+     "base_parcela": 68000.0,
+     "reducao_pct": 30,
+     "parcela_reduzida": true,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9597",
+     "texto": "1334TX - AUTOMÓVEL R$70 MIL (70% = R$49 MIL) - R$ 70.000,00",
+     "credito": 70000.0,
+     "base_parcela": 70000.0,
+     "reducao_pct": 30,
+     "parcela_reduzida": true,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9599",
+     "texto": "1336TX - AUTOMÓVEL R$72 MIL (70% = R$50.400 MIL) - R$ 72.000,00",
+     "credito": 72000.0,
+     "base_parcela": 72000.0,
+     "reducao_pct": 30,
+     "parcela_reduzida": true,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9603",
+     "texto": "1340TX - AUTOMÓVEL R$76 MIL (70% = R$53.200 MIL) - R$ 76.000,00",
+     "credito": 76000.0,
+     "base_parcela": 76000.0,
+     "reducao_pct": 30,
+     "parcela_reduzida": true,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9605",
+     "texto": "1342TX - AUTOMÓVEL R$78 MIL (70% = R$54.600 MIL) - R$ 78.000,00",
+     "credito": 78000.0,
+     "base_parcela": 78000.0,
+     "reducao_pct": 30,
+     "parcela_reduzida": true,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9607",
+     "texto": "1344TX - AUTOMÓVEL R$80 MIL (70% = R$56 MIL) - R$ 80.000,00",
+     "credito": 80000.0,
+     "base_parcela": 80000.0,
+     "reducao_pct": 30,
+     "parcela_reduzida": true,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9779",
+     "texto": "1494TX - AUTOMÓVEL R$82 MIL (70% = R$ 57.400 MIL) - R$ 82.000,00",
+     "credito": 82000.0,
+     "base_parcela": 82000.0,
+     "reducao_pct": 30,
+     "parcela_reduzida": true,
+     "prazo": "72"
+    }
+   ]
+  },
+  {
+   "plano_cod": "057",
+   "plano_txt": "057 - SUPER GRUPO MASTER – 40% DESC",
+   "parcela_reduzida": false,
+   "creditos": [
+    {
+     "bem_cod": "9665",
+     "texto": "1390TX - 40% - KICKS EXCLUSIVE 1.6 16V FLEX AUT. - R$ 62.764,00",
+     "credito": 62764.0,
+     "base_parcela": 62764.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9401",
+     "texto": "1163TX - 40% - MOBI TREKKING 1.0 FLEX 5P. - R$ 32.262,00",
+     "credito": 32262.0,
+     "base_parcela": 32262.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9646",
+     "texto": "1383TX - 40% - ONIX SEDAN PLUS LT 1.0 12V TB FLEX AUT. - R$ 48.348,00",
+     "credito": 48348.0,
+     "base_parcela": 48348.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9548",
+     "texto": "1293TX - 40% - T-CROSS COMFORTLINE 1.0 TSI FLEX 5P AUT. - R$ 67.964,00",
+     "credito": 67964.0,
+     "base_parcela": 67964.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9663",
+     "texto": "1388TX - 40% - VERSA ADVANCE 1.6 16V FLEX AUT. - R$ 51.500,00",
+     "credito": 51500.0,
+     "base_parcela": 51500.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9480",
+     "texto": "1242TX - 50% - ARGO DRIVE 1.0 6V FLEX - R$ 46.050,00",
+     "credito": 46050.0,
+     "base_parcela": 46050.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9667",
+     "texto": "1392TX - 50% - COROLLA XEI 2.0 FLEX 16V AUT. - R$ 87.741,00",
+     "credito": 87741.0,
+     "base_parcela": 87741.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9352",
+     "texto": "1115TX - 50% - KWID INTENSE 1.0 FLEX 12V 5P MEC. - R$ 37.260,00",
+     "credito": 37260.0,
+     "base_parcela": 37260.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9353",
+     "texto": "1116TX - 50% - MOBI TREKKING 1.0 FLEX 5P. - R$ 40.327,00",
+     "credito": 40327.0,
+     "base_parcela": 40327.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9482",
+     "texto": "1244TX - 50% - VIRTUS COMFORT. 200 TSI 1.0 FLEX 12V AUT - R$ 71.756,00",
+     "credito": 71756.0,
+     "base_parcela": 71756.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9483",
+     "texto": "1245TX - 70% - ARGO DRIVE 1.0 6V FLEX - R$ 64.470,00",
+     "credito": 64470.0,
+     "base_parcela": 64470.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9346",
+     "texto": "1112TX - 70% - KWID ZEN 1.0 FLEX 12V 5P MEC. - R$ 51.553,00",
+     "credito": 51553.0,
+     "base_parcela": 51553.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9769",
+     "texto": "1482TX - ARGO 1.0 6V FLEX. - 36% - R$ 32.525,00",
+     "credito": 32525.0,
+     "base_parcela": 32525.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9766",
+     "texto": "1480TX - HB20 LIMITED 1.0 FLEX 12V MEC. - 32% - R$ 31.956,00",
+     "credito": 31956.0,
+     "base_parcela": 31956.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9770",
+     "texto": "1485TX - HB20S COMFORT 1.0 FLEX 12V MEC. - 38% - R$ 38.972,00",
+     "credito": 38972.0,
+     "base_parcela": 38972.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9293",
+     "texto": "1072TX - KWID INTENSE 1.0 FLEX 12V 5P MEC. - R$ 74.555,00",
+     "credito": 74555.0,
+     "base_parcela": 74555.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9462",
+     "texto": "1225TX - KWID OUTSIDER 1.0 FLEX 12V 5P MEC. - R$ 79.992,00",
+     "credito": 79992.0,
+     "base_parcela": 79992.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9764",
+     "texto": "1478TX - KWID ZEN 1.0 FLEX 12V 5P MEC. - 38% - R$ 27.986,00",
+     "credito": 27986.0,
+     "base_parcela": 27986.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9300",
+     "texto": "1069TX - KWID ZEN 1.0 FLEX 12V 5P MEC. - R$ 73.647,00",
+     "credito": 73647.0,
+     "base_parcela": 73647.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9461",
+     "texto": "1224TX - MOBI LIKE 1.0 FIRE FLEX 5P. - R$ 78.430,00",
+     "credito": 78430.0,
+     "base_parcela": 78430.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9304",
+     "texto": "1073TX - MOBI TREKKING 1.0 FLEX 5P. - R$ 84.406,00",
+     "credito": 84406.0,
+     "base_parcela": 84406.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9765",
+     "texto": "1479TX - ONIX HATCH 1.0 12V FLEX 5P MEC. - 30% - R$ 29.097,00",
+     "credito": 29097.0,
+     "base_parcela": 29097.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    }
+   ]
+  },
+  {
+   "plano_cod": "066",
+   "plano_txt": "066 - CONTEMPLA + MASTER ANDAMENTO",
+   "parcela_reduzida": false,
+   "creditos": [
+    {
+     "bem_cod": "9665",
+     "texto": "1390TX - 40% - KICKS EXCLUSIVE 1.6 16V FLEX AUT. - R$ 62.764,00",
+     "credito": 62764.0,
+     "base_parcela": 62764.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9646",
+     "texto": "1383TX - 40% - ONIX SEDAN PLUS LT 1.0 12V TB FLEX AUT. - R$ 48.348,00",
+     "credito": 48348.0,
+     "base_parcela": 48348.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9548",
+     "texto": "1293TX - 40% - T-CROSS COMFORTLINE 1.0 TSI FLEX 5P AUT. - R$ 67.964,00",
+     "credito": 67964.0,
+     "base_parcela": 67964.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9663",
+     "texto": "1388TX - 40% - VERSA ADVANCE 1.6 16V FLEX AUT. - R$ 51.500,00",
+     "credito": 51500.0,
+     "base_parcela": 51500.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9480",
+     "texto": "1242TX - 50% - ARGO DRIVE 1.0 6V FLEX - R$ 46.050,00",
+     "credito": 46050.0,
+     "base_parcela": 46050.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9667",
+     "texto": "1392TX - 50% - COROLLA XEI 2.0 FLEX 16V AUT. - R$ 87.741,00",
+     "credito": 87741.0,
+     "base_parcela": 87741.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9352",
+     "texto": "1115TX - 50% - KWID INTENSE 1.0 FLEX 12V 5P MEC. - R$ 37.260,00",
+     "credito": 37260.0,
+     "base_parcela": 37260.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9353",
+     "texto": "1116TX - 50% - MOBI TREKKING 1.0 FLEX 5P. - R$ 40.327,00",
+     "credito": 40327.0,
+     "base_parcela": 40327.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9482",
+     "texto": "1244TX - 50% - VIRTUS COMFORT. 200 TSI 1.0 FLEX 12V AUT - R$ 71.756,00",
+     "credito": 71756.0,
+     "base_parcela": 71756.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9483",
+     "texto": "1245TX - 70% - ARGO DRIVE 1.0 6V FLEX - R$ 64.470,00",
+     "credito": 64470.0,
+     "base_parcela": 64470.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9346",
+     "texto": "1112TX - 70% - KWID ZEN 1.0 FLEX 12V 5P MEC. - R$ 51.553,00",
+     "credito": 51553.0,
+     "base_parcela": 51553.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9766",
+     "texto": "1480TX - HB20 LIMITED 1.0 FLEX 12V MEC. - 32% - R$ 31.956,00",
+     "credito": 31956.0,
+     "base_parcela": 31956.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9293",
+     "texto": "1072TX - KWID INTENSE 1.0 FLEX 12V 5P MEC. - R$ 74.555,00",
+     "credito": 74555.0,
+     "base_parcela": 74555.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9462",
+     "texto": "1225TX - KWID OUTSIDER 1.0 FLEX 12V 5P MEC. - R$ 79.992,00",
+     "credito": 79992.0,
+     "base_parcela": 79992.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9764",
+     "texto": "1478TX - KWID ZEN 1.0 FLEX 12V 5P MEC. - 38% - R$ 27.986,00",
+     "credito": 27986.0,
+     "base_parcela": 27986.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9300",
+     "texto": "1069TX - KWID ZEN 1.0 FLEX 12V 5P MEC. - R$ 73.647,00",
+     "credito": 73647.0,
+     "base_parcela": 73647.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9461",
+     "texto": "1224TX - MOBI LIKE 1.0 FIRE FLEX 5P. - R$ 78.430,00",
+     "credito": 78430.0,
+     "base_parcela": 78430.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9304",
+     "texto": "1073TX - MOBI TREKKING 1.0 FLEX 5P. - R$ 84.406,00",
+     "credito": 84406.0,
+     "base_parcela": 84406.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9765",
+     "texto": "1479TX - ONIX HATCH 1.0 12V FLEX 5P MEC. - 30% - R$ 29.097,00",
+     "credito": 29097.0,
+     "base_parcela": 29097.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    }
+   ]
+  },
+  {
+   "plano_cod": "067",
+   "plano_txt": "067 - CONTEMPLA + MASTER IPCA AND",
+   "parcela_reduzida": false,
+   "creditos": [
+    {
+     "bem_cod": "9376",
+     "texto": "1139TX - AUTOMOVEL R$ 23.000,00 - R$ 23.000,00",
+     "credito": 23000.0,
+     "base_parcela": 23000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9377",
+     "texto": "1140TX - AUTOMOVEL R$ 24.000,00 - R$ 24.000,00",
+     "credito": 24000.0,
+     "base_parcela": 24000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9378",
+     "texto": "1141TX - AUTOMÓVEL R$ 25.000,00 - R$ 25.000,00",
+     "credito": 25000.0,
+     "base_parcela": 25000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9380",
+     "texto": "1143TX - AUTOMÓVEL R$ 27.000,00 - R$ 27.000,00",
+     "credito": 27000.0,
+     "base_parcela": 27000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9382",
+     "texto": "1145TX - AUTOMÓVEL R$ 29.000,00 - R$ 29.000,00",
+     "credito": 29000.0,
+     "base_parcela": 29000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9384",
+     "texto": "1147TX - AUTOMÓVEL R$ 31.000,00 - R$ 31.000,00",
+     "credito": 31000.0,
+     "base_parcela": 31000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9386",
+     "texto": "1149TX - AUTOMÓVEL R$ 33.000,00 - R$ 33.000,00",
+     "credito": 33000.0,
+     "base_parcela": 33000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9388",
+     "texto": "1151TX - AUTOMÓVEL R$ 35.000,00 - R$ 35.000,00",
+     "credito": 35000.0,
+     "base_parcela": 35000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9390",
+     "texto": "1153TX - AUTOMÓVEL R$ 37.000,00 - R$ 37.000,00",
+     "credito": 37000.0,
+     "base_parcela": 37000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9392",
+     "texto": "1155TX - AUTOMÓVEL R$ 39.000,00 - R$ 39.000,00",
+     "credito": 39000.0,
+     "base_parcela": 39000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9394",
+     "texto": "1157TX - AUTOMÓVEL R$ 41.000,00 - R$ 41.000,00",
+     "credito": 41000.0,
+     "base_parcela": 41000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9396",
+     "texto": "1159TX - AUTOMÓVEL R$ 43.000,00 - R$ 43.000,00",
+     "credito": 43000.0,
+     "base_parcela": 43000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9398",
+     "texto": "1161TX - AUTOMÓVEL R$ 45.000,00 - R$ 45.000,00",
+     "credito": 45000.0,
+     "base_parcela": 45000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9412",
+     "texto": "1175TX - AUTOMÓVEL R$ 47.000,00 - R$ 47.000,00",
+     "credito": 47000.0,
+     "base_parcela": 47000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9414",
+     "texto": "1177TX - AUTOMÓVEL R$ 49.000,00 - R$ 49.000,00",
+     "credito": 49000.0,
+     "base_parcela": 49000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9416",
+     "texto": "1179TX - AUTOMÓVEL R$ 51.000,00 - R$ 51.000,00",
+     "credito": 51000.0,
+     "base_parcela": 51000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9421",
+     "texto": "1184TX - AUTOMÓVEL R$ 56.000,00 - R$ 56.000,00",
+     "credito": 56000.0,
+     "base_parcela": 56000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9426",
+     "texto": "1189TX - AUTOMÓVEL R$ 61.000,00 - R$ 61.000,00",
+     "credito": 61000.0,
+     "base_parcela": 61000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9431",
+     "texto": "1194TX - AUTOMÓVEL R$ 66.000,00 - R$ 66.000,00",
+     "credito": 66000.0,
+     "base_parcela": 66000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9437",
+     "texto": "1200TX - AUTOMÓVEL R$ 72.000,00 - R$ 72.000,00",
+     "credito": 72000.0,
+     "base_parcela": 72000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9443",
+     "texto": "1206TX - AUTOMÓVEL R$ 78.000,00 - R$ 78.000,00",
+     "credito": 78000.0,
+     "base_parcela": 78000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
+    },
+    {
+     "bem_cod": "9449",
+     "texto": "1212TX - AUTOMÓVEL R$ 84.000,00 - R$ 84.000,00",
+     "credito": 84000.0,
+     "base_parcela": 84000.0,
+     "reducao_pct": 0,
+     "parcela_reduzida": false,
+     "prazo": "72"
     }
    ]
   }
  ],
- "grupos": []
+ "grupos": [
+  {
+   "grupo": "9564",
+   "grupo_raw": "009564 - A",
+   "bem": "AUTOMÓVEL R$ 80.000,00",
+   "credito": 80000.0,
+   "taxa": 16.5,
+   "prox_assembleia": "24/09/2026",
+   "vencto_assembleia": "21/09/2026",
+   "prazo_restante": 66,
+   "prazo_total": 78,
+   "vagas": 342,
+   "participantes": 900,
+   "parcela": 1494.55,
+   "lance_medio": 58.1179,
+   "plano_cod": "039",
+   "plano_txt": "039 - SUPER GRUPO MASTER IPCA",
+   "prazo_label": "72",
+   "credito_faixa": 80000.0,
+   "base_parcela": 80000.0,
+   "reducao_pct": 0,
+   "parcela_reduzida": false
+  },
+  {
+   "grupo": "9598",
+   "grupo_raw": "009598 - F",
+   "bem": "AUTOMÓVEL R$80 MIL (70% = R$56 MIL)",
+   "credito": 80000.0,
+   "taxa": 16.5,
+   "prox_assembleia": "26/10/2026",
+   "vencto_assembleia": "20/10/2026",
+   "prazo_restante": 72,
+   "prazo_total": 78,
+   "vagas": 1143,
+   "participantes": 1200,
+   "parcela": 988.47,
+   "lance_medio": 0.0,
+   "plano_cod": "042",
+   "plano_txt": "042 - SUPER GRUPO MASTER IPCA PR",
+   "prazo_label": "72",
+   "credito_faixa": 80000.0,
+   "base_parcela": 80000.0,
+   "reducao_pct": 30,
+   "parcela_reduzida": true
+  },
+  {
+   "grupo": "9555",
+   "grupo_raw": "009555 - A",
+   "bem": "KWID OUTSIDER 1.0 FLEX 12V 5P MEC.",
+   "credito": 79992.0,
+   "taxa": 9.9,
+   "prox_assembleia": "24/09/2026",
+   "vencto_assembleia": "21/09/2026",
+   "prazo_restante": 66,
+   "prazo_total": 78,
+   "vagas": 337,
+   "participantes": 900,
+   "parcela": 1409.74,
+   "lance_medio": 59.48,
+   "plano_cod": "057",
+   "plano_txt": "057 - SUPER GRUPO MASTER – 40% DESC",
+   "prazo_label": "72",
+   "credito_faixa": 79992.0,
+   "base_parcela": 79992.0,
+   "reducao_pct": 0,
+   "parcela_reduzida": false
+  },
+  {
+   "grupo": "9045",
+   "grupo_raw": "009045 - A",
+   "bem": "KWID OUTSIDER 1.0 FLEX 12V 5P MEC.",
+   "credito": 79992.0,
+   "taxa": 15.0,
+   "prox_assembleia": "24/09/2026",
+   "vencto_assembleia": "21/09/2026",
+   "prazo_restante": 54,
+   "prazo_total": 78,
+   "vagas": 131,
+   "participantes": 460,
+   "parcela": 1784.83,
+   "lance_medio": 65.2906,
+   "plano_cod": "066",
+   "plano_txt": "066 - CONTEMPLA + MASTER ANDAMENTO",
+   "prazo_label": "72",
+   "credito_faixa": 79992.0,
+   "base_parcela": 79992.0,
+   "reducao_pct": 0,
+   "parcela_reduzida": false
+  },
+  {
+   "grupo": "9050",
+   "grupo_raw": "009050 - A",
+   "bem": "AUTOMÓVEL R$ 78.000,00",
+   "credito": 78000.0,
+   "taxa": 15.0,
+   "prox_assembleia": "17/09/2026",
+   "vencto_assembleia": "14/09/2026",
+   "prazo_restante": 55,
+   "prazo_total": 78,
+   "vagas": 160,
+   "participantes": 460,
+   "parcela": 1710.2,
+   "lance_medio": 56.5008,
+   "plano_cod": "067",
+   "plano_txt": "067 - CONTEMPLA + MASTER IPCA AND",
+   "prazo_label": "72",
+   "credito_faixa": 78000.0,
+   "base_parcela": 78000.0,
+   "reducao_pct": 0,
+   "parcela_reduzida": false
+  }
+ ]
 }

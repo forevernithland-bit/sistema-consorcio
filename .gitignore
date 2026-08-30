@@ -27,3 +27,7 @@ __pycache__/
 # ===== Config local do Claude Code =====
 .claude/
 backups/
+
+# previews locais do simulador
+_preview*.html
+_pv.js

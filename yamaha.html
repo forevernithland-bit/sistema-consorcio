@@ -147,6 +147,42 @@ cursor:pointer;
 font-weight:bold;
 }
 
+/* ===== Abas (Simulador / Base de Dados) ===== */
+.tabbar{display:flex;gap:8px;justify-content:center;margin-bottom:14px;flex-wrap:wrap}
+.tabBtn{
+padding:12px 22px;border:2px solid #334155;background:#0b1220;color:#cbd5e1;
+border-radius:8px;cursor:pointer;font-weight:bold;font-size:15px;
+}
+.tabBtn.active{background:#f97316;border-color:#f97316;color:#fff}
+
+/* ===== Base de Dados ===== */
+.baseWrap{color:#e2e8f0}
+.attBox{
+background:#0b1220;border:1px solid #1e293b;border-radius:12px;padding:16px 18px;
+margin-bottom:18px;display:flex;flex-wrap:wrap;gap:22px;align-items:center;
+}
+.attBox .big{font-size:13px;color:#94a3b8}
+.attBox .big b{display:block;font-size:20px;color:#22c55e;font-weight:bold;margin-top:2px}
+.attBox .cell{font-size:12px;color:#94a3b8;border-left:1px solid #1e293b;padding-left:16px}
+.attBox .cell b{display:block;font-size:14px;color:#e2e8f0;font-weight:bold;margin-top:2px}
+
+.baseSec{background:#fff;border-radius:12px;padding:14px 14px 6px;margin-bottom:16px;color:#111}
+.baseSec h3{margin:2px 0 4px;font-size:16px}
+.baseSec .sub{font-size:12px;color:#666;margin-bottom:10px}
+.baseFiltro{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.baseFiltro select,.baseFiltro input{width:auto;min-width:150px;padding:8px}
+.tblBox{overflow-x:auto;max-height:440px;overflow-y:auto;border:1px solid #eee;border-radius:8px}
+table.baseTbl{border-collapse:collapse;width:100%;font-size:13px}
+table.baseTbl th,table.baseTbl td{border-bottom:1px solid #eee;padding:7px 9px;text-align:left;white-space:nowrap}
+table.baseTbl th{position:sticky;top:0;background:#f8fafc;font-weight:bold;z-index:1}
+table.baseTbl tr:hover td{background:#fafafa}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:bold}
+.pill.sim{background:#dcfce7;color:#166534}
+.pill.nao{background:#f1f5f9;color:#64748b}
+.pill.vaga{background:#dcfce7;color:#166534}
+.pill.semvaga{background:#fee2e2;color:#991b1b}
+.baseVazio{padding:18px;color:#666;font-size:13px}
+
 @media(max-width:768px){
 .card{grid-template-columns:1fr}
 .footer,button.gerar{grid-column:span 1}
@@ -158,6 +194,13 @@ font-weight:bold;
 
 <body>
 <div class="container">
+
+<div class="tabbar">
+<button class="tabBtn active" id="tb-sim" onclick="setAba('sim')">📊 Simulador</button>
+<button class="tabBtn" id="tb-base" onclick="setAba('base')">🗄️ Base de Dados</button>
+</div>
+
+<div id="abaSim">
 
 <div class="top-buttons">
 Selecione um produto
@@ -225,6 +268,15 @@ Parcelas Pós: <span id="parcelasPos"></span>
 
 <div id="resultado"></div>
 
+</div><!-- /#abaSim -->
+
+<div id="abaBase" style="display:none">
+  <div class="baseWrap">
+    <div class="attBox" id="attBox"></div>
+    <div id="baseConteudo"></div>
+  </div>
+</div>
+
 </div>
 
 <div class="modalBg" id="modalBg">
@@ -244,6 +296,10 @@ Caminhões: 10 anos
 </div>
 
 <script>
+// Dados que o robô do escritório coleta. O modulos/yamaha_sim.py troca o
+// objeto abaixo (marcador "__BASE_DADOS__") pelo JSON real do Supabase.
+const BASE_DADOS = window.BASE_DADOS || {"__BASE_DADOS__":true,"planos":[],"grupos":[],"assembleias":[],"resumo":[],"atualizacao":{},"contagem":{}};
+
 let produto='auto'
 const seguros={auto:0.000884,moto:0.000914,imovel:0.000276,caminhao:0.00036}
 const imagens={
@@ -366,6 +422,233 @@ resultado.innerHTML=`
     </div>
   </div>
 </div>`
+}
+
+/* ============================================================
+   ABA "BASE DE DADOS" — só leitura do que o robô já coletou
+   ============================================================ */
+function setAba(n){
+  document.getElementById('abaSim').style.display  = (n==='sim')  ? '' : 'none';
+  document.getElementById('abaBase').style.display = (n==='base') ? '' : 'none';
+  document.getElementById('tb-sim').classList.toggle('active', n==='sim');
+  document.getElementById('tb-base').classList.toggle('active', n==='base');
+  if(n==='base' && !window._baseRender){ renderBase(); window._baseRender = true; }
+}
+
+function _esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function _brl(v){ v=parseFloat(v); if(isNaN(v)) return '—'; return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+function _pct(v){ v=parseFloat(v); if(isNaN(v)||v===0) return '—'; return v.toFixed(4).replace(/\.?0+$/,'')+'%'; }
+function _num(v){ return (v==null||v==='')?'—':v; }
+function _dt(iso){
+  if(!iso) return '—';
+  const d=new Date(iso); if(isNaN(d)) return _esc(iso);
+  const p=n=>String(n).padStart(2,'0');
+  return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function _tbl(headers, rows){
+  if(!rows.length) return '<div class="baseVazio">Nada coletado ainda. Rode o robô no PC do escritório.</div>';
+  const th = headers.map(h=>`<th>${_esc(h)}</th>`).join('');
+  const tr = rows.map(r=>'<tr>'+r.map(c=>`<td>${c==null?'—':c}</td>`).join('')+'</tr>').join('');
+  return `<div class="tblBox"><table class="baseTbl"><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table></div>`;
+}
+function _prod(p){ return _esc(p||'—'); }
+function _pill(cond, textoSim, textoNao, clsSim, clsNao){
+  return cond ? `<span class="pill ${clsSim}">${textoSim}</span>` : `<span class="pill ${clsNao}">${textoNao}</span>`;
+}
+
+function renderBase(){
+  const B = BASE_DADOS || {};
+  const att = B.atualizacao || {};
+  const ct  = B.contagem || {};
+
+  // ---- caixa "última atualização" ----
+  document.getElementById('attBox').innerHTML = `
+    <div class="big">Última atualização da base<b>${_dt(att.geral)}</b></div>
+    <div class="cell">Planos / faixas<b>${_dt(att.planos)}</b></div>
+    <div class="cell">Grupos e vagas<b>${_dt(att.grupos)}</b></div>
+    <div class="cell">Assembleias<b>${_dt(att.assembleias)}</b></div>
+    <div class="cell">No banco<b>${ct.planos||0} planos · ${ct.faixas||0} faixas · ${ct.grupos||0} grupos · ${ct.assembleias||0} assembleias</b></div>
+  `;
+
+  const planos = (B.planos||[]).slice().sort((a,b)=>String(a.codigo).localeCompare(String(b.codigo)));
+  const grupos = (B.grupos||[]).slice();
+  const assemb = (B.assembleias||[]).slice();
+  const resumo = (B.resumo||[]).slice();
+
+  const produtos = [...new Set(planos.map(p=>p.tipo_bem).concat(grupos.map(g=>g.tipo_bem)))].filter(Boolean).sort();
+
+  // ---- 1) PLANOS (produto / prazos / parcela reduzida) ----
+  const secPlanos = `
+    <div class="baseSec">
+      <h3>Planos por tipo de produto</h3>
+      <div class="sub">Tipo de Venda no Newcon. "Prazos" = prazos distintos vistos nas faixas de crédito do plano.</div>
+      <div class="baseFiltro">
+        <select id="fPlanoProd" onchange="_pintaPlanos()"><option value="">Todos os produtos</option>${produtos.map(p=>`<option>${_esc(p)}</option>`).join('')}</select>
+      </div>
+      <div id="boxPlanos"></div>
+    </div>`;
+
+  // ---- 2) VALORES POR PLANO (faixas de crédito) ----
+  const secFaixas = `
+    <div class="baseSec">
+      <h3>Valores por plano (faixas de crédito)</h3>
+      <div class="sub">Cada linha é uma opção de "Bem" do plano — o crédito daquela faixa, o prazo e se tem redução (PR).</div>
+      <div class="baseFiltro">
+        <select id="fFaixaProd" onchange="_carregaPlanosSelect();_pintaFaixas()"><option value="">Todos os produtos</option>${produtos.map(p=>`<option>${_esc(p)}</option>`).join('')}</select>
+        <select id="fFaixaPlano" onchange="_pintaFaixas()"></select>
+      </div>
+      <div id="boxFaixas"></div>
+    </div>`;
+
+  // ---- 3) GRUPOS ATIVOS ----
+  const secGrupos = `
+    <div class="baseSec">
+      <h3>Grupos ativos (vagas, parcela, taxa, assembleia)</h3>
+      <div class="sub">Última consulta de vagas de cada grupo. "Lance médio" aqui já é a média real das assembleias quando ela existe.</div>
+      <div class="baseFiltro">
+        <select id="fGrupoProd" onchange="_pintaGrupos()"><option value="">Todos os produtos</option>${produtos.map(p=>`<option>${_esc(p)}</option>`).join('')}</select>
+      </div>
+      <div id="boxGrupos"></div>
+    </div>`;
+
+  // ---- 4) RESULTADO DAS ASSEMBLEIAS ----
+  const gruposAssemb = [...new Set(assemb.map(a=>a.grupo))].sort();
+  const secAssemb = `
+    <div class="baseSec">
+      <h3>Resultado das assembleias</h3>
+      <div class="sub">Contemplados por modalidade e estatística de lance, assembleia a assembleia (mais recentes primeiro).</div>
+      <div class="baseFiltro">
+        <select id="fAssGrupo" onchange="_pintaAssemb()"><option value="">Todos os grupos</option>${gruposAssemb.map(g=>`<option>${_esc(g)}</option>`).join('')}</select>
+      </div>
+      <div id="boxAssemb"></div>
+    </div>`;
+
+  // ---- 5) RESUMO POR GRUPO (período coletado) ----
+  const secResumo = `
+    <div class="baseSec">
+      <h3>Resumo de lance por grupo (período coletado)</h3>
+      <div class="sub">Consolidado das assembleias que já foram lidas de cada grupo.</div>
+      <div id="boxResumo"></div>
+    </div>`;
+
+  document.getElementById('baseConteudo').innerHTML =
+    secPlanos + secFaixas + secGrupos + secAssemb + secResumo;
+
+  // guarda pros filtros
+  window._B = {planos, grupos, assemb, resumo};
+  _pintaPlanos(); _carregaPlanosSelect(); _pintaFaixas(); _pintaGrupos(); _pintaAssemb(); _pintaResumo();
+}
+
+function _prazosDoPlano(p){
+  return [...new Set((p.creditos||[]).map(c=>c.prazo).filter(Boolean))].sort((a,b)=>(+a)-(+b)).join(', ') || '—';
+}
+function _pintaPlanos(){
+  const f = document.getElementById('fPlanoProd').value;
+  const rows = window._B.planos
+    .filter(p=>!f || p.tipo_bem===f)
+    .map(p=>[
+      _esc(p.codigo), _prod(p.tipo_bem), _esc(p.nome),
+      _prazosDoPlano(p),
+      (p.creditos||[]).length,
+      _pill(p.parcela_reduzida,'PR','integral','sim','nao'),
+      _dt(p.consultado_em)
+    ]);
+  document.getElementById('boxPlanos').innerHTML =
+    _tbl(['Código','Produto','Nome','Prazos','Nº faixas','Parcela','Atualizado'], rows);
+}
+function _carregaPlanosSelect(){
+  const f = document.getElementById('fFaixaProd').value;
+  const sel = document.getElementById('fFaixaPlano');
+  const ps = window._B.planos.filter(p=>!f || p.tipo_bem===f)
+    .filter(p=>(p.creditos||[]).length);
+  sel.innerHTML = '<option value="">Todos os planos</option>' +
+    ps.map(p=>`<option value="${_esc(p.codigo)}">${_esc(p.codigo)} — ${_esc(p.nome)}</option>`).join('');
+}
+function _pintaFaixas(){
+  const fp = document.getElementById('fFaixaProd').value;
+  const fc = document.getElementById('fFaixaPlano').value;
+  const rows = [];
+  window._B.planos
+    .filter(p=>!fp || p.tipo_bem===fp)
+    .filter(p=>!fc || String(p.codigo)===fc)
+    .forEach(p=>(p.creditos||[]).forEach(c=>{
+      rows.push([
+        _esc(p.codigo), _prod(p.tipo_bem),
+        c.prazo||'—',
+        _brl(c.credito),
+        (c.reducao_pct? _brl(c.base_parcela) : '—'),
+        (c.reducao_pct? c.reducao_pct+'%' : '—'),
+        _pill(c.parcela_reduzida || c.reducao_pct,'PR','integral','sim','nao'),
+        _esc(c.texto||'')
+      ]);
+    }));
+  rows.sort((a,b)=>{
+    const va=parseFloat(String(a[3]).replace(/[^\d,]/g,'').replace(',','.'))||0;
+    const vb=parseFloat(String(b[3]).replace(/[^\d,]/g,'').replace(',','.'))||0;
+    return va-vb;
+  });
+  document.getElementById('boxFaixas').innerHTML =
+    _tbl(['Plano','Produto','Prazo','Crédito','Base (s/ redução)','Redução','Parcela','Descrição do bem'], rows);
+}
+function _pintaGrupos(){
+  const f = document.getElementById('fGrupoProd').value;
+  const rows = window._B.grupos
+    .filter(g=>!f || g.tipo_bem===f)
+    .sort((a,b)=>(b.vagas||0)-(a.vagas||0))
+    .map(g=>[
+      _esc(g.grupo), _prod(g.tipo_bem), _esc(g.plano_codigo),
+      _brl(g.credito),
+      _pill((g.vagas||0)>0, _num(g.vagas)+' vagas', 'sem vaga','vaga','semvaga'),
+      _brl(g.parcela),
+      (g.taxa!=null? (+g.taxa).toFixed(2)+'%':'—'),
+      _esc(g.prox_assembleia||'—'),
+      (g.prazo_restante!=null && g.prazo_total!=null? g.prazo_restante+'/'+g.prazo_total : '—'),
+      _pct(g.lance_medio),
+      _pill(g.parcela_reduzida,'PR','integral','sim','nao'),
+      _dt(g.consultado_em)
+    ]);
+  document.getElementById('boxGrupos').innerHTML =
+    _tbl(['Grupo','Produto','Plano','Crédito','Vagas','Parcela','Taxa','Próx. assembleia','Prazo (rest./total)','Lance médio','Parcela','Atualizado'], rows);
+}
+function _pintaAssemb(){
+  const f = document.getElementById('fAssGrupo').value;
+  const rows = window._B.assemb
+    .filter(a=>!f || a.grupo===f)
+    .sort((a,b)=> String(b.data_assembleia||'').localeCompare(String(a.data_assembleia||'')) || (b.num_assembleia-a.num_assembleia))
+    .map(a=>[
+      _esc(a.grupo), _prod(a.tipo_bem),
+      _num(a.num_assembleia),
+      _esc(a.mes_competencia||'—'),
+      _esc(a.data_assembleia||'—'),
+      _num(a.n_total),
+      _num(a.n_lance_livre), _num(a.n_lance_fixo), _num(a.n_sorteio),
+      _pct(a.lance_livre_medio),
+      (a.lance_livre_min? _pct(a.lance_livre_min)+' – '+_pct(a.lance_livre_max) : '—'),
+      _pct(a.lance_fixo_medio),
+      _esc((a.modalidades_vistas||[]).join(', ')),
+      _dt(a.atualizado_em)
+    ]);
+  document.getElementById('boxAssemb').innerHTML =
+    _tbl(['Grupo','Produto','Nº','Mês','Data','Contempl.','L. livre','L. fixo','Sorteio','Livre méd.','Livre mín–máx','Fixo méd.','Modalidades','Atualizado'], rows);
+}
+function _pintaResumo(){
+  const rows = window._B.resumo
+    .slice()
+    .sort((a,b)=> String(a.grupo).localeCompare(String(b.grupo)))
+    .map(r=>[
+      _esc(r.grupo), _prod(r.tipo_bem),
+      _num(r.assembleias_analisadas),
+      _esc(r.de||'—')+' → '+_esc(r.ate||'—'),
+      _pct(r.lance_livre_medio_periodo),
+      (r.lance_livre_min_periodo? _pct(r.lance_livre_min_periodo)+' – '+_pct(r.lance_livre_max_periodo):'—'),
+      _pct(r.lance_fixo_medio_periodo),
+      _num(r.contempl_lance_livre), _num(r.contempl_lance_fixo),
+      _num(r.contempl_lance_limitado), _num(r.contempl_lance_fidelidade),
+      _num(r.contempl_sorteio), _num(r.contempl_total),
+      _dt(r.atualizado_em)
+    ]);
+  document.getElementById('boxResumo').innerHTML =
+    _tbl(['Grupo','Produto','Assembl.','Período','Livre méd.','Livre mín–máx','Fixo méd.','C. livre','C. fixo','C. limit.','C. fidel.','C. sorteio','C. total','Atualizado'], rows);
 }
 </script>
 </body>
