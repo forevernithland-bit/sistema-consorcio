@@ -1,0 +1,46 @@
+{
+ "metas": [
+  {
+   "plano_cod": "76",
+   "plano_txt": "074 - S GRUPO PRIME IPCA + TX 11,6",
+   "creditos": [
+    {
+     "bem_cod": "9688",
+     "texto": "1403TX - AUTOMÓVEL R$ 100.000,00 - R$ 100.000,00",
+     "credito": 100000.0
+    },
+    {
+     "bem_cod": "9690",
+     "texto": "1405TX - AUTOMÓVEL R$ 110.000,00 - R$ 110.000,00",
+     "credito": 110000.0
+    },
+    {
+     "bem_cod": "9692",
+     "texto": "1407TX - AUTOMÓVEL R$ 120.000,00 - R$ 120.000,00",
+     "credito": 120000.0
+    },
+    {
+     "bem_cod": "9694",
+     "texto": "1409TX - AUTOMÓVEL R$ 130.000,00 - R$ 130.000,00",
+     "credito": 130000.0
+    },
+    {
+     "bem_cod": "9696",
+     "texto": "1411TX - AUTOMÓVEL R$ 140.000,00 - R$ 140.000,00",
+     "credito": 140000.0
+    },
+    {
+     "bem_cod": "9698",
+     "texto": "1413TX - AUTOMÓVEL R$ 150.000,00 - R$ 150.000,00",
+     "credito": 150000.0
+    },
+    {
+     "bem_cod": "9455",
+     "texto": "1218TX - AUTOMÓVEL R$ 90.000,00 - R$ 90.000,00",
+     "credito": 90000.0
+    }
+   ]
+  }
+ ],
+ "grupos": []
+}
