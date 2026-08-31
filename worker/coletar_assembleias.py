@@ -104,11 +104,15 @@ def _mes(s):
 HOME_URL = "https://newkey.cny.com.br/Intranet/frmMain.aspx"
 
 
-def _ir_para_resultado(page, tentativas=4):
-    """Contemplação (topo) → Contemplação (submenu) → 'Resultado de Assembleia'."""
+def _ir_para_resultado(page, tentativas=4, forcar=False):
+    """Contemplação (topo) → Contemplação (submenu) → 'Resultado de Assembleia'.
+    forcar=True: mesmo que o campo do grupo já esteja visível, re-clica em
+    'Contemplação' pra voltar ao formulário limpo (usar ao TROCAR de grupo —
+    depois de ler as assembleias do anterior a tela fica num sub-estado e o
+    Buscar não recarrega direito)."""
     for i in range(tentativas):
         try:
-            if page.locator(F["grupo"]).count() and \
+            if not forcar and page.locator(F["grupo"]).count() and \
                page.locator(F["grupo"]).first.is_visible():
                 return True
             if i:
@@ -362,9 +366,9 @@ def _vale_a_pena(sb, grupo, forcar):
 
 
 def _nav_grupo(page, grupo):
-    """Já na tela 'Resultado de Assembleia': troca o filtro para outro grupo.
-    NÃO reabre o navegador — só muda o número e busca de novo."""
-    _ir_para_resultado(page)              # garante que o campo do grupo está visível
+    """Troca o filtro para outro grupo. Volta ao formulário LIMPO clicando em
+    'Contemplação' (é só isso que precisa — não reabre o navegador)."""
+    _ir_para_resultado(page, forcar=True)   # sempre re-clica Contemplação
     campo = page.locator(F["grupo"]).first
     for g in (grupo, grupo.zfill(6), grupo.lstrip("0")):
         try:
