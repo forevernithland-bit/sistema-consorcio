@@ -543,7 +543,15 @@ def _coletar_plano(page, plano_val, plano_txt, alvo=None, com_grupos=False,
                                       key=lambda f: abs(f[2] - alvo))]
                 alvos = candidatas[:max_faixas]
         else:
-            alvos = [f for f in faixas if f[2]]
+            # SEM alvo: o grupo de um plano é o mesmo pra qualquer crédito, então
+            # entrar em UMA faixa por prazo já traz o(s) grupo(s). Pega do meio da
+            # lista (costuma ter grade populada). --faixas 0 volta a varrer tudo.
+            todas = [f for f in faixas if f[2]]
+            if max_faixas:
+                mid = len(todas) // 2
+                alvos = todas[mid:mid + max_faixas] or todas[:max_faixas]
+            else:
+                alvos = todas
         for bv, bt, cval in alvos:
             cred_f, base_f, red_f = _reducao_faixa(bt)
             pr_f = red_f > 0 or _tem_pr(bt) or pr_plano

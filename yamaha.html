@@ -632,6 +632,11 @@ let logoHtml = (LOGO_CONSORBENS && LOGO_CONSORBENS.indexOf('LOGO_CONSORBENS')===
   ? `<img src="${LOGO_CONSORBENS}" alt="Consorbens">`
   : `<span class="ph-fallback">CONSORBENS</span>`;
 let parcelaPosTxt = (parcelasPos.innerText.split(' de ')[1]) || parcelasPos.innerText;
+let _qtdCotas = +cotas.value||1;
+let _creditoUn = numero(credito.value);
+let _creditoTotal = _creditoUn * _qtdCotas;            // soma de todas as cotas
+let creditoContratadoTxt = _creditoTotal ? moeda(_creditoTotal) : (credito.value||'-');
+let creditoSubTxt = _qtdCotas>1 ? `${_qtdCotas} cotas de ${moeda(_creditoUn)}` : '';
 
 resultado.innerHTML=`
 <div class="summary show" id="resumo">
@@ -649,7 +654,8 @@ resultado.innerHTML=`
     </div>
     <div class="proposta-credito">
       <span>Crédito contratado</span>
-      <b>${credito.value||'-'}</b>
+      <b>${creditoContratadoTxt}</b>
+      ${creditoSubTxt ? `<small style="display:block;font-size:11px;color:#4f8a8a;font-weight:700;margin-top:2px">${creditoSubTxt}</small>` : ''}
     </div>
     <div class="proposta-body">
       <div class="proposta-grid">
@@ -994,10 +1000,14 @@ function verLancesMes(){
 // ---- Proposta: WhatsApp + PDF ----
 function enviarWhats(){
   const g=document.getElementById('grupo').value||'-';
+  const _qc=+document.getElementById('cotas').value||1;
+  const _cu=numero(document.getElementById('credito').value);
+  const _ct=_cu*_qc;
   const t='*PROPOSTA DE CONSÓRCIO — CONSORBENS (Yamaha)*\n\n'
     +'Grupo: '+g+'\n'
-    +'Crédito contratado: '+(document.getElementById('credito').value||'-')+'\n'
-    +'Quantidade de cotas: '+(document.getElementById('cotas').value||'1')+'\n'
+    +'Crédito contratado: '+(_ct?moeda(_ct):(document.getElementById('credito').value||'-'))
+       +(_qc>1?' ('+_qc+' cotas de '+moeda(_cu)+')':'')+'\n'
+    +'Quantidade de cotas: '+_qc+'\n'
     +'Prazo contratado: '+(document.getElementById('prazo').value||'-')+' meses\n'
     +'Parcela inicial (aprox.): '+(document.getElementById('parcelaAntes').value||'-')+'\n'
     +'Lance (recursos próprios): '+moeda(rec)+'\n'

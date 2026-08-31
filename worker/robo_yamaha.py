@@ -38,6 +38,7 @@ USO (PC do escritório):
     python robo_yamaha.py --completo --salvar      # tudo, grava
   Opções:
     --produtos auto,moto        limita os produtos (padrão: os 4)
+    --planos 6                  só os 6 planos MAIS RECENTES de cada produto
     --incluir-antigos           varre também os planos antigos do início
     --prazo longo|todos         longo = só o prazo máximo (rápido; padrão)
     --assembleias 3             nº de assembleias por grupo na fase 2 (padrão 3)
@@ -343,7 +344,9 @@ def main():
     forcar_grupos = "--forcar-grupos" in a   # re-varre até os planos já em dia
     prods = [p.strip().lower() for p in (opt("--produtos") or ",".join(ORDEM_PRODUTOS)).split(",")]
     prods = [p for p in ORDEM_PRODUTOS if p in prods] or ORDEM_PRODUTOS
-    limite_planos = 1 if rapido else 2 if teste else None
+    # --planos N = pega só os N planos MAIS RECENTES de cada produto
+    limite_planos = (int(opt("--planos")) if opt("--planos")
+                     else 1 if rapido else 2 if teste else None)
     if rapido and not opt("--produtos"):
         prods = ["auto"]                       # rápido: 1 produto só
     elif teste and not opt("--produtos"):
