@@ -72,27 +72,6 @@ body{
 .locked .lock-hint{display:block;position:relative;z-index:6;}
 .locked .simBody{display:none;}
 
-/* ---------- Resumo do produto (valores nos grupos) ---------- */
-.resumo-produto{display:none;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px;}
-.resumo-produto.show{display:block;}
-.rp-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
-.rp-head h4{margin:0;font-size:14px;color:#e2e8f0;font-weight:800;}
-.rp-head .rp-quando{font-size:11px;color:#8fa3a3;font-weight:700;}
-.rp-stats{display:flex;flex-wrap:wrap;gap:8px 10px;margin-bottom:12px;}
-.rp-stat{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:12px;color:#cbd5e1;font-weight:700;}
-.rp-stat b{display:block;font-size:15px;color:#7fd4d4;font-weight:900;margin-top:1px;font-variant-numeric:tabular-nums;}
-.rp-tblbox{overflow-x:auto;border:1px solid var(--line);border-radius:11px;}
-.rp-tbl{border-collapse:collapse;width:100%;font-size:12.5px;color:#e2e8f0;white-space:nowrap;}
-.rp-tbl th{background:var(--bg2);color:#a7cfcf;text-transform:uppercase;font-size:10px;letter-spacing:.4px;font-weight:800;padding:8px 11px;text-align:left;border-bottom:1px solid var(--line);}
-.rp-tbl td{padding:9px 11px;border-bottom:1px solid var(--line);font-weight:700;font-variant-numeric:tabular-nums;}
-.rp-tbl tr:last-child td{border-bottom:none;}
-.rp-tbl tbody tr{cursor:pointer;transition:background .12s;}
-.rp-tbl tbody tr:hover{background:rgba(46,110,110,.16);}
-.rp-tbl .rp-vaga{color:#6ee7b7;} .rp-tbl .rp-semvaga{color:#fca5a5;}
-.rp-chips{margin-top:11px;font-size:11.5px;color:#8fa3a3;font-weight:700;}
-.rp-chips .rp-chip{display:inline-block;background:var(--bg2);border:1px solid var(--line);border-radius:999px;padding:3px 10px;margin:3px 4px 0 0;color:#cbd5e1;font-weight:800;font-variant-numeric:tabular-nums;}
-.rp-hint{margin-top:9px;font-size:11px;color:#8fa3a3;font-weight:600;}
-
 /* ---------- Passo 2: grupo ---------- */
 .grupo-pick{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px;}
 .grupo-pick select.grupoSel{width:100%;padding:13px 12px;border-radius:12px;border:1.5px solid #26344d;background:var(--bg2);color:#e2e8f0;font-size:15px;font-weight:700;outline:none;cursor:pointer;}
@@ -333,9 +312,6 @@ table.baseTbl tr:hover td{background:#fafafa}
       <div class="lock-hint">👆 Escolha um produto acima para liberar o simulador.</div>
 
       <div class="simBody">
-        <!-- Resumo dos valores nos grupos do produto -->
-        <div id="resumoProduto" class="resumo-produto"></div>
-
         <!-- Passo 2 -->
         <div class="step">
           <div class="step-label"><span class="step-num">2</span> Grupo</div>
@@ -699,105 +675,36 @@ function setProdutoNovo(p,el){
   el.classList.add('active');
   document.getElementById('simGate').classList.remove('locked');
   preencherGrupos();
-  montarResumoProduto();
   // reseta seleção de grupo
   document.getElementById('grupoSel').value='';
   onGrupoSel();
   calcular();
 }
 
-function _maxConsulta(gs){
-  let m=null; gs.forEach(g=>{ const v=g.consultado_em; if(v && (m==null || String(v)>String(m))) m=v; }); return m;
-}
-function _selDaTabela(gr){
-  const sel=document.getElementById('grupoSel');
-  sel.value=gr; onGrupoSel();
-  sel.scrollIntoView({behavior:'smooth',block:'center'});
-}
-
-function montarResumoProduto(){
-  const box=document.getElementById('resumoProduto');
-  const gs=gruposDoProduto();
-  if(!gs.length){ box.classList.remove('show'); box.innerHTML=''; return; }
-  const prodLabel=({auto:'Automóvel',moto:'Moto',imovel:'Imóvel',caminhao:'Caminhão'})[produto]||produto;
-  const comVaga=gs.filter(g=>(g.vagas||0)>0);
-  const totVagas=gs.reduce((s,g)=>s+(g.vagas||0),0);
-
-  // valores de crédito: dos grupos + das faixas dos planos referenciados
-  const vals=new Set();
-  gs.forEach(g=>{ if(g.credito!=null) vals.add(+g.credito); });
-  const planoCods=new Set(gs.map(g=>g.plano_codigo).filter(Boolean).map(String));
-  (BASE_DADOS.planos||[]).forEach(p=>{
-    if(planoCods.has(String(p.codigo))) (p.creditos||[]).forEach(c=>{ if(c && c.credito!=null) vals.add(+c.credito); });
-  });
-  const valsArr=[...vals].filter(v=>v>0).sort((a,b)=>a-b);
-  const cMin=valsArr[0], cMax=valsArr[valsArr.length-1];
-
-  // lance livre médio: faixa entre grupos
-  const lms=gs.map(g=>{
-    const r=_resumoDoGrupo(g.grupo);
-    return r&&r.lance_livre_medio_periodo!=null ? +r.lance_livre_medio_periodo : (g.lance_medio!=null? +g.lance_medio : null);
-  }).filter(v=>v!=null && v>0);
-  const lmMin=lms.length?Math.min(...lms):null, lmMax=lms.length?Math.max(...lms):null;
-
-  // próxima assembleia mais próxima
-  const hoje=new Date(); hoje.setHours(0,0,0,0);
-  let proxG=null, proxD=null;
-  gs.forEach(g=>{
-    const m=String(g.prox_assembleia||'').match(/(\d{2})\/(\d{2})\/(\d{4})/);
-    if(!m) return;
-    const d=new Date(+m[3],+m[2]-1,+m[1]);
-    if(d>=hoje && (proxD==null || d<proxD)){ proxD=d; proxG=g; }
-  });
-
-  const quando=_dtCurto(_maxConsulta(gs));
-
-  let stats='';
-  stats+=`<div class="rp-stat">Grupos<b>${gs.length}</b></div>`;
-  stats+=`<div class="rp-stat">Com vaga<b>${comVaga.length}</b></div>`;
-  stats+=`<div class="rp-stat">Vagas no total<b>${totVagas.toLocaleString('pt-BR')}</b></div>`;
-  if(cMin!=null) stats+=`<div class="rp-stat">Crédito<b>${cMin===cMax?moeda(cMin):moeda(cMin)+' – '+moeda(cMax)}</b></div>`;
-  if(lmMin!=null){ const a=lmMin.toFixed(1).replace('.',','), b=lmMax.toFixed(1).replace('.',',');
-    stats+=`<div class="rp-stat">Lance livre médio<b>${a===b?a+'%':a+'% – '+b+'%'}</b></div>`; }
-  if(proxG) stats+=`<div class="rp-stat">Assembleia + próxima<b>${proxG.prox_assembleia} · G${proxG.grupo}</b></div>`;
-
-  const rows=gs.slice().sort((a,b)=>{
-    const va=(a.vagas||0)>0?0:1, vb=(b.vagas||0)>0?0:1;
-    if(va!==vb) return va-vb;
-    return String(a.grupo).localeCompare(String(b.grupo),undefined,{numeric:true});
-  }).map(g=>{
-    const r=_resumoDoGrupo(g.grupo);
-    const lm = r&&r.lance_livre_medio_periodo!=null ? _pctTxt(r.lance_livre_medio_periodo) : (_pctTxt(g.lance_medio)||'—');
-    const vaga=(g.vagas||0)>0;
-    return `<tr onclick="_selDaTabela('${String(g.grupo)}')">`
-      +`<td>${g.grupo}</td>`
-      +`<td>${g.credito!=null?moeda(+g.credito):'—'}</td>`
-      +`<td>${(g.prazo_restante!=null&&g.prazo_total!=null)?g.prazo_restante+'/'+g.prazo_total:'—'}</td>`
-      +`<td>${g.taxa!=null?(+g.taxa).toFixed(2).replace('.',',')+'%':'—'}</td>`
-      +`<td>${g.parcela!=null?moeda(+g.parcela):'—'}</td>`
-      +`<td class="${vaga?'rp-vaga':'rp-semvaga'}">${vaga?g.vagas:'sem vaga'}</td>`
-      +`<td>${lm||'—'}</td>`
-      +`<td>${g.prox_assembleia||'—'}</td>`
-      +`</tr>`;
-  }).join('');
-
-  const chips = valsArr.length
-    ? `<div class="rp-chips">Créditos disponíveis nos planos: ${valsArr.map(v=>`<span class="rp-chip">${moeda(v)}</span>`).join('')}</div>`
-    : '';
-
-  box.innerHTML =
-    `<div class="rp-head"><h4>📊 Resumo — ${prodLabel}</h4><span class="rp-quando">base de ${quando}</span></div>`
-    +`<div class="rp-stats">${stats}</div>`
-    +`<div class="rp-tblbox"><table class="rp-tbl">`
-    +`<thead><tr><th>Grupo</th><th>Crédito</th><th>Prazo</th><th>Taxa</th><th>Parcela base</th><th>Vagas</th><th>Lance livre méd.</th><th>Próx. assembleia</th></tr></thead>`
-    +`<tbody>${rows}</tbody></table></div>`
-    +chips
-    +`<div class="rp-hint">Clique numa linha para escolher o grupo.</div>`;
-  box.classList.add('show');
-}
-
 function gruposDoProduto(){
   return (BASE_DADOS.grupos||[]).filter(g=>_prodMatch(g.tipo_bem,produto));
+}
+
+// Valor de crédito curto: R$ 100 mil / R$ 22.329
+function _kbrl(v){
+  v=+v; if(!isFinite(v)) return '—';
+  if(v>=1000 && v%1000===0) return 'R$ '+(v/1000).toLocaleString('pt-BR')+' mil';
+  if(v>=1000) return 'R$ '+(v/1000).toLocaleString('pt-BR',{maximumFractionDigits:1})+' mil';
+  return moeda(v);
+}
+// Faixa de crédito daquele grupo específico: min–max das faixas do plano do
+// grupo; se não achar plano/faixas, usa o crédito único do próprio grupo.
+function faixaCreditoGrupo(g){
+  const p=_planoDoGrupo(g);
+  let vals=(p && Array.isArray(p.creditos)) ? p.creditos.map(c=>c && c.credito).filter(v=>v!=null).map(Number) : [];
+  if(!vals.length && g.credito!=null) vals=[+g.credito];
+  if(!vals.length) return null;
+  return {min:Math.min(...vals), max:Math.max(...vals)};
+}
+function faixaCreditoTxt(g){
+  const f=faixaCreditoGrupo(g);
+  if(!f) return '';
+  return f.min===f.max ? _kbrl(f.min) : (_kbrl(f.min)+' a '+_kbrl(f.max));
 }
 
 function preencherGrupos(){
@@ -811,7 +718,8 @@ function preencherGrupos(){
   gs.forEach(g=>{
     const temVaga=(g.vagas||0)>0;
     const et = temVaga ? (g.vagas+' vaga'+(g.vagas>1?'s':'')) : 'sem vaga';
-    html+=`<option value="${String(g.grupo)}">Grupo ${g.grupo} — ${et} · base de ${_dtCurto(g.consultado_em)}</option>`;
+    const fx = faixaCreditoTxt(g);
+    html+=`<option value="${String(g.grupo)}">Grupo ${g.grupo}${fx?' — '+fx:''} · ${et} · base de ${_dtCurto(g.consultado_em)}</option>`;
   });
   html+='<option value="__manual__">✏️ Outro grupo (preencher manual)</option>';
   sel.innerHTML=html;
@@ -873,9 +781,11 @@ function onGrupoSel(){
   GRUPO_ATUAL=g; _setManual(false);
   document.getElementById('grupo').value=g.grupo;
 
-  // ---- status: vaga + data da base ----
+  // ---- status: crédito do grupo + vaga + data da base ----
   const temVaga=(g.vagas||0)>0;
+  const fx=faixaCreditoTxt(g);
   status.innerHTML =
+    (fx?`<span class="pill" style="background:#eef6f5;color:#245858">Crédito: ${fx}</span> `:'') +
     (temVaga?`<span class="pill vaga">${g.vagas} vaga${g.vagas>1?'s':''}</span>`
             :`<span class="pill semvaga">sem vaga</span>`) +
     ` <span class="att-chip">🕓 Base atualizada em ${_dt(g.consultado_em)}</span>`;
