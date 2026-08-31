@@ -17,16 +17,24 @@ Faz as DUAS coisas numa sessão só (abre o navegador e LOGA UMA VEZ):
      a MÉDIA DE LANCE LIVRE real.
 
 Inteligente:
-  * uma sessão só — não fica logando/deslogando (recupera a navegação sem
-    relogar; só reabre o navegador se a sessão travar de vez);
+  * LÊ O QUE JÁ TEMOS primeiro (planos_yamaha + grupos_yamaha) e SÓ BUSCA O
+    QUE FALTA OU VENCEU: pula o plano cujo catálogo de faixas tem < 30 dias
+    E cujos grupos já vistos ainda estão dentro da validade pela regra do
+    Uriel (nº de vagas × dias: <10 vagas revalida sempre, grupo cheio vale
+    até 20 dias). `--forcar-grupos` re-varre tudo;
+  * uma sessão só — não fica logando/deslogando à toa. Se um passo do Newcon
+    travar (timeout, "Invalid postback"), tenta recuperar a navegação; se nem
+    assim, REABRE o navegador (novo login) e continua. Na fase de assembleias,
+    se 3 grupos seguidos falharem, para (rode de novo mais tarde);
   * grava o progresso em `robo_yamaha_progresso.json` a cada plano/grupo —
     se parar no meio (timeout, queda), rodar o MESMO comando de novo
     continua exatamente de onde parou;
   * tudo o que coleta é gravado no Supabase à medida que anda (com --salvar).
 
 USO (PC do escritório):
-    python robo_yamaha.py --teste                 # curto, NÃO grava (confere)
-    python robo_yamaha.py --teste --salvar        # curto e grava
+    python robo_yamaha.py --rapido                 # MÍNIMO: 1 produto, 1 plano,
+                                                   # 1 grupo, 1 assembleia (só confere)
+    python robo_yamaha.py --teste --salvar        # curto (2 prod, 2 planos) e grava
     python robo_yamaha.py --completo --salvar      # tudo, grava
   Opções:
     --produtos auto,moto        limita os produtos (padrão: os 4)
@@ -34,8 +42,9 @@ USO (PC do escritório):
     --prazo longo|todos         longo = só o prazo máximo (rápido; padrão)
     --assembleias 3             nº de assembleias por grupo na fase 2 (padrão 3)
     --so-grupos | --so-assembleias   roda só uma das fases
+    --forcar-grupos             re-varre até os planos que já estão em dia
     --headless                  navegador invisível
-    --refazer                   ignora o progresso e recomeça do zero
+    --refazer                   ignora o progresso do dia e recomeça
 
 Precisa das migrações 17, 18, 19 (e 20) rodadas no Supabase, e do
 worker/.env com SUPABASE_URL/KEY e SIMULACAO_CPF.
@@ -52,6 +61,7 @@ from coletar_grupos import (                      # noqa: E402
     _abrir, _conectar_sb, _ir_para_form, _preambulo, _opcoes, S,
     _plano_valido, _cod, _coletar_plano,
     _salvar as _salvar_grupos, _registrar_busca, PRODUTOS,
+    _carregar_catalogo, _idade_dias, precisa_reconsultar, CATALOGO_MAX_DIAS,
 )
 import coletar_grupos as CG                        # noqa: E402
 from coletar_assembleias import (                  # noqa: E402
@@ -117,15 +127,85 @@ def _planos_do_produto(page, prod_in, incluir_antigos, limite=None):
     return prod_nome, prod_pal, escolhidos
 
 
+def _grupos_da_base(sb, prod_nome):
+    """Grupos que JÁ temos de um produto, agrupados por plano.
+    {plano_cod: [rows]} + set de grupos com vaga."""
+    por_plano, com_vaga = {}, {}
+    try:
+        rows = (sb.table("grupos_yamaha").select("grupo,plano_codigo,vagas,consultado_em,tipo_bem")
+                .eq("tipo_bem", prod_nome).execute().data or [])
+    except Exception as e:
+        print(f"  !! não li grupos_yamaha de {prod_nome}: {str(e)[:90]}")
+        rows = []
+    for r in rows:
+        por_plano.setdefault(_cod(r.get("plano_codigo")), []).append(r)
+        if (r.get("vagas") or 0) > 0:
+            com_vaga[str(r["grupo"])] = prod_nome
+    return por_plano, com_vaga
+
+
+def _plano_ja_fresco(cod, catalogo, grupos_do_plano):
+    """True = já temos esse plano e os dados estão dentro da validade → pular.
+    Precisa: catálogo de faixas < 30 dias  E  já vimos grupo(s) desse plano
+    E  nenhum deles venceu pela regra do Uriel (nº de vagas × dias)."""
+    cat = catalogo.get(cod)
+    if not cat or _idade_dias(cat.get("consultado_em")) >= CATALOGO_MAX_DIAS:
+        return False
+    if not grupos_do_plano:
+        return False          # nunca vimos grupo desse plano → tem que varrer
+    return not any(precisa_reconsultar(g.get("vagas"), g.get("consultado_em"))
+                   for g in grupos_do_plano)
+
+
+def _voltar_form(page, prod_pal, reabrir):
+    """Tenta voltar ao formulário; se não der, reabre o navegador (relogin).
+    Devolve o page (novo, se reabriu) ou levanta se nem reabrindo deu."""
+    try:
+        _ir_para_form(page); _preambulo(page, prod_pal)
+        return page
+    except Exception:
+        page = reabrir()
+        _ir_para_form(page); _preambulo(page, prod_pal)
+        return page
+
+
+def _voltar_resultado(page, reabrir):
+    try:
+        _ir_para_resultado(page)
+        return page
+    except Exception:
+        page = reabrir()
+        _ir_para_resultado(page)
+        return page
+
+
 def fase_grupos(page, sb, prog, produtos, incluir_antigos, prazo_pref,
-                salvar, limite_planos):
+                salvar, limite_planos, forcar, reabrir):
     for prod_in in produtos:
         prod_nome, prod_pal, planos = _planos_do_produto(
             page, prod_in, incluir_antigos, limite_planos)
+
+        # >>> LÊ O QUE JÁ TEMOS antes de sair varrendo <<<
+        catalogo = _carregar_catalogo(sb, prod_nome)
+        por_plano, com_vaga_db = _grupos_da_base(sb, prod_nome)
+        prog["grupos_com_vaga"].update(com_vaga_db)   # fase 2 cobre até os planos pulados
+
         feitos = set(prog["planos_feitos"].get(prod_in, []))
-        fila = [(v, t) for v, t in planos if _cod(t) not in feitos]
-        print(f"\n{'#'*72}\n# {prod_nome}: {len(planos)} plano(s) recente(s), "
-              f"{len(feitos)} já feito(s) hoje, {len(fila)} na fila\n{'#'*72}")
+        fila, pulados = [], 0
+        for v, t in planos:
+            c = _cod(t)
+            if c in feitos:
+                continue
+            if not forcar and _plano_ja_fresco(c, catalogo, por_plano.get(c, [])):
+                pulados += 1
+                prog["planos_feitos"].setdefault(prod_in, []).append(c)
+                continue
+            fila.append((v, t))
+        print(f"\n{'#'*72}\n# {prod_nome}: {len(planos)} plano(s) recente(s) | "
+              f"{len(feitos)} feito(s) hoje | {pulados} já em dia (pulados) | "
+              f"{len(fila)} a buscar\n{'#'*72}")
+        if pulados:
+            _prog_gravar(prog)
         if not fila:
             continue
 
@@ -153,7 +233,7 @@ def fase_grupos(page, sb, prog, produtos, incluir_antigos, prazo_pref,
                 except Exception as e:
                     print(f"  ~ plano {cod} tentativa {tent}: {str(e)[:120]}")
                     try:
-                        _ir_para_form(page); _preambulo(page, prod_pal)
+                        page = _voltar_form(page, prod_pal, reabrir)
                     except Exception:
                         pass
             prog["planos_feitos"].setdefault(prod_in, [])
@@ -162,9 +242,9 @@ def fase_grupos(page, sb, prog, produtos, incluir_antigos, prazo_pref,
             _prog_gravar(prog)
 
             try:
-                _ir_para_form(page); _preambulo(page, prod_pal)
+                page = _voltar_form(page, prod_pal, reabrir)
             except Exception as e:
-                print(f"\n  !! não consegui voltar ao formulário ({str(e)[:70]}).")
+                print(f"\n  !! não consegui voltar ao formulário nem reabrindo ({str(e)[:70]}).")
                 print(f"  !! PAROU no plano {cod} de {prod_nome}. O que já foi coletado "
                       f"está salvo. Rode o MESMO comando de novo para continuar.")
                 return False
@@ -174,7 +254,7 @@ def fase_grupos(page, sb, prog, produtos, incluir_antigos, prazo_pref,
 
 
 # ------------------------------------------------------------------- fase 2
-def fase_assembleias(page, sb, prog, n_ass, salvar):
+def fase_assembleias(page, sb, prog, n_ass, salvar, reabrir):
     pend = [g for g in sorted(prog["grupos_com_vaga"], key=lambda x: int(x))
             if g not in prog["assembleias_feitas"]]
     print(f"\n{'#'*72}\n# ASSEMBLEIAS: {len(prog['grupos_com_vaga'])} grupo(s) com vaga, "
@@ -182,11 +262,12 @@ def fase_assembleias(page, sb, prog, n_ass, salvar):
     if not pend:
         return True
     try:
-        _ir_para_resultado(page)                    # navega (sem relogar)
+        page = _voltar_resultado(page, reabrir)     # navega (reabre se travar)
     except Exception as e:
-        print(f"  !! não abri Resultado de Assembleia ({str(e)[:80]}).")
+        print(f"  !! não abri Resultado de Assembleia nem reabrindo ({str(e)[:80]}).")
         return False
 
+    falhas_seguidas = 0
     for n, grupo in enumerate(pend, 1):
         tb = prog["grupos_com_vaga"].get(grupo)
         print(f"\n[assembleia {n}/{len(pend)}] grupo {grupo} ({tb})", flush=True)
@@ -196,7 +277,7 @@ def fase_assembleias(page, sb, prog, n_ass, salvar):
             prog["assembleias_feitas"].append(grupo); _prog_gravar(prog)
             continue
         resumos = contempls = None
-        for tent in (1, 2):
+        for tent in (1, 2, 3):
             try:
                 _nav_grupo(page, grupo)
                 resumos, contempls = _coletar_um(page, sb, grupo, n_ass, tb, False)
@@ -204,16 +285,21 @@ def fase_assembleias(page, sb, prog, n_ass, salvar):
             except Exception as e:
                 print(f"  ~ tentativa {tent}: {str(e)[:120]}")
                 try:
-                    _ir_para_resultado(page)
+                    page = _voltar_resultado(page, reabrir)   # recupera; reabre se preciso
                 except Exception:
-                    print("  x sessão travada na fase 2 — progresso salvo, "
+                    print("  x não recuperei a sessão nem reabrindo — progresso salvo, "
                           "rode o mesmo comando de novo.")
                     _prog_gravar(prog)
                     return False
         if resumos is None:
-            print(f"  x grupo {grupo} FALHOU — fica pendente.")
+            print(f"  x grupo {grupo} FALHOU (fica pendente; segue pro próximo).")
+            falhas_seguidas += 1
             _prog_gravar(prog)
+            if falhas_seguidas >= 3:
+                print("  x 3 grupos seguidos falharam — parando. Rode de novo mais tarde.")
+                return False
             continue
+        falhas_seguidas = 0
         if salvar and resumos:
             _salvar_assemb(sb, resumos, contempls)
             print(f"  [OK] {len(resumos)} assembleia(s) + {len(contempls)} contemplação(ões).")
@@ -239,10 +325,11 @@ def main():
     def opt(k, d=None):
         return a[a.index(k) + 1] if k in a else d
 
-    teste = "--teste" in a
+    rapido = "--rapido" in a
+    teste = "--teste" in a or rapido
     completo = "--completo" in a
     if not (teste or completo):
-        print("passe --teste (curto, confere) ou --completo (tudo).")
+        print("passe --rapido (mínimo), --teste (curto) ou --completo (tudo).")
         return
     salvar = "--salvar" in a
     headless = "--headless" in a
@@ -250,20 +337,23 @@ def main():
     prazo_pref = (opt("--prazo") or "longo").lower()
     if prazo_pref in ("todos", "all"):
         prazo_pref = None
-    n_ass = int(opt("--assembleias", "2" if teste else "3"))
+    n_ass = int(opt("--assembleias", "1" if rapido else "2" if teste else "3"))
     so_grupos = "--so-grupos" in a
     so_assemb = "--so-assembleias" in a
+    forcar_grupos = "--forcar-grupos" in a   # re-varre até os planos já em dia
     prods = [p.strip().lower() for p in (opt("--produtos") or ",".join(ORDEM_PRODUTOS)).split(",")]
     prods = [p for p in ORDEM_PRODUTOS if p in prods] or ORDEM_PRODUTOS
-    limite_planos = 2 if teste else None
-    if teste:
-        prods = prods[:2] if not opt("--produtos") else prods   # teste: 2 produtos
+    limite_planos = 1 if rapido else 2 if teste else None
+    if rapido and not opt("--produtos"):
+        prods = ["auto"]                       # rápido: 1 produto só
+    elif teste and not opt("--produtos"):
+        prods = prods[:2]                      # teste: 2 produtos
 
     if "--refazer" in a:
         _prog_limpar()
     prog = _prog_ler()
 
-    modo = "TESTE CURTO" if teste else "COMPLETO"
+    modo = "RÁPIDO" if rapido else "TESTE CURTO" if teste else "COMPLETO"
     print(f">>> ROBÔ YAMAHA — {modo}{' (grava)' if salvar else ' (NÃO grava)'}")
     print(f"    produtos: {', '.join(prods)} | prazo: {prazo_pref or 'todos'} | "
           f"assembleias/grupo: {n_ass}")
@@ -287,21 +377,41 @@ def main():
 
     fase = prog.get("fase", "grupos")
     pw, browser, ctx, page = _abrir(sb, visivel=not headless)
+    sessao = {"pw": pw, "browser": browser, "ctx": ctx, "page": page}
+    n_reaberturas = [0]
+
+    def reabrir():
+        """Fecha e reabre o navegador (novo login). Devolve o page novo."""
+        n_reaberturas[0] += 1
+        if n_reaberturas[0] > 4:
+            raise RuntimeError("reabri o navegador vezes demais — abortando")
+        try:
+            sessao["browser"].close(); sessao["pw"].stop()
+        except Exception:
+            pass
+        print(f"   [sessão] reabrindo o navegador / novo login "
+              f"(reabertura {n_reaberturas[0]})...", flush=True)
+        p2, b2, c2, pg2 = _abrir(sb, visivel=not headless)
+        sessao.update(pw=p2, browser=b2, ctx=c2, page=pg2)
+        return pg2
+
     fim_ok = True
     try:
         if not so_assemb and fase == "grupos":
-            fim_ok = fase_grupos(page, sb, prog, prods, incluir_antigos,
-                                 prazo_pref, salvar, limite_planos)
+            fim_ok = fase_grupos(sessao["page"], sb, prog, prods, incluir_antigos,
+                                 prazo_pref, salvar, limite_planos, forcar_grupos,
+                                 reabrir)
         if fim_ok and not so_grupos:
-            # no teste, olha assembleia só dos 2 primeiros grupos por segurança
-            if teste and prog["grupos_com_vaga"]:
+            # rápido: 1 grupo · teste: 2 grupos (por segurança/tempo)
+            corte = 1 if rapido else 2 if teste else None
+            if corte and prog["grupos_com_vaga"]:
                 keep = dict(list(sorted(prog["grupos_com_vaga"].items(),
-                                        key=lambda kv: int(kv[0])))[:2])
+                                        key=lambda kv: int(kv[0])))[:corte])
                 prog["grupos_com_vaga"] = keep
-            fim_ok = fase_assembleias(page, sb, prog, n_ass, salvar)
+            fim_ok = fase_assembleias(sessao["page"], sb, prog, n_ass, salvar, reabrir)
     finally:
         try:
-            browser.close(); pw.stop()
+            sessao["browser"].close(); sessao["pw"].stop()
         except Exception:
             pass
 
