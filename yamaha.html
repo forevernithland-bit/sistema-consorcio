@@ -418,6 +418,8 @@ table.baseTbl tr:hover td{background:#fafafa}
           </div>
         </div>
 
+        <div id="avisoGrupoNovo" style="display:none;margin-top:12px;padding:12px 14px;border-radius:12px;background:#fff7e8;border:1px solid #f6c99b;color:#8a5a00;font-size:12.5px;line-height:1.5"></div>
+
         <div id="resultado"></div>
 
         <div class="resumo-acoes" id="resumoAcoes">
@@ -685,6 +687,23 @@ resultado.innerHTML=`
 </div>`;
 document.getElementById('resumoAcoes').classList.add('show');
 document.getElementById('resumo').scrollIntoView({behavior:'smooth'});
+
+// Grupo digitado à mão que não está na base → avisa pra cadastrar
+try{
+  const gnum=String(document.getElementById('grupo').value||'').trim();
+  const naBase=(BASE_DADOS.grupos||[]).some(x=>String(x.grupo)===gnum);
+  const av=document.getElementById('avisoGrupoNovo');
+  if(gnum && !naBase && (modoManual || !GRUPO_ATUAL)){
+    av.innerHTML='⚠️ <b>Grupo '+gnum+'</b> não está na Base de Dados. '
+      +'Role até <b>"✍️ Editar a Base de Dados manualmente"</b> aqui embaixo e cadastre '
+      +'(crédito '+(document.getElementById('credito').value||'—')
+      +' · prazo '+(document.getElementById('prazo').value||'—')
+      +' · taxa '+(document.getElementById('taxa').value||'—')
+      +' · prazo do grupo '+(document.getElementById('prazoGrupo').value||'—')
+      +') — assim ele já aparece na lista nas próximas vezes.';
+    av.style.display='block';
+  } else { av.style.display='none'; }
+}catch(e){}
 }
 
 // ===================================================================
