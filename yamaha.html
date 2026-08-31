@@ -222,6 +222,7 @@ body{
 .baseFiltro label{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#334155;font-weight:700;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:6px 10px;}
 .baseFiltro label input[type=checkbox]{min-width:0;width:auto;}
 .baseFiltro label input[type=number]{min-width:0;width:64px;padding:4px 6px;}
+.baseFiltro input[type=search]{min-width:200px;flex:1;max-width:280px;}
 .tblBox{overflow-x:auto;max-height:440px;overflow-y:auto;border:1px solid #eee;border-radius:8px}
 table.baseTbl{border-collapse:collapse;width:100%;font-size:13px}
 table.baseTbl th,table.baseTbl td{border-bottom:1px solid #eee;padding:7px 9px;text-align:left;white-space:nowrap}
@@ -455,11 +456,6 @@ table.baseTbl tr:hover td{background:#fafafa}
     Automóveis: 35% — podendo usar 15% de embutido<br>
     Imóveis: 30% — podendo usar 25% de embutido<br>
     Caminhões: 25%<br><br>
-
-    <small style="color:#64748b">Essas são as regras gerais. Quando existe a
-    tabela do grupo na pasta da Consorbens, o robô grava o embutido e o lance
-    fixo específicos daquele grupo e o simulador mostra esses valores ao
-    escolher o grupo.</small><br><br>
 
     <b>Maturidade de Veículos Yamaha:</b><br>
     Motos: 10 anos<br>
@@ -776,7 +772,7 @@ function preencherGrupos(){
     const temVaga=(g.vagas||0)>0;
     const et = temVaga ? (g.vagas+' vaga'+(g.vagas>1?'s':'')) : 'sem vaga';
     const fx = faixaCreditoTxt(g);
-    const pr = grupoTemPR(g) ? ' · PR' : '';
+    const pr = grupoTemPR(g) ? ' · PARCELA REDUZIDA' : ' · parcela integral';
     html+=`<option value="${String(g.grupo)}">Grupo ${g.grupo}${pr}${fx?' — '+fx:''} · ${et} · base de ${_dtCurto(g.consultado_em)}</option>`;
   });
   html+='<option value="__manual__">✏️ Outro grupo (preencher manual)</option>';
@@ -858,6 +854,9 @@ function onGrupoSel(){
   if(mt){ mb.textContent='Média de lance livre: '+mt; mb.className='media-badge'; }
   else  { mb.textContent='Média de lance livre: — (sem assembleia coletada)'; mb.className='media-badge none'; }
   mediaLinha.classList.add('show');
+
+  // ---- tipo de parcela: segue o plano do grupo (reduzida x integral) ----
+  document.getElementById('tipoPlano').value = grupoTemPR(g) ? 'reduzida' : 'integral';
 
   // ---- taxa / prazo do grupo (autofill nos inputs que calcular() lê) ----
   if(g.taxa!=null) document.getElementById('taxa').value=_fmtPctIn((+g.taxa).toFixed(2).replace(/\.?0+$/,''));
@@ -1099,6 +1098,7 @@ function renderBase(){
       <h3>Planos por tipo de produto</h3>
       <div class="sub">Tipo de Venda no Newcon. "Prazos" = prazos distintos vistos nas faixas de crédito do plano.</div>
       <div class="baseFiltro">
+        <input type="search" id="fPlanoBusca" placeholder="🔎 buscar código ou nome do plano…" oninput="_pintaPlanos()">
         <select id="fPlanoProd" onchange="_pintaPlanos()"><option value="">Todos os produtos</option>${produtos.map(p=>`<option>${_esc(p)}</option>`).join('')}</select>
       </div>
       <div id="boxPlanos"></div>
@@ -1109,6 +1109,7 @@ function renderBase(){
       <h3>Valores por plano (faixas de crédito)</h3>
       <div class="sub">Cada linha é uma opção de "Bem" do plano — o crédito daquela faixa, o prazo e se tem redução (PR).</div>
       <div class="baseFiltro">
+        <input type="search" id="fFaixaBusca" placeholder="🔎 buscar crédito, prazo ou bem…" oninput="_pintaFaixas()">
         <select id="fFaixaProd" onchange="_carregaPlanosSelect();_pintaFaixas()"><option value="">Todos os produtos</option>${produtos.map(p=>`<option>${_esc(p)}</option>`).join('')}</select>
         <select id="fFaixaPlano" onchange="_pintaFaixas()"></select>
       </div>
@@ -1120,6 +1121,7 @@ function renderBase(){
       <h3>Grupos ativos (vagas, parcela, taxa, assembleia)</h3>
       <div class="sub">Última consulta de vagas de cada grupo. "Lance médio" aqui já é a média real das assembleias quando ela existe.</div>
       <div class="baseFiltro">
+        <input type="search" id="fGrupoBusca" placeholder="🔎 buscar grupo, plano ou assembleia…" oninput="_pintaGrupos()">
         <select id="fGrupoProd" onchange="_pintaGrupos()"><option value="">Todos os produtos</option>${produtos.map(p=>`<option>${_esc(p)}</option>`).join('')}</select>
         <select id="fGrupoOrdem" onchange="_pintaGrupos()">
           <option value="vagas">Ordenar: mais vagas</option>
@@ -1147,6 +1149,7 @@ function renderBase(){
       <h3>Resultado das assembleias</h3>
       <div class="sub">Contemplados por modalidade e estatística de lance, assembleia a assembleia (mais recentes primeiro).</div>
       <div class="baseFiltro">
+        <input type="search" id="fAssBusca" placeholder="🔎 buscar grupo, mês ou modalidade…" oninput="_pintaAssemb()">
         <select id="fAssGrupo" onchange="_pintaAssemb()"><option value="">Todos os grupos</option>${gruposAssemb.map(g=>`<option>${_esc(g)}</option>`).join('')}</select>
       </div>
       <div id="boxAssemb"></div>
@@ -1157,6 +1160,7 @@ function renderBase(){
       <h3>Resumo de lance por grupo (período coletado)</h3>
       <div class="sub">Consolidado das assembleias que já foram lidas de cada grupo.</div>
       <div class="baseFiltro">
+        <input type="search" id="fResBusca" placeholder="🔎 buscar grupo…" oninput="_pintaResumo()">
         <select id="fResProd" onchange="_pintaResumo()"><option value="">Todos os produtos</option>${produtos.map(p=>`<option>${_esc(p)}</option>`).join('')}</select>
         <select id="fResOrdem" onchange="_pintaResumo()">
           <option value="c_livre">Ordenar: mais contempl. por lance livre</option>
@@ -1172,7 +1176,7 @@ function renderBase(){
     </div>`;
 
   document.getElementById('baseConteudo').innerHTML =
-    secPlanos + secFaixas + secGrupos + secAssemb + secResumo;
+    secGrupos + secResumo + secAssemb + secPlanos + secFaixas;
 
   window._B = {planos, grupos, assemb, resumo};
   _pintaPlanos(); _carregaPlanosSelect(); _pintaFaixas(); _pintaGrupos(); _pintaAssemb(); _pintaResumo();
@@ -1181,10 +1185,20 @@ function renderBase(){
 function _prazosDoPlano(p){
   return [...new Set((p.creditos||[]).map(c=>c.prazo).filter(Boolean))].sort((a,b)=>(+a)-(+b)).join(', ') || '—';
 }
+// texto de busca de um filtro (minúsculo, sem espaços nas pontas)
+function _bq(id){ return ((document.getElementById(id)||{}).value||'').trim().toLowerCase(); }
+// o objeto casa com a busca? (procura em todos os campos-texto dados)
+function _casa(q, ...campos){
+  if(!q) return true;
+  const alvo = campos.map(c=>String(c==null?'':c)).join(' ').toLowerCase();
+  return q.split(/\s+/).every(t=>alvo.indexOf(t)>=0);
+}
 function _pintaPlanos(){
   const f = document.getElementById('fPlanoProd').value;
+  const q = _bq('fPlanoBusca');
   const rows = window._B.planos
     .filter(p=>!f || p.tipo_bem===f)
+    .filter(p=>_casa(q, p.codigo, p.nome, p.tipo_bem))
     .map(p=>[
       _esc(p.codigo), _prod(p.tipo_bem), _esc(p.nome),
       _prazosDoPlano(p),
@@ -1206,11 +1220,13 @@ function _carregaPlanosSelect(){
 function _pintaFaixas(){
   const fp = document.getElementById('fFaixaProd').value;
   const fc = document.getElementById('fFaixaPlano').value;
+  const q = _bq('fFaixaBusca');
   const rows = [];
   window._B.planos
     .filter(p=>!fp || p.tipo_bem===fp)
     .filter(p=>!fc || String(p.codigo)===fc)
     .forEach(p=>(p.creditos||[]).forEach(c=>{
+      if(!_casa(q, p.codigo, p.tipo_bem, c.prazo, c.credito, _brl(c.credito), c.texto, (c.reducao_pct?'pr reduzida '+c.reducao_pct:'integral'))) return;
       rows.push([
         _esc(p.codigo), _prod(p.tipo_bem),
         c.prazo||'—',
@@ -1251,11 +1267,13 @@ function _pintaGrupos(){
     prazo:(a,b)=>_n(a.prazo_restante,1)-_n(b.prazo_restante,1),
     grupo:(a,b)=>String(a.grupo).localeCompare(String(b.grupo),undefined,{numeric:true}),
   })[ord] || ((a,b)=>_n(b.vagas)-_n(a.vagas));
+  const q = _bq('fGrupoBusca');
   const rows = window._B.grupos
     .filter(g=>!f || g.tipo_bem===f)
     .filter(g=>!soVaga || (g.vagas||0)>0)
     .filter(g=>!vagaMin || (g.vagas||0)>=vagaMin)
     .filter(g=>isNaN(lanceMax) || (g.lance_medio!=null && +g.lance_medio<=lanceMax))
+    .filter(g=>_casa(q, g.grupo, g.plano_codigo, g.tipo_bem, g.bem, g.prox_assembleia, grupoTemPR(g)?'pr reduzida':'integral'))
     .slice().sort(cmp)
     .map(g=>[
       _esc(g.grupo), _prod(g.tipo_bem), _esc(g.plano_codigo),
@@ -1266,7 +1284,7 @@ function _pintaGrupos(){
       _esc(g.prox_assembleia||'—'),
       (g.prazo_restante!=null && g.prazo_total!=null? g.prazo_restante+'/'+g.prazo_total : '—'),
       _pct(g.lance_medio),
-      _pill(g.parcela_reduzida,'PR','integral','sim','nao'),
+      _pill(grupoTemPR(g),'PR','integral','sim','nao'),
       _dtBase(g.consultado_em)
     ]);
   document.getElementById('boxGrupos').innerHTML =
@@ -1274,8 +1292,10 @@ function _pintaGrupos(){
 }
 function _pintaAssemb(){
   const f = document.getElementById('fAssGrupo').value;
+  const q = _bq('fAssBusca');
   const rows = window._B.assemb
     .filter(a=>!f || a.grupo===f)
+    .filter(a=>_casa(q, a.grupo, a.tipo_bem, a.mes_competencia, a.data_assembleia, a.num_assembleia, (a.modalidades_vistas||[]).join(' ')))
     .sort((a,b)=> String(b.data_assembleia||'').localeCompare(String(a.data_assembleia||'')) || (b.num_assembleia-a.num_assembleia))
     .map(a=>[
       _esc(a.grupo), _prod(a.tipo_bem),
@@ -1306,10 +1326,12 @@ function _pintaResumo(){
     assembl:(a,b)=>_n(b.assembleias_analisadas)-_n(a.assembleias_analisadas),
     grupo:(a,b)=>String(a.grupo).localeCompare(String(b.grupo),undefined,{numeric:true}),
   })[ord] || ((a,b)=>_n(b.contempl_lance_livre)-_n(a.contempl_lance_livre));
+  const q = _bq('fResBusca');
   const rows = window._B.resumo
     .slice()
     .filter(r=>!f || r.tipo_bem===f)
     .filter(r=>!soLL || (r.contempl_lance_livre||0)>0)
+    .filter(r=>_casa(q, r.grupo, r.tipo_bem))
     .sort(cmp)
     .map(r=>[
       _esc(r.grupo), _prod(r.tipo_bem),
