@@ -893,17 +893,25 @@ function onGrupoSel(){
   document.getElementById('credito').value = g.credito!=null ? moeda(+g.credito) : document.getElementById('credito').value;
 
   // ---- select de prazos ----
+  // O prazo da cota num grupo em andamento é o QUE RESTA (prazo_restante).
+  // Ele fica pré-selecionado. Os outros (prazo total do grupo, prazos originais
+  // do plano) ficam como opção, mas o padrão é o restante.
+  const pRest = (g.prazo_restante!=null) ? +g.prazo_restante : null;
+  const pTot  = (g.prazo_total!=null) ? +g.prazo_total : null;
   const prazos=[...new Set(faixas.map(c=>c.prazo).filter(Boolean).map(Number))].sort((a,b)=>a-b);
-  let pHtml='<option value="">Selecione o prazo…</option>';
-  prazos.forEach(pz=>{
-    const marca = (g.prazo_total!=null && +g.prazo_total===pz) ? ' (prazo do grupo)' : '';
-    pHtml+=`<option value="${pz}">${pz} meses${marca}</option>`;
-  });
-  if(g.prazo_total!=null && !prazos.includes(+g.prazo_total))
-    pHtml+=`<option value="${g.prazo_total}">${g.prazo_total} meses (prazo do grupo)</option>`;
+  const jaListado=new Set();
+  let pHtml='';
+  if(pRest!=null){ pHtml+=`<option value="${pRest}">${pRest} meses · restante do grupo</option>`; jaListado.add(pRest); }
+  if(pTot!=null && !jaListado.has(pTot)){ pHtml+=`<option value="${pTot}">${pTot} meses · prazo total do grupo</option>`; jaListado.add(pTot); }
+  prazos.forEach(pz=>{ if(!jaListado.has(pz)){ pHtml+=`<option value="${pz}">${pz} meses · prazo do plano</option>`; jaListado.add(pz); } });
+  if(pRest==null && pTot==null && !prazos.length) pHtml+='<option value="">Selecione o prazo…</option>';
   pHtml+='<option value="__manual__">✏️ Prazo manual</option>';
-  document.getElementById('prazoSel').innerHTML=pHtml;
-  document.getElementById('prazoSel').style.display='';
+  const _pSel=document.getElementById('prazoSel');
+  _pSel.innerHTML=pHtml;
+  _pSel.style.display='';
+  // pré-seleciona o restante do grupo (ou o total, se não houver restante)
+  const _pDefault = pRest!=null ? String(pRest) : (pTot!=null ? String(pTot) : '');
+  if(_pDefault){ _pSel.value=_pDefault; document.getElementById('prazo').value=_pDefault; }
 
   // ---- painel de informações do grupo ----
   montarInfoGrupo(g,plano,resumo);
@@ -916,9 +924,13 @@ function onCreditoSel(){
   if(v==='__manual__'){ document.getElementById('credito').value=''; document.getElementById('credito').focus(); calcular(); return; }
   if(v){
     document.getElementById('credito').value=moeda(parseFloat(v));
+    // Se o grupo está em andamento (tem prazo restante), o prazo da cota é o
+    // que RESTA — não o prazo original do plano. Só puxa o prazo da faixa
+    // quando não há grupo da base (modo manual).
+    const temRestante = GRUPO_ATUAL && GRUPO_ATUAL.prazo_restante!=null;
     const op=sel.options[sel.selectedIndex];
     const pz=op.getAttribute('data-prazo');
-    if(pz){ document.getElementById('prazo').value=pz;
+    if(pz && !temRestante){ document.getElementById('prazo').value=pz;
       const pSel=document.getElementById('prazoSel');
       if([...pSel.options].some(o=>o.value===String(pz))) pSel.value=String(pz);
     }

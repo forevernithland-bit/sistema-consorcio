@@ -172,11 +172,11 @@ def _voltar_form(page, prod_pal, reabrir):
 
 def _voltar_resultado(page, reabrir):
     try:
-        _ir_para_resultado(page)
+        _ir_para_resultado(page, forcar=True)   # re-clica Contemplação
         return page
     except Exception:
         page = reabrir()
-        _ir_para_resultado(page)
+        _ir_para_resultado(page, forcar=True)
         return page
 
 
