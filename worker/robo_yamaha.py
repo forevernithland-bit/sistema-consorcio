@@ -353,6 +353,12 @@ def main():
         _prog_limpar()
     prog = _prog_ler()
 
+    # se um run menor (--rapido/--teste) "terminou" hoje, um run maior deve
+    # voltar a varrer os grupos — mas aproveita o que já foi feito.
+    if prog.get("fase") == "fim" and (completo or (teste and not rapido)):
+        prog["fase"] = "grupos"
+        prog["grupos_com_vaga"] = {}          # re-semeia do banco na fase_grupos
+
     modo = "RÁPIDO" if rapido else "TESTE CURTO" if teste else "COMPLETO"
     print(f">>> ROBÔ YAMAHA — {modo}{' (grava)' if salvar else ' (NÃO grava)'}")
     print(f"    produtos: {', '.join(prods)} | prazo: {prazo_pref or 'todos'} | "
