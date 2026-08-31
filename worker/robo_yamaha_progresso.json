@@ -20,6 +20,12 @@
   "9516": "Moto",
   "9517": "Moto"
  },
- "assembleias_feitas": [],
- "atualizado_em": "2026-08-31T08:55:05"
+ "assembleias_feitas": [
+  "9045",
+  "9057",
+  "9060",
+  "9508",
+  "9509"
+ ],
+ "atualizado_em": "2026-08-31T09:12:16"
 }
