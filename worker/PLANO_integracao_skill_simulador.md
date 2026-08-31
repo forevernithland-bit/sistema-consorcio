@@ -59,7 +59,15 @@ Já temos o esqueleto certo; falta unificar:
 | `RELATORIO_COMISSAO` | mês/ano | rotina de download+parse (existe, avulsa) |
 | `COLETA_GRUPOS` | produto, credito, n_grupos, prazo | `coletar_grupos.py` |
 | `COLETA_ASSEMBLEIAS` | grupos[], assembleias, tipo_bem | `coletar_assembleias.py` |
+| `COLETA_TABELAS` | — | `coletar_tabelas_yamaha.py` — lê os PDFs de `CONSORBENS\Tabelas\YAMAHA`, grava embutido/lance-fixo por grupo; **no-op se não há PDF novo** |
 | `PLANEJAR_SIMULACAO` | produto, credito, prazo, lance_cliente, parcela_alvo, n_grupos | orquestra as duas de cima + driver do simulador + monta proposta |
+
+**Cadência automática** (o supervisor enfileira sozinho, prioridade baixa —
+roda no "tempo ocioso", quando o robô já está aberto e sem LANCE/BOLETO na
+fila; não é gatilho dedicado): `COLETA_TABELAS` **1×/semana** (as regras de
+embutido/lance-fixo quase nunca mudam) · `COLETA_GRUPOS --sync` conforme regra
+de validade do Uriel · `COLETA_ASSEMBLEIAS` para grupo candidato sem assembleia
+do mês.
 
 O supervisor: 1 loop, pega o próximo PENDENTE (prioridade: LANCE/BOLETO na
 frente das coletas, que são mais lentas), abre **um** navegador Playwright,
@@ -180,7 +188,7 @@ fechar uma lista conjunta antes de codar.
   handlers; **2 navegadores por função** (um Newcon serializado + um só para o
   `yamaha.html`); **"cede a vez" cooperativo** (coleta em blocos suspende se
   entrar LANCE/BOLETO); coluna `prioridade`; **poll na `fila_automacao`**, sem
-  HTTP; **migração 20** com `payload`/`resultado` jsonb + `chave_idempotencia`;
+  HTTP; **migração 21** com `payload`/`resultado` jsonb + `chave_idempotencia`;
   extrair um **`core/fila_contrato.py`** único (hoje as regras de lance/dedup
   estão duplicadas ERP↔skill). "Sempre ligado": **Task Scheduler headful +
   auto-logon + watchdog**, NÃO Windows Service (sessão 0 = só headless, e o
@@ -199,10 +207,10 @@ fechar uma lista conjunta antes de codar.
 
 ### Lista conjunta — resolver antes de codar (dono do item entre colchetes)
 
-**A. Contrato de dados / schema (trava a migração 20 e o `fila_contrato.py`)**
+**A. Contrato de dados / schema (trava a migração 21 e o `fila_contrato.py`)**
 1. **Schema exato de `payload` e `resultado` por `tipo`**, principalmente o de
    `PLANEJAR_SIMULACAO` = espelho de `simulados_yamaha_cenarios`. [TI + Dados]
-2. **Migração 20** (`fila_automacao`): `prioridade`, `payload/resultado jsonb`,
+2. **Migração 21** (`fila_automacao`): `prioridade`, `payload/resultado jsonb`,
    `chave_idempotencia`, `origem`, `progresso`, `heartbeat_em` + índices. [TI]
 3. **4 tabelas de histórico** (`simulados_yamaha`, `_cenarios`, `_resultado`,
    `score_config`): quem grava (handler direto ou via `resultado` da fila?),
