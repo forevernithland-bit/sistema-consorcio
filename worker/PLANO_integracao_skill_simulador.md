@@ -16,12 +16,29 @@
 
 1. **Um robô só.** Toda a inteligência que já ensinamos à Consorbens vive num
    **único processo** no PC do escritório:
+
+   *Precisam do navegador Newcon:*
    - **Lance** (Ofertar Lance → Newcon) — já funciona (`worker_lances.py` / `newcon.py`).
    - **Boletos** (Emissão de Cobrança → PDF + código de barras) — já funciona.
    - **Busca de grupos / planos / faixas de crédito / vagas** (`coletar_grupos.py`).
    - **Resultado de assembleias / média de lance real** (`coletar_assembleias.py`).
    - **Relatórios de comissão** (download no Newcon, leitura de PDF).
-   - **Planejamento de simulação** (`planejar.py`) + **driver do `yamaha.html`** (novo).
+   - **Planejamento de simulação** (`planejar.py` / `robo_yamaha.py`) + **driver do `yamaha.html`** (novo).
+
+   *Não precisam de navegador (só HTTP / API) — hoje são robôs SEPARADOS que o
+   Uriel quer trazer pra cá (ver 7.9):*
+   - **Importar cartas da Anglo** → `IMPORTA_ANGLO_CONSORCIO/atualizar_cartas.py`:
+     baixa da API JSON da Anglo, aplica ágio + termômetro, grava no **Supabase
+     do SITE** (projeto `gvgwphsmdbmzifpwrevp`, não o do ERP), substituindo só o
+     fornecedor "Anglo Consórcios". Sem navegador, ~2 s. Hoje roda 23h/dia via
+     Agendador. É o que alimenta a skill `cartas-contempladas-consorbens`.
+   - **Baixar tabelas do Gmail** → dois scripts iguais
+     (`ATUALIZA_YAMAHA_TABELAS/scripts/download_attachments.py` e
+     `GUIA_DE_OPORTUNIDADES_ITAU/scripts/download_attachments.py`): Gmail API
+     (readonly), baixam os anexos pra `G:\Meu Drive\CONSORBENS\Tabelas\{YAMAHA,ITAU}`.
+     Yamaha: busca "Tabelas Yamaha", quarta 12h. Itaú: `subject:"GUIA DE
+     OPORTUNIDADES" "Itaú"`, terça 12h. É o que alimenta o `coletar_tabelas_yamaha.py`
+     e o simulador "Oportunidades Itaú".
 2. **Sempre ligado, na escuta.** O robô fica de pé o tempo todo, ouvindo uma
    fila de pedidos, e executa assim que chega tarefa — sem alguém rodar script
    na mão.
@@ -61,6 +78,8 @@ Já temos o esqueleto certo; falta unificar:
 | `COLETA_ASSEMBLEIAS` | grupos[], assembleias, tipo_bem | `coletar_assembleias.py` |
 | `COLETA_TABELAS` | — | `coletar_tabelas_yamaha.py` — lê os PDFs de `CONSORBENS\Tabelas\YAMAHA`, grava embutido/lance-fixo por grupo; **no-op se não há PDF novo** |
 | `PLANEJAR_SIMULACAO` | produto, credito, prazo, lance_cliente, parcela_alvo, n_grupos | orquestra as duas de cima + driver do simulador + monta proposta |
+| `IMPORTA_ANGLO` | — | `atualizar_cartas.py` — API Anglo → Supabase do SITE. **Sem navegador.** (ver 7.9) |
+| `BAIXAR_GMAIL` | fonte: `yamaha` \| `itau` | `download_attachments.py` — Gmail API → pasta `Tabelas\{YAMAHA,ITAU}`. **Sem navegador.** (ver 7.9) |
 
 **Cadência automática** (o supervisor enfileira sozinho, prioridade baixa —
 roda no "tempo ocioso", quando o robô já está aberto e sem LANCE/BOLETO na
@@ -74,18 +93,20 @@ frente das coletas, que são mais lentas), abre **um** navegador Playwright,
 loga **uma vez**, roda o handler, grava resultado + `bater_heartbeat` a cada
 ciclo. Erro técnico → reabre navegador; erro de negócio → não repete.
 
-### 2.2 "Sempre ligado"
+### 2.2 "Sempre ligado" (resumo — detalhe na seção 7)
 
-- **Agora (barato):** `iniciar_robo.bat` na pasta **Inicializar** do Windows
-  (`shell:startup`) + o loop com `while True` e reconexão. Já dá "liga sozinho
-  quando o PC liga".
-- **Depois (robusto):** empacotar como **serviço do Windows** (NSSM ou
-  `pywin32`), com restart automático e log rotativo. O heartbeat em
-  `robo_status` continua sendo a fonte da verdade pro ERP (🟢/🔴).
 - **Fila como "escuta":** o robô não precisa de porta aberta nem webhook — ele
   faz *poll* na `fila_automacao` (a cada ~15–30 s). Quem "fala" com ele é
   qualquer cliente que saiba gravar uma linha na fila: o ERP (botões), um cron,
   ou a **skill do Clode**.
+- **Arranque:** `.bat` na Inicialização do Windows + **logon automático** do
+  Windows → PC liga, loga sozinho, robô sobe.
+- **Keep-alive:** watchdog leve (script ou Agendador de Tarefas) que checa o
+  heartbeat em `robo_status` e re-sobe o supervisor se ele morreu.
+- **NÃO** dá pra ser Serviço do Windows (sessão 0 = só headless, e o Newcon
+  precisa de navegador visível). Roda numa sessão logada, janela minimizada.
+- Retomada: progresso em arquivo + fila durável → ao re-subir continua de onde
+  parou. Heartbeat em `robo_status` = bolinha 🟢/🔴 no ERP.
 
 ---
 
@@ -255,3 +276,165 @@ fechar uma lista conjunta antes de codar.
 **Gate:** codar a rodada 2 **só** depois desta lista fechada num spec assinado
 por TI e Dados, com prioridade para os itens **5** (chave simulado→resultado) e
 **6–10** (atributos de grupo, dependem de mapear telas novas do Newcon).
+
+---
+
+## 7. Arquitetura "sempre-ligado" (robô de prontidão)
+
+> Objetivo: o robô fica de pé o tempo todo no PC do escritório e atua sozinho
+> assim que chega tarefa — igual já rola com LANCE e BOLETO. Nada de rodar
+> script na mão.
+
+### 7.1 O processo — supervisor único
+
+`worker/worker_consorbens.py` (estende o `worker_lances.py` de hoje):
+
+```
+loop infinito:
+  1. lê fila_automacao  (status=PENDENTE, order by prioridade, criado_em)
+  2. se não há nada: bate heartbeat em robo_status, dorme 15-30 s, repete
+  3. pega o próximo pedido, marca PROCESSANDO
+  4. chama o handler do `tipo`:
+        LANCE / BOLETO              -> newcon.py (já existe)
+        RELATORIO_COMISSAO         -> baixar_comissoes.py
+        COLETA_GRUPOS              -> coletar_grupos.py  (como função)
+        COLETA_ASSEMBLEIAS        -> coletar_assembleias.py
+        COLETA_TABELAS            -> coletar_tabelas_yamaha.py
+        PLANEJAR_SIMULACAO       -> planejar/robo_yamaha  + driver do yamaha.html
+  5. grava resultado (SUCESSO/ERRO + resultado jsonb) e bate heartbeat
+  6. erro técnico  -> recupera navegação -> se falhar, reabre navegador (relogin)
+     erro de negócio -> marca ERRO, NÃO repete
+```
+
+- **1 navegador Playwright + 1 login** no Newcon, reusado por todos os
+  handlers (o `robo_yamaha.py` já tem essa lógica: sessão única, retomada,
+  `_reset_para_resultado` pra re-navegar sem relogar, `reabrir()` como último
+  recurso).
+- **2º contexto de navegador** só para o `yamaha.html` (o driver do simulado),
+  isolado do Newcon — crash do driver não derruba a sessão de venda.
+
+### 7.2 Como ele fica ligado — 3 camadas
+
+| Camada | Implementação | Cobre |
+|---|---|---|
+| **Arranque** | `iniciar_robo.bat` em `shell:startup` + **logon automático do Windows** (netplwiz / registro `AutoAdminLogon`) | PC liga/reinicia → loga sozinho → robô sobe |
+| **Keep-alive (watchdog)** | Tarefa no Agendador ("a cada 2 min") ou `watchdog_robo.py`: lê `robo_status.atualizado_em`; se > 3 min parado → `taskkill` no python + re-executa o `.bat` | crash, deadlock, Newcon matou a sessão de vez |
+| **Retomada** | progresso em `*_progresso.json` + a própria `fila_automacao` (durável) | ao re-subir: pedido que estava PROCESSANDO volta pra PENDENTE (`reenfileirar_interrompidos`); coleta continua do bloco onde parou |
+
+**Por que não Serviço do Windows:** serviço roda na **sessão 0**, sem desktop
+→ Playwright só funciona headless. O Newcon **não foi validado headless** (tem
+tela pesada de postback, "Invalid postback", etc.). Então: sessão logada,
+janela do Chrome **minimizada** ("segundo plano" = minimizado, não invisível).
+Se um dia validarmos o Newcon headless, aí vira serviço de verdade e resolve.
+
+**Alternativa (se o PC do escritório não puder ficar logado):** um mini-PC
+dedicado só pro robô, ou uma VM Windows com auto-logon — mesmo desenho.
+
+### 7.3 A fila é a caixa de entrada
+
+Ninguém "chama" o robô por HTTP. Quem quer que ele faça algo **grava uma linha
+em `fila_automacao`**:
+- **ERP** — botões (Ofertar Lance, Emitir Boleto) já fazem isso hoje
+- **Skill do Clode** — traduz "gera um simulado pra cliente que quer 100k em
+  veículo" num pedido `PLANEJAR_SIMULACAO`
+- **Cron interno** (7.4) — o próprio supervisor se agenda
+
+Vantagem: sem porta aberta, sem firewall, sem TLS, sem 2º serviço no ar. A
+latência (poll de 15-30 s) é irrelevante pra tudo aqui.
+
+### 7.4 Cron interno (o robô se auto-agenda)
+
+No tempo ocioso (fila sem LANCE/BOLETO), o supervisor enfileira sozinho, com
+`prioridade` baixa:
+
+| Tarefa | Quando |
+|---|---|
+| `COLETA_GRUPOS --sync` | conforme a regra de validade do Uriel (nº de vagas × dias) — na prática ~1×/dia varre só os planos vencidos |
+| `COLETA_ASSEMBLEIAS` | grupo candidato com vaga que ainda não tem a assembleia do mês |
+| `COLETA_TABELAS` | 1×/semana (regras de embutido/lance-fixo quase não mudam) |
+
+### 7.5 Prioridade + "cede a vez"
+
+- Coluna `prioridade int` (menor = mais urgente): LANCE/BOLETO=10 ·
+  PLANEJAR=40 · COLETA_*=50 · RELATORIO=60
+- Seleção: `order by prioridade, criado_em`
+- **Cede a vez:** a coleta roda em **blocos** (um plano / um grupo por vez).
+  Entre blocos re-olha a fila; se surgiu PENDENTE de prioridade < a dela,
+  **suspende** (volta a PENDENTE com o progresso gravado), executa o urgente,
+  e retoma. Latência do LANCE = "1 bloco" (segundos a ~1-2 min), sem
+  paralelismo real no Newcon.
+
+### 7.6 Observabilidade
+
+- **Heartbeat** em `robo_status` a cada ciclo → bolinha 🟢/🔴 **SERVER** no ERP
+  (já existe: `_status_robo` em `app.py`, `LIMITE_SERVER_SEG=90`)
+- **Log rotativo** `worker/logs/robo.log` (RotatingFileHandler, ~5 MB × 5) +
+  eco no console; o `.bat` também redireciona stdout/stderr pra `logs/console.log`
+- **Painel da fila no ERP** — reaproveita o que `_mapa_ultimo_lance` já faz:
+  lista `fila_automacao` filtrando `tipo in (COLETA_*, PLANEJAR_*)` com
+  `status` / `progresso` ("coletando 3/12") / `mensagem`
+- Opcional: alerta (e-mail/registro) se ficar 🔴 por > X min em horário comercial
+
+### 7.7 Modos de falha
+
+| Situação | O que acontece |
+|---|---|
+| PC reinicia | logon automático → `.bat` → robô sobe, `reenfileirar_interrompidos`, segue |
+| Robô trava / deadlock | watchdog mata e re-sobe em ~2-3 min |
+| Sessão Newcon expira no meio | handler recupera navegação; se travar, `reabrir()` (relogin), sem intervenção |
+| `G:\` (Drive) não montado | robô **recusa subir** com log claro (não roda cego — boleto e `yamaha.html` vivem no `G:\`) |
+| Sessão do Windows deslogada (não bloqueada) | Playwright headful para de funcionar — documentar: "não fazer logoff, só bloquear"; watchdog detecta pelo heartbeat parado |
+| PC desligado / sem energia | bolinha 🔴 no ERP; nada a fazer no software |
+| Uma coleta longa pendurada | teto de tempo por tarefa (ex.: PLANEJAR = 15 min) aborta e marca ERRO_TECNICO |
+
+### 7.8 O que já está pronto pra isso
+
+- `robo_yamaha.py` — sessão única, retomada por arquivo de progresso,
+  recuperação em camadas (navegação → reabrir navegador), "lê o que já temos
+  antes de buscar". É o handler de `COLETA_GRUPOS` + `COLETA_ASSEMBLEIAS`
+  praticamente pronto.
+- `coletar_tabelas_yamaha.py` — handler de `COLETA_TABELAS` (no-op se não há
+  PDF novo).
+- `worker_lances.py` — o esqueleto do loop (heartbeat, classificação
+  técnico×negócio, reenfileiramento). É a base do `worker_consorbens.py`.
+- `robo_status` + bolinha 🟢 SERVER — observabilidade mínima já no ar.
+
+**Falta:** o `worker_consorbens.py` (juntar os handlers num loop só), a
+migração da `fila_automacao` (`prioridade`, `payload/resultado jsonb`,
+`chave_idempotencia`), o watchdog, e o auto-logon do Windows. Codar depois do
+gate da seção 6.
+
+### 7.9 Funções API-only (sem navegador) — as mais fáceis de trazer
+
+Hoje são **3 robôs separados**, cada um com seu `.bat` e sua tarefa no
+Agendador. Todos são **puro HTTP/API, sem navegador** — então entram no
+supervisor como tarefas rápidas que **não encostam na sessão Newcon** (rodam
+inline ou numa thread à parte, sem disputar prioridade com LANCE/BOLETO).
+
+| Robô hoje | Pasta | O que faz | Vira |
+|---|---|---|---|
+| Importar Anglo | `CLODE\IMPORTA_ANGLO_CONSORCIO` (`atualizar_cartas.py`) | API JSON da Anglo → ágio + termômetro → **Supabase do SITE** (`gvgwphsmdbmzifpwrevp`), substitui só fornecedor "Anglo Consórcios" | tipo `IMPORTA_ANGLO` |
+| Baixar tabelas Yamaha | `CLODE\ATUALIZA_YAMAHA_TABELAS\scripts` (`download_attachments.py`) | Gmail API (readonly), busca "Tabelas Yamaha" → `CONSORBENS\Tabelas\YAMAHA` | tipo `BAIXAR_GMAIL` (fonte=yamaha) |
+| Baixar guia Itaú | `CLODE\GUIA_DE_OPORTUNIDADES_ITAU\scripts` (`download_attachments.py`) | Gmail API, `subject:"GUIA DE OPORTUNIDADES" "Itaú"` → `CONSORBENS\Tabelas\ITAU` | tipo `BAIXAR_GMAIL` (fonte=itau) |
+
+**Como consolidar:**
+- Os 3 scripts já rodam standalone — viram **handlers** do supervisor
+  (import + chamada de função), mantendo o `__main__` pra debug.
+- **Credenciais** (não mexer, só apontar):
+  - Anglo: `config.json` em `%LOCALAPPDATA%\Consorbens\` (fora do Drive, não
+    sincroniza) — o script já procura em vários caminhos alternativos.
+  - Gmail (Yamaha e Itaú): `credentials.json` + `token.pickle` dentro de cada
+    `scripts/` (OAuth já autorizado, escopo `gmail.readonly`). Dois tokens
+    separados — dá pra unificar num só depois, não é urgente.
+- **Supabase:** o Anglo grava no projeto do **SITE**, os outros no do **ERP** ou
+  em pasta. O supervisor só precisa das duas URLs/keys no `.env`.
+- **Cadência automática** (cron interno, 7.4): `BAIXAR_GMAIL` yamaha quarta 12h
+  · `BAIXAR_GMAIL` itau terça 12h · `IMPORTA_ANGLO` 23h/dia. E **encadear**:
+  depois do `BAIXAR_GMAIL` yamaha, enfileira `COLETA_TABELAS` (que lê os PDFs
+  novos e atualiza os grupos no simulador).
+- **Aposentar:** os `.bat` e as tarefas do Agendador desses 3 saem de cena — o
+  supervisor passa a ser o único ponto que roda tudo (menos coisa pra dar
+  errado, um log só, uma bolinha só).
+
+Essas 3 são as **primeiras a migrar** quando começar a rodada 2 — são simples,
+sem risco de navegador, e já tiram 3 tarefas do Agendador.

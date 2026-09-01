@@ -158,33 +158,31 @@ def _plano_ja_fresco(cod, catalogo, grupos_do_plano):
                    for g in grupos_do_plano)
 
 
-def _voltar_form(page, prod_pal, reabrir):
-    """Tenta voltar ao formulário; se não der, reabre o navegador (relogin).
-    Devolve o page (novo, se reabriu) ou levanta se nem reabrindo deu."""
+def _voltar_form(sx, prod_pal, reabrir):
+    """Volta ao formulário de venda; se não der, reabre o navegador (relogin).
+    SEMPRE lê a página atual de `sx` (que reabrir() atualiza)."""
     try:
-        _ir_para_form(page); _preambulo(page, prod_pal)
-        return page
+        _ir_para_form(sx["page"]); _preambulo(sx["page"], prod_pal)
     except Exception:
-        page = reabrir()
-        _ir_para_form(page); _preambulo(page, prod_pal)
-        return page
+        reabrir()                       # atualiza sx["page"]
+        _ir_para_form(sx["page"]); _preambulo(sx["page"], prod_pal)
 
 
-def _voltar_resultado(page, reabrir):
+def _voltar_resultado(sx, reabrir):
+    """Volta pra tela de Resultado de Assembleia (caminho fixo); reabre se travar.
+    SEMPRE lê/atualiza `sx["page"]`."""
     try:
-        _ir_para_resultado(page, forcar=True)   # re-clica Contemplação
-        return page
+        _ir_para_resultado(sx["page"], forcar=True)
     except Exception:
-        page = reabrir()
-        _ir_para_resultado(page, forcar=True)
-        return page
+        reabrir()                       # atualiza sx["page"]
+        _ir_para_resultado(sx["page"], forcar=True)
 
 
-def fase_grupos(page, sb, prog, produtos, incluir_antigos, prazo_pref,
+def fase_grupos(sx, sb, prog, produtos, incluir_antigos, prazo_pref,
                 salvar, limite_planos, forcar, reabrir):
     for prod_in in produtos:
         prod_nome, prod_pal, planos = _planos_do_produto(
-            page, prod_in, incluir_antigos, limite_planos)
+            sx["page"], prod_in, incluir_antigos, limite_planos)
 
         # >>> LÊ O QUE JÁ TEMOS antes de sair varrendo <<<
         catalogo = _carregar_catalogo(sb, prod_nome)
@@ -218,7 +216,7 @@ def fase_grupos(page, sb, prog, produtos, incluir_antigos, prazo_pref,
             for tent in (1, 2):
                 try:
                     meta, grupos = _coletar_plano(
-                        page, pv, pt, alvo=None, com_grupos=True,
+                        sx["page"], pv, pt, alvo=None, com_grupos=True,
                         prazo_pref=prazo_pref, max_faixas=1)
                     if salvar:
                         try:
@@ -234,7 +232,7 @@ def fase_grupos(page, sb, prog, produtos, incluir_antigos, prazo_pref,
                 except Exception as e:
                     print(f"  ~ plano {cod} tentativa {tent}: {str(e)[:120]}")
                     try:
-                        page = _voltar_form(page, prod_pal, reabrir)
+                        _voltar_form(sx, prod_pal, reabrir)
                     except Exception:
                         pass
             prog["planos_feitos"].setdefault(prod_in, [])
@@ -243,7 +241,7 @@ def fase_grupos(page, sb, prog, produtos, incluir_antigos, prazo_pref,
             _prog_gravar(prog)
 
             try:
-                page = _voltar_form(page, prod_pal, reabrir)
+                _voltar_form(sx, prod_pal, reabrir)
             except Exception as e:
                 print(f"\n  !! não consegui voltar ao formulário nem reabrindo ({str(e)[:70]}).")
                 print(f"  !! PAROU no plano {cod} de {prod_nome}. O que já foi coletado "
@@ -255,7 +253,7 @@ def fase_grupos(page, sb, prog, produtos, incluir_antigos, prazo_pref,
 
 
 # ------------------------------------------------------------------- fase 2
-def fase_assembleias(page, sb, prog, n_ass, salvar, reabrir):
+def fase_assembleias(sx, sb, prog, n_ass, salvar, reabrir, forcar=False):
     pend = [g for g in sorted(prog["grupos_com_vaga"], key=lambda x: int(x))
             if g not in prog["assembleias_feitas"]]
     print(f"\n{'#'*72}\n# ASSEMBLEIAS: {len(prog['grupos_com_vaga'])} grupo(s) com vaga, "
@@ -263,7 +261,7 @@ def fase_assembleias(page, sb, prog, n_ass, salvar, reabrir):
     if not pend:
         return True
     try:
-        page = _voltar_resultado(page, reabrir)     # navega (reabre se travar)
+        _voltar_resultado(sx, reabrir)     # navega (reabre se travar)
     except Exception as e:
         print(f"  !! não abri Resultado de Assembleia nem reabrindo ({str(e)[:80]}).")
         return False
@@ -272,7 +270,7 @@ def fase_assembleias(page, sb, prog, n_ass, salvar, reabrir):
     for n, grupo in enumerate(pend, 1):
         tb = prog["grupos_com_vaga"].get(grupo)
         print(f"\n[assembleia {n}/{len(pend)}] grupo {grupo} ({tb})", flush=True)
-        ok_g, motivo = _vale_a_pena(sb, grupo, False)
+        ok_g, motivo = _vale_a_pena(sb, grupo, forcar)
         if not ok_g:
             print(f"  pula: {motivo}")
             prog["assembleias_feitas"].append(grupo); _prog_gravar(prog)
@@ -280,13 +278,17 @@ def fase_assembleias(page, sb, prog, n_ass, salvar, reabrir):
         resumos = contempls = None
         for tent in (1, 2, 3):
             try:
-                _nav_grupo(page, grupo)
-                resumos, contempls = _coletar_um(page, sb, grupo, n_ass, tb, False)
+                # SEMPRE re-abre a tela limpa (Contemplação → Contemplação →
+                # Resultado) antes de digitar o grupo — é o que resolve o
+                # "não sabe onde clicar" ao trocar de grupo.
+                _voltar_resultado(sx, reabrir)
+                _nav_grupo(sx["page"], grupo)
+                resumos, contempls = _coletar_um(sx["page"], sb, grupo, n_ass, tb, forcar)
                 break
             except Exception as e:
                 print(f"  ~ tentativa {tent}: {str(e)[:120]}")
                 try:
-                    page = _voltar_resultado(page, reabrir)   # recupera; reabre se preciso
+                    _voltar_resultado(sx, reabrir)   # recupera; reabre se preciso
                 except Exception:
                     print("  x não recuperei a sessão nem reabrindo — progresso salvo, "
                           "rode o mesmo comando de novo.")
@@ -329,8 +331,10 @@ def main():
     rapido = "--rapido" in a
     teste = "--teste" in a or rapido
     completo = "--completo" in a
-    if not (teste or completo):
-        print("passe --rapido (mínimo), --teste (curto) ou --completo (tudo).")
+    so_grupos = "--so-grupos" in a
+    so_assemb = "--so-assembleias" in a
+    if not (teste or completo or so_grupos or so_assemb):
+        print("passe --rapido | --teste | --completo  (ou --so-grupos / --so-assembleias)")
         return
     salvar = "--salvar" in a
     headless = "--headless" in a
@@ -339,8 +343,8 @@ def main():
     if prazo_pref in ("todos", "all"):
         prazo_pref = None
     n_ass = int(opt("--assembleias", "1" if rapido else "2" if teste else "3"))
-    so_grupos = "--so-grupos" in a
-    so_assemb = "--so-assembleias" in a
+    n_grupos = int(opt("--n-grupos")) if opt("--n-grupos") else None   # teto de grupos na fase 2
+    forcar_ass = "--forcar" in a            # relê assembleia mesmo já tendo a do mês
     forcar_grupos = "--forcar-grupos" in a   # re-varre até os planos já em dia
     prods = [p.strip().lower() for p in (opt("--produtos") or ",".join(ORDEM_PRODUTOS)).split(",")]
     prods = [p for p in ORDEM_PRODUTOS if p in prods] or ORDEM_PRODUTOS
@@ -374,13 +378,17 @@ def main():
     sb = _conectar_sb()
 
     # --so-assembleias sem progresso: pega os grupos com vaga direto do banco
+    # (respeitando --produtos)
     if so_assemb and not prog["grupos_com_vaga"]:
+        _nomes = {"auto": "Auto", "moto": "Moto", "imovel": "Imóvel", "caminhao": "Caminhão"}
+        _quer = {_nomes[p] for p in prods}
         try:
             for r in (sb.table("grupos_yamaha").select("grupo,tipo_bem,vagas")
                       .gt("vagas", 0).execute().data or []):
-                prog["grupos_com_vaga"][str(r["grupo"])] = r.get("tipo_bem") or "Auto"
+                if r.get("tipo_bem") in _quer:
+                    prog["grupos_com_vaga"][str(r["grupo"])] = r["tipo_bem"]
             print(f"    (--so-assembleias: {len(prog['grupos_com_vaga'])} grupo(s) "
-                  f"com vaga vindos do banco)")
+                  f"com vaga de {', '.join(sorted(_quer))} vindos do banco)")
         except Exception as e:
             print(f"    !! não li grupos_yamaha: {e}")
 
@@ -390,7 +398,7 @@ def main():
     n_reaberturas = [0]
 
     def reabrir():
-        """Fecha e reabre o navegador (novo login). Devolve o page novo."""
+        """Fecha e reabre o navegador (novo login). Atualiza sessao['page']."""
         n_reaberturas[0] += 1
         if n_reaberturas[0] > 4:
             raise RuntimeError("reabri o navegador vezes demais — abortando")
@@ -406,18 +414,22 @@ def main():
 
     fim_ok = True
     try:
-        if not so_assemb and fase == "grupos":
-            fim_ok = fase_grupos(sessao["page"], sb, prog, prods, incluir_antigos,
+        # SEMPRE tenta a fase de grupos (a não ser --so-assembleias). O
+        # fase_grupos pula sozinho o produto/plano que já foi feito hoje —
+        # então isso resume um run interrompido E acrescenta produtos novos
+        # a um progresso que já passou pra fase de assembleias.
+        if not so_assemb:
+            fim_ok = fase_grupos(sessao, sb, prog, prods, incluir_antigos,
                                  prazo_pref, salvar, limite_planos, forcar_grupos,
                                  reabrir)
         if fim_ok and not so_grupos:
-            # rápido: 1 grupo · teste: 2 grupos (por segurança/tempo)
-            corte = 1 if rapido else 2 if teste else None
+            # rápido: 1 grupo · teste: 2 grupos · --n-grupos N: N (por tempo)
+            corte = n_grupos or (1 if rapido else 2 if teste else None)
             if corte and prog["grupos_com_vaga"]:
                 keep = dict(list(sorted(prog["grupos_com_vaga"].items(),
                                         key=lambda kv: int(kv[0])))[:corte])
                 prog["grupos_com_vaga"] = keep
-            fim_ok = fase_assembleias(sessao["page"], sb, prog, n_ass, salvar, reabrir)
+            fim_ok = fase_assembleias(sessao, sb, prog, n_ass, salvar, reabrir, forcar_ass)
     finally:
         try:
             sessao["browser"].close(); sessao["pw"].stop()

@@ -104,61 +104,94 @@ def _mes(s):
 HOME_URL = "https://newkey.cny.com.br/Intranet/frmMain.aspx"
 
 
+def _clic_texto(page, txt, timeout=8000):
+    """Clica no 1º elemento visível cujo texto BATE (link/menu/aba/span)."""
+    for cand in (lambda: page.get_by_role("link", name=txt, exact=False),
+                 lambda: page.get_by_role("menuitem", name=txt, exact=False),
+                 lambda: page.get_by_role("button", name=txt, exact=False),
+                 lambda: page.get_by_text(txt, exact=True),
+                 lambda: page.get_by_text(txt, exact=False)):
+        try:
+            loc = cand()
+            for k in range(min(loc.count(), 8)):
+                el = loc.nth(k)
+                if el.is_visible():
+                    el.click(timeout=timeout)
+                    try:
+                        page.wait_for_load_state("networkidle", timeout=8000)
+                    except Exception:
+                        pass
+                    return True
+        except Exception:
+            continue
+    return False
+
+
+def _reset_para_resultado(page):
+    """Caminho FIXO que o Uriel ensinou pra abrir/re-abrir a tela de resultado
+    de assembleia SEM relogar, mesmo estando dentro de um grupo:
+        Contemplação (topo) → Contemplação (submenu) → Resultado de Assembleia
+    (repetir isso é o que resolve o 'não sabe onde clicar' ao trocar de grupo)."""
+    page.goto(HOME_URL, wait_until="domcontentloaded")
+    page.wait_for_timeout(1600)
+
+    _clic_texto(page, "Contemplação")          # 1) menu do topo
+    page.wait_for_timeout(1100)
+    _clic_texto(page, "Contemplação")          # 2) mesmo item no submenu
+    page.wait_for_timeout(1100)
+
+    # se ainda não abriu, clica em cada "Contemplação" visível até aparecer
+    if not page.get_by_text("Resultado de Assembleia", exact=False).count():
+        cands = page.get_by_text("Contemplação", exact=True)
+        for k in range(min(cands.count(), 8)):
+            try:
+                cands.nth(k).click(timeout=5000)
+                page.wait_for_load_state("networkidle", timeout=6000)
+                page.wait_for_timeout(700)
+            except Exception:
+                pass
+            if page.get_by_text("Resultado de Assembleia", exact=False).count():
+                break
+
+    # 3) Resultado de Assembleia(s) — 1º o nó do TreeView (ID), depois texto
+    clicou3 = False
+    for cand in (lambda: page.locator("#ctl00_Conteudo_ctl00_tvwMenut1"),
+                 lambda: page.get_by_role("link", name="Resultado de Assembleia", exact=False),
+                 lambda: page.get_by_text("Resultado de Assembleias", exact=False),
+                 lambda: page.get_by_text("Resultado de Assembleia", exact=False),
+                 lambda: page.get_by_text("Resultado da Assembleia", exact=False)):
+        try:
+            loc = cand().first
+            if loc.count():
+                loc.click(timeout=8000)
+                page.wait_for_load_state("networkidle", timeout=10000)
+                clicou3 = True
+                break
+        except Exception:
+            continue
+    if not clicou3:
+        print("   [nav] não achei o link 'Resultado de Assembleia'")
+
+    # espera o campo do grupo aparecer (frame principal OU filho)
+    _fr, _campo = _campo_grupo(page)
+    _campo.wait_for(state="visible", timeout=20000)
+    print("   [nav] tela de Resultado de Assembleia pronta", flush=True)
+
+
 def _ir_para_resultado(page, tentativas=4, forcar=False):
-    """Contemplação (topo) → Contemplação (submenu) → 'Resultado de Assembleia'.
-    forcar=True: mesmo que o campo do grupo já esteja visível, re-clica em
-    'Contemplação' pra voltar ao formulário limpo (usar ao TROCAR de grupo —
-    depois de ler as assembleias do anterior a tela fica num sub-estado e o
-    Buscar não recarrega direito)."""
+    """Garante estar na tela 'Resultado de Assembleia'. forcar=True força o
+    caminho completo (Contemplação → Contemplação → Resultado) mesmo que o
+    campo do grupo já esteja visível — usar ao TROCAR de grupo."""
     for i in range(tentativas):
         try:
             if not forcar and page.locator(F["grupo"]).count() and \
                page.locator(F["grupo"]).first.is_visible():
                 return True
-            if i:
-                page.goto(HOME_URL, wait_until="domcontentloaded")
-                page.wait_for_timeout(1200)
-            _clic(page, "Contemplação")          # menu do topo
-            page.wait_for_timeout(500)
-
-            def _achou_resultado():
-                try:
-                    return (page.locator("#ctl00_Conteudo_ctl00_tvwMenut1").count() > 0
-                            or page.get_by_text("Resultado de Assembleia", exact=False).count() > 0)
-                except Exception:
-                    return False
-
-            # o submenu tem 'Pré-Contemplação' E 'Contemplação'. Testa cada
-            # link/aba "Contemplação" até um deles abrir 'Resultado de Assembleia'.
-            if not _achou_resultado():
-                cands = page.get_by_text("Contemplação", exact=True)
-                for k in range(min(cands.count(), 6)):
-                    try:
-                        cands.nth(k).click(timeout=6000)
-                        page.wait_for_load_state("networkidle")
-                        page.wait_for_timeout(600)
-                    except Exception:
-                        continue
-                    if _achou_resultado():
-                        break
-                    _clic(page, "Contemplação")   # reabre o submenu p/ o próximo
-
-            for tent in (lambda: page.locator("#ctl00_Conteudo_ctl00_tvwMenut1"),
-                         lambda: page.get_by_text("Resultado de Assembleia", exact=True),
-                         lambda: page.get_by_text("Resultado da Assembleia", exact=False)):
-                try:
-                    loc = tent().first
-                    if loc.count():
-                        loc.click(timeout=8000)
-                        page.wait_for_load_state("networkidle")
-                        break
-                except Exception:
-                    continue
-            page.wait_for_selector(F["grupo"], state="visible", timeout=15000)
+            _reset_para_resultado(page)
             return True
         except Exception as e:
-            print(f"   [nav] tentativa {i+1}/{tentativas}: {str(e)[:70]}")
-            page.wait_for_timeout(1500)
+            print(f"   [nav] tentativa {i+1}/{tentativas}: {str(e)[:80]}")
+            page.wait_for_timeout(1800)
     raise RuntimeError("não cheguei em 'Resultado de Assembleia'")
 
 
@@ -365,28 +398,80 @@ def _vale_a_pena(sb, grupo, forcar):
     return True, ""
 
 
-def _nav_grupo(page, grupo):
-    """Troca o filtro para outro grupo. Volta ao formulário LIMPO clicando em
-    'Contemplação' (é só isso que precisa — não reabre o navegador)."""
-    _ir_para_resultado(page, forcar=True)   # sempre re-clica Contemplação
-    campo = page.locator(F["grupo"]).first
-    for g in (grupo, grupo.zfill(6), grupo.lstrip("0")):
+def _campo_grupo(page):
+    """Acha o input do grupo — no frame principal OU num frame filho."""
+    sel = F["grupo"]
+    try:
+        if page.locator(sel).count():
+            return page, page.locator(sel).first
+    except Exception:
+        pass
+    for fr in page.frames:
         try:
-            campo.fill("")
-            campo.fill(g)
-            break
+            if fr is not page.main_frame and fr.locator(sel).count():
+                return fr, fr.locator(sel).first
         except Exception:
             continue
+    return page, page.locator(sel).first
+
+
+def _nav_grupo(page, grupo):
+    """A tela de Resultado de Assembleia JÁ foi aberta (por _voltar_resultado).
+    Aqui só digita o número do grupo e clica em Buscar."""
+    # garante o campo (sem re-fazer o caminho do menu — isso é do _voltar_resultado)
+    try:
+        page.wait_for_selector(F["grupo"], state="visible", timeout=8000)
+    except Exception:
+        _reset_para_resultado(page)
+
+    ctx, campo = _campo_grupo(page)
+    alvo = str(int(grupo))                      # '009057' -> '9057'
+    ok = False
+    for g in (alvo, grupo.zfill(6), str(grupo)):
+        try:
+            campo.click(timeout=5000)
+            campo.press("Control+a")
+            campo.press("Delete")
+            campo.type(g, delay=30)
+            val = (campo.input_value() or "").strip().lstrip("0")
+            if val == alvo.lstrip("0"):
+                ok = True
+                print(f"   [nav] grupo {g} digitado no campo", flush=True)
+                break
+        except Exception as e:
+            print(f"   [nav] tentei digitar '{g}': {str(e)[:60]}")
+    if not ok:
+        raise RuntimeError(f"não consegui digitar o grupo {grupo}")
+
+    # Buscar (botão OK / Buscar Grupos) — ou Enter no campo como fallback
+    clicou = False
     for bt in (F["buscar"], F["buscar2"]):
         try:
-            if page.locator(bt).count():
-                page.locator(bt).first.click(timeout=10000, no_wait_after=True)
+            loc = ctx.locator(bt)
+            if not loc.count():
+                loc = page.locator(bt)
+            if loc.count():
+                loc.first.click(timeout=10000, no_wait_after=True)
+                clicou = True
                 break
         except Exception:
             pass
+    if not clicou:
+        try:
+            campo.press("Enter")
+        except Exception:
+            pass
+
     page.wait_for_timeout(3000)
-    page.wait_for_load_state("networkidle")
-    page.wait_for_selector(f"#{F['grd_conf']}, table", timeout=30000)
+    try:
+        page.wait_for_load_state("networkidle", timeout=15000)
+    except Exception:
+        pass
+    # a grade pode não aparecer se o grupo não tiver assembleia — não é erro fatal
+    try:
+        page.wait_for_selector(f"#{F['grd_conf']}, table", timeout=12000)
+    except Exception:
+        pass
 
 
 def _coletar_um(page, sb, grupo, n_ass, tipo_bem, forcar):
