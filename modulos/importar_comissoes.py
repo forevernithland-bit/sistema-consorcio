@@ -45,6 +45,22 @@ def _mes_competencia(data_fim_str):
         return ""
 
 
+def _chave_evento(c, data_pgto):
+    """Chave de idempotência de um lançamento: (chave_unica, periodo_fim).
+    Igual à do importar_lote_comissoes.py — a mesma parcela só reaparece
+    noutro período (estorno/reativação), aí o periodo_fim muda."""
+    return (f"{c['cliente']}_{c['grupo']}_{c['cota']}_{c['admin']}_{c['parcela']}", data_pgto)
+
+
+def _chaves_ja_gravadas(supabase):
+    """Conjunto de (chave_unica, periodo_fim) que já existem em comissoes_pagas."""
+    try:
+        rows = supabase.table("comissoes_pagas").select("chave_unica,periodo_fim").execute().data or []
+    except Exception:
+        return set()
+    return {(r.get("chave_unica"), r.get("periodo_fim")) for r in rows}
+
+
 # ==========================================
 # 1. LEITOR DO PDF
 # ==========================================
@@ -281,6 +297,18 @@ def render_importar_comissoes(supabase, df_vendas_global, cfg, lista_admin_bd):
 
     # ---------- CONFIRMAÇÃO ----------
     st.divider()
+
+    # Nota já importada? (mesma nota entrando 2x) — checa (chave_unica, periodo_fim)
+    data_pgto_prev = info.get("periodo_fim") or ""
+    ja_no_historico = _chaves_ja_gravadas(supabase)
+    repetidas = [c for c in cotas if _chave_evento(c, data_pgto_prev) in ja_no_historico]
+    if repetidas:
+        st.warning(
+            f"⚠️ **{len(repetidas)} de {len(cotas)} cota(s) desta nota já estão no histórico** "
+            f"(período {data_pgto_prev or '—'}). Se confirmar, elas são **ignoradas** — "
+            f"nada será duplicado. Só as cotas novas entram."
+        )
+
     bloqueios = []
     if sem_cliente:
         bloqueios.append(f"{len(sem_cliente)} cota(s) sem cliente")
@@ -299,8 +327,13 @@ def render_importar_comissoes(supabase, df_vendas_global, cfg, lista_admin_bd):
             _limpar_import()
             st.rerun()
 
-    if confirmar:
-        _salvar_pagamentos(supabase, cotas, info, admin_sel)
+    if confirmar and not st.session_state.get("import_salvando"):
+        # trava de duplo-clique: um 2º rerun não reexecuta a gravação
+        st.session_state["import_salvando"] = True
+        try:
+            _salvar_pagamentos(supabase, cotas, info, admin_sel)
+        finally:
+            st.session_state.pop("import_salvando", None)
 
 
 # ==========================================
@@ -369,9 +402,16 @@ def _render_cadastro_faltantes(supabase, cotas, admin_padrao):
 def _salvar_pagamentos(supabase, cotas, info, admin_sel):
     data_pgto = info.get("periodo_fim") or datetime.today().strftime("%d/%m/%Y")
     mes_comp = _mes_competencia(data_pgto)
-    ok, erros = 0, 0
+
+    # Idempotência: não regravar o que já está no histórico (mesma nota 2x).
+    ja_existe = _chaves_ja_gravadas(supabase)
+
+    ok, erros, pulados = 0, 0, 0
     for c in cotas:
         chave = f"{c['cliente']}_{c['grupo']}_{c['cota']}_{c['admin']}_{c['parcela']}"
+        if (chave, data_pgto) in ja_existe:
+            pulados += 1
+            continue
         try:
             # 1) Histórico detalhado (tabela comissoes_pagas)
             supabase.table("comissoes_pagas").insert({
@@ -404,14 +444,21 @@ def _salvar_pagamentos(supabase, cotas, info, admin_sel):
                 supabase.table("status_comissoes").update(payload).eq("id", ex.data[0]["id"]).execute()
             else:
                 supabase.table("status_comissoes").insert(payload).execute()
+            ja_existe.add((chave, data_pgto))
             ok += 1
         except Exception as e:
             erros += 1
             st.error(f"Erro na cota {c['grupo']}/{c['cota']}: {e}")
 
-    if ok:
+    if pulados and not ok:
+        st.info(f"ℹ️ Nada a fazer: as {pulados} cota(s) desta nota já estavam no histórico "
+                f"(competência {mes_comp}). Nenhuma duplicata foi criada.")
+        _limpar_import()
+        st.rerun()
+    elif ok:
+        extra = f" · {pulados} já existia(m) e foi(ram) ignorada(s)" if pulados else ""
         st.success(f"✅ {ok} pagamento(s) registrado(s) no histórico e marcados como PAGO "
-                   f"(competência {mes_comp}).")
+                   f"(competência {mes_comp}){extra}.")
         _limpar_import()
         st.rerun()
     elif erros:
@@ -419,7 +466,7 @@ def _salvar_pagamentos(supabase, cotas, info, admin_sel):
 
 
 def _limpar_import():
-    for k in ["import_cotas", "import_info", "editor_import", "upl_comissao"]:
+    for k in ["import_cotas", "import_info", "editor_import", "upl_comissao", "import_salvando"]:
         st.session_state.pop(k, None)
 
 
