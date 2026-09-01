@@ -40,6 +40,30 @@ def _ddmmaaaa(valor):
         return ""
 
 
+def _data_recebimento(data_relatorio):
+    """Regime de CAIXA. A Yamaha paga ~uma quinzena depois de fechar o período:
+      - período que fecha no MEIO do mês (01–15)  -> recebido no MESMO mês
+      - período que fecha no FIM do mês (16–fim)   -> recebido no mês SEGUINTE
+    Ex.: 16–31/08 -> 09/2026 · 01–15/08 -> 08/2026 · 16–31/07 -> 08/2026.
+    Recebe e devolve 'dd/mm/aaaa'. (Override linha a linha em `financeiro_datas`
+    continua valendo por cima.)"""
+    s = _ddmmaaaa(data_relatorio)
+    if not s:
+        return data_relatorio or ""
+    try:
+        d = pd.to_datetime(s, dayfirst=True, errors="coerce")
+        if pd.isna(d):
+            return s
+        if d.day > 15:                       # quinzena que fecha no fim do mês
+            ano = d.year + (1 if d.month == 12 else 0)
+            mes = 1 if d.month == 12 else d.month + 1
+        else:                                # quinzena que fecha dia 15
+            ano, mes = d.year, d.month
+        return f"15/{mes:02d}/{ano}"
+    except Exception:
+        return s
+
+
 def _carregar_datas_financeiro(supabase):
     """Datas exclusivas do Financeiro (tabela financeiro_datas). {chave: 'dd/mm/aaaa'}."""
     try:
@@ -63,12 +87,14 @@ def _recebidos_tradicional(supabase, df_vendas_global, df_admin, cfg, status_dic
     """Comissões recebidas do Consórcio Tradicional.
     Fonte 1: comissoes_pagas (NF). Fonte 2: baixas manuais (PAGO fora do NF).
 
-    Data usada = data do Financeiro (financeiro_datas) OU, por padrão, a DATA DE
-    PAGAMENTO da nota (fim do período do relatório da administradora). É o mesmo
-    critério do "Histórico de Pagamentos" (mes_competencia), então as duas telas
-    batem mês a mês. Antes o padrão era `data_importacao` (o dia em que a linha
-    entrou no banco) — isso jogava um histórico inteiro, importado de uma vez,
-    todo para o mês da importação."""
+    Data usada = data do Financeiro (financeiro_datas) OU, por padrão, o mês de
+    RECEBIMENTO em caixa (`_data_recebimento`): a quinzena que fecha dia 15 cai
+    no mesmo mês; a que fecha no fim do mês cai no mês seguinte. Regime de caixa
+    — por isso esta aba pode ficar à frente do "Histórico de Pagamentos", que é
+    por competência (mes_competencia).
+    Antes o padrão era `data_importacao` (o dia em que a linha entrou no banco) —
+    isso jogava um histórico inteiro, importado de uma vez, todo para o mês da
+    importação."""
     regs = []
     chaves_nf = set()
 
@@ -87,9 +113,10 @@ def _recebidos_tradicional(supabase, df_vendas_global, df_admin, cfg, status_dic
         # todos entram no faturamento. Duplicidade de verdade = a MESMA parcela
         # no MESMO período, e essa continua sendo pega (mesma key).
         key = f"{ch}|{r.get('periodo_fim') or ''}"
-        # padrão = data de pagamento da nota (mês de referência do relatório);
-        # reserva = data em que a linha foi lançada no sistema
-        padrao = _ddmmaaaa(r.get("data_pagamento")) or _ddmmaaaa(r.get("data_importacao"))
+        # padrão = mês de recebimento em caixa (mês seguinte ao fim do período
+        # do relatório); reserva = data em que a linha foi lançada no sistema
+        base = _ddmmaaaa(r.get("data_pagamento")) or _ddmmaaaa(r.get("data_importacao"))
+        padrao = _data_recebimento(base)
         data_fin = datas_fin.get(key) or datas_fin.get(ch) or padrao
         regs.append({
             "key": key, "origem": "NF",
@@ -313,8 +340,10 @@ def _aba_realizado(supabase, df_vendas_global, df_admin, cfg, status_dict):
         df_fmt[col] = df_fmt[col].apply(formatar_brl_puro)
     st.dataframe(df_fmt, use_container_width=True)
 
-    st.caption("ℹ️ Tradicional entra no **mês de referência do relatório da administradora** "
-               "(data de pagamento da nota) — igual ao Histórico de Pagamentos. "
+    st.caption("ℹ️ Tradicional entra no **mês do recebimento em caixa**: a quinzena que fecha no "
+               "dia 15 cai no mesmo mês; a que fecha no fim do mês cai no **mês seguinte** (regime de "
+               "caixa — pode ficar à frente do Histórico de Pagamentos). Dá para ajustar linha a linha "
+               "no detalhe do mês. "
                "“Cartas Contempladas — Site” são as operações **concluídas** no admin do Site, "
                "no mês da conclusão. Ágio hoje sem imposto.")
 
