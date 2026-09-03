@@ -71,6 +71,7 @@ body{
 .lock-hint{display:none;text-align:center;color:#cbd5e1;font-weight:700;font-size:14px;padding:26px 14px;border:1.5px dashed var(--line);border-radius:var(--radius);background:var(--panel);}
 .locked .lock-hint{display:block;position:relative;z-index:6;}
 .locked .simBody{display:none;}
+.locked .estrBody{display:none;}
 
 /* ---------- Passo 2: grupo ---------- */
 .grupo-pick{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px;}
@@ -253,6 +254,52 @@ table.baseTbl tr:hover td{background:#fafafa}
   .proposta-liquido span{max-width:100%}
 }
 
+/* ---------- Simulação Estruturada ---------- */
+.estr-linha{background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow-sm);margin-bottom:12px;position:relative;}
+.estr-linha .el-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.estr-linha .field-group label{font-size:10px;}
+.estr-linha input,.estr-linha select{padding:10px;border-radius:10px;border:1.5px solid var(--field-line);font-size:14px;width:100%;background:var(--field);color:var(--ink);outline:none;}
+.estr-linha input:focus,.estr-linha select:focus{border-color:var(--teal);background:#fff;box-shadow:0 0 0 4px rgba(46,110,110,.14);}
+.estr-linha .sel-disp{border:1.5px solid #b8d8d6 !important;background:#eef6f5 !important;color:var(--teal-d) !important;font-weight:800;}
+.estr-linha .o-cell{background:#eef2f9 !important;font-weight:800;color:var(--navy) !important;}
+.estr-linha .o-cell.o-pos{background:#eef6f5 !important;color:var(--teal-d) !important;}
+.estr-info{grid-column:1/-1;font-size:11.5px;color:#475569;background:#f1f5f9;border-radius:9px;padding:7px 11px;margin-top:2px;}
+.estr-info b{color:var(--navy);}
+.el-remove{position:absolute;top:10px;right:10px;width:26px;height:26px;border:none;border-radius:8px;background:#fee2e2;color:#b91c1c;font-weight:900;cursor:pointer;font-size:13px;line-height:1;}
+.estr-add-row{margin:2px 0 14px;}
+.btnAddEstr{padding:11px 18px;border:1.5px dashed var(--teal-l);background:#eef6f5;color:var(--teal-d);font-weight:800;border-radius:12px;cursor:pointer;font-size:14px;}
+.btnAddEstr:hover{background:#e0efee;}
+.btnFluxo{background:linear-gradient(135deg,#0f766e,#0b5c56);color:#fff;box-shadow:0 12px 24px -12px rgba(15,118,110,.8);}
+.estr-tot{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow-sm);}
+.et-item{background:#f5f7fb;border:1px solid var(--field-line);border-radius:11px;padding:10px 13px;}
+.et-item span{display:block;font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:#576372;font-weight:800;margin-bottom:3px;}
+.et-item b{font-size:16px;color:#111;font-weight:900;font-variant-numeric:tabular-nums;}
+.et-item.et-pos{background:#eef6f5;border-color:#b8d8d6;}
+.et-item.et-pos b{color:var(--teal-d);}
+.et-item.et-liq{background:linear-gradient(135deg,#0f9d6b,#0c8a5e);border-color:transparent;}
+.et-item.et-liq span,.et-item.et-liq b{color:#fff;}
+/* card do relatório: reusa .proposta; linhas por grupo */
+.estr-linha-rel{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--field-line);font-size:13px;}
+.estr-linha-rel:last-child{border-bottom:none;}
+.estr-linha-rel .er-g{font-weight:800;color:var(--navy);}
+.estr-linha-rel .er-v{text-align:right;color:#334155;font-variant-numeric:tabular-nums;}
+.estr-linha-rel .er-v small{display:block;color:#64748b;font-size:11px;}
+.fluxo-box{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow-sm);padding:18px;margin-top:14px;max-width:600px;margin-left:auto;margin-right:auto;}
+.fluxo-tit{font-weight:900;color:var(--navy);font-size:15px;margin-bottom:4px;}
+.fluxo-sub{font-size:11.5px;color:#64748b;margin-bottom:12px;line-height:1.5;}
+.fluxo-tab{width:100%;border-collapse:collapse;font-size:13px;}
+.fluxo-tab th,.fluxo-tab td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--field-line);}
+.fluxo-tab th{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#64748b;}
+.fluxo-tab td:last-child{text-align:right;font-weight:800;font-variant-numeric:tabular-nums;}
+.fluxo-total{margin-top:10px;font-weight:800;color:var(--navy);text-align:right;}
+.fluxo-aviso{margin-top:12px;font-size:11px;color:#8a5a00;background:#fff7e8;border:1px solid #f6c99b;border-radius:10px;padding:9px 12px;line-height:1.5;}
+.fluxo-vazio{color:#64748b;font-size:13px;text-align:center;padding:16px;}
+
+@media(max-width:768px){
+  .estr-linha .el-grid{grid-template-columns:1fr 1fr;}
+  .estr-tot{grid-template-columns:1fr 1fr;}
+}
+
 /* ===== Impressão da proposta (1 página) ===== */
 @media print{
   html,body{background:#fff !important;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
@@ -294,6 +341,7 @@ table.baseTbl tr:hover td{background:#fafafa}
     </div>
     <div class="tabbar">
       <button class="tabBtn active" id="tb-sim" onclick="setAba('sim')">📊 Simulador</button>
+      <button class="tabBtn" id="tb-estr" onclick="setAba('estr')">🧩 Estruturada</button>
       <button class="tabBtn" id="tb-base" onclick="setAba('base')">🗄️ Base de Dados</button>
     </div>
   </div>
@@ -424,11 +472,62 @@ table.baseTbl tr:hover td{background:#fafafa}
 
         <div class="resumo-acoes" id="resumoAcoes">
           <button type="button" class="btn-whats" onclick="enviarWhats()">📲 Enviar no WhatsApp</button>
-          <button type="button" class="btn-pdf" onclick="abrirModal('modalPDF')">📄 Gerar PDF</button>
+          <button type="button" class="btn-pdf" onclick="_pdfAlvo='resumo';abrirModal('modalPDF')">📄 Gerar PDF</button>
         </div>
       </div><!-- /simBody -->
     </div><!-- /simGate -->
   </div><!-- /abaSim -->
+
+  <!-- ================= ABA SIMULAÇÃO ESTRUTURADA ================= -->
+  <!-- Vários grupos numa operação só. USA A MESMA calcular() da aba Simulador
+       (via "dirigir o formulário oculto" — ver calcLinhaEstr). -->
+  <div id="abaEstr" style="display:none">
+
+    <div class="step">
+      <div class="step-label"><span class="step-num">1</span> Produto da operação</div>
+      <div class="prod-btns" id="estrProdBtns">
+        <button class="btnProduto" type="button" onclick="setProdutoEstr('auto',this)">🚗 Automóvel</button>
+        <button class="btnProduto" type="button" onclick="setProdutoEstr('moto',this)">🏍️ Moto</button>
+        <button class="btnProduto" type="button" onclick="setProdutoEstr('imovel',this)">🏠 Imóvel</button>
+        <button class="btnProduto" type="button" onclick="setProdutoEstr('caminhao',this)">🚚 Caminhão</button>
+      </div>
+    </div>
+
+    <div id="estrGate" class="locked">
+      <div class="lock-hint">Selecione um produto para montar a operação.</div>
+      <div class="estrBody">
+        <div class="step">
+          <div class="step-label"><span class="step-num">2</span> Grupos da operação</div>
+          <div id="estrLinhas"></div>
+          <div class="estr-add-row">
+            <button type="button" class="btnAddEstr" onclick="addLinhaEstr()">➕ Adicionar grupo</button>
+          </div>
+
+          <div class="estr-tot" id="estrTotais">
+            <div class="et-item"><span>Cotas</span><b id="etCotas">0</b></div>
+            <div class="et-item"><span>Crédito total</span><b id="etCredito">R$ 0,00</b></div>
+            <div class="et-item"><span>Parcela antes (soma)</span><b id="etParcela">R$ 0,00</b></div>
+            <div class="et-item"><span>Lance · rec. próprios</span><b id="etLance">R$ 0,00</b></div>
+            <div class="et-item et-pos"><span>Parcela pós (soma)</span><b id="etParcelaPos">R$ 0,00</b></div>
+            <div class="et-item et-liq"><span>Crédito líquido total</span><b id="etLiquido">R$ 0,00</b></div>
+          </div>
+
+          <div class="buttons" style="grid-column:auto;margin-top:14px">
+            <button class="btnGerar" type="button" onclick="gerarPropostaEstr()">Gerar Relatório</button>
+            <button class="btnFluxo" type="button" onclick="gerarFluxoEstr()">📊 Fluxo de pagamentos</button>
+          </div>
+        </div>
+
+        <div id="resultadoEstr"></div>
+        <div id="fluxoEstr"></div>
+
+        <div class="resumo-acoes" id="resumoAcoesEstr">
+          <button type="button" class="btn-whats" onclick="enviarWhatsEstr()">📲 Enviar no WhatsApp</button>
+          <button type="button" class="btn-pdf" onclick="_pdfAlvo='resumoEstr';abrirModal('modalPDF')">📄 Gerar PDF</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- ================= ABA BASE DE DADOS (INTOCADA) ================= -->
   <div id="abaBase" style="display:none">
@@ -1048,13 +1147,14 @@ function enviarWhats(){
     +'_Simulado com valores aproximados. Não é garantia de contemplação._';
   window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank');
 }
+let _pdfAlvo='resumo';   // 'resumo' (simples) | 'resumoEstr' (estruturada)
 function confirmarPDF(){
   const cli=document.getElementById('pdfCliente').value.trim();
   const rep=document.getElementById('pdfRepresentacao').value.trim();
   const tel=document.getElementById('pdfTelefone').value.trim();
-  const box=document.getElementById('resumo');
+  const box=document.getElementById(_pdfAlvo);
   if(!box){ fecharModal('modalPDF'); return; }
-  const top=box.querySelector('#ppTop'), bot=box.querySelector('#ppBottom');
+  const top=box.querySelector('#ppTop, .pp-top'), bot=box.querySelector('#ppBottom, .pp-bottom');
   if(top){
     if(cli){ top.innerHTML='<span class="pp-rotulo">Proposta preparada para</span><b>'+cli+'</b>'; top.style.display='block'; }
     else { top.innerHTML=''; top.style.display='none'; }
@@ -1087,10 +1187,13 @@ function imprimirResumo(box){
    ============================================================ */
 function setAba(n){
   document.getElementById('abaSim').style.display  = (n==='sim')  ? '' : 'none';
+  document.getElementById('abaEstr').style.display = (n==='estr') ? '' : 'none';
   document.getElementById('abaBase').style.display = (n==='base') ? '' : 'none';
   document.getElementById('tb-sim').classList.toggle('active', n==='sim');
+  document.getElementById('tb-estr').classList.toggle('active', n==='estr');
   document.getElementById('tb-base').classList.toggle('active', n==='base');
   if(n==='base' && !window._baseRender){ renderBase(); window._baseRender = true; }
+  if(n==='estr' && !window._estrInit){ initEstr(); window._estrInit = true; }
 }
 
 function _esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
@@ -1388,6 +1491,384 @@ function _pintaResumo(){
     ]);
   document.getElementById('boxResumo').innerHTML =
     _tbl(['Grupo','Produto','Assembl.','Período','Livre méd.','Livre mín–máx','Fixo méd.','C. livre','C. fixo','C. limit.','C. fidel.','C. sorteio','C. total','Atualizado'], rows);
+}
+
+// =====================================================================
+// SIMULAÇÃO ESTRUTURADA — vários grupos numa operação só.
+// USA A MESMA calcular() da aba Simulador ("dirigir o formulário oculto"):
+// pra cada linha, escreve os valores nos inputs do simulador simples, chama
+// calcular() (INTOCADA) e lê os resultados de volta. Um snapshot/restore
+// garante que a aba Simulador não seja afetada.
+// =====================================================================
+let _estrProduto=null;
+const _EI = ['credito','prazo','prazoGrupo','taxa','cotas','embutido','recurso','tipoPlano','seguroTipo','grupo'];
+
+function _snapSim(){
+  const s={_produto:produto,_embAuto:_embutidoAuto,_rec:rec};
+  _EI.forEach(id=>s[id]=document.getElementById(id).value);
+  return s;
+}
+function _restoreSim(s){
+  _EI.forEach(id=>document.getElementById(id).value=s[id]);
+  produto=s._produto; _embutidoAuto=s._embAuto;
+  calcular();            // recompõe os spans/inputs da aba Simulador
+  rec=s._rec;            // calcular() sobrescreve 'rec' — devolve o do simples
+}
+
+function setProdutoEstr(p,el){
+  _estrProduto=p;
+  document.querySelectorAll('#estrProdBtns .btnProduto').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('estrGate').classList.remove('locked');
+  document.querySelectorAll('#estrLinhas .estr-linha').forEach(row=>{
+    _preencherSelGrupoEstr(row.querySelector('.e-grupoSel'));
+  });
+  calcTodasEstr();
+}
+
+function initEstr(){
+  if(!document.querySelectorAll('#estrLinhas .estr-linha').length) addLinhaEstr();
+}
+
+function _estrGrupos(){
+  return (BASE_DADOS.grupos||[]).filter(g=>_prodMatch(g.tipo_bem,_estrProduto));
+}
+function _preencherSelGrupoEstr(sel){
+  if(!sel) return;
+  let h='<option value="">Selecione o grupo…</option>';
+  if(_estrProduto){
+    _estrGrupos().slice().sort((a,b)=>{
+      const va=(a.vagas||0)>0?0:1, vb=(b.vagas||0)>0?0:1;
+      if(va!==vb) return va-vb;
+      return String(a.grupo).localeCompare(String(b.grupo),undefined,{numeric:true});
+    }).forEach(g=>{
+      const et=(g.vagas||0)>0?(g.vagas+' vaga'+(g.vagas>1?'s':'')):'sem vaga';
+      const fx=faixaCreditoTxt(g);
+      h+=`<option value="${String(g.grupo)}">Grupo ${g.grupo}${fx?' — '+fx:''} · ${et}</option>`;
+    });
+  }
+  h+='<option value="__manual__">✏️ manual</option>';
+  sel.innerHTML=h;
+}
+
+function addLinhaEstr(){
+  const cont=document.getElementById('estrLinhas');
+  const row=document.createElement('div');
+  row.className='estr-linha';
+  row.innerHTML=`
+    <button type="button" class="el-remove" title="Remover" onclick="removerLinhaEstr(this)">×</button>
+    <div class="el-grid">
+      <div class="field-group"><label>Grupo</label>
+        <select class="e-grupoSel sel-disp" onchange="onGrupoSelEstr(this)"></select>
+        <input class="e-grupo" placeholder="Grupo" oninput="calcTodasEstr()">
+      </div>
+      <div class="field-group"><label>Cotas</label>
+        <input class="e-cotas" type="number" value="1" min="1" oninput="calcTodasEstr()"></div>
+      <div class="field-group"><label>Tipo de parcela</label>
+        <select class="e-tipoPlano" onchange="calcTodasEstr()">
+          <option value="reduzida">Parcela Reduzida</option>
+          <option value="integral">Parcela Integral</option>
+        </select></div>
+      <div class="field-group"><label>Seguro</label>
+        <select class="e-seguro" onchange="calcTodasEstr()">
+          <option value="com">Com Seguro</option><option value="sem">Sem Seguro</option>
+        </select></div>
+
+      <div class="field-group"><label>Crédito (R$)</label>
+        <select class="e-credSel sel-disp" onchange="onCredSelEstr(this)" style="display:none"></select>
+        <input class="e-credito" placeholder="R$ 0,00" oninput="_mCredEstr(this)"></div>
+      <div class="field-group"><label>Prazo do grupo</label>
+        <input class="e-prazoGrupo" type="number" placeholder="Prazo grupo" oninput="calcTodasEstr()"></div>
+      <div class="field-group"><label>Prazo da cota</label>
+        <select class="e-prazoSel sel-disp" onchange="onPrazoSelEstr(this)" style="display:none"></select>
+        <input class="e-prazo" type="number" placeholder="Meses" oninput="calcTodasEstr()"></div>
+      <div class="field-group"><label>Taxa adm. (%)</label>
+        <input class="e-taxa" placeholder="%" oninput="_mPctEstr(this)"></div>
+
+      <div class="field-group"><label>Lance embutido (%)</label>
+        <input class="e-emb" placeholder="%" oninput="_mPctEstr(this)"></div>
+      <div class="field-group"><label>Recurso próprio (%)</label>
+        <input class="e-rec" placeholder="%" oninput="_mPctEstr(this)"></div>
+      <div class="field-group"><label>Crédito total</label>
+        <input class="o-cell o-credTotal" readonly></div>
+      <div class="field-group"><label>Parcela antes</label>
+        <input class="o-cell o-parcela" readonly></div>
+
+      <div class="field-group"><label>Lance · rec. próprios</label>
+        <input class="o-cell o-lanceRec" readonly></div>
+      <div class="field-group"><label>Lance embutido (R$)</label>
+        <input class="o-cell o-emb" readonly></div>
+      <div class="field-group"><label>Crédito líquido</label>
+        <input class="o-cell o-pos o-liquido" readonly></div>
+      <div class="field-group"><label>Parcela pós</label>
+        <input class="o-cell o-pos o-parcelaPos" readonly></div>
+
+      <div class="field-group"><label>Prazo pós</label>
+        <input class="o-cell o-prazoPos" readonly></div>
+
+      <div class="estr-info"></div>
+    </div>`;
+  cont.appendChild(row);
+  _preencherSelGrupoEstr(row.querySelector('.e-grupoSel'));
+  calcTotaisEstr();
+}
+function removerLinhaEstr(btn){
+  const row=btn.closest('.estr-linha');
+  if(document.querySelectorAll('#estrLinhas .estr-linha').length<=1){ return; }
+  row.remove(); calcTodasEstr();
+}
+function _mCredEstr(el){ el.value=maskMoeda(el.value); calcTodasEstr(); }
+function _mPctEstr(el){ el.value=maskPercent(el.value); calcTodasEstr(); }
+
+function onGrupoSelEstr(sel){
+  const row=sel.closest('.estr-linha'); const q=s=>row.querySelector(s);
+  const v=sel.value; const info=q('.estr-info');
+  if(v==='__manual__'){ q('.e-grupo').value=''; q('.e-grupo').focus();
+    q('.e-credSel').style.display='none'; q('.e-prazoSel').style.display='none';
+    info.textContent=''; calcTodasEstr(); return; }
+  if(!v){ info.textContent=''; calcTodasEstr(); return; }
+  const g=_estrGrupos().find(x=>String(x.grupo)===String(v));
+  if(!g){ return; }
+  q('.e-grupo').value=g.grupo;
+  q('.e-tipoPlano').value = grupoTemPR(g) ? 'reduzida' : 'integral';
+  if(g.taxa!=null) q('.e-taxa').value=_fmtPctIn((+g.taxa).toFixed(2).replace(/\.?0+$/,''));
+  if(g.prazo_total!=null) q('.e-prazoGrupo').value=g.prazo_total;
+  q('.e-prazo').value=(g.prazo_restante!=null?g.prazo_restante:(g.prazo_total!=null?g.prazo_total:''));
+  q('.e-emb').value=regrasDoGrupo(g).embutido+'%';
+
+  const plano=_planoDoGrupo(g);
+  const faixas=(plano&&Array.isArray(plano.creditos))?plano.creditos.filter(c=>c&&c.credito!=null):[];
+  const cSel=q('.e-credSel');
+  let ch='<option value="">Crédito…</option>';
+  if(faixas.length){ faixas.slice().sort((a,b)=>(+a.credito)-(+b.credito)).forEach(c=>{
+      ch+=`<option value="${c.credito}" data-prazo="${c.prazo||''}">${moeda(+c.credito)}${c.reducao_pct?' · PR '+c.reducao_pct+'%':''}</option>`; }); }
+  else if(g.credito!=null){ ch+=`<option value="${g.credito}">${moeda(+g.credito)}</option>`; }
+  ch+='<option value="__manual__">✏️ manual</option>';
+  cSel.innerHTML=ch; cSel.style.display='';
+  q('.e-credito').value = g.credito!=null ? moeda(+g.credito) : q('.e-credito').value;
+
+  const pRest=(g.prazo_restante!=null)?+g.prazo_restante:null, pTot=(g.prazo_total!=null)?+g.prazo_total:null;
+  const prazos=[...new Set(faixas.map(c=>c.prazo).filter(Boolean).map(Number))].sort((a,b)=>a-b);
+  const seen=new Set(); let ph='';
+  if(pRest!=null){ ph+=`<option value="${pRest}">${pRest} meses · restante</option>`; seen.add(pRest); }
+  if(pTot!=null&&!seen.has(pTot)){ ph+=`<option value="${pTot}">${pTot} meses · total</option>`; seen.add(pTot); }
+  prazos.forEach(pz=>{ if(!seen.has(pz)){ ph+=`<option value="${pz}">${pz} meses · plano</option>`; seen.add(pz); } });
+  ph+='<option value="__manual__">✏️ manual</option>';
+  const pSel=q('.e-prazoSel'); pSel.innerHTML=ph; pSel.style.display='';
+  const pd=pRest!=null?String(pRest):(pTot!=null?String(pTot):'');
+  if(pd){ pSel.value=pd; q('.e-prazo').value=pd; }
+
+  const resumo=_resumoDoGrupo(g.grupo);
+  const media = resumo&&resumo.lance_livre_medio_periodo!=null?resumo.lance_livre_medio_periodo
+              :(g.lance_medio!=null?g.lance_medio:null);
+  const rg=regrasDoGrupo(g);
+  info.innerHTML='<b>Grupo '+g.grupo+'</b> · '+((g.vagas||0)>0?(g.vagas+' vaga'+(g.vagas>1?'s':'')):'sem vaga')
+    +' · prazo restante '+(g.prazo_restante!=null?g.prazo_restante:'—')
+    +' · lance médio '+(_pctTxt(media)||'—')
+    +' · embutido até '+rg.embutido+'%';
+  calcTodasEstr();
+}
+function onCredSelEstr(sel){
+  const row=sel.closest('.estr-linha'); const q=s=>row.querySelector(s); const v=sel.value;
+  if(v==='__manual__'){ q('.e-credito').value=''; q('.e-credito').focus(); calcTodasEstr(); return; }
+  if(v){
+    q('.e-credito').value=moeda(parseFloat(v));
+    const op=sel.options[sel.selectedIndex], pz=op.getAttribute('data-prazo');
+    const temRestante = q('.e-prazoSel') && [...q('.e-prazoSel').options].some(o=>o.textContent.indexOf('restante')>=0 && o.selected);
+    if(pz && !temRestante){ q('.e-prazo').value=pz;
+      const pSel=q('.e-prazoSel'); if([...pSel.options].some(o=>o.value===String(pz))) pSel.value=String(pz); }
+  }
+  calcTodasEstr();
+}
+function onPrazoSelEstr(sel){
+  const row=sel.closest('.estr-linha'); const q=s=>row.querySelector(s); const v=sel.value;
+  if(v==='__manual__'){ q('.e-prazo').value=''; q('.e-prazo').focus(); calcTodasEstr(); return; }
+  if(v){ q('.e-prazo').value=v; }
+  calcTodasEstr();
+}
+
+function _calcUmaLinhaEstr(row){
+  const q=s=>row.querySelector(s);
+  const set=(id,val)=>document.getElementById(id).value=val;
+  produto=_estrProduto||'auto';
+  set('cotas',    q('.e-cotas').value||'1');
+  set('credito',  q('.e-credito').value||'');
+  set('prazo',    q('.e-prazo').value||'');
+  set('prazoGrupo', q('.e-prazoGrupo').value||q('.e-prazo').value||'');
+  set('taxa',     q('.e-taxa').value||'');
+  set('embutido', q('.e-emb').value||'');
+  set('recurso',  q('.e-rec').value||'');
+  document.getElementById('tipoPlano').value=q('.e-tipoPlano').value;
+  document.getElementById('seguroTipo').value=q('.e-seguro').value;
+  set('grupo',    q('.e-grupo').value||'');
+  calcular();   // <<< a MESMA função do simulador simples
+
+  const cotasN=+q('.e-cotas').value||1;
+  const credUn=numero(q('.e-credito').value);
+  const prazoN=+q('.e-prazo').value||0;
+  const pPosTxt=document.getElementById('parcelasPos').innerText||'';
+  q('.o-credTotal').value = moeda(credUn*cotasN);
+  q('.o-parcela').value   = document.getElementById('parcelaAntes').value||'';
+  q('.o-lanceRec').value  = moeda(rec);
+  q('.o-emb').value       = (document.getElementById('embRef').innerText||'').replace('Equivale a ','');
+  q('.o-liquido').value   = document.getElementById('liberado').innerText||'';
+  q('.o-parcelaPos').value= (pPosTxt.split(' de ')[1]||pPosTxt);
+  q('.o-prazoPos').value  = prazoN?(prazoN-1):'';
+
+  row.dataset.credTotal   = credUn*cotasN;
+  row.dataset.recEfetivo  = rec;
+  row.dataset.pAntes      = numero(q('.o-parcela').value);
+  row.dataset.pPos        = numero(q('.o-parcelaPos').value);
+  row.dataset.liquido     = numero(q('.o-liquido').value);
+  row.dataset.prazoPos    = prazoN?(prazoN-1):0;
+  row.dataset.embVal      = numero(q('.o-emb').value);
+}
+
+function calcTodasEstr(){
+  const rows=[...document.querySelectorAll('#estrLinhas .estr-linha')];
+  if(!rows.length){ calcTotaisEstr(); return; }
+  const snap=_snapSim();
+  rows.forEach(_calcUmaLinhaEstr);
+  _restoreSim(snap);
+  calcTotaisEstr();
+}
+
+function calcTotaisEstr(){
+  const rows=[...document.querySelectorAll('#estrLinhas .estr-linha')];
+  let c=0,cred=0,pAntes=0,lance=0,pPos=0,liq=0;
+  rows.forEach(r=>{
+    c     += +r.querySelector('.e-cotas').value||0;
+    cred  += +r.dataset.credTotal||0;
+    pAntes+= +r.dataset.pAntes||0;
+    lance += +r.dataset.recEfetivo||0;
+    pPos  += +r.dataset.pPos||0;
+    liq   += +r.dataset.liquido||0;
+  });
+  document.getElementById('etCotas').innerText=c;
+  document.getElementById('etCredito').innerText=moeda(cred);
+  document.getElementById('etParcela').innerText=moeda(pAntes);
+  document.getElementById('etLance').innerText=moeda(lance);
+  document.getElementById('etParcelaPos').innerText=moeda(pPos);
+  document.getElementById('etLiquido').innerText=moeda(liq);
+}
+
+function _linhasEstrValidas(){
+  return [...document.querySelectorAll('#estrLinhas .estr-linha')].filter(r=>(+r.dataset.credTotal||0)>0);
+}
+
+function gerarPropostaEstr(){
+  const rows=_linhasEstrValidas();
+  if(!rows.length){ alert('Preencha ao menos um grupo com crédito e prazo.'); return; }
+  const label=({auto:'Automóvel',moto:'Moto',imovel:'Imóvel',caminhao:'Caminhão'})[_estrProduto]||'Consórcio';
+  const img=imagens[_estrProduto]||imagens.auto;
+  const logoHtml=(LOGO_CONSORBENS && LOGO_CONSORBENS.indexOf('LOGO_CONSORBENS')===-1)
+    ? `<img src="${LOGO_CONSORBENS}" alt="Consorbens">` : `<span class="ph-fallback">CONSORBENS</span>`;
+  let linhas='';
+  rows.forEach(r=>{
+    const g=r.querySelector('.e-grupo').value||'—';
+    const cot=+r.querySelector('.e-cotas').value||1;
+    linhas+=`<div class="estr-linha-rel">
+      <span class="er-g">Grupo ${g}${cot>1?' · '+cot+' cotas':''}</span>
+      <span class="er-v">${moeda(+r.dataset.credTotal||0)}
+        <small>parcela ${r.querySelector('.o-parcela').value||'—'} → pós ${r.querySelector('.o-parcelaPos').value||'—'}</small>
+      </span></div>`;
+  });
+  const el=id=>document.getElementById(id).innerText;
+  document.getElementById('resultadoEstr').innerHTML=`
+  <div class="summary show" id="resumoEstr">
+    <div class="proposta">
+      <div class="proposta-head">
+        ${logoHtml}
+        <div class="proposta-titulo">Proposta de Consórcio<b>Operação Estruturada</b></div>
+      </div>
+      <div class="proposta-pessoal-top pp-top" style="display:none"></div>
+      <div class="proposta-img-wrap">
+        <img class="proposta-img" src="${img}" alt="${label}" referrerpolicy="no-referrer"
+             onerror="this.style.display='none';this.parentNode.style.background='linear-gradient(135deg,#123f3e,#2e6e6e)';this.parentNode.style.height='120px'">
+        <span class="proposta-img-label">Operação ${label}</span>
+      </div>
+      <div class="proposta-credito">
+        <span>Crédito total contratado</span>
+        <b>${el('etCredito')}</b>
+        <small style="display:block;font-size:11px;color:#4f8a8a;font-weight:700;margin-top:2px">${el('etCotas')} cota(s) em ${rows.length} grupo(s)</small>
+      </div>
+      <div class="proposta-body">
+        <div style="padding:10px 0 4px">${linhas}</div>
+        <div class="proposta-grid">
+          <div class="pg-item"><span>Parcela inicial (soma)</span><b>${el('etParcela')}</b></div>
+          <div class="pg-item"><span>Lance · recursos próprios</span><b>${el('etLance')}</b></div>
+          <div class="pg-item d-pos"><span>Parcela após contemplação (soma)</span><b>${el('etParcelaPos')}</b></div>
+          <div class="pg-item d-pos"><span>Grupos na operação</span><b>${rows.length}</b></div>
+        </div>
+        <div class="proposta-liquido">
+          <span>Crédito líquido total na contemplação</span>
+          <b>${el('etLiquido')}</b>
+        </div>
+        <div class="proposta-pessoal-bottom pp-bottom" style="display:none"></div>
+      </div>
+      <div class="proposta-disc">Simulado com valores aproximados · não é garantia de contemplação</div>
+      <div class="proposta-rodape"><b>CONSORBENS</b> · Consórcio de veículos e imóveis<br>www.consorbens.com</div>
+    </div>
+  </div>`;
+  document.getElementById('resumoAcoesEstr').classList.add('show');
+  document.getElementById('resumoEstr').scrollIntoView({behavior:'smooth'});
+}
+
+function enviarWhatsEstr(){
+  const rows=_linhasEstrValidas();
+  if(!rows.length){ alert('Preencha ao menos um grupo.'); return; }
+  const el=id=>document.getElementById(id).innerText;
+  let t='*PROPOSTA DE CONSÓRCIO — CONSORBENS (Yamaha)*\n_Operação Estruturada_\n\n';
+  rows.forEach((r,i)=>{
+    const g=r.querySelector('.e-grupo').value||'—';
+    const cot=+r.querySelector('.e-cotas').value||1;
+    t+=(i+1)+') Grupo '+g+(cot>1?' ('+cot+' cotas)':'')+'\n'
+      +'   Crédito: '+moeda(+r.dataset.credTotal||0)+'\n'
+      +'   Parcela: '+(r.querySelector('.o-parcela').value||'—')+' → pós '+(r.querySelector('.o-parcelaPos').value||'—')+'\n';
+  });
+  t+='\n*Totais da operação*\n'
+    +'Crédito total: '+el('etCredito')+'\n'
+    +'Cotas: '+el('etCotas')+'\n'
+    +'Parcela inicial (soma): '+el('etParcela')+'\n'
+    +'Lance · recursos próprios: '+el('etLance')+'\n'
+    +'Parcela pós (soma): '+el('etParcelaPos')+'\n\n'
+    +'*Crédito líquido total na contemplação: '+el('etLiquido')+'*\n\n'
+    +'_Simulado com valores aproximados. Não é garantia de contemplação._';
+  window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank');
+}
+
+function gerarFluxoEstr(){
+  const alvo=document.getElementById('fluxoEstr');
+  const linhas=_linhasEstrValidas().map(r=>({
+    grupo:(r.querySelector('.e-grupo').value||'').trim(),
+    pAntes:+r.dataset.pAntes||0, pPos:+r.dataset.pPos||0, prazoPos:+r.dataset.prazoPos||0
+  })).filter(l=>l.pAntes>0);
+  if(!linhas.length){
+    alvo.innerHTML='<div class="fluxo-box"><div class="fluxo-vazio">Preencha ao menos um grupo com crédito e prazo.</div></div>';
+    alvo.scrollIntoView({behavior:'smooth'}); return;
+  }
+  let maxM=Math.max.apply(null,linhas.map(l=>l.prazoPos||0)); if(maxM<1) maxM=1;
+  const faixas=[]; let prev=null, ini=1;
+  for(let m=1;m<=maxM;m++){
+    let tot=0;
+    linhas.forEach(l=>{ if(m===1) tot+=l.pAntes; else if(m<=l.prazoPos) tot+=l.pPos; });
+    tot=Math.round(tot*100)/100;
+    if(prev===null){ prev=tot; ini=1; }
+    else if(tot!==prev){ faixas.push({ini,fim:m-1,valor:prev}); prev=tot; ini=m; }
+  }
+  faixas.push({ini,fim:maxM,valor:prev});
+  const totalGeral=faixas.reduce((s,f)=>s+f.valor*(f.fim-f.ini+1),0);
+  let h='<div class="fluxo-box"><div class="fluxo-tit">📊 Fluxo de pagamentos previsto</div>';
+  h+='<div class="fluxo-sub">Soma das parcelas de '+linhas.length+' grupo(s). A <b>Parcela 1</b> é antes da contemplação; da 2ª em diante já considera a operação contemplada de imediato (parcela pós). Conforme os grupos de prazo menor terminam, a parcela mensal cai.</div>';
+  h+='<table class="fluxo-tab"><thead><tr><th>Parcelas</th><th>Valor mensal</th></tr></thead><tbody>';
+  faixas.forEach(f=>{
+    const fx=(f.ini===f.fim)?('Parcela '+f.ini):('Parcela '+f.ini+' a '+f.fim);
+    h+='<tr><td>'+fx+'</td><td>'+moeda(f.valor)+'</td></tr>';
+  });
+  h+='</tbody></table><div class="fluxo-total">Total previsto a pagar: <b>'+moeda(totalGeral)+'</b></div>';
+  h+='<div class="fluxo-aviso">⚠️ <b>É só um simulador — não é garantia de contemplação.</b> Ilustra como ficariam as parcelas <b>se o cliente contemplar de imediato</b> (1ª assembleia). Valores mudam com reajustes anuais e a data real da contemplação.</div></div>';
+  alvo.innerHTML=h;
+  alvo.scrollIntoView({behavior:'smooth'});
 }
 
 // ---- estado inicial: nada selecionado, simulador travado ----

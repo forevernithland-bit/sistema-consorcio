@@ -286,7 +286,9 @@ def render_yamaha_sim(supabase, pasta_atual):
                 1,
             )
 
-    components.html(html_code, height=1600, scrolling=True)
+    # 1600 cobre a aba Simulador; a aba "Estruturada" (várias linhas + relatório
+    # + fluxo) é mais alta — scrolling=True cobre o resto, mas dá um respiro.
+    components.html(html_code, height=1900, scrolling=True)
 
     # ---- edição manual da Base de Dados (sem robô) ----
     st.divider()
