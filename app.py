@@ -25,6 +25,7 @@ from modulos.tema import montar_css, render_seletor_tema, css_fundo_login
 from modulos.ofertar_lance import render_ofertar_lance
 from modulos.emitir_boleto import render_emitir_boleto
 from modulos.financeiro import render_financeiro
+from modulos.robo_painel import render_robo_painel
 
 # ==========================================
 # 1. CONFIGURAÇÃO DA PÁGINA E SESSÕES
@@ -42,6 +43,17 @@ for key, default in [('usuario_logado', None), ('perfil_logado', None), ('nome_v
 
 is_logado = st.session_state['usuario_logado'] is not None
 is_master = (st.session_state.get('perfil_logado') == "Master") or (st.session_state.get('usuario_logado') in ['breno', 'uriel'])
+
+# Deep-link p/ atalho na área de trabalho: ...?pg=robo abre direto o Painel do Robô.
+_PG_MAP = {"robo": "🤖 Robô"}
+try:
+    _pg = (st.query_params.get("pg") or "").lower()
+except Exception:
+    _pg = ""
+if _pg in _PG_MAP and not st.session_state.get("_pg_aplicado"):
+    st.session_state['menu_lateral'] = _PG_MAP[_pg]
+    st.session_state['last_radio_selection'] = None
+    st.session_state['_pg_aplicado'] = True
 
 # ==========================================
 # 2. INICIAR BANCO DE DADOS
@@ -243,7 +255,7 @@ else:
     # Menu principal. Senhas e Base de Conhecimento agora ficam DENTRO de
     # "Configurações de Sistema" (abas). Assembleias está oculto por enquanto.
     if is_master:
-        opcoes_principais = ["Dashboard", "Nova Venda", "Ofertar Lance", "Emissão de Boletos", "Financeiro", "Baixar Parcelas", "Relatórios", "Mídias", "Configurações de Sistema"]
+        opcoes_principais = ["Dashboard", "Nova Venda", "Ofertar Lance", "Emissão de Boletos", "Financeiro", "Baixar Parcelas", "Relatórios", "Mídias", "🤖 Robô", "Configurações de Sistema"]
     else:
         opcoes_principais = ["Dashboard", "Nova Venda", "Ofertar Lance", "Emissão de Boletos", "Relatórios", "Mídias"]
         
@@ -431,6 +443,8 @@ elif menu_selecionado == "Mídias":
     render_midias()
 elif menu_selecionado == "Baixar Parcelas":
     render_baixas(supabase, df_vendas_global, df_admin, cfg, status_dict, lista_admin_bd)
+elif menu_selecionado == "🤖 Robô":
+    render_robo_painel(supabase)
 elif menu_selecionado == "Configurações de Sistema":
     # Senhas e Base de Conhecimento agora vivem aqui dentro, como abas.
     tab_sis, tab_senhas, tab_ia = st.tabs(["⚙️ Sistema", "🔐 Senhas", "🧠 Base de Conhecimento"])
