@@ -44,13 +44,17 @@ quando = ["diario 07:00", "diario 12:00", "diario 15:00", "diario 20:00"]
 # ------------------------------------------------------------------------
 # COLETA — tarefas que USAM o Newcon. O supervisor enfileira na
 # fila_automacao (prioridade baixa) e roda "cedendo a vez" pra LANCE/BOLETO.
+#
+# grupos_sync roda e, ao terminar, ENCADEIA sozinho a COLETA_ASSEMBLEIAS
+# (pega o resultado das assembleias / lance médio dos grupos com vaga).
+# Ou seja: 1 horário aqui já cobre grupos + assembleias.
 # ------------------------------------------------------------------------
 [coleta.grupos_sync]
 ativo  = true
 quando = "diario 02:00"
 
 [coleta.tabelas]
-ativo  = false          # já encadeado no gmail_yamaha; ligue aqui se quiser reforço
+ativo  = false          # já encadeado no gmail_yamaha (seg/qua/sex); reforço opcional
 quando = "seg 03:00"
 
 # ------------------------------------------------------------------------
