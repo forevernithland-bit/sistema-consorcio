@@ -893,11 +893,9 @@ function preencherGrupos(){
   });
   let html='<option value="">Selecione o grupo…</option>';
   gs.forEach(g=>{
-    const temVaga=(g.vagas||0)>0;
-    const et = temVaga ? (g.vagas+' vaga'+(g.vagas>1?'s':'')) : 'sem vaga';
     const fx = faixaCreditoTxt(g);
     const pr = grupoTemPR(g) ? ' · PARCELA REDUZIDA' : ' · parcela integral';
-    html+=`<option value="${String(g.grupo)}">Grupo ${g.grupo}${pr}${fx?' — '+fx:''} · ${et} · base de ${_dtCurto(g.consultado_em)}</option>`;
+    html+=`<option value="${String(g.grupo)}">Grupo ${g.grupo}${pr}${fx?' — '+fx:''} · ${_vagaTxt(g)} · base de ${_dtCurto(g.consultado_em)}</option>`;
   });
   html+='<option value="__manual__">✏️ Outro grupo (preencher manual)</option>';
   sel.innerHTML=html;
@@ -960,13 +958,15 @@ function onGrupoSel(){
   document.getElementById('grupo').value=g.grupo;
 
   // ---- status: crédito do grupo + vaga + data da base ----
-  const temVaga=(g.vagas||0)>0;
   const fx=faixaCreditoTxt(g);
+  const vagaPill = g.vagas==null
+      ? `<span class="pill" style="background:#fef3e2;color:#9a5b00">vagas não coletadas — rode o robô</span>`
+      : (g.vagas>0 ? `<span class="pill vaga">${g.vagas} vaga${g.vagas>1?'s':''}</span>`
+                   : `<span class="pill semvaga">sem vaga</span>`);
   status.innerHTML =
     (fx?`<span class="pill" style="background:#eef6f5;color:#245858">Crédito: ${fx}</span> `:'') +
     (grupoTemPR(g)?`<span class="pill" style="background:#fef3e2;color:#9a5b00">Parcela reduzida</span> `:'') +
-    (temVaga?`<span class="pill vaga">${g.vagas} vaga${g.vagas>1?'s':''}</span>`
-            :`<span class="pill semvaga">sem vaga</span>`) +
+    vagaPill +
     ` <span class="att-chip">🕓 Base atualizada em ${_dt(g.consultado_em)}</span>`;
 
   // ---- selo de média de lance livre ----
@@ -1533,6 +1533,12 @@ function initEstr(){
 function _estrGrupos(){
   return (BASE_DADOS.grupos||[]).filter(g=>_prodMatch(g.tipo_bem,_estrProduto));
 }
+// "sem vaga" (=0, cheio) x "vagas não coletadas" (=null, base não trouxe) —
+// não é a mesma coisa; o usuário precisa saber quando é falta de dado.
+function _vagaTxt(g){
+  if(g.vagas==null) return 'vagas s/ dado';
+  return g.vagas>0 ? (g.vagas+' vaga'+(g.vagas>1?'s':'')) : 'sem vaga';
+}
 function _preencherSelGrupoEstr(sel){
   if(!sel) return;
   let h='<option value="">Selecione o grupo…</option>';
@@ -1542,9 +1548,9 @@ function _preencherSelGrupoEstr(sel){
       if(va!==vb) return va-vb;
       return String(a.grupo).localeCompare(String(b.grupo),undefined,{numeric:true});
     }).forEach(g=>{
-      const et=(g.vagas||0)>0?(g.vagas+' vaga'+(g.vagas>1?'s':'')):'sem vaga';
       const fx=faixaCreditoTxt(g);
-      h+=`<option value="${String(g.grupo)}">Grupo ${g.grupo}${fx?' — '+fx:''} · ${et}</option>`;
+      const pr=grupoTemPR(g)?' · PARCELA REDUZIDA':' · parcela integral';
+      h+=`<option value="${String(g.grupo)}">Grupo ${g.grupo}${pr}${fx?' — '+fx:''} · ${_vagaTxt(g)}</option>`;
     });
   }
   h+='<option value="__manual__">✏️ manual</option>';
@@ -1662,7 +1668,7 @@ function onGrupoSelEstr(sel){
   const media = resumo&&resumo.lance_livre_medio_periodo!=null?resumo.lance_livre_medio_periodo
               :(g.lance_medio!=null?g.lance_medio:null);
   const rg=regrasDoGrupo(g);
-  info.innerHTML='<b>Grupo '+g.grupo+'</b> · '+((g.vagas||0)>0?(g.vagas+' vaga'+(g.vagas>1?'s':'')):'sem vaga')
+  info.innerHTML='<b>Grupo '+g.grupo+'</b> · '+(grupoTemPR(g)?'parcela reduzida':'parcela integral')+' · '+_vagaTxt(g)
     +' · prazo restante '+(g.prazo_restante!=null?g.prazo_restante:'—')
     +' · lance médio '+(_pctTxt(media)||'—')
     +' · embutido até '+rg.embutido+'%';
