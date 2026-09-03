@@ -242,7 +242,7 @@ def _trava_ler() -> dict | None:
         return None
 
 
-def _trava_gravar(login: str, motivo: str, erro: str = ""):
+def _trava_gravar(sb, login: str, motivo: str, erro: str = ""):
     dados = _trava_ler() or {"desde": agora_iso(), "tentativas": 0}
     dados.update(login=login, motivo=motivo, ultimo_erro=str(erro)[:300],
                  tentativas=int(dados.get("tentativas", 0)) + 1,
@@ -252,23 +252,63 @@ def _trava_gravar(login: str, motivo: str, erro: str = ""):
             json.dump(dados, f, ensure_ascii=False, indent=1)
     except Exception as e:
         log(f"⚠️ não gravei {LOGIN_TRAVA}: {e}")
+    # espelha no Supabase pra o ERP mostrar o aviso + botão "liberar"
+    try:
+        if sb is not None:
+            sb.table("robo_status").update({
+                "login_travado": True, "login_travado_desde": dados["desde"],
+                "login_travado_msg": f"{motivo} — {str(erro)[:200]}",
+            }).eq("id", 1).execute()
+    except Exception as e:
+        log(f"⚠️ não marquei a trava no robo_status: {e}")
     log("🔒 LOGIN DO NEWCON TRAVADO — a senha está errada/expirada. "
         "O robô NÃO vai tentar de novo (pra não bloquear a conta). "
-        "Corrija na aba 'Senhas' do CRM e rode:  python worker_consorbens.py --destravar-login")
+        "Libere no ERP (aviso no topo) ou rode:  python worker_consorbens.py --destravar-login")
 
 
-def _trava_limpar() -> bool:
+def _trava_limpar(sb=None) -> bool:
+    removeu = False
     if os.path.exists(LOGIN_TRAVA):
         try:
             os.remove(LOGIN_TRAVA)
-            return True
+            removeu = True
         except Exception as e:
             log(f"⚠️ não removi {LOGIN_TRAVA}: {e}")
-    return False
+    try:
+        if sb is not None:
+            sb.table("robo_status").update(
+                {"login_travado": False, "login_travado_msg": None}).eq("id", 1).execute()
+    except Exception as e:
+        log(f"⚠️ não limpei a trava no robo_status: {e}")
+    return removeu
 
 
 def login_travado() -> bool:
     return os.path.exists(LOGIN_TRAVA)
+
+
+def _sincronizar_trava(sb) -> None:
+    """Alinha a trava local com o robo_status do Supabase, a cada ciclo:
+      - ERP clicou 'liberar o robô' (Supabase=False) e ainda tem arquivo local
+        -> apaga o arquivo (o robô volta a tentar logar).
+      - Supabase diz travado e não tem arquivo local (robô reiniciou) -> recria.
+    """
+    try:
+        r = sb.table("robo_status").select("login_travado").eq("id", 1).execute()
+        remoto = bool((r.data or [{}])[0].get("login_travado"))
+    except Exception:
+        return
+    local = login_travado()
+    if local and not remoto:
+        if _trava_limpar():
+            log("🔓 login LIBERADO pelo ERP — vou tentar entrar no Newcon de novo.")
+    elif remoto and not local:
+        try:
+            with open(LOGIN_TRAVA, "w", encoding="utf-8") as f:
+                json.dump({"desde": agora_iso(), "motivo": "trava vinda do robo_status",
+                           "tentativas": 1}, f, ensure_ascii=False, indent=1)
+        except Exception:
+            pass
 
 
 _MARCA_TRAVA_LOG = [0.0]   # throttle do aviso no loop
@@ -330,10 +370,10 @@ def preparar_newcon(sb: Client, visivel: bool):
         except Exception as e:
             # Falha no login = senha errada/expirada (ou o Newcon pediu troca).
             # NÃO repete: trava e espera o usuário destravar de propósito.
-            _trava_gravar(login_newcon, "senha errada/expirada no login do Newcon", e)
+            _trava_gravar(sb, login_newcon, "senha errada/expirada no login do Newcon", e)
             raise LoginTravado(str(e)) from e
         context.storage_state(path=newcon.STORAGE_STATE)
-        _trava_limpar()   # logou -> se havia trava antiga, some
+        _trava_limpar(sb)   # logou -> se havia trava antiga, some
         return {"pw": pw, "browser": browser, "context": context, "page": page}
     except LoginTravado:
         _fechar_navegador({"browser": browser, "pw": pw})
@@ -783,11 +823,16 @@ def _fazer_agora():
 def main():
     if "--destravar-login" in sys.argv:
         t = _trava_ler()
-        if _trava_limpar():
+        try:
+            sb_d = conectar_supabase()
+        except Exception:
+            sb_d = None
+        if _trava_limpar(sb_d):
             log(f"🔓 login do Newcon DESTRAVADO (estava travado desde "
                 f"{(t or {}).get('desde', '?')}). O robô vai tentar logar de novo no próximo ciclo.")
         else:
-            log("nada a destravar — o login não estava travado.")
+            _trava_limpar(sb_d)   # garante que o robo_status também limpa
+            log("arquivo local não existia — limpei a trava no robo_status por garantia.")
         return
 
     if "--rodar-agora" in sys.argv:
@@ -837,6 +882,7 @@ def main():
     try:
         while True:
             cfg = ler_config()          # config a quente
+            _sincronizar_trava(sb)      # ERP clicou "liberar o robô"? apaga a trava local
             try:
                 enfileirar_mensais_do_mes(sb)
                 cron_tick(cfg)

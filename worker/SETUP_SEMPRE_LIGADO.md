@@ -61,23 +61,25 @@ Newcon com tentativas repetidas (o que travaria o Breno/Uriel também).
 
 Quando isso acontece:
 
-- Ele cria `worker\robo_login_travado.json` (fica lá **mesmo se o robô
-  reiniciar** — ele lembra que a última senha estava errada).
-- **Lance / boleto / coleta ficam parados** (as tarefas esperam na fila).
-- **Gmail Yamaha / Gmail Itaú / Anglo continuam rodando** (não usam o Newcon).
+- Ele cria `worker\robo_login_travado.json` (persiste mesmo reiniciando) **e**
+  marca `robo_status.login_travado = true` no Supabase.
+- No **ERP aparece um aviso vermelho no topo de toda tela** + um *toast*
+  ("🔒 O robô não está entrando no Newcon…") + o botão
+  **"✅ Já atualizei a senha — liberar o robô"**.
+- **Lance / boleto / coleta ficam parados**; Gmail/Anglo seguem.
 - O `robo.log` repete o aviso a cada ~15 min.
 
-**Pra voltar ao normal** (só quando você tiver CERTEZA que a senha nova está
-certa):
+**Pra voltar ao normal** (só quando a senha nova estiver CERTA):
 
 1. Atualize a senha do Newcon na aba **Senhas** do CRM (empresa `YAMAHA NEWCON`).
-2. Rode:
-   ```bash
-   python worker_consorbens.py --destravar-login
-   ```
-   (pode rodar numa janela separada, com o robô ligado — ele pega no próximo ciclo)
+2. **No ERP, clique em "✅ Já atualizei a senha — liberar o robô"**
+   (o robô pega no próximo ciclo, ~30 s).
+   *Alternativa por terminal:* `python worker_consorbens.py --destravar-login`
 
 O robô **nunca** destrava sozinho — é sempre você que dá o OK.
+
+> Precisa da **migração 23** (`migracoes/23_robo_status_login_travado.sql`)
+> rodada no Supabase do ERP pra o aviso/botão funcionarem.
 
 ---
 

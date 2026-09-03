@@ -177,6 +177,23 @@ def _status_robo(sb):
         return False
 
 
+def _trava_login_robo(sb):
+    """(travado, desde_texto) — o robô marca isso quando erra a senha do Newcon."""
+    try:
+        r = (sb.table("robo_status")
+             .select("login_travado,login_travado_desde").eq("id", 1).execute())
+        row = (r.data or [{}])[0]
+    except Exception:
+        return (False, "")
+    if not row.get("login_travado"):
+        return (False, "")
+    try:
+        desde = pd.to_datetime(row.get("login_travado_desde")).strftime("%d/%m %H:%M")
+    except Exception:
+        desde = str(row.get("login_travado_desde") or "")
+    return (True, desde)
+
+
 _online = _status_robo(supabase)
 _cor = "#22c55e" if _online else "#ef4444"          # verde / vermelho
 _titulo = "Robô ligado" if _online else "Robô desligado"
@@ -362,6 +379,38 @@ if not is_logado:
 
 # --- BARRA SUPERIOR: SELETOR DE COR DO SISTEMA ---
 render_seletor_tema()
+
+# --- AVISO: robô não está entrando no Newcon (senha errada/expirada) ---
+_trava_on, _trava_desde = _trava_login_robo(supabase)
+if _trava_on:
+    if not st.session_state.get("_trava_toast"):
+        st.toast("🔒 O robô não está entrando no Newcon — senha errada/expirada!", icon="⚠️")
+        st.session_state["_trava_toast"] = True
+    st.error(
+        f"🔒 **O robô parou de entrar no Newcon** (desde {_trava_desde}). A senha do Newcon "
+        f"está **errada ou expirada** — ele fez 1 tentativa e travou de propósito, pra não "
+        f"bloquear a conta.\n\n"
+        f"**Como resolver:** abra a aba **Senhas**, atualize a senha da empresa "
+        f"*YAMAHA NEWCON*, e clique no botão abaixo. Enquanto isso, **lance / boleto / coletas "
+        f"ficam parados** (o resto do robô — Gmail, Anglo — segue normal)."
+    )
+    _bt1, _bt2 = st.columns([1, 2])
+    with _bt1:
+        if st.button("✅ Já atualizei a senha — liberar o robô", type="primary",
+                     use_container_width=True, key="btn_liberar_robo"):
+            try:
+                supabase.table("robo_status").update({
+                    "login_travado": False, "login_travado_msg": None,
+                    "login_liberado_em": datetime.now(timezone.utc).isoformat(),
+                }).eq("id", 1).execute()
+                st.session_state.pop("_trava_toast", None)
+                st.success("Liberado! O robô vai tentar entrar de novo no próximo ciclo (~30s).")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Não consegui liberar agora: {e}")
+    st.divider()
+else:
+    st.session_state.pop("_trava_toast", None)
 
 # --- ROTEAMENTO PARA OS MÓDULOS ---
 if menu_selecionado == "Dashboard":
