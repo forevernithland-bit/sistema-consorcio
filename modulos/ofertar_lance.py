@@ -30,6 +30,21 @@ def _regra_lance(produto):
     return LANCE_FIXO_DEFAULTS.get(normalizar_produto(produto), DEFAULT_LANCE)
 
 
+def _nome_curto(nome):
+    """Só 1º nome + último sobrenome, pra não ocupar tanta largura na tabela.
+    'DAVIDSON VINICIU LACERDA DA SILVA' -> 'DAVIDSON SILVA'. Tira apelido entre
+    parênteses ('... (Nay)' -> '...') e ignora conectivos (da, de, do…) no fim."""
+    limpo = re.sub(r"\s*\([^)]*\)", "", str(nome or "")).strip()
+    partes = [p for p in limpo.split() if p]
+    if len(partes) <= 2:
+        return " ".join(partes)
+    conectivos = {"da", "de", "do", "dos", "das", "e"}
+    sobren = partes[-1]
+    if sobren.lower() in conectivos and len(partes) >= 3:
+        sobren = partes[-2]
+    return f"{partes[0]} {sobren}"
+
+
 def _inicio_mes_atual():
     """Primeiro dia do mês atual (ex: '2026-08-01') — a conferência é mensal."""
     hoje = datetime.today()
@@ -167,15 +182,15 @@ def render_ofertar_lance(supabase, df_vendas_global):
         linhas.append({
             "venda_id": vid,
             "Selecionar": False,
-            "Cliente": r.get('Nome do cliente', ''),
-            "Vendedor": r.get('VENDEDOR', ''),
-            "Produto": r.get('PRODUTO', ''),
+            "Cliente": _nome_curto(r.get('Nome do cliente', '')),
+            "Situação": _rotulo_situacao(pedido),
             "Grupo/Cota": f"{r.get('GRUPO','')}/{r.get('COTA','')}",
+            "Produto": r.get('PRODUTO', ''),
+            "Vendedor": r.get('VENDEDOR', ''),
             "Valor": formatar_brl_puro(r.get('Valor_Numerico', 0)),
             "Lance Fixo (%)": lance,
             "Embutido (%)": embutido,
             "Próprios (%)": max(0.0, lance - embutido),
-            "Situação": _rotulo_situacao(pedido),
             "_na_fila": na_fila,
         })
     df_edit = pd.DataFrame(linhas)
@@ -198,15 +213,15 @@ def render_ofertar_lance(supabase, df_vendas_global):
         "venda_id": None,
         "_na_fila": None,
         "Selecionar": st.column_config.CheckboxColumn("✔️", help="Marque para ofertar o lance"),
-        "Cliente": st.column_config.TextColumn("Cliente", disabled=True),
-        "Vendedor": st.column_config.TextColumn("Vendedor", disabled=True),
-        "Produto": st.column_config.TextColumn("Produto", disabled=True),
-        "Grupo/Cota": st.column_config.TextColumn("Grupo/Cota", disabled=True),
-        "Valor": st.column_config.TextColumn("Valor da Carta", disabled=True),
+        "Cliente": st.column_config.TextColumn("Cliente", disabled=True, width="small"),
+        "Situação": st.column_config.TextColumn("Situação", disabled=True, width="medium"),
+        "Grupo/Cota": st.column_config.TextColumn("Grupo/Cota", disabled=True, width="small"),
+        "Produto": st.column_config.TextColumn("Produto", disabled=True, width="small"),
+        "Vendedor": st.column_config.TextColumn("Vendedor", disabled=True, width="small"),
+        "Valor": st.column_config.TextColumn("Valor da Carta", disabled=True, width="small"),
         "Lance Fixo (%)": st.column_config.NumberColumn("Lance Fixo (%)", min_value=0.0, max_value=100.0, step=0.5, format="%.2f%%", help="% total do lance fixo"),
         "Embutido (%)": st.column_config.NumberColumn("Embutido (%)", min_value=0.0, max_value=100.0, step=0.5, format="%.2f%%", help="% que sai do próprio crédito"),
         "Próprios (%)": st.column_config.NumberColumn("Próprios (%)", format="%.2f%%", help="Recursos próprios = Lance Fixo − Embutido (calculado)"),
-        "Situação": st.column_config.TextColumn("Situação", disabled=True),
     }
 
     # A key muda junto com "marcar todos" para o editor refletir a marcação em massa
@@ -344,6 +359,8 @@ def _painel_status(supabase, is_master):
         return
 
     df_f = pd.DataFrame(dados)
+    if 'cliente' in df_f.columns:
+        df_f['cliente'] = df_f['cliente'].apply(_nome_curto)
     df_f['Situação'] = df_f.apply(lambda x: _rotulo_situacao(x.to_dict()), axis=1)
 
     def _dt(v):
@@ -387,7 +404,16 @@ def _painel_status(supabase, is_master):
     if df_show.empty:
         st.info(f"Nenhum lance encontrado para “{busca_h}”.")
         return
-    st.dataframe(df_show, use_container_width=True, hide_index=True)
+    st.dataframe(
+        df_show, use_container_width=True, hide_index=True,
+        column_config={
+            "Cliente": st.column_config.TextColumn("Cliente", width="small"),
+            "Grupo/Cota": st.column_config.TextColumn("Grupo/Cota", width="small"),
+            "Tipo": st.column_config.TextColumn("Tipo", width="small"),
+            "Situação": st.column_config.TextColumn("Situação", width="medium"),
+            "Mensagem": st.column_config.TextColumn("Mensagem", width="large"),
+        },
+    )
 
     st.caption(
         "ℹ️ Os lances só são efetivados quando o **robô do escritório** está ligado. "
