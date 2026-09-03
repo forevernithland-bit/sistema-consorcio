@@ -44,16 +44,21 @@ for key, default in [('usuario_logado', None), ('perfil_logado', None), ('nome_v
 is_logado = st.session_state['usuario_logado'] is not None
 is_master = (st.session_state.get('perfil_logado') == "Master") or (st.session_state.get('usuario_logado') in ['breno', 'uriel'])
 
-# Deep-link p/ atalho na área de trabalho: ...?pg=robo abre direto o Painel do Robô.
+# Deep-link: ...?pg=robo (atalho na área de trabalho OU clique no "SERVER" da
+# barra lateral) abre o Painel do Robô. Depois de aplicar, limpa o parâmetro
+# para que um novo clique no "SERVER" torne a acionar.
 _PG_MAP = {"robo": "🤖 Robô"}
 try:
     _pg = (st.query_params.get("pg") or "").lower()
 except Exception:
     _pg = ""
-if _pg in _PG_MAP and not st.session_state.get("_pg_aplicado"):
+if _pg in _PG_MAP:
     st.session_state['menu_lateral'] = _PG_MAP[_pg]
     st.session_state['last_radio_selection'] = None
-    st.session_state['_pg_aplicado'] = True
+    try:
+        st.query_params.clear()
+    except Exception:
+        pass
 
 # ==========================================
 # 2. INICIAR BANCO DE DADOS
@@ -216,12 +221,13 @@ st.sidebar.markdown(
       [data-testid="stSidebarUserContent"] {{ padding-top: 0.6rem !important; }}
       section[data-testid="stSidebar"] > div:first-child {{ padding-top: 0.6rem !important; }}
     </style>
-    <div style="display:flex;align-items:center;justify-content:flex-start;gap:7px;
-                margin:-6px 0 4px 2px;" title="{_titulo}">
+    <a href="?pg=robo" target="_self" title="{_titulo} — abrir Painel do Robô"
+       style="text-decoration:none;display:flex;align-items:center;justify-content:flex-start;
+              gap:7px;margin:-6px 0 4px 2px;cursor:pointer;">
         <span style="width:11px;height:11px;border-radius:50%;background:{_cor};
                      box-shadow:0 0 6px {_cor};display:inline-block;"></span>
         <span style="font-size:12px;font-weight:700;letter-spacing:1px;color:{_cor};">SERVER</span>
-    </div>
+    </a>
     """,
     unsafe_allow_html=True,
 )
@@ -255,7 +261,7 @@ else:
     # Menu principal. Senhas e Base de Conhecimento agora ficam DENTRO de
     # "Configurações de Sistema" (abas). Assembleias está oculto por enquanto.
     if is_master:
-        opcoes_principais = ["Dashboard", "Nova Venda", "Ofertar Lance", "Emissão de Boletos", "Financeiro", "Baixar Parcelas", "Relatórios", "Mídias", "🤖 Robô", "Configurações de Sistema"]
+        opcoes_principais = ["Dashboard", "Nova Venda", "Ofertar Lance", "Emissão de Boletos", "Financeiro", "Baixar Parcelas", "Relatórios", "Mídias", "Configurações de Sistema"]
     else:
         opcoes_principais = ["Dashboard", "Nova Venda", "Ofertar Lance", "Emissão de Boletos", "Relatórios", "Mídias"]
         
@@ -444,7 +450,11 @@ elif menu_selecionado == "Mídias":
 elif menu_selecionado == "Baixar Parcelas":
     render_baixas(supabase, df_vendas_global, df_admin, cfg, status_dict, lista_admin_bd)
 elif menu_selecionado == "🤖 Robô":
-    render_robo_painel(supabase)
+    if is_master:
+        render_robo_painel(supabase)
+    else:
+        st.session_state['menu_lateral'] = "Dashboard"
+        st.rerun()
 elif menu_selecionado == "Configurações de Sistema":
     # Senhas e Base de Conhecimento agora vivem aqui dentro, como abas.
     tab_sis, tab_senhas, tab_ia = st.tabs(["⚙️ Sistema", "🔐 Senhas", "🧠 Base de Conhecimento"])
