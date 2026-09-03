@@ -53,17 +53,55 @@ real.
 
 ---
 
-## 3. Subir sozinho quando o PC liga
+## 2b. Trava de segurança do login do Newcon (importante)
+
+Se o robô tentar logar no Newcon e a **senha estiver errada/expirada**, ele
+**para de tentar na hora** — só 1 tentativa. Isso evita bloquear a conta do
+Newcon com tentativas repetidas (o que travaria o Breno/Uriel também).
+
+Quando isso acontece:
+
+- Ele cria `worker\robo_login_travado.json` (fica lá **mesmo se o robô
+  reiniciar** — ele lembra que a última senha estava errada).
+- **Lance / boleto / coleta ficam parados** (as tarefas esperam na fila).
+- **Gmail Yamaha / Gmail Itaú / Anglo continuam rodando** (não usam o Newcon).
+- O `robo.log` repete o aviso a cada ~15 min.
+
+**Pra voltar ao normal** (só quando você tiver CERTEZA que a senha nova está
+certa):
+
+1. Atualize a senha do Newcon na aba **Senhas** do CRM (empresa `YAMAHA NEWCON`).
+2. Rode:
+   ```bash
+   python worker_consorbens.py --destravar-login
+   ```
+   (pode rodar numa janela separada, com o robô ligado — ele pega no próximo ciclo)
+
+O robô **nunca** destrava sozinho — é sempre você que dá o OK.
+
+---
+
+## 3. Subir sozinho quando o PC liga — SEM JANELA
+
+**Jeito fácil:** botão direito em **`INSTALAR_ROBO.bat`** → *Executar como
+administrador*. Ele cria o atalho de inicialização **e** a tarefa do watchdog
+de uma vez. Pronto — pula pro passo 5.
+
+**Na mão** (se o `.bat` não rolar):
 
 1. `Win+R` → `shell:startup` → Enter (abre a pasta de Inicializar).
 2. Crie ali um **atalho** para
-   `G:\Meu Drive\CLODE\ERP_CONSORBENS\worker\iniciar_robo.bat`.
-   (Botão direito na pasta → Novo → Atalho → aponte pro `.bat`.)
-3. (Opcional, se o PC reinicia sozinho e ninguém loga) **logon automático do
+   `G:\Meu Drive\CLODE\ERP_CONSORBENS\worker\iniciar_robo_oculto.vbs`
+   (o `.vbs`, não o `.bat`). Ele sobe o robô **sem nenhuma janela** — não tem
+   o que fechar sem querer. Os logs continuam em `worker\logs\robo.log`.
+3. **Pra espiar o robô** quando bater a ansiedade: dá 2 cliques em
+   `worker\ver_robo.bat`. Abre uma janelinha azul que mostra o log **ao vivo**;
+   pode fechar essa janela à vontade que **não para o robô** (é só leitura).
+5. (Opcional, se o PC reinicia sozinho e ninguém loga) **logon automático do
    Windows**: `Win+R` → `netplwiz` → desmarque "Os usuários precisam digitar
    um nome…" → confirme com a senha. (Ou `AutoAdminLogon=1` no registro em
    `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon`.)
-4. **Regra de ouro:** ao sair, **bloqueie a tela** (`Win+L`) — **não faça
+6. **Regra de ouro:** ao sair, **bloqueie a tela** (`Win+L`) — **não faça
    logoff**. Logoff derruba o navegador headful e o robô para.
 
 ---
@@ -104,10 +142,40 @@ O robô único já faz o que eles faziam (timers no `robo_config.toml`).
 
 **Inicializar** (`shell:startup`): apague os atalhos `Atualizar-Site.lnk` /
 `ATUALIZAR_TUDO_AGORA` / `iniciar_robo - Atalho.lnk` **antigos** — fica só o
-atalho novo do `iniciar_robo.bat`.
+atalho novo (`Robo Consorbens.lnk`, criado pelo `INSTALAR_ROBO.bat`).
 
-As pastas `credentials.json` / `token.pickle` / `config.json` **ficam onde
-estão** — o robô único aponta pra elas (`robo_config.toml` → `[caminhos]`).
+### ⚠️ NÃO apague as pastas dos robôs antigos
+
+O robô único **importa o código deles**. Devem continuar existindo:
+- `CLODE\ATUALIZA_YAMAHA_TABELAS\scripts\` (com `download_attachments.py`,
+  `config.py`, `credentials.json`, `token.pickle`)
+- `CLODE\GUIA_DE_OPORTUNIDADES_ITAU\scripts\` (idem)
+- `CLODE\IMPORTA_ANGLO_CONSORCIO\` (`atualizar_cartas.py` + a credencial em
+  `%LOCALAPPDATA%\Consorbens\config.json`)
+
+O que dá pra apagar sem dó: os **atalhos do desktop** ("Atualizar-Site",
+"ATUALIZAR_...") e os `.bat` de execução manual (`ATUALIZAR_*_AGORA.bat`) —
+são só lançadores. Se quiser manter 1 pra debug, mantenha; o robô não usa.
+
+---
+
+## Comandos úteis (rodar numa janela à parte, com o robô ligado)
+
+```bash
+# ver o log ao vivo (ou 2 cliques em ver_robo.bat)
+powershell Get-Content logs\robo.log -Wait -Tail 40
+
+# forçar um timer agora (Gmail é read-only, seguro)
+python worker_consorbens.py --rodar-agora gmail_itau
+python worker_consorbens.py --rodar-agora anglo --dry
+
+# FURAR A FILA: pausa a coleta atual (salva progresso), roda isto primeiro, retoma
+python worker_consorbens.py --fazer-agora COLETA_ASSEMBLEIAS
+python worker_consorbens.py --fazer-agora RELATORIO_COMISSAO --payload "{\"mes\":\"2026-08\"}"
+
+# senha do Newcon travou? corrija na aba Senhas do CRM e:
+python worker_consorbens.py --destravar-login
+```
 
 ---
 
@@ -117,9 +185,13 @@ estão** — o robô único aponta pra elas (`robo_config.toml` → `[caminhos]`
 |---|---|
 | Supervisor | `worker/worker_consorbens.py` |
 | Config (a quente) | `worker/robo_config.toml` |
+| Subir sem janela | `worker/iniciar_robo_oculto.vbs` (atalho no startup) |
+| Ver o log ao vivo | `worker/ver_robo.bat` (fechar não para o robô) |
+| Instalar startup+watchdog | `worker/INSTALAR_ROBO.bat` (como admin) |
 | Log | `worker/logs/robo.log` · console: `worker/logs/console.log` |
 | Estado do cron | `worker/robo_cron_estado.json` |
 | Estado da coleta | `worker/robo_yamaha_progresso.json` (já existia) |
+| Trava de login do Newcon | `worker/robo_login_travado.json` (persiste; some com `--destravar-login`) |
 | PID | `worker/robo.pid` |
 | Watchdog | `worker/watchdog_robo.py` → `worker/logs/watchdog.log` |
 | Migração | `migracoes/22_fila_automacao_prioridade.sql` (rodar no Supabase do ERP) |

@@ -22,6 +22,7 @@ _AQUI = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(_AQUI, ".env"))
 
 PID_FILE = os.path.join(_AQUI, "robo.pid")
+VBS = os.path.join(_AQUI, "iniciar_robo_oculto.vbs")   # sobe SEM janela
 BAT = os.path.join(_AQUI, "iniciar_robo.bat")
 LOG = os.path.join(_AQUI, "logs", "watchdog.log")
 LIMITE_SEG = int(os.getenv("WATCHDOG_LIMITE_SEG", "180"))
@@ -80,10 +81,15 @@ def _matar(pid: int):
 
 
 def _subir():
+    # Prefere o .vbs (sobe SEM janela). Se não existir, cai pro .bat minimizado.
     try:
-        subprocess.Popen(["cmd", "/c", "start", "", "/min", BAT],
-                         cwd=_AQUI, close_fds=True)
-        log("iniciei o iniciar_robo.bat")
+        if os.path.exists(VBS):
+            subprocess.Popen(["wscript.exe", VBS], cwd=_AQUI, close_fds=True)
+            log("iniciei o robô oculto (iniciar_robo_oculto.vbs)")
+        else:
+            subprocess.Popen(["cmd", "/c", "start", "", "/min", BAT],
+                             cwd=_AQUI, close_fds=True)
+            log("iniciei o iniciar_robo.bat (minimizado)")
     except Exception as e:
         log(f"falha ao subir o robô: {e}")
 

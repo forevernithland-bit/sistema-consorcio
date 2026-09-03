@@ -6,12 +6,13 @@
 [geral]
 # Começa em simulação — o Newcon NÃO é aberto, LANCE/BOLETO respondem "SIMULAÇÃO".
 # Vire para false só depois de validar o circuito no PC do escritório.
-modo_simulacao    = true
+modo_simulacao    = false
 # false = janela do Chrome minimizada ("segundo plano", não invisível).
-navegador_visivel = true
+navegador_visivel = false
 # Pausa do loop quando não há nada a fazer.
 intervalo_seg     = 25
-# Teto de tempo por tarefa (minutos) — passou disso, aborta com ERRO_TECNICO.
+# Teto de tempo por tarefa (minutos) — RESERVADO p/ uso futuro. Hoje a rede de
+# segurança de tarefa pendurada é o watchdog_robo.py (reage ao heartbeat velho).
 [geral.timeout_tarefa_min]
 RELATORIO_COMISSAO = 30
 COLETA_GRUPOS      = 20
@@ -21,22 +22,24 @@ PLANEJAR_SIMULACAO = 15
 
 # ------------------------------------------------------------------------
 # TIMERS — tarefas de API (sem navegador). O supervisor dispara sozinho.
-# "quando" = "<dia> <hh:mm>"   dia ∈ seg ter qua qui sex sab dom | diario
-# Cada tarefa dispara no máximo 1x por dia (estado em robo_cron_estado.json).
+# "quando" = uma string OU uma lista de "<dias> HH:MM".
+#   <dias> = 'diario'  ou  dias separados por vírgula: seg ter qua qui sex sab dom
+# Dispara 1x por horário programado; se o robô estava desligado na hora,
+# dispara assim que subir. Estado em robo_cron_estado.json.
 # ------------------------------------------------------------------------
 [timers.gmail_yamaha]
 ativo  = true
-quando = "qua 12:00"
+quando = ["seg 12:00", "qua 12:00", "sex 12:00"]
 # Depois de baixar as tabelas Yamaha, enfileira estas tarefas (leem os PDFs novos):
 encadear = ["COLETA_TABELAS"]
 
 [timers.gmail_itau]
 ativo  = true
-quando = "ter 12:00"
+quando = ["seg 12:00", "qua 12:00", "sex 12:00"]
 
 [timers.anglo]
 ativo  = true
-quando = "diario 23:00"
+quando = ["diario 07:00", "diario 12:00", "diario 15:00", "diario 20:00"]
 
 # ------------------------------------------------------------------------
 # COLETA — tarefas que USAM o Newcon. O supervisor enfileira na

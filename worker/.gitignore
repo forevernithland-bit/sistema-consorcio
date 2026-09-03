@@ -5,3 +5,11 @@ roteiro_newcon.py
 comprovantes/
 __pycache__/
 *.pyc
+
+# Robô único — arquivos de ESTADO (não versionar; robo_config.toml FICA no repo)
+robo.pid
+robo_cron_estado.json
+robo_login_travado.json
+robo_yamaha_progresso.json
+tabelas_yamaha_estado.json
+logs/

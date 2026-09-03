@@ -28,7 +28,7 @@ import json
 import threading
 import traceback
 import tomllib
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from dotenv import load_dotenv
 from supabase import create_client, Client
@@ -141,18 +141,38 @@ def marcar(sb: Client, pid, **campos):
     sb.table("fila_automacao").update(campos).eq("id", pid).execute()
 
 
+# fallback fixo — vale mesmo se o robo_config.toml não parsear.
+_PRIO_FIXA = {"LANCE": 10, "BOLETO": 10, "PLANEJAR_SIMULACAO": 40,
+              "COLETA_GRUPOS": 50, "COLETA_ASSEMBLEIAS": 50,
+              "COLETA_TABELAS": 50, "RELATORIO_COMISSAO": 60}
+
+
 def _prio_pedido(pedido: dict, cfg: dict) -> int:
     tipo = (pedido.get("tipo") or "").upper()
     p = pedido.get("prioridade")
     if p is not None:
-        return int(p)
-    return int(cfg.get("fila", {}).get("prioridade", {}).get(tipo, 50))
+        try:
+            return int(p)
+        except (TypeError, ValueError):
+            pass
+    padrao = _PRIO_FIXA.get(tipo, 50)
+    try:
+        return int(cfg.get("fila", {}).get("prioridade", {}).get(tipo, padrao))
+    except (TypeError, ValueError):
+        return padrao
 
 
 def pegar_proximo_pedido(sb: Client, cfg: dict):
     """Mais urgente primeiro. LANCE/BOLETO entram sem `prioridade` do ERP —
-    o coalesce no Python garante que fiquem à frente das coletas."""
+    o coalesce no Python garante que fiquem à frente das coletas.
+    Em modo_simulacao, ignora as tarefas que só rodam com Newcon real
+    (COLETA_GRUPOS/ASSEMBLEIAS, RELATORIO_COMISSAO) — elas ficam na fila
+    esperando o robô virar pra Newcon real."""
     tipos = list(HANDLERS.keys())
+    if bool(cfg.get("geral", {}).get("modo_simulacao", True)) or login_travado():
+        # em simulação OU com o login do Newcon travado, não pega tarefa que
+        # precise do Newcon — elas ficam PENDENTE esperando.
+        tipos = [t for t in tipos if t not in PRECISA_NEWCON and t != "RELATORIO_COMISSAO"]
     res = (sb.table("fila_automacao").select("*")
            .eq("status", "PENDENTE").in_("tipo", tipos)
            .order("criado_em", desc=False).limit(50).execute())
@@ -164,13 +184,17 @@ def pegar_proximo_pedido(sb: Client, cfg: dict):
 
 
 def deve_ceder(sb: Client, cfg: dict, prioridade_atual: int) -> bool:
-    """True se há um PENDENTE mais urgente (nº de prioridade menor) esperando."""
+    """True se há QUALQUER PENDENTE mais urgente (nº de prioridade menor) na
+    fila — não só LANCE/BOLETO. Assim dá pra 'furar a fila' de propósito
+    enfileirando uma tarefa com prioridade baixa (ex.: 1) e a coleta em
+    andamento pausa (salvando o progresso), faz a urgente e retoma depois."""
     try:
         res = (sb.table("fila_automacao").select("tipo,prioridade,criado_em")
-               .eq("status", "PENDENTE").in_("tipo", ["LANCE", "BOLETO"])
-               .limit(1).execute())
-        if res.data:
-            return _prio_pedido(res.data[0], cfg) < prioridade_atual
+               .eq("status", "PENDENTE").in_("tipo", list(HANDLERS.keys()))
+               .order("criado_em", desc=False).limit(50).execute())
+        for r in (res.data or []):
+            if _prio_pedido(r, cfg) < prioridade_atual:
+                return True
     except Exception:
         pass
     return False
@@ -197,6 +221,59 @@ def reenfileirar_interrompidos(sb: Client):
 
 
 # --------------------------------------------------------- Newcon (sessão)
+# Trava de segurança do LOGIN: se uma tentativa de login falhar (senha
+# errada/expirada), o robô NÃO tenta de novo — para não bloquear a conta do
+# Newcon com tentativas repetidas. Fica travado (só isso; Gmail/Anglo seguem)
+# até o usuário: 1) corrigir a senha na aba 'Senhas' do CRM e 2) rodar
+#   python worker_consorbens.py --destravar-login
+# O arquivo abaixo PERSISTE entre reinícios do robô.
+LOGIN_TRAVA = os.path.join(_AQUI, "robo_login_travado.json")
+
+
+class LoginTravado(Exception):
+    pass
+
+
+def _trava_ler() -> dict | None:
+    try:
+        with open(LOGIN_TRAVA, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def _trava_gravar(login: str, motivo: str, erro: str = ""):
+    dados = _trava_ler() or {"desde": agora_iso(), "tentativas": 0}
+    dados.update(login=login, motivo=motivo, ultimo_erro=str(erro)[:300],
+                 tentativas=int(dados.get("tentativas", 0)) + 1,
+                 atualizado_em=agora_iso())
+    try:
+        with open(LOGIN_TRAVA, "w", encoding="utf-8") as f:
+            json.dump(dados, f, ensure_ascii=False, indent=1)
+    except Exception as e:
+        log(f"⚠️ não gravei {LOGIN_TRAVA}: {e}")
+    log("🔒 LOGIN DO NEWCON TRAVADO — a senha está errada/expirada. "
+        "O robô NÃO vai tentar de novo (pra não bloquear a conta). "
+        "Corrija na aba 'Senhas' do CRM e rode:  python worker_consorbens.py --destravar-login")
+
+
+def _trava_limpar() -> bool:
+    if os.path.exists(LOGIN_TRAVA):
+        try:
+            os.remove(LOGIN_TRAVA)
+            return True
+        except Exception as e:
+            log(f"⚠️ não removi {LOGIN_TRAVA}: {e}")
+    return False
+
+
+def login_travado() -> bool:
+    return os.path.exists(LOGIN_TRAVA)
+
+
+_MARCA_TRAVA_LOG = [0.0]   # throttle do aviso no loop
+
+
 def buscar_credenciais_newcon(sb: Client):
     try:
         res = (sb.table("senhas_sistema").select("login,senha,empresa")
@@ -216,31 +293,54 @@ def buscar_credenciais_newcon(sb: Client):
 def preparar_newcon(sb: Client, visivel: bool):
     from playwright.sync_api import sync_playwright
     import newcon
+
+    # trava de segurança: enquanto travado, nem tenta abrir o Newcon.
+    if login_travado():
+        t = _trava_ler() or {}
+        raise LoginTravado(
+            f"login travado desde {t.get('desde', '?')} ({t.get('tentativas', '?')} tentativa(s)). "
+            "Corrija a senha e rode: python worker_consorbens.py --destravar-login")
+
     login_newcon, senha_newcon = buscar_credenciais_newcon(sb)
     pw = sync_playwright().start()
     browser = pw.chromium.launch(headless=not visivel)
     ctx_kwargs = {"accept_downloads": True,
                   "permissions": ["clipboard-read", "clipboard-write"]}
-    if os.path.exists(newcon.STORAGE_STATE):
-        context = browser.new_context(storage_state=newcon.STORAGE_STATE, **ctx_kwargs)
-    else:
-        context = browser.new_context(**ctx_kwargs)
-    page = context.new_page()
-    page.set_default_timeout(TIMEOUT_ELEMENTO * 1000)
-    page.set_default_navigation_timeout(TIMEOUT_ELEMENTO * 1000)
-    page.on("dialog", lambda d: d.dismiss())
-    page.goto(NEWCON_URL)
     try:
-        logado = newcon.esta_logado(page)
-    except NotImplementedError:
-        logado = False
-    if not logado:
-        log("Newcon: sessão inválida — logando…")
-        newcon.fazer_login(page, context, login_newcon, senha_newcon)
+        if os.path.exists(newcon.STORAGE_STATE):
+            context = browser.new_context(storage_state=newcon.STORAGE_STATE, **ctx_kwargs)
+        else:
+            context = browser.new_context(**ctx_kwargs)
+        page = context.new_page()
+        page.set_default_timeout(TIMEOUT_ELEMENTO * 1000)
+        page.set_default_navigation_timeout(TIMEOUT_ELEMENTO * 1000)
+        page.on("dialog", lambda d: d.dismiss())
+        page.goto(NEWCON_URL)
+        try:
+            logado = newcon.esta_logado(page)
+        except NotImplementedError:
+            logado = False
+        if logado:
+            log("Newcon: sessão salva reutilizada. 👍")
+            return {"pw": pw, "browser": browser, "context": context, "page": page}
+
+        log("Newcon: sessão inválida — logando (1 tentativa só)…")
+        try:
+            newcon.fazer_login(page, context, login_newcon, senha_newcon)
+        except Exception as e:
+            # Falha no login = senha errada/expirada (ou o Newcon pediu troca).
+            # NÃO repete: trava e espera o usuário destravar de propósito.
+            _trava_gravar(login_newcon, "senha errada/expirada no login do Newcon", e)
+            raise LoginTravado(str(e)) from e
         context.storage_state(path=newcon.STORAGE_STATE)
-    else:
-        log("Newcon: sessão salva reutilizada. 👍")
-    return {"pw": pw, "browser": browser, "context": context, "page": page}
+        _trava_limpar()   # logou -> se havia trava antiga, some
+        return {"pw": pw, "browser": browser, "context": context, "page": page}
+    except LoginTravado:
+        _fechar_navegador({"browser": browser, "pw": pw})
+        raise
+    except Exception:
+        _fechar_navegador({"browser": browser, "pw": pw})
+        raise
 
 
 def _fechar_navegador(ctx):
@@ -415,9 +515,9 @@ HANDLERS = {
     "COLETA_TABELAS": h_coleta_tabelas,
     "PLANEJAR_SIMULACAO": h_stub,
 }
-# handlers que precisam da sessão Newcon aberta
-PRECISA_NEWCON = {"LANCE", "BOLETO", "RELATORIO_COMISSAO",
-                  "COLETA_GRUPOS", "COLETA_ASSEMBLEIAS"}
+# handlers que o supervisor abre a sessão Newcon ANTES de chamar.
+# RELATORIO_COMISSAO fica de fora: ele abre e fecha o SEU próprio navegador.
+PRECISA_NEWCON = {"LANCE", "BOLETO", "COLETA_GRUPOS", "COLETA_ASSEMBLEIAS"}
 
 _reabrir_holder = {"fn": None}   # o loop principal injeta a função de reabrir o Newcon
 _newcon_ref = {"c": None}        # referência viva ao contexto Newcon (o loop mantém)
@@ -440,27 +540,45 @@ def _cron_gravar(d):
         log(f"⚠️ não gravei {CRON_ESTADO}: {e}")
 
 
-def _venceu(quando: str, ultimo_iso: str) -> bool:
-    """`quando` = '<dia> HH:MM'. True se já passou da hora hoje e ainda não rodou hoje."""
-    try:
-        dia_txt, hhmm = quando.split()
-        hh, mm = map(int, hhmm.split(":"))
-    except Exception:
-        return False
+def _slots_do_dia(quando, ref: "datetime") -> list:
+    """Datetimes de UM dia (`ref`) em que a tarefa deveria disparar.
+    `quando` = string OU lista de "<dias> HH:MM"; <dias> = 'diario' ou dias
+    por vírgula ('seg,qua,sex'). Entrada malformada é ignorada (não derruba)."""
+    entradas = quando if isinstance(quando, (list, tuple)) else [quando]
+    out = []
+    for e in entradas:
+        try:
+            dia_txt, hhmm = str(e).split()
+            hh, mm = map(int, hhmm.split(":"))
+            if not (0 <= hh <= 23 and 0 <= mm <= 59):
+                raise ValueError(f"hora inválida em {e!r}")
+            dias = [d.strip() for d in dia_txt.split(",")]
+            if "diario" not in dias and not any(_DIAS.get(d) == ref.weekday() for d in dias):
+                continue
+            out.append(ref.replace(hour=hh, minute=mm, second=0, microsecond=0))
+        except Exception:
+            continue
+    return sorted(out)
+
+
+def _venceu(quando, ultimo_iso: str, dias_atras: int = 3) -> bool:
+    """True se existe um horário programado que já passou e é mais recente que
+    a última execução. Olha HOJE e até `dias_atras` dias atrás — assim, se o
+    PC estava desligado na janela (ex.: segunda 12:00) e só ligou dias depois,
+    a rodada perdida ainda é recuperada."""
     agora = datetime.now()
-    if dia_txt != "diario":
-        if agora.weekday() != _DIAS.get(dia_txt, -1):
-            return False
-    if (agora.hour, agora.minute) < (hh, mm):
-        return False
+    ult = None
     if ultimo_iso:
         try:
             ult = datetime.fromisoformat(ultimo_iso)
-            if ult.date() == agora.date():
-                return False
         except Exception:
-            pass
-    return True
+            ult = None
+    for d in range(dias_atras, -1, -1):
+        ref = agora - timedelta(days=d)
+        for slot in _slots_do_dia(quando, ref):
+            if agora >= slot and (ult is None or ult < slot):
+                return True
+    return False
 
 
 def _rodar_timer(nome: str, cfg: dict, dry: bool = False) -> dict:
@@ -514,11 +632,15 @@ def cron_tick(cfg: dict):
             log(f"🗓️  timer '{nome}' venceu — rodando…")
             try:
                 r = _rodar_timer(nome, cfg)
-                log(f"   {'✅' if r.get('ok') else '⚠️'} {nome}: {r.get('mensagem')}")
             except Exception as e:
-                log(f"   ❌ {nome} falhou: {e}")
-            est[nome] = datetime.now().isoformat()
-            _cron_gravar(est)
+                log(f"   ❌ {nome} falhou: {e} — vou tentar de novo no próximo ciclo.")
+                r = {"ok": False}
+            log(f"   {'✅' if r.get('ok') else '⚠️'} {nome}: {r.get('mensagem')}")
+            # Só carimba o horário se DEU CERTO. Falha transitória (rede caiu no
+            # horário) → não marca → tenta de novo no próximo ciclo (não pula o dia).
+            if r.get("ok"):
+                est[nome] = datetime.now().isoformat()
+                _cron_gravar(est)
     # coletas que usam o Newcon — vão pela fila
     for nome, cconf in (cfg.get("coleta", {}) or {}).items():
         if not isinstance(cconf, dict) or not cconf.get("ativo"):
@@ -592,12 +714,19 @@ def enfileirar_mensais_do_mes(sb):
 
 # --------------------------------------------------------------- guardas
 def _checar_caminhos(cfg):
-    faltando = []
-    for k, p in (cfg.get("caminhos", {}) or {}).items():
-        if k.endswith(("_yamaha", "_itau")) and not os.path.isdir(p):
-            faltando.append(f"{k} -> {p}")
+    cam = cfg.get("caminhos", {}) or {}
+    # canário do Drive montado: sem estas duas, o robô se recusa a subir.
+    criticas = [cam.get("tabelas_yamaha"), cam.get("tabelas_itau")]
+    faltando = [p for p in criticas if not p or not os.path.isdir(p)]
     if faltando:
-        raise SystemExit("Drive não montado / pastas faltando:\n  " + "\n  ".join(faltando))
+        raise SystemExit("Drive não montado / pastas de Tabelas faltando:\n  "
+                         + "\n  ".join(str(p) for p in faltando))
+    # as demais (scripts dos robôs de API, pasta Anglo): só avisa — se sumirem,
+    # o timer correspondente falha sozinho e tenta de novo, sem derrubar o robô.
+    for k in ("gmail_yamaha_scripts", "gmail_itau_scripts", "anglo_dir"):
+        p = cam.get(k)
+        if p and not os.path.isdir(p):
+            log(f"⚠️ pasta '{k}' não encontrada ({p}) — o timer relacionado vai falhar até resolver.")
 
 
 # --------------------------------------------------------------- CLI direto
@@ -611,13 +740,63 @@ def _rodar_agora():
     sys.exit(0 if r.get("ok") else 1)
 
 
+def _fazer_agora():
+    """Enfileira uma tarefa com prioridade MÁXIMA (1). O robô que estiver
+    rodando uma coleta pausa (salva o progresso), faz esta, e retoma depois.
+      python worker_consorbens.py --fazer-agora COLETA_ASSEMBLEIAS
+      python worker_consorbens.py --fazer-agora RELATORIO_COMISSAO --payload "{\"mes\":\"2026-08\"}"
+    """
+    i = sys.argv.index("--fazer-agora")
+    tipo = sys.argv[i + 1].upper()
+    if tipo not in HANDLERS:
+        print(f"tipo inválido. Use um de: {', '.join(HANDLERS)}")
+        sys.exit(2)
+    payload = {}
+    if "--payload" in sys.argv:
+        try:
+            payload = json.loads(sys.argv[sys.argv.index("--payload") + 1])
+        except Exception as e:
+            print(f"--payload não é um JSON válido: {e}")
+            sys.exit(2)
+    prio = 1
+    if "--prioridade" in sys.argv:
+        prio = int(sys.argv[sys.argv.index("--prioridade") + 1])
+    sb = conectar_supabase()
+    row = sb.table("fila_automacao").insert({
+        "tipo": tipo, "status": "PENDENTE", "prioridade": prio,
+        "payload": payload, "solicitado_por": "CLI:fazer-agora",
+    }).execute()
+    rid = (row.data or [{}])[0].get("id")
+    log(f"➕ enfileirado #{rid} {tipo} com prioridade {prio}. "
+        f"O robô ligado vai pausar o que estiver fazendo e rodar isto primeiro.")
+    sys.exit(0)
+
+
 # --------------------------------------------------------------- loop
 def main():
+    if "--destravar-login" in sys.argv:
+        t = _trava_ler()
+        if _trava_limpar():
+            log(f"🔓 login do Newcon DESTRAVADO (estava travado desde "
+                f"{(t or {}).get('desde', '?')}). O robô vai tentar logar de novo no próximo ciclo.")
+        else:
+            log("nada a destravar — o login não estava travado.")
+        return
+
     if "--rodar-agora" in sys.argv:
         _rodar_agora()
         return
 
+    if "--fazer-agora" in sys.argv:
+        _fazer_agora()
+        return
+
     log("=== ROBÔ ÚNICO CONSORBENS — iniciando ===")
+    if login_travado():
+        t = _trava_ler() or {}
+        log(f"🔒 ATENÇÃO: login do Newcon TRAVADO (desde {t.get('desde', '?')}, "
+            f"{t.get('tentativas', '?')} tentativa(s)). Lance/boleto/coleta ficam parados. "
+            "Corrija a senha e rode: python worker_consorbens.py --destravar-login")
     try:
         with open(os.path.join(_AQUI, "robo.pid"), "w") as f:
             f.write(str(os.getpid()))
@@ -641,7 +820,8 @@ def main():
         n_reab[0] += 1
         log(f"🔄 reabrindo o Newcon (reabertura {n_reab[0]})…")
         _fechar_navegador(_newcon_ref["c"])
-        novo = preparar_newcon(sb, visivel)
+        _newcon_ref["c"] = None
+        novo = preparar_newcon(sb, visivel)   # pode levantar LoginTravado — sobe
         _newcon_ref["c"] = novo
         return novo["page"]
 
@@ -676,10 +856,35 @@ def main():
 
             sim = bool(cfg.get("geral", {}).get("modo_simulacao", True))
             precisa = tipo in PRECISA_NEWCON and not sim
-            if precisa and _newcon_ref["c"] is None:
-                _newcon_ref["c"] = preparar_newcon(sb, visivel)
 
-            r = handler(sb, pedido, _newcon_ref["c"], cfg)
+            # Abrir o Newcon e rodar o handler NÃO podem derrubar o supervisor
+            # (senão o watchdog vira crash-loop). Falha aqui = marca a linha e segue.
+            try:
+                if precisa and _newcon_ref["c"] is None:
+                    _newcon_ref["c"] = preparar_newcon(sb, visivel)
+                r = handler(sb, pedido, _newcon_ref["c"], cfg) or {}
+            except LoginTravado as e:
+                # login do Newcon travado: a tarefa NÃO é culpada — fica PENDENTE.
+                if time.time() - _MARCA_TRAVA_LOG[0] > 900:   # avisa no máx. a cada 15 min
+                    log(f"🔒 #{pedido['id']} [{tipo}] esperando: {e}")
+                    _MARCA_TRAVA_LOG[0] = time.time()
+                time.sleep(intervalo)
+                continue
+            except Exception as e:
+                erro = f"{type(e).__name__}: {e}"
+                traceback.print_exc()
+                log(f"   ❌ #{pedido['id']} [{tipo}] exceção não tratada: {erro}")
+                try:
+                    marcar(sb, pedido["id"], status="ERRO",
+                           mensagem=f"exceção no handler: {erro}", concluido_em=agora_iso())
+                except Exception:
+                    pass
+                # Newcon pode ter ficado ruim — fecha pra reabrir limpo no próximo
+                if not sim:
+                    _fechar_navegador(_newcon_ref["c"])
+                    _newcon_ref["c"] = None
+                time.sleep(min(intervalo, 15))
+                continue
 
             if r.get("reiniciar") and not sim:
                 _fechar_navegador(_newcon_ref["c"])
