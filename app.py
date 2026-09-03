@@ -214,23 +214,37 @@ def _trava_login_robo(sb):
 _online = _status_robo(supabase)
 _cor = "#22c55e" if _online else "#ef4444"          # verde / vermelho
 _titulo = "Robô ligado" if _online else "Robô desligado"
+# "SERVER" é um botão (não um <a href>): link real recarregaria a página inteira
+# e derrubaria a sessão de login. Estilizado via container com key p/ parecer selo.
 st.sidebar.markdown(
     f"""
     <style>
       /* Encosta o conteúdo da sidebar no topo (sobe a bolinha SERVER o máximo possível) */
       [data-testid="stSidebarUserContent"] {{ padding-top: 0.6rem !important; }}
       section[data-testid="stSidebar"] > div:first-child {{ padding-top: 0.6rem !important; }}
+      div.st-key-server_badge {{ margin: -6px 0 2px 2px; }}
+      div.st-key-server_badge button {{
+        background: transparent !important; border: none !important;
+        box-shadow: none !important; padding: 0 !important;
+        min-height: 0 !important; height: auto !important; width: auto !important;
+        line-height: 1 !important;
+      }}
+      div.st-key-server_badge button:hover {{ opacity: .7; }}
+      div.st-key-server_badge button p {{
+        color: {_cor} !important; font-size: 12px !important;
+        font-weight: 700 !important; letter-spacing: 1px !important; margin: 0 !important;
+      }}
     </style>
-    <a href="?pg=robo" target="_self" title="{_titulo} — abrir Painel do Robô"
-       style="text-decoration:none;display:flex;align-items:center;justify-content:flex-start;
-              gap:7px;margin:-6px 0 4px 2px;cursor:pointer;">
-        <span style="width:11px;height:11px;border-radius:50%;background:{_cor};
-                     box-shadow:0 0 6px {_cor};display:inline-block;"></span>
-        <span style="font-size:12px;font-weight:700;letter-spacing:1px;color:{_cor};">SERVER</span>
-    </a>
     """,
     unsafe_allow_html=True,
 )
+with st.sidebar.container(key="server_badge"):
+    if st.button("● SERVER", key="btn_server_robo",
+                 help=f"{_titulo} — abrir Painel do Robô"):
+        st.session_state['menu_lateral'] = "🤖 Robô"
+        st.session_state['last_radio_selection'] = None
+        st.session_state['cliente_visualizado'] = None
+        st.rerun()
 
 logo_path = os.path.join(PASTA_ATUAL, "logo.png")
 if os.path.exists(logo_path):
