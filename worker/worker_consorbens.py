@@ -457,7 +457,14 @@ def h_coleta_grupos(sb, pedido, ctx, cfg):
         produtos=payload.get("produtos"), prazo_pref=payload.get("prazo", "longo"),
         salvar=True, forcar=bool(payload.get("forcar")),
         ceder_cb=_ceder_cb_factory(sb, cfg, prio))
-    return _fechar_fila(sb, pid, r)
+    fim = _fechar_fila(sb, pid, r)
+    # Encadeamento: terminou de mapear os grupos com vaga -> vai pegar as
+    # assembleias desses grupos (lance médio). Só quando REALMENTE concluiu
+    # (não quando cedeu a vez).
+    if fim.get("ok") and not r.get("ceder"):
+        _enfileirar_interno("cadeia:COLETA_GRUPOS", "COLETA_ASSEMBLEIAS",
+                            {"produtos": payload.get("produtos")})
+    return fim
 
 
 def h_coleta_assembleias(sb, pedido, ctx, cfg):
