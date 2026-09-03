@@ -1,5 +1,22 @@
 # Robô de Oferta de Lances (Worker)
 
+> **Robô único (novo):** `worker_consorbens.py` substitui o `worker_lances.py`
+> **e** os 3 robôs separados de Gmail/Anglo. Um processo só, um log só
+> (`logs/robo.log`), uma bolinha 🟢 SERVER só. Config a quente em
+> `robo_config.toml`. Instalação passo a passo: **`SETUP_SEMPRE_LIGADO.md`**.
+>
+> - lê a `fila_automacao` e roda `LANCE` / `BOLETO` / `RELATORIO_COMISSAO` /
+>   `COLETA_GRUPOS` / `COLETA_ASSEMBLEIAS` / `COLETA_TABELAS`
+>   (dispatch por `HANDLERS` — adicionar função nova = 1 linha);
+> - **cron interno** dispara Gmail Yamaha (qua 12h), Gmail Itaú (ter 12h) e
+>   Importar Anglo (23h/dia) — sem Agendador de Tarefas do Windows;
+> - `watchdog_robo.py` (tarefa "a cada 2 min") re-sobe o robô se travar.
+>
+> O restante deste README descreve o `worker_lances.py` original, que continua
+> como base (LANCE/BOLETO são o mesmo código).
+
+---
+
 Este robô roda **no PC do escritório** (não no Streamlit Cloud). Ele lê os
 pedidos de lance que o CRM grava na fila (`fila_automacao` no Supabase),
 executa no Newcon e escreve o resultado de volta.

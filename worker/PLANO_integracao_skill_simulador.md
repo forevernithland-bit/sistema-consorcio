@@ -281,6 +281,17 @@ por TI e Dados, com prioridade para os itens **5** (chave simulado→resultado) 
 
 ## 7. Arquitetura "sempre-ligado" (robô de prontidão)
 
+> **STATUS (2026-09-02): IMPLEMENTADO — rodada de infraestrutura.**
+> Entregue: `worker/worker_consorbens.py` (supervisor + `HANDLERS` + cron
+> interno), `worker/robo_config.toml`, `handlers_gmail.py` / `handlers_anglo.py`
+> / `handlers_coleta.py`, `watchdog_robo.py`, `iniciar_robo.bat` (atualizado),
+> `migracoes/22_fila_automacao_prioridade.sql`, `worker/SETUP_SEMPRE_LIGADO.md`.
+> `ceder_cb` adicionado em `robo_yamaha.fase_grupos/fase_assembleias`.
+> **Fora desta rodada:** `PLANEJAR_SIMULACAO` (fica como `h_stub`) — segue
+> travado pelo gate da seção 6. A migração 22 é MENOR que a "migração 21"
+> abaixo (só `prioridade` + `payload/resultado/progresso`); o resto
+> (`chave_idempotencia`, tabelas de simulado) é da rodada do simulador.
+
 > Objetivo: o robô fica de pé o tempo todo no PC do escritório e atua sozinho
 > assim que chega tarefa — igual já rola com LANCE e BOLETO. Nada de rodar
 > script na mão.

@@ -179,7 +179,7 @@ def _voltar_resultado(sx, reabrir):
 
 
 def fase_grupos(sx, sb, prog, produtos, incluir_antigos, prazo_pref,
-                salvar, limite_planos, forcar, reabrir):
+                salvar, limite_planos, forcar, reabrir, ceder_cb=None):
     for prod_in in produtos:
         prod_nome, prod_pal, planos = _planos_do_produto(
             sx["page"], prod_in, incluir_antigos, limite_planos)
@@ -210,6 +210,12 @@ def fase_grupos(sx, sb, prog, produtos, incluir_antigos, prazo_pref,
 
         CG._PROD_PAL = prod_pal
         for i, (pv, pt) in enumerate(fila, 1):
+            # "cede a vez": se o supervisor sinalizar que entrou tarefa urgente
+            # (LANCE/BOLETO), grava o progresso e sai — retoma no próximo ciclo.
+            if ceder_cb and ceder_cb():
+                print("  [cede a vez] tarefa urgente na fila — pausando a coleta de grupos.")
+                _prog_gravar(prog)
+                return "CEDEU"
             cod = _cod(pt)
             print(f"\n[{prod_nome} {i}/{len(fila)}] plano {cod}", flush=True)
             ok = False
@@ -253,7 +259,7 @@ def fase_grupos(sx, sb, prog, produtos, incluir_antigos, prazo_pref,
 
 
 # ------------------------------------------------------------------- fase 2
-def fase_assembleias(sx, sb, prog, n_ass, salvar, reabrir, forcar=False):
+def fase_assembleias(sx, sb, prog, n_ass, salvar, reabrir, forcar=False, ceder_cb=None):
     pend = [g for g in sorted(prog["grupos_com_vaga"], key=lambda x: int(x))
             if g not in prog["assembleias_feitas"]]
     print(f"\n{'#'*72}\n# ASSEMBLEIAS: {len(prog['grupos_com_vaga'])} grupo(s) com vaga, "
@@ -268,6 +274,10 @@ def fase_assembleias(sx, sb, prog, n_ass, salvar, reabrir, forcar=False):
 
     falhas_seguidas = 0
     for n, grupo in enumerate(pend, 1):
+        if ceder_cb and ceder_cb():
+            print("  [cede a vez] tarefa urgente na fila — pausando a coleta de assembleias.")
+            _prog_gravar(prog)
+            return "CEDEU"
         tb = prog["grupos_com_vaga"].get(grupo)
         print(f"\n[assembleia {n}/{len(pend)}] grupo {grupo} ({tb})", flush=True)
         ok_g, motivo = _vale_a_pena(sb, grupo, forcar)

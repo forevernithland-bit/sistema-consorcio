@@ -1,35 +1,33 @@
 @echo off
 chcp 65001 >nul
-title Robo de Lances - Consorbens
+title Robo Unico - Consorbens
 color 0A
 
 echo.
 echo   ============================================================
-echo      ROBO DE OFERTA DE LANCES - CONSORBENS
+echo      ROBO UNICO - CONSORBENS  (lance / boleto / coletas / robos de API)
 echo   ============================================================
 echo.
-echo   Vou processar os lances que estao na fila do CRM.
-echo   Deixe esta janela ABERTA enquanto ele trabalha.
-echo   Para parar a qualquer momento: feche a janela ou Ctrl+C.
-echo.
-echo   ------------------------------------------------------------
+echo   Deixe esta janela ABERTA (pode minimizar).
+echo   Config: worker\robo_config.toml  ^|  Log: worker\logs\robo.log
+echo   Para parar: feche a janela ou Ctrl+C.
 echo.
 
 REM Entra na pasta do robo (mesmo lugar deste arquivo)
 cd /d "%~dp0"
 
-REM Confere se o Python esta instalado
 where python >nul 2>nul
 if errorlevel 1 (
     echo   [ERRO] Python nao encontrado neste PC.
-    echo   Instale o Python e rode a instalacao do robo antes ^(veja o README^).
-    echo.
     pause
     exit /b 1
 )
 
-REM Liga o robo
-python worker_lances.py
+if not exist logs mkdir logs
+
+REM Sobe o supervisor. stdout/stderr tambem vao pro console.log (o robo.log
+REM ja e escrito pelo proprio Python).
+python worker_consorbens.py >> logs\console.log 2>&1
 
 echo.
 echo   ============================================================

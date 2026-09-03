@@ -1,0 +1,74 @@
+# ------------------------------------------------------------------------
+# Configuração do robô único (worker_consorbens.py)
+# Editável a quente: o supervisor relê este arquivo a cada ciclo.
+# ------------------------------------------------------------------------
+
+[geral]
+# Começa em simulação — o Newcon NÃO é aberto, LANCE/BOLETO respondem "SIMULAÇÃO".
+# Vire para false só depois de validar o circuito no PC do escritório.
+modo_simulacao    = true
+# false = janela do Chrome minimizada ("segundo plano", não invisível).
+navegador_visivel = true
+# Pausa do loop quando não há nada a fazer.
+intervalo_seg     = 25
+# Teto de tempo por tarefa (minutos) — passou disso, aborta com ERRO_TECNICO.
+[geral.timeout_tarefa_min]
+RELATORIO_COMISSAO = 30
+COLETA_GRUPOS      = 20
+COLETA_ASSEMBLEIAS = 20
+COLETA_TABELAS     = 15
+PLANEJAR_SIMULACAO = 15
+
+# ------------------------------------------------------------------------
+# TIMERS — tarefas de API (sem navegador). O supervisor dispara sozinho.
+# "quando" = "<dia> <hh:mm>"   dia ∈ seg ter qua qui sex sab dom | diario
+# Cada tarefa dispara no máximo 1x por dia (estado em robo_cron_estado.json).
+# ------------------------------------------------------------------------
+[timers.gmail_yamaha]
+ativo  = true
+quando = "qua 12:00"
+# Depois de baixar as tabelas Yamaha, enfileira estas tarefas (leem os PDFs novos):
+encadear = ["COLETA_TABELAS"]
+
+[timers.gmail_itau]
+ativo  = true
+quando = "ter 12:00"
+
+[timers.anglo]
+ativo  = true
+quando = "diario 23:00"
+
+# ------------------------------------------------------------------------
+# COLETA — tarefas que USAM o Newcon. O supervisor enfileira na
+# fila_automacao (prioridade baixa) e roda "cedendo a vez" pra LANCE/BOLETO.
+# ------------------------------------------------------------------------
+[coleta.grupos_sync]
+ativo  = true
+quando = "diario 02:00"
+
+[coleta.tabelas]
+ativo  = false          # já encadeado no gmail_yamaha; ligue aqui se quiser reforço
+quando = "seg 03:00"
+
+# ------------------------------------------------------------------------
+# Prioridade na fila (menor = mais urgente). LANCE/BOLETO vêm sem esse
+# campo do ERP — o supervisor assume 10 pra eles de qualquer forma.
+# ------------------------------------------------------------------------
+[fila.prioridade]
+LANCE              = 10
+BOLETO             = 10
+PLANEJAR_SIMULACAO = 40
+COLETA_GRUPOS      = 50
+COLETA_ASSEMBLEIAS = 50
+COLETA_TABELAS     = 50
+RELATORIO_COMISSAO = 60
+
+# ------------------------------------------------------------------------
+# Caminhos (Drive montado). O robô se recusa a subir se estes não existirem.
+# ------------------------------------------------------------------------
+[caminhos]
+tabelas_yamaha  = 'G:\Meu Drive\CONSORBENS\Tabelas\YAMAHA'
+tabelas_itau    = 'G:\Meu Drive\CONSORBENS\Tabelas\ITAU'
+gmail_yamaha_scripts = 'G:\Meu Drive\CLODE\ATUALIZA_YAMAHA_TABELAS\scripts'
+gmail_itau_scripts   = 'G:\Meu Drive\CLODE\GUIA_DE_OPORTUNIDADES_ITAU\scripts'
+anglo_dir            = 'G:\Meu Drive\CLODE\IMPORTA_ANGLO_CONSORCIO'
