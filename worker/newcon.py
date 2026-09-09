@@ -13,6 +13,7 @@ Seguranças embutidas:
 
 import os
 import re
+import base64
 import unicodedata
 from datetime import datetime
 from playwright.sync_api import Page, BrowserContext, TimeoutError as PWTimeout
@@ -313,6 +314,50 @@ def ofertar_lance(page: Page, pedido: dict, timeout_confirmacao: int):
 # Onde salvar os PDFs dos boletos (no PC do escritório). Configurável no .env.
 PASTA_BOLETOS = os.getenv("PASTA_BOLETOS", r"G:\Meu Drive\CONSORBENS\IMAGENS\Boletos")
 
+# JS que lê o conteúdo da própria aba (serve para blob: e data:) e devolve base64.
+_JS_ABA_PARA_B64 = """async (u) => {
+    const r = await fetch(u); const b = await r.blob();
+    const buf = await b.arrayBuffer(); const bytes = new Uint8Array(buf);
+    let s = ''; for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+    return btoa(s);
+}"""
+
+
+def _extrair_pdf_da_aba(pg, cap, so_se_pdf_url=False):
+    """Tenta extrair os bytes de um PDF de uma aba, seja a URL http(s), blob: ou data:.
+    Guarda o resultado em cap['pdf']. Best-effort — nunca levanta erro."""
+    if cap.get("pdf"):
+        return
+    try:
+        u = pg.url or ""
+    except Exception:
+        return
+    if not u or u.startswith("about:"):
+        return
+    low = u.lower()
+    if so_se_pdf_url and not (low.endswith(".pdf") or low.startswith("blob:")
+                              or low.startswith("data:") or "pdf" in low):
+        return
+    try:
+        if u.startswith("blob:") or u.startswith("data:"):
+            try:
+                pg.wait_for_load_state("domcontentloaded", timeout=5000)
+            except Exception:
+                pass
+            b64 = pg.evaluate(_JS_ABA_PARA_B64, u)
+            if b64:
+                raw = base64.b64decode(b64)
+                if raw[:4] == b"%PDF":
+                    cap["pdf"] = raw
+            return
+        # http(s): usa a APIRequestContext do contexto (herda os cookies da sessão)
+        resp = pg.context.request.get(u)
+        body = resp.body()
+        if body[:4] == b"%PDF":
+            cap["pdf"] = body
+    except Exception:
+        pass
+
 
 def gerar_boleto(page: Page, pedido: dict, timeout: int):
     """Emite o boleto de uma cota no Newcon, baixa o PDF e lê o código de barras.
@@ -421,51 +466,146 @@ def gerar_boleto(page: Page, pedido: dict, timeout: int):
         return "FALHA", (f"Achei o boleto mas não consegui marcar a parcela de {grupo}/{cota}. "
                          f"Print: {os.path.basename(cam)}"), {}
 
-    # 5) "Emitir Cobrança" -> o boleto abre no VISUALIZADOR DE PDF do navegador
-    #    (o popup É o PDF). Basta pegar o PDF direto da URL do popup e salvar.
+    # 4b) Guarda: não emitir linha errada (ex.: "RECBTO. DIFERENÇA" com -3,40).
+    #     Se o "Total a receber" da tela não for positivo, aborta sem emitir.
+    try:
+        _mtot = re.search(r"Total a receber\D{0,20}?(-?\s*[\d.]+,\d{2})",
+                          _texto_pagina(page), re.I)
+        if _mtot:
+            _val = float(_mtot.group(1).replace(" ", "").replace(".", "").replace(",", "."))
+            if _val <= 0:
+                cam = _print_tela(page, f"boleto_total_invalido_{grupo}_{cota}")
+                return "FALHA", (f"Boleto de {grupo}/{cota} ficou com Total a receber "
+                                 f"{_mtot.group(1).strip()} (parece a linha de diferença). "
+                                 f"Não emiti. Print: {os.path.basename(cam)}"), {"em_atraso": em_atraso}
+    except Exception:
+        pass
+
+    # 5) "Emitir Cobrança". Fluxo atual do Newcon (conferido na gravação
+    #    roteiro_boleto.py): clicar "Emitir Cobrança" abre um popup de
+    #    confirmação; o PDF de verdade sai clicando "Baixar" DENTRO DE UM IFRAME
+    #    da tela de relatório do boleto (frmConCoRelBoletoAvulso.aspx) e vem como
+    #    DOWNLOAD. Também cobrimos os casos de aba com URL de PDF / blob: / data:.
     arquivo = ""
+    ctx = page.context
+    _cap = {"pdf": None}
+
+    def _on_download(dl):
+        try:
+            tmp = dl.path()            # bloqueia até o download terminar
+            if tmp and os.path.exists(tmp):
+                with open(tmp, "rb") as fh:
+                    b = fh.read()
+                if b[:4] == b"%PDF":
+                    _cap["pdf"] = b
+        except Exception:
+            pass
+
+    def _clicar_baixar_em(alvo):
+        """Procura 'Baixar'/'Download'/'Imprimir' no alvo e em qualquer iframe dele."""
+        try:
+            frames = [alvo] + list(getattr(alvo, "frames", []) or [])
+        except Exception:
+            frames = [alvo]
+        for fr in frames:
+            for papel in ("button", "link"):
+                for nome in ("Baixar", "Download", "Imprimir", "Salvar"):
+                    try:
+                        el = fr.get_by_role(papel, name=nome)
+                        if el.count():
+                            el.first.click(timeout=4000)
+                            return True
+                    except Exception:
+                        pass
+        return False
+
+    ctx.on("download", _on_download)
     try:
         os.makedirs(PASTA_BOLETOS, exist_ok=True)
         caminho_pdf = os.path.join(PASTA_BOLETOS, nome_arquivo)
-        page.get_by_role("button", name="Emitir Cobrança", exact=True).click()
 
-        # Espera o(s) popup(s) do boleto e baixa o PDF da URL (usa a sessão logada)
-        for _ in range(20):  # ~40s
-            page.wait_for_timeout(2000)
-            for pg in [p for p in page.context.pages if p is not page]:
-                u = pg.url or ""
-                if not u or u.startswith("about:"):
-                    continue
-                try:
-                    resp = page.context.request.get(u)
-                    body = resp.body()
-                    if body[:4] == b"%PDF":
-                        with open(caminho_pdf, "wb") as f:
-                            f.write(body)
-                        arquivo = caminho_pdf
-                        break
-                except Exception:
-                    continue
-            if arquivo:
+        # 5.1 "Emitir Cobrança" — clica UMA vez; se abrir popup de confirmação, ok
+        try:
+            with ctx.expect_page(timeout=8000):
+                page.get_by_role("button", name="Emitir Cobrança", exact=True).click()
+        except PWTimeout:
+            pass                       # clicou, só não abriu popup — segue
+        except Exception:
+            _print_tela(page, f"erro_emitir_boleto_{grupo}_{cota}")
+        page.wait_for_timeout(1500)
+
+        # 5.2 abre a tela de relatório do boleto (nova aba) e clica "Baixar"
+        rel_url = ("https://newkey.cny.com.br/Intranet/CONCO/frmConCoRelBoletoAvulso.aspx")
+        if "/Intranet/" in (page.url or ""):
+            rel_url = re.sub(r"(https?://[^/]+/Intranet/).*", r"\1CONCO/frmConCoRelBoletoAvulso.aspx",
+                             page.url)
+        rel = None
+        try:
+            with ctx.expect_page(timeout=8000) as pinfo:
+                page.evaluate("u => window.open(u, '_blank')", rel_url)
+            rel = pinfo.value
+        except Exception:
+            rel = None
+        clicou_baixar = False
+        for alvo in ([rel] if rel else []) + [p for p in ctx.pages if p is not page]:
+            try:
+                alvo.wait_for_load_state("networkidle", timeout=8000)
+            except Exception:
+                pass
+            if _clicar_baixar_em(alvo):
+                clicou_baixar = True
                 break
+        # fallback: popup bloqueado -> navega a própria página para o relatório,
+        # clica "Baixar" e volta (para o passo do código de barras).
+        if not clicou_baixar and not _cap["pdf"]:
+            try:
+                page.goto(rel_url)
+                page.wait_for_load_state("networkidle", timeout=8000)
+                _clicar_baixar_em(page)
+                page.wait_for_timeout(2500)
+                page.go_back()
+                page.wait_for_load_state("networkidle", timeout=8000)
+            except Exception:
+                pass
 
-        if not arquivo:  # não achou PDF — guarda print de cada popup para diagnóstico
-            for i, pg in enumerate([p for p in page.context.pages if p is not page]):
+        # 5.3 espera o PDF (download OU aba com PDF/blob/data) por até ~40s
+        for _ in range(20):
+            if _cap["pdf"]:
+                break
+            page.wait_for_timeout(2000)
+            for pg in [p for p in ctx.pages if p is not page]:
+                _extrair_pdf_da_aba(pg, _cap)
+                if _cap["pdf"]:
+                    break
+            if not _cap["pdf"]:            # o PDF pode ter substituído a própria página
+                _extrair_pdf_da_aba(page, _cap, so_se_pdf_url=True)
+
+        if _cap["pdf"]:
+            with open(caminho_pdf, "wb") as f:
+                f.write(_cap["pdf"])
+            arquivo = caminho_pdf
+        else:                             # não veio PDF — diagnóstico
+            for i, pg in enumerate([p for p in ctx.pages if p is not page]):
                 try:
                     _print_tela(pg, f"boleto_sem_pdf_{grupo}_{cota}_pop{i}")
                 except Exception:
                     pass
-
+            _print_tela(page, f"boleto_sem_pdf_{grupo}_{cota}_principal")
+    except Exception:
+        _print_tela(page, f"erro_emitir_boleto_{grupo}_{cota}")
+        # segue mesmo assim para tentar pegar o código de barras
+    finally:
+        try:
+            ctx.remove_listener("download", _on_download)
+        except Exception:
+            pass
         # fecha os popups, deixando só a página principal (p/ o passo do código)
-        for p in list(page.context.pages):
+        for p in list(ctx.pages):
             if p is not page:
                 try:
                     p.close()
                 except Exception:
                     pass
-    except Exception:
-        _print_tela(page, f"erro_emitir_boleto_{grupo}_{cota}")
-        # segue mesmo assim para tentar pegar o código de barras
 
     # 6) Gerar + copiar o código de barras (vai para a área de transferência)
     codigo = ""
