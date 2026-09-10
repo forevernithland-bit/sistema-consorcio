@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 from datetime import datetime
-from utils import formatar_telefone, formatar_data, formatar_moeda
+from utils import formatar_telefone, formatar_data, formatar_moeda, formatar_cpf
 
 PRODUTOS = ["Auto", "Imóvel", "Moto", "Caminhão", "Serviços"]
 VENDEDORES = ["BRENO LIMA", "URIEL GOMES", "Particular Breno", "Particular Uriel", "Consorbens", "Vendedor Terceiro"]
@@ -9,12 +9,12 @@ VENDEDORES = ["BRENO LIMA", "URIEL GOMES", "Particular Breno", "Particular Uriel
 VENDEDORES_CONTEMPLADO = ["Consorbens", "BRENO LIMA", "URIEL GOMES", "Particular Breno", "Particular Uriel", "Vendedor Terceiro"]
 
 
-def _salvar_cliente_se_novo(supabase, df_cli, cliente, telefone, email, end_completo, aniversario, profissao, renda):
+def _salvar_cliente_se_novo(supabase, df_cli, cliente, telefone, email, end_completo, aniversario, profissao, renda, cpf=""):
     """Insere o cliente na tabela de clientes, se ainda não existir."""
     try:
         if df_cli.empty or cliente not in df_cli['Nome'].tolist():
             supabase.table("clientes").insert([{
-                "Nome": cliente, "Telefone": telefone, "Email": email, "Endereco": end_completo,
+                "Nome": cliente, "CPF": cpf, "Telefone": telefone, "Email": email, "Endereco": end_completo,
                 "Aniversario": aniversario, "Profissao": profissao, "Renda": renda,
                 "Data_Cadastro": datetime.today().strftime("%d/%m/%Y")
             }]).execute()
@@ -33,6 +33,7 @@ def render_nova_venda(supabase, df_cli, lista_admin_bd):
     col_c1, col_c2 = st.columns(2)
     with col_c1:
         cliente = st.text_input("Nome do Cliente *", key="v_cli")
+        cpf = st.text_input("CPF", key="v_cpf", on_change=lambda: st.session_state.update({'v_cpf': formatar_cpf(st.session_state.get('v_cpf',''))}), placeholder="000.000.000-00", max_chars=14)
         telefone = st.text_input("Telefone", key="v_tel", on_change=lambda: st.session_state.update({'v_tel': formatar_telefone(st.session_state.get('v_tel',''))}), placeholder="(31) 99999-9999", max_chars=15)
         profissao = st.text_input("Profissão", key="v_prof")
     with col_c2:
@@ -136,7 +137,7 @@ def render_nova_venda(supabase, df_cli, lista_admin_bd):
                         })
 
                     supabase.table("vendas").insert(vendas_insert).execute()
-                    _salvar_cliente_se_novo(supabase, df_cli, cliente, telefone, email, end_completo, aniversario, profissao, renda)
+                    _salvar_cliente_se_novo(supabase, df_cli, cliente, telefone, email, end_completo, aniversario, profissao, renda, cpf)
                     st.success(f"✅ {len(cotas_data)} Venda(s) salvas!")
                     st.session_state['qtd_cotas'] = 1
 
@@ -186,5 +187,5 @@ def render_nova_venda(supabase, df_cli, lista_admin_bd):
                     "AGIO": agio
                 }
                 supabase.table("vendas").insert([venda]).execute()
-                _salvar_cliente_se_novo(supabase, df_cli, cliente, telefone, email, end_completo, aniversario, profissao, renda)
+                _salvar_cliente_se_novo(supabase, df_cli, cliente, telefone, email, end_completo, aniversario, profissao, renda, cpf)
                 st.success("✅ Venda de Consórcio Contemplado salva!")

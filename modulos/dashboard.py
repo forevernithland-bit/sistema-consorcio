@@ -3,8 +3,8 @@ import pandas as pd
 from datetime import datetime, timedelta
 import requests
 import altair as alt
-from utils import (formatar_telefone, formatar_data, formatar_data_br, 
-                   formatar_moeda, formatar_brl_puro, normalizar_produto)
+from utils import (formatar_telefone, formatar_data, formatar_data_br,
+                   formatar_moeda, formatar_brl_puro, normalizar_produto, formatar_cpf)
 from regras import gerar_tabela_parcelas
 from database import salvar_status_comissoes
 from modulos.integracao_site import carregar_operacoes_site
@@ -112,8 +112,10 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
         key_aniv = f"a_{cliente_nome}"
         key_prof = f"p_{cliente_nome}"
         key_renda = f"r_{cliente_nome}"
+        key_cpf = f"cpf_{cliente_nome}"
 
         if key_nome not in st.session_state: st.session_state[key_nome] = safe_str(info_cliente.get("Nome"), cliente_nome)
+        if key_cpf not in st.session_state: st.session_state[key_cpf] = safe_str(info_cliente.get("CPF"))
         if key_tel not in st.session_state: st.session_state[key_tel] = safe_str(info_cliente.get("Telefone"))
         if key_email not in st.session_state: st.session_state[key_email] = safe_str(info_cliente.get("Email"))
         if key_end not in st.session_state: st.session_state[key_end] = safe_str(info_cliente.get("Endereco"))
@@ -141,6 +143,7 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
         
         c1, c2 = st.columns(2)
         with c1:
+            cpf_edit = st.text_input("CPF", key=key_cpf, on_change=lambda: st.session_state.update({key_cpf: formatar_cpf(st.session_state[key_cpf])}), disabled=not is_master, placeholder="000.000.000-00", max_chars=14)
             endereco = st.text_input("Endereço Completo", key=key_end, disabled=not is_master)
             telefone_edit = st.text_input("Telefone", key=key_tel, on_change=lambda: st.session_state.update({key_tel: formatar_telefone(st.session_state[key_tel])}), disabled=not is_master)
             profissao_edit = st.text_input("Profissão", key=key_prof, disabled=not is_master)
@@ -154,7 +157,7 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
             with col_b1:
                 if st.button("Salvar Alterações Cadastrais", type="primary", use_container_width=True):
                     dados_cli = {
-                        "Nome": st.session_state[key_nome], "Telefone": st.session_state[key_tel], "Email": st.session_state[key_email],
+                        "Nome": st.session_state[key_nome], "CPF": st.session_state[key_cpf], "Telefone": st.session_state[key_tel], "Email": st.session_state[key_email],
                         "Endereco": st.session_state[key_end], "Aniversario": st.session_state[key_aniv], "Profissao": st.session_state[key_prof], "Renda": st.session_state[key_renda]
                     }
                     try:

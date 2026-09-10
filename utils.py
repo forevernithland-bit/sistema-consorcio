@@ -29,6 +29,13 @@ def formatar_telefone(tel):
     elif len(nums) == 10: return f"({nums[:2]}) {nums[2:6]}-{nums[6:]}"
     return tel
 
+def formatar_cpf(cpf):
+    if not cpf: return ""
+    nums = ''.join(filter(str.isdigit, str(cpf)))[:11]
+    if len(nums) == 11:
+        return f"{nums[:3]}.{nums[3:6]}.{nums[6:9]}-{nums[9:]}"
+    return str(cpf)
+
 def formatar_data_br(dt):
     if pd.isna(dt) or dt is None: return ""
     if isinstance(dt, (datetime, pd.Timestamp)):
