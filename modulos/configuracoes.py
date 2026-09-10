@@ -22,13 +22,24 @@ def render_configuracoes(supabase, df_admin_cad, df_admin, lista_admin_bd, cfg, 
     with t_regras:
         if not df_admin.empty:
             df_m = df_admin.drop(columns=['Admin_Norm', 'Prod_Norm', 'Tipo_Norm', 'id'], errors='ignore').copy()
-            if 'Tipo_Parcela' in df_m.columns:
-                df_m['Tipo_Parcela'] = df_m['Tipo_Parcela'].fillna('').replace('', '— (todas)')
+
+            # "Tipo de Parcela" logo depois do Produto, pra ficar claro qual
+            # linha é a linear e qual é a reduzida (ex.: Itaú imóvel).
+            _tp = df_m.pop('Tipo_Parcela') if 'Tipo_Parcela' in df_m.columns else None
+            df_m.insert(2, 'Tipo de Parcela',
+                        (_tp.fillna('').replace('', 'Linear/Reduzida (todas)')
+                         if _tp is not None else 'Linear/Reduzida (todas)'))
 
             # Cálculo seguro da comissão usando a nossa função parse_float_safe
-            df_m.insert(2, 'Total Comissão', df_m.apply(lambda r: f"{sum([parse_float_safe(r.get(f'P{i}', 0)) for i in range(1, 26)]):.2f}%".replace('.', ','), axis=1))
+            df_m.insert(3, 'Total Comissão', df_m.apply(lambda r: f"{sum([parse_float_safe(r.get(f'P{i}', 0)) for i in range(1, 26)]):.2f}%".replace('.', ','), axis=1))
+
+            # Quantidade de parcelas (nº de Pn preenchidos) — ajuda a bater o "4% em N"
+            df_m.insert(4, 'Nº Parcelas', df_m.apply(lambda r: sum(1 for i in range(1, 26) if parse_float_safe(r.get(f'P{i}', 0)) > 0), axis=1))
 
             st.dataframe(df_m.style.set_properties(**{'text-align': 'center'}), use_container_width=True, hide_index=True)
+            st.caption("**Tipo de Parcela** — *Linear*: parcela cheia. *Reduzida*: parcela reduzida (o Itaú "
+                       "dilui os mesmos 4% em mais parcelas). *Linear/Reduzida (todas)*: a regra vale para "
+                       "os dois casos (Yamaha e demais).")
         
         with st.expander("➕ Nova Regra", expanded=False):
             with st.form("f_a_n"):
