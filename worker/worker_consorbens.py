@@ -40,6 +40,7 @@ load_dotenv(os.path.join(_AQUI, ".env"))
 
 import handlers_gmail          # noqa: E402
 import handlers_anglo          # noqa: E402
+import handlers_fraga_bitello  # noqa: E402
 import handlers_coleta         # noqa: E402
 
 CONFIG_PATH = os.path.join(_AQUI, "robo_config.toml")
@@ -579,6 +580,26 @@ def h_importar_anglo(sb, pedido, ctx, cfg):
         return {"ok": False, "negocio": True}
 
 
+def h_importar_fraga_bitello(sb, pedido, ctx, cfg):
+    """IMPORTA_FRAGA_BITELLO — sincroniza as cartas do fornecedor Fraga e
+    Bitello no site, lendo a API pública deles. Só API."""
+    pid = pedido["id"]
+    payload = pedido.get("payload") or {}
+    marcar(sb, pid, status="PROCESSANDO", iniciado_em=agora_iso())
+    try:
+        r = handlers_fraga_bitello.importar_fb(
+            cfg.get("caminhos", {}).get("fraga_bitello_scripts", handlers_fraga_bitello._DEF_FB),
+            dry=bool(payload.get("dry")))
+        marcar(sb, pid, status="SUCESSO",
+               mensagem=r.get("mensagem") or "cartas Fraga e Bitello sincronizadas no site",
+               concluido_em=agora_iso())
+        return {"ok": True}
+    except Exception as e:
+        marcar(sb, pid, status="ERRO", mensagem=f"{type(e).__name__}: {e}",
+               concluido_em=agora_iso())
+        return {"ok": False, "negocio": True}
+
+
 def _fechar_fila(sb, pid, r: dict):
     """Traduz o retorno de um handler de coleta para o estado da fila."""
     if r.get("ceder"):
@@ -606,6 +627,7 @@ HANDLERS = {
     "BAIXAR_GMAIL_YAMAHA": h_baixar_gmail,
     "BAIXAR_GMAIL_ITAU": h_baixar_gmail,
     "IMPORTA_ANGLO": h_importar_anglo,
+    "IMPORTA_FRAGA_BITELLO": h_importar_fraga_bitello,
     "PLANEJAR_SIMULACAO": h_stub,
 }
 # handlers que o supervisor abre a sessão Newcon ANTES de chamar.
@@ -685,6 +707,9 @@ def _rodar_timer(nome: str, cfg: dict, dry: bool = False) -> dict:
     elif nome == "anglo":
         r = handlers_anglo.importar_anglo(
             cfg.get("caminhos", {}).get("anglo_dir", handlers_anglo._DEF_ANGLO), dry=dry)
+    elif nome == "fraga_bitello":
+        r = handlers_fraga_bitello.importar_fb(
+            cfg.get("caminhos", {}).get("fraga_bitello_scripts", handlers_fraga_bitello._DEF_FB), dry=dry)
     else:
         return {"ok": False, "mensagem": f"timer desconhecido: {nome}"}
     # encadeamento (ex.: depois do gmail_yamaha, enfileira COLETA_TABELAS)

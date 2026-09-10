@@ -41,6 +41,13 @@ quando = ["seg 12:00", "qua 12:00", "sex 12:00"]
 ativo  = true
 quando = ["diario 07:00", "diario 12:00", "diario 15:00", "diario 20:00"]
 
+# Fraga e Bitello — lê a API deles e sincroniza as cartas do fornecedor
+# "Fraga e Bitello" no site (ágio autos 5% / imóveis 4%, já configurado em
+# `fornecedores`). Horários deslocados dos da Anglo pra não sobrepor.
+[timers.fraga_bitello]
+ativo  = true
+quando = ["diario 06:00", "diario 11:00", "diario 16:00", "diario 21:00"]
+
 # ------------------------------------------------------------------------
 # COLETA — tarefas que USAM o Newcon. O supervisor enfileira na
 # fila_automacao (prioridade baixa) e roda "cedendo a vez" pra LANCE/BOLETO.
@@ -79,3 +86,4 @@ tabelas_itau    = 'G:\Meu Drive\CONSORBENS\Tabelas\ITAU'
 gmail_yamaha_scripts = 'G:\Meu Drive\CLODE\ATUALIZA_YAMAHA_TABELAS\scripts'
 gmail_itau_scripts   = 'G:\Meu Drive\CLODE\GUIA_DE_OPORTUNIDADES_ITAU\scripts'
 anglo_dir            = 'G:\Meu Drive\CLODE\IMPORTA_ANGLO_CONSORCIO'
+fraga_bitello_scripts = 'C:\Users\desta\.claude\skills\cartas-contempladas-consorbens\scripts'

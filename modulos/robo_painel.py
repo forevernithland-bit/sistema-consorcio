@@ -21,6 +21,10 @@ TAREFAS = [
     ("🏢 Atualizar cartas Anglo (site)", "IMPORTA_ANGLO", 55, {},
      "Baixa o estoque da Anglo e substitui as cartas 'Anglo Consórcios' no site. "
      "Não toca em outros fornecedores."),
+    ("🏦 Atualizar cartas Fraga e Bitello (site)", "IMPORTA_FRAGA_BITELLO", 55, {},
+     "Lê a API da Fraga e Bitello e sincroniza as cartas do fornecedor 'Fraga e "
+     "Bitello' no site (ágio autos 5% / imóveis 4%). Roda sozinho 4x/dia; este "
+     "botão força na hora."),
     ("📥 Baixar tabelas Yamaha (Gmail)", "BAIXAR_GMAIL_YAMAHA", 55, {},
      "Puxa o e-mail mais recente 'Tabelas Yamaha' e salva os anexos em "
      "CONSORBENS\\Tabelas\\YAMAHA."),
