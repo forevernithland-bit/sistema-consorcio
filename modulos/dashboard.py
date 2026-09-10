@@ -298,20 +298,31 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
                             except ValueError: idx_produto = 0
                             novo_produto = st.selectbox("Tipo do Bem", options=lista_produtos, index=idx_produto, disabled=not is_master)
 
+                        _tp_opts = ["Linear", "Reduzida"]
+                        _tp_atual = str(cota_info.get('TIPO_PARCELA') or "Linear").strip().capitalize()
+                        if _tp_atual not in _tp_opts: _tp_atual = "Linear"
+                        novo_tipo_parcela = st.selectbox(
+                            "Tipo de Parcela", options=_tp_opts, index=_tp_opts.index(_tp_atual),
+                            disabled=not is_master,
+                            help="Muda a regra de comissão em administradoras com percentual "
+                                 "diferente por tipo de parcela (ex.: Itaú imóvel linear = 4% "
+                                 "em 8; reduzida = 4% em 12).")
+
                         col_b1, col_b2 = st.columns(2)
                         with col_b1:
                             if st.button("💾 Salvar Alterações na Cota", type="primary", use_container_width=True):
                                 data_formatada = nova_data.strftime("%d/%m/%Y") if not isinstance(nova_data, str) else nova_data
                                 
                                 dados_atualizados = {
-                                    "VENDEDOR": novo_vendedor, 
-                                    "STATUS": novo_status, 
-                                    "DATA": data_formatada, 
-                                    "GRUPO": novo_grupo, 
+                                    "VENDEDOR": novo_vendedor,
+                                    "STATUS": novo_status,
+                                    "DATA": data_formatada,
+                                    "GRUPO": novo_grupo,
                                     "COTA": nova_cota,
                                     "VALOR": novo_valor,
                                     "ADMINISTRADORA": nova_admin,
-                                    "PRODUTO": novo_produto
+                                    "PRODUTO": novo_produto,
+                                    "TIPO_PARCELA": novo_tipo_parcela
                                 }
                                 
                                 supabase.table("vendas").update(dados_atualizados).eq("id", id_cota).execute()

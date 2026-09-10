@@ -89,6 +89,12 @@ def render_nova_venda(supabase, df_cli, lista_admin_bd):
             admin = st.selectbox("Administradora *", lista_admin_bd)
             produto = st.selectbox("Produto *", PRODUTOS)
 
+        tipo_parcela = st.selectbox(
+            "Tipo de Parcela", ["Linear", "Reduzida"],
+            help="Define a regra de comissão quando a administradora tem "
+                 "percentuais diferentes por tipo de parcela (ex.: Itaú imóvel "
+                 "linear = 4% em 8 parcelas; reduzida = 4% em 12).")
+
         st.markdown("##### Cotas Adquiridas")
         if 'qtd_cotas' not in st.session_state:
             st.session_state['qtd_cotas'] = 1
@@ -133,6 +139,7 @@ def render_nova_venda(supabase, df_cli, lista_admin_bd):
                             "ADMINISTRADORA": admin,
                             "STATUS": "Em Andamento",
                             "TIPO_PRODUTO": "Consórcio Tradicional",
+                            "TIPO_PARCELA": tipo_parcela,
                             "VALOR": vf
                         })
 

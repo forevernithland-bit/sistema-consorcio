@@ -73,6 +73,12 @@ def carregar_dados_iniciais(supabase: Client):
     if not df_admin.empty:
         df_admin['Admin_Norm'] = df_admin['Administradora'].apply(normalizar_string)
         df_admin['Prod_Norm'] = df_admin['Produto'].apply(normalizar_produto)
+        # Tipo de parcela da regra (linear x reduzida). Vazio = regra genérica.
+        if 'Tipo_Parcela' in df_admin.columns:
+            df_admin['Tipo_Norm'] = df_admin['Tipo_Parcela'].apply(normalizar_string)
+        else:
+            df_admin['Tipo_Parcela'] = ""
+            df_admin['Tipo_Norm'] = ""
 
     # 6. Carregar Status das Comissões (Pagas ou Pendentes)
     df_status = carregar_tabela(supabase, "status_comissoes")

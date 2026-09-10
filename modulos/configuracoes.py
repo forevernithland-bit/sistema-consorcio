@@ -21,27 +21,33 @@ def render_configuracoes(supabase, df_admin_cad, df_admin, lista_admin_bd, cfg, 
     
     with t_regras:
         if not df_admin.empty:
-            df_m = df_admin.drop(columns=['Admin_Norm', 'Prod_Norm', 'id'], errors='ignore').copy()
-            
+            df_m = df_admin.drop(columns=['Admin_Norm', 'Prod_Norm', 'Tipo_Norm', 'id'], errors='ignore').copy()
+            if 'Tipo_Parcela' in df_m.columns:
+                df_m['Tipo_Parcela'] = df_m['Tipo_Parcela'].fillna('').replace('', '— (todas)')
+
             # Cálculo seguro da comissão usando a nossa função parse_float_safe
             df_m.insert(2, 'Total Comissão', df_m.apply(lambda r: f"{sum([parse_float_safe(r.get(f'P{i}', 0)) for i in range(1, 26)]):.2f}%".replace('.', ','), axis=1))
-            
+
             st.dataframe(df_m.style.set_properties(**{'text-align': 'center'}), use_container_width=True, hide_index=True)
         
         with st.expander("➕ Nova Regra", expanded=False):
             with st.form("f_a_n"):
-                c1, c2 = st.columns(2)
+                c1, c2, c3 = st.columns(3)
                 na = c1.selectbox("Admin *", lista_admin_bd)
                 pa = c2.selectbox("Produto *", ["Auto", "Imóvel", "Moto", "Caminhão", "Serviços"])
+                tp = c3.selectbox("Tipo de Parcela", ["— (todas)", "Linear", "Reduzida"],
+                                  help="Use Linear/Reduzida quando a administradora tem "
+                                       "percentuais diferentes por tipo de parcela (ex.: Itaú).")
                 i_p = []
                 for l in range(5):
                     cp = st.columns(5)
                     for c in range(5):
                         np = (l * 5) + c + 1
-                        i_p.append(cp[c].number_input(f"Parcela {np}", min_value=0.0, step=0.1, key=f"n_p{np}"))
+                        i_p.append(cp[c].number_input(f"Parcela {np}", min_value=0.0, step=0.05, format="%.4f", key=f"n_p{np}"))
                 if st.form_submit_button("Salvar", type="primary") and na != "Nenhuma administradora cadastrada":
-                    nr = {"Administradora": na.upper(), "Produto": pa}
-                    for i, v in enumerate(i_p): 
+                    nr = {"Administradora": na.upper(), "Produto": pa,
+                          "Tipo_Parcela": (tp if tp in ("Linear", "Reduzida") else None)}
+                    for i, v in enumerate(i_p):
                         nr[f"P{i+1}"] = f"{v}%" if v > 0 else ""
                     supabase.table("administradoras").insert(nr).execute()
                     st.rerun()
@@ -53,20 +59,25 @@ def render_configuracoes(supabase, df_admin_cad, df_admin, lista_admin_bd, cfg, 
                 if sel:
                     id_r = int(sel.split(" | ")[0].replace("ID:", ""))
                     r_at = df_admin[df_admin['id'] == id_r].iloc[0]
-                    c1, c2 = st.columns(2)
+                    c1, c2, c3 = st.columns(3)
                     e_n = c1.selectbox("Admin", lista_admin_bd, index=lista_admin_bd.index(r_at['Administradora']) if r_at['Administradora'] in lista_admin_bd else 0)
                     e_p = c2.selectbox("Produto", ["Auto", "Imóvel", "Moto", "Caminhão", "Serviços"], index=obter_index_produto(r_at['Produto']))
+                    _tp_op = ["— (todas)", "Linear", "Reduzida"]
+                    _tp_cur = str(r_at.get('Tipo_Parcela') or "").strip().capitalize()
+                    e_tp = c3.selectbox("Tipo de Parcela", _tp_op,
+                                        index=_tp_op.index(_tp_cur) if _tp_cur in _tp_op else 0)
                     e_ip = []
                     for l in range(5):
                         cp = st.columns(5)
                         for c in range(5):
                             np = (l * 5) + c + 1
                             v_f = float(str(r_at.get(f'P{np}', '')).replace('%', '').strip() or 0.0)
-                            e_ip.append(cp[c].number_input(f"P {np}", min_value=0.0, step=0.1, value=v_f, key=f"e_p{np}"))
+                            e_ip.append(cp[c].number_input(f"P {np}", min_value=0.0, step=0.05, format="%.4f", value=v_f, key=f"e_p{np}"))
                     b1, b2 = st.columns(2)
                     if b1.button("Salvar Alterações", type="primary"):
-                        r_u = {"Administradora": e_n.upper(), "Produto": e_p}
-                        for i, v in enumerate(e_ip): 
+                        r_u = {"Administradora": e_n.upper(), "Produto": e_p,
+                               "Tipo_Parcela": (e_tp if e_tp in ("Linear", "Reduzida") else None)}
+                        for i, v in enumerate(e_ip):
                             r_u[f"P{i+1}"] = f"{v}%" if v > 0 else ""
                         supabase.table("administradoras").update(r_u).eq("id", id_r).execute()
                         st.rerun()

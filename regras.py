@@ -24,8 +24,19 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict):
     """Gera a tabela completa de previsão de comissionamento e parcelas"""
     hoje = pd.Timestamp.today().normalize()
     parcelas_finais = []
-    vendas_sem_data = [] 
-    
+    vendas_sem_data = []
+
+    # A regra de comissão pode variar pelo TIPO DE PARCELA da cota
+    # (linear x reduzida) — ex.: Itaú imóvel reduzida = 4% em 12 parcelas.
+    # Se a coluna ainda não existe (antes da migração 25), tudo cai na
+    # regra genérica e nada muda para as outras administradoras.
+    if df_regras is not None and not df_regras.empty and 'Tipo_Norm' not in df_regras.columns:
+        df_regras = df_regras.copy()
+        if 'Tipo_Parcela' in df_regras.columns:
+            df_regras['Tipo_Norm'] = df_regras['Tipo_Parcela'].apply(normalizar_string)
+        else:
+            df_regras['Tipo_Norm'] = ""
+
     for idx, r in df_alvo.iterrows():
         data_venda = r['Data_Real']
         cliente = r.get('Nome do cliente', 'Desconhecido')
@@ -49,9 +60,17 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict):
         
         status_cota = r.get('STATUS', 'Em Andamento')
         if status_cota in ["Vendido", ""]: status_cota = "Em Andamento"
-        
-        regra = df_regras[(df_regras['Admin_Norm'] == admin_norm) & (df_regras['Prod_Norm'] == prod_norm)]
-        if regra.empty: continue
+
+        tipo_norm = normalizar_string(r.get('TIPO_PARCELA', '') or '')
+        base = df_regras[(df_regras['Admin_Norm'] == admin_norm) & (df_regras['Prod_Norm'] == prod_norm)]
+        if base.empty: continue
+        # 1º: regra específica do tipo de parcela da cota; 2º: regra genérica
+        # (Tipo_Norm vazio); 3º: qualquer uma que casou admin+produto.
+        regra = base[base['Tipo_Norm'] == tipo_norm]
+        if regra.empty:
+            regra = base[base['Tipo_Norm'] == ""]
+        if regra.empty:
+            regra = base
         regra = regra.iloc[0]
         
         tier_pct, tier_parc = calcular_comissao_vendedor(df_global, vendedor, data_venda, cfg)
