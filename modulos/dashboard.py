@@ -6,7 +6,7 @@ import altair as alt
 from utils import (formatar_telefone, formatar_data, formatar_data_br,
                    formatar_moeda, formatar_brl_puro, normalizar_produto, formatar_cpf)
 from regras import gerar_tabela_parcelas
-from database import salvar_status_comissoes
+from database import salvar_status_comissoes, carregar_dados_iniciais
 from modulos.integracao_site import carregar_operacoes_site
 from modulos.financeiro import calcular_resumo_mes_atual
 
@@ -169,6 +169,7 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
                         if st.session_state[key_nome] != cliente_nome:
                             supabase.table("vendas").update({"NOME": st.session_state[key_nome]}).eq("NOME", cliente_nome).execute()
                             st.session_state['cliente_visualizado'] = st.session_state[key_nome]
+                        carregar_dados_iniciais.clear()
                         st.success("Dados atualizados com sucesso!"); st.rerun()
                     except Exception as e: st.error(f"❌ Erro ao salvar: {e}")
 
@@ -176,6 +177,7 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
                 if st.button("🚨 Excluir Cliente (Apagar Todas as Cotas)", use_container_width=True):
                     if id_cliente_db: supabase.table("clientes").delete().eq("id", int(id_cliente_db)).execute()
                     supabase.table("vendas").delete().eq("NOME", cliente_nome).execute()
+                    carregar_dados_iniciais.clear()
                     st.session_state['cliente_visualizado'] = None; st.session_state['key_tabela'] += 1; st.rerun()
 
         st.divider()
@@ -238,6 +240,7 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
                                         "TIPO_PRODUTO": "Consórcio Tradicional",
                                         "VALOR": float(add_valor),
                                     }]).execute()
+                                    carregar_dados_iniciais.clear()
                                     st.success(f"✅ Cota {g}/{c} adicionada ao perfil de {cliente_nome}!")
                                     st.rerun()
                                 except Exception as e:
@@ -326,10 +329,12 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
                                 }
                                 
                                 supabase.table("vendas").update(dados_atualizados).eq("id", id_cota).execute()
+                                carregar_dados_iniciais.clear()
                                 st.success("Cota atualizada com sucesso!"); st.rerun()
                         with col_b2:
                             if is_master and st.button("🚨 Apagar Esta Cota", use_container_width=True):
                                 supabase.table("vendas").delete().eq("id", id_cota).execute()
+                                carregar_dados_iniciais.clear()
                                 st.success("Cota apagada com sucesso!"); st.rerun()
 
                 st.subheader("📈 Previsão de Comissionamento")

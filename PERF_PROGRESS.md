@@ -33,7 +33,13 @@ rastreado abaixo, arquivo por arquivo, conforme vou mexendo em cada um.
       duas logo após o único update que o próprio app faz em `robo_status`
       (botão "liberar robô"). Testado: leitura cacheada retorna valor
       idêntico e cai de ~0.87s para ~0.000s.
-- [ ] `modulos/dashboard.py`
+- [x] `modulos/dashboard.py` — adicionado `carregar_dados_iniciais.clear()` logo
+      após cada escrita em `clientes`/`vendas` (editar/excluir cliente,
+      adicionar cota, editar cota, apagar cota), para o cache de 60s de
+      `database.py` nunca mostrar dado velho depois de uma escrita nesta tela.
+      Nenhuma outra otimização aplicada aqui (os `.apply()` restantes rodam
+      sobre recortes pequenos — por cliente — e vetorizá-los não traria ganho
+      que justifique o risco).
 - [ ] `modulos/financeiro.py`
 - [ ] `modulos/relatorios.py`
 - [ ] `modulos/nova_venda.py`
