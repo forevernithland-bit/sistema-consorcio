@@ -160,22 +160,29 @@ def _cartas_site():
 # ==========================================================
 # FILTRO DE PERÍODO (sobre uma coluna 'AAAA-MM')
 # ==========================================================
-def _seletor_periodo(chave, meses_disponiveis):
+def _seletor_periodo(chave, meses_disponiveis, default_modo="Mês Atual"):
     """Devolve (lista_de_ym, rótulo). 'Todos' = tudo o que existe."""
     hoje = datetime.today()
     ym_atual = f"{hoje.year:04d}-{hoje.month:02d}"
     ma, aa = (hoje.month - 1, hoje.year) if hoje.month > 1 else (12, hoje.year - 1)
     ym_ant = f"{aa:04d}-{ma:02d}"
+    mp, ap = (hoje.month + 1, hoje.year) if hoje.month < 12 else (1, hoje.year + 1)
+    ym_prox = f"{ap:04d}-{mp:02d}"
     disp = sorted(meses_disponiveis)
 
-    opcoes = ["Mês Atual", "Mês Anterior", "Últimos 6 meses", "Últimos 12 meses",
-              "Ano Atual", "Todos", "Escolher meses"]
+    opcoes = ["Mês Atual", "Próximo Mês", "Mês Atual + Próximo", "Mês Anterior",
+              "Últimos 6 meses", "Últimos 12 meses", "Ano Atual", "Todos", "Escolher meses"]
     c1, c2 = st.columns([1, 2])
     with c1:
-        modo = st.selectbox("⏳ Período", opcoes, index=0, key=f"rel_per_{chave}")
+        idx = opcoes.index(default_modo) if default_modo in opcoes else 0
+        modo = st.selectbox("⏳ Período", opcoes, index=idx, key=f"rel_per_{chave}")
 
     if modo == "Mês Atual":
         return [ym_atual], _label_mes(ym_atual)
+    if modo == "Próximo Mês":
+        return [ym_prox], _label_mes(ym_prox)
+    if modo == "Mês Atual + Próximo":
+        return [ym_atual, ym_prox], f"{_label_mes(ym_atual)} + {_label_mes(ym_prox)}"
     if modo == "Mês Anterior":
         return [ym_ant], _label_mes(ym_ant)
     if modo in ("Últimos 6 meses", "Últimos 12 meses"):
@@ -471,13 +478,22 @@ def _aba_previsto(prev, site_prev):
     st.markdown("#### 🔮 Faturamento Previsto")
     st.caption("Comissões ainda **não recebidas** das cotas Em Andamento, projetadas pela "
                "regra de cada administradora, mais o ágio das cartas contempladas ainda "
-               "em análise no Site.")
+               "em análise no Site. Escolha o mês — por padrão já vem com o atual + o "
+               "seguinte, pra ter noção do que deve entrar no mês que vem.")
 
-    sem_trad = prev is None or prev.empty
+    sem_trad_bruto = prev is None or prev.empty
     sem_site = site_prev is None or site_prev.empty
-    if sem_trad and sem_site:
+    if sem_trad_bruto and sem_site:
         return _vazio("Nada previsto: não há cotas ativas com parcelas pendentes.")
 
+    if not sem_trad_bruto:
+        meses = _meses_de((prev, "ym"))
+        yms, rotulo = _seletor_periodo("previsto", meses, default_modo="Mês Atual + Próximo")
+        prev = prev[prev["ym"].isin(yms)] if yms else prev.iloc[0:0]
+
+    sem_trad = prev is None or prev.empty
+    if sem_trad and not sem_trad_bruto:
+        st.info(f"Nenhuma comissão prevista para **{rotulo}**.")
     if not sem_trad:
         vencidas = prev[prev["atrasada"]]
         a_vencer = prev[~prev["atrasada"]]
@@ -704,19 +720,19 @@ def render_relatorios(supabase, df_vendas_global, df_admin, cfg, status_dict):
                    + ", ".join(sorted(dups))
                    + ". A previsão conta cada uma só uma vez, mas convém apagar a repetida.")
 
-    abas = ["💵 Faturamento por Mês", "🏢 Administradora", "📦 Produto", "👤 Vendedor",
-            "🔮 Previsto", "🎯 Cartas Contempladas", "📊 Produção", "💰 Comissionamento"]
+    abas = ["💵 Faturamento por Mês", "🔮 Previsto", "🏢 Administradora", "📦 Produto",
+            "👤 Vendedor", "🎯 Cartas Contempladas", "📊 Produção", "💰 Comissionamento"]
     t = st.tabs(abas)
     with t[0]:
         _aba_faturamento_mes(com, site_ok, prev)
     with t[1]:
-        _aba_administradora(com, vendas, prev)
-    with t[2]:
-        _aba_produto(com, vendas, prev)
-    with t[3]:
-        _aba_vendedor(com, vendas, prev, is_master)
-    with t[4]:
         _aba_previsto(prev, site_prev)
+    with t[2]:
+        _aba_administradora(com, vendas, prev)
+    with t[3]:
+        _aba_produto(com, vendas, prev)
+    with t[4]:
+        _aba_vendedor(com, vendas, prev, is_master)
     with t[5]:
         _aba_cartas(site_ok)
     with t[6]:
