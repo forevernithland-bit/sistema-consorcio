@@ -40,9 +40,20 @@ def carregar_tabela(supabase: Client, nome_tabela: str) -> pd.DataFrame:
 # ==========================================
 # CARREGAMENTO E LIMPEZA INICIAL DE DADOS
 # ==========================================
-def carregar_dados_iniciais(supabase: Client):
-    """Carrega e padroniza todas as tabelas cruciais do sistema ao iniciar"""
-    
+@st.cache_data(ttl=60)
+def carregar_dados_iniciais(_supabase: Client):
+    """Carrega e padroniza todas as tabelas cruciais do sistema ao iniciar.
+
+    Cacheado por até 60s (st.cache_data) para evitar refazer ~7 fetches completos
+    do Supabase a cada rerun/clique de navegação. Toda escrita nas tabelas lidas
+    aqui (vendas, clientes, assembleias, cad_administradoras, administradoras,
+    status_comissoes, config_interna) DEVE chamar carregar_dados_iniciais.clear()
+    logo após o insert/update/delete, para não mostrar dado desatualizado antes
+    do TTL expirar. Parâmetro com "_" no nome (_supabase) para o Streamlit não
+    tentar hashear o Client do Supabase.
+    """
+    supabase = _supabase
+
     # 1. Carregar Vendas
     df_vendas_bd = carregar_tabela(supabase, "vendas")
     if not df_vendas_bd.empty:
@@ -149,7 +160,8 @@ def salvar_status_comissoes(supabase: Client, df_editado: pd.DataFrame, df_origi
             except Exception as e:
                 st.error(f"Erro ao salvar a parcela {chave}: {e}")
                 return False
-                
+
+        carregar_dados_iniciais.clear()
         return True
     return False
 
