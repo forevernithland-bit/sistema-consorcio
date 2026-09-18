@@ -52,8 +52,11 @@ def render_seletor_tema():
 # ==========================================
 # FUNDO ILUSTRADO DA TELA DE LOGIN
 # ==========================================
+@st.cache_data
 def _svg_login_b64():
-    """Lê a ilustração de fundo (assets/fundo_login.svg) e devolve em base64."""
+    """Lê a ilustração de fundo (assets/fundo_login.svg) e devolve em base64.
+    Cacheado sem TTL: é um arquivo estático do projeto, só muda em deploy —
+    evita reler e recodificar o SVG a cada render da tela de login."""
     raiz = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     caminho = os.path.join(raiz, "assets", "fundo_login.svg")
     try:

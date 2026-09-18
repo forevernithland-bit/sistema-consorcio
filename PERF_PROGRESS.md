@@ -173,9 +173,24 @@ rastreado abaixo, arquivo por arquivo, conforme vou mexendo em cada um.
       tabelas do `carregar_dados_iniciais`, cache isolado neste arquivo.
       Testado: dado idêntico com e sem cache, latência cai de ~0.63s para
       ~0.001s.
-- [ ] `modulos/midias.py`
-- [ ] `modulos/senhas.py`
-- [ ] `modulos/tema.py`
+- [x] `modulos/midias.py` — nenhuma mudança necessária. Usa só
+      `listar_arquivos_drive` (utils.py), que já estava cacheada antes desta
+      tarefa começar.
+- [x] `modulos/senhas.py` — decisão: não cachear (ver seção de decisões
+      abaixo). Tela de baixo tráfego (só dentro de Configurações → Senhas,
+      para Masters) e sensível (senhas em texto puro); melhor manter sempre
+      a leitura mais atual do banco do que arriscar mostrar uma senha
+      desatualizada por até o TTL.
+- [x] `modulos/tema.py` — `_svg_login_b64` (lê e base64-codifica
+      `assets/fundo_login.svg` a cada render da tela de login) cacheada com
+      `@st.cache_data` sem TTL — arquivo estático, só muda em deploy.
+      Testado: conteúdo idêntico, latência cai de ~0.016s para ~0.0001s.
+      `montar_css`/`render_seletor_tema` não mexidos: é só formatação de
+      string em memória (f-string), sem I/O nem chamada ao banco — não há
+      nada para cachear com ganho real, e cachear geraria só overhead de
+      hash/cópia por muito pouco benefício.
+
+Com este arquivo, a lista completa de 20 itens do plano foi percorrida.
 
 ## Decisões de "não cachear" (revisar com calma depois)
 
@@ -195,3 +210,7 @@ rastreado abaixo, arquivo por arquivo, conforme vou mexendo em cada um.
   rara, não em todo clique de navegação), então o ganho de cachear seria
   pequeno — e o risco de, com cache desatualizado, deixar passar uma
   duplicata financeira não compensa. Mantido sem cache.
+- `modulos/senhas.py` (leitura de `senhas_sistema`): tela de baixo tráfego
+  (só Configurações → Senhas, só Masters) e sensível — senhas em texto
+  puro. Melhor sempre mostrar a senha mais atual do que arriscar um Master
+  ver uma senha já trocada há pouco. Mantido sem cache.
