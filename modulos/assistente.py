@@ -5,6 +5,15 @@ import io
 import os
 from docx import Document
 
+@st.cache_data(ttl=60)
+def _carregar_base_conhecimento(_supabase):
+    """Leitura cacheada de base_conhecimento_ia (regras que o Bento usa no
+    chat e que a tela 'Base de Conhecimento' exibe/edita). Escritas nesta
+    tabela (cadastrar, importar Word, apagar) chamam
+    _carregar_base_conhecimento.clear() logo em seguida."""
+    return _supabase.table("base_conhecimento_ia").select("*").execute().data
+
+
 # ==========================================
 # 1. WIDGET DO CHAT DO BENTO (Flutuante / Tela Cheia)
 # ==========================================
@@ -93,8 +102,7 @@ def render_widget_ia(supabase):
                             modelo_escolhido = next((m for m in modelos_permitidos if '1.5-flash' in m), modelos_permitidos[0])
                             modelo_limpo = modelo_escolhido.replace('models/', '')
                             
-                            res = supabase.table("base_conhecimento_ia").select("*").execute()
-                            df_base = pd.DataFrame(res.data)
+                            df_base = pd.DataFrame(_carregar_base_conhecimento(supabase))
                             
                             contexto_geral = ""
                             if not df_base.empty:
@@ -142,8 +150,7 @@ def render_config_ia(supabase):
     st.markdown("Aqui você escreve tudo o que o Bento precisa saber para responder à equipe com precisão.")
     
     try:
-        res = supabase.table("base_conhecimento_ia").select("*").execute()
-        df_bd = pd.DataFrame(res.data)
+        df_bd = pd.DataFrame(_carregar_base_conhecimento(supabase))
     except:
         df_bd = pd.DataFrame(columns=["id", "administradora", "regras_operacionais", "regras_comissionamento"])
         
@@ -160,6 +167,7 @@ def render_config_ia(supabase):
                         "regras_operacionais": reg_op,
                         "regras_comissionamento": reg_com
                     }).execute()
+                    _carregar_base_conhecimento.clear()
                     st.success("Salvo com sucesso!")
                     st.rerun()
                 else:
@@ -223,7 +231,8 @@ def render_config_ia(supabase):
                             else:
                                 supabase.table("base_conhecimento_ia").insert(payload).execute()
                             contador += 1
-                            
+
+                    _carregar_base_conhecimento.clear()
                     st.success(f"✅ Sucesso! {contador} administradora(s) processada(s) e salvas no banco!")
                     st.rerun()
                 except Exception as e:
@@ -273,4 +282,5 @@ def render_config_ia(supabase):
                 st.write(row['regras_comissionamento'])
                 if st.button(f"🚨 Apagar Regras da {row['administradora']}", key=f"del_{row['id']}"):
                     supabase.table("base_conhecimento_ia").delete().eq("id", row['id']).execute()
+                    _carregar_base_conhecimento.clear()
                     st.rerun()

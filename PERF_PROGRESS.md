@@ -165,7 +165,14 @@ rastreado abaixo, arquivo por arquivo, conforme vou mexendo em cada um.
       Testado contra o Supabase real: dado idêntico com e sem cache,
       latência cai de ~0.44s para ~0.001s. Import isolado do módulo
       confirmado sem ciclo (importa financeiro.py e relatorios.py).
-- [ ] `modulos/assistente.py`
+- [x] `modulos/assistente.py` — nova `_carregar_base_conhecimento`, cacheada
+      com `@st.cache_data(ttl=60)`, substitui os dois fetches diretos de
+      `base_conhecimento_ia` (widget do chat do Bento e a tela "Base de
+      Conhecimento" em Configurações). `.clear()` adicionado nos 3 pontos de
+      escrita (cadastrar manual, importar Word, apagar). Não é uma das 7
+      tabelas do `carregar_dados_iniciais`, cache isolado neste arquivo.
+      Testado: dado idêntico com e sem cache, latência cai de ~0.63s para
+      ~0.001s.
 - [ ] `modulos/midias.py`
 - [ ] `modulos/senhas.py`
 - [ ] `modulos/tema.py`
