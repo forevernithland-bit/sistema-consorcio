@@ -78,7 +78,16 @@ rastreado abaixo, arquivo por arquivo, conforme vou mexendo em cada um.
       loop, dentro do `if ok:`. Com isso os caches de `comissoes_pagas`
       ficam totalmente cobertos entre financeiro.py/relatorios.py/baixas.py.
       Testado import isolado do módulo (sem import circular).
-- [ ] `modulos/ofertar_lance.py`
+- [x] `modulos/ofertar_lance.py` — nenhuma mudança. `_mapa_ultimo_lance` e
+      `_painel_status` leem `fila_automacao`, que é escrita tanto pelo app
+      (aqui mesmo, `_enfileirar`) quanto pelo WORKER externo do robô
+      (`worker/worker_lances.py` etc.), em ciclos de segundos, e a própria
+      razão de existir desta tela é mostrar o status **ao vivo** da fila
+      (inclui um botão "🔄 Atualizar"). Cachear aqui esconderia justamente a
+      informação que o usuário está checando. Decisão: não cachear (ver
+      seção "Decisões de não cachear" abaixo). `fila_automacao` não é uma das
+      7 tabelas do `carregar_dados_iniciais`, então nenhuma invalidação foi
+      necessária.
 - [ ] `modulos/emitir_boleto.py`
 - [ ] `modulos/configuracoes.py`
 - [ ] `modulos/assembleias.py`
@@ -94,4 +103,8 @@ rastreado abaixo, arquivo por arquivo, conforme vou mexendo em cada um.
 
 ## Decisões de "não cachear" (revisar com calma depois)
 
-(nenhuma ainda — será preenchido conforme avanço)
+- `modulos/ofertar_lance.py` (`_mapa_ultimo_lance`, `_painel_status`): leem
+  `fila_automacao`, que é escrita em tempo real pelo worker externo do robô
+  (fora do processo do Streamlit, então `.clear()` local não alcançaria essas
+  escritas) e a tela existe justamente para mostrar o andamento ao vivo.
+  Não cacheado — segue lendo direto do banco a cada rerun, como já era.
