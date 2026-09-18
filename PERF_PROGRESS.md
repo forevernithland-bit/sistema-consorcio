@@ -95,7 +95,10 @@ rastreado abaixo, arquivo por arquivo, conforme vou mexendo em cada um.
       `ofertar_lance.py`: status ao vivo do robô, escrito por um processo
       externo. `listar_arquivos_drive` já estava cacheada (utils.py) e já
       tinha `.clear()` correto no botão "Atualizar" — nada a mudar.
-- [ ] `modulos/configuracoes.py`
+- [x] `modulos/configuracoes.py` — adicionado `carregar_dados_iniciais.clear()`
+      após todas as escritas em `cad_administradoras`, `administradoras` e
+      `config_interna` (cadastrar admin, nova regra, editar/excluir regra,
+      salvar regras internas).
 - [ ] `modulos/assembleias.py`
 - [ ] `modulos/robo_painel.py`
 - [ ] `modulos/yamaha_sim.py`

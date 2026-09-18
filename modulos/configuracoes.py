@@ -1,5 +1,6 @@
 import streamlit as st
 from utils import parse_float_safe, obter_index_produto
+from database import carregar_dados_iniciais
 
 def render_configuracoes(supabase, df_admin_cad, df_admin, lista_admin_bd, cfg, cfg_id):
     st.markdown("### 🏢 Configurações de Sistema")
@@ -13,6 +14,7 @@ def render_configuracoes(supabase, df_admin_cad, df_admin, lista_admin_bd, cfg, 
             en_adm = st.text_input("Endereço Completo")
             if st.form_submit_button("Salvar Administradora", type="primary") and n_adm:
                 supabase.table("cad_administradoras").insert({"Administradora": n_adm.upper(), "CNPJ": cn_adm, "Endereço": en_adm}).execute()
+                carregar_dados_iniciais.clear()
                 st.success("Cadastrada!")
                 st.rerun()
                 
@@ -61,6 +63,7 @@ def render_configuracoes(supabase, df_admin_cad, df_admin, lista_admin_bd, cfg, 
                     for i, v in enumerate(i_p):
                         nr[f"P{i+1}"] = f"{v}%" if v > 0 else ""
                     supabase.table("administradoras").insert(nr).execute()
+                    carregar_dados_iniciais.clear()
                     st.rerun()
                 
         with st.expander("✏️ Editar/Excluir Regra", expanded=False):
@@ -91,9 +94,11 @@ def render_configuracoes(supabase, df_admin_cad, df_admin, lista_admin_bd, cfg, 
                         for i, v in enumerate(e_ip):
                             r_u[f"P{i+1}"] = f"{v}%" if v > 0 else ""
                         supabase.table("administradoras").update(r_u).eq("id", id_r).execute()
+                        carregar_dados_iniciais.clear()
                         st.rerun()
                     if b2.button("🚨 EXCLUIR"):
                         supabase.table("administradoras").delete().eq("id", id_r).execute()
+                        carregar_dados_iniciais.clear()
                         st.rerun()
 
     with t_reg_int:
@@ -147,6 +152,7 @@ def render_configuracoes(supabase, df_admin_cad, df_admin, lista_admin_bd, cfg, 
                     supabase.table("config_interna").update(n_c).eq("id", int(cfg_id)).execute()
                 else:
                     supabase.table("config_interna").insert(n_c).execute()
+                carregar_dados_iniciais.clear()
                 st.success("✅ Regras atualizadas!")
                 st.rerun()
             except Exception as e:
