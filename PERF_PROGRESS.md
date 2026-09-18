@@ -114,7 +114,24 @@ rastreado abaixo, arquivo por arquivo, conforme vou mexendo em cada um.
       habilitado quando a tarefa já está na fila, gerando pedido duplicado).
       Mesma decisão do `ofertar_lance.py`/`emitir_boleto.py`. Nenhuma escrita
       nas 7 tabelas de `carregar_dados_iniciais` — só em `fila_automacao`.
-- [ ] `modulos/yamaha_sim.py`
+- [x] `modulos/yamaha_sim.py` — 3 caches: `_logo_data_uri` e a nova
+      `_ler_html_yamaha` (arquivo estático `yamaha.html`, ~100KB, relido do
+      disco em TODO render do simulador) cacheadas sem TTL (`@st.cache_data`
+      simples — só mudam em deploy); `carregar_base_yamaha` (4 tabelas:
+      planos_yamaha, grupos_yamaha, yamaha_assembleias,
+      yamaha_grupo_lance_resumo) cacheada com `ttl=60` + `.clear()` nos dois
+      formulários manuais que escrevem aqui (editar grupo, lançar
+      assembleia). Cuidado tomado: o campo `gerado_em` do payload (timestamp
+      "agora") foi tirado de dentro da função cacheada e recalculado a cada
+      render em `render_yamaha_sim`, pra não passar a mostrar um horário
+      congelado do momento em que os dados foram buscados (ele não é
+      exibido no yamaha.html hoje, mas preservei o valor exato mesmo assim).
+      As mesmas 4 tabelas também são escritas pelo worker de coleta externo
+      (`worker/coletar_grupos.py`, `coletar_tabelas_yamaha.py`,
+      `coletar_assembleias.py`) — o ttl=60 é a rede de segurança para essas.
+      Testado contra o Supabase real: dado idêntico (exceto `gerado_em`, que
+      já era esperado variar) e arquivo idêntico com e sem cache; latência
+      cai de ~1.4s/~0.03s/~0.12s para ~0.007s/~0.0005s/~0.0007s.
 - [ ] `modulos/itau_v2.py`
 - [ ] `modulos/integracao_site.py`
 - [ ] `modulos/importar_comissoes.py`

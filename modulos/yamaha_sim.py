@@ -18,9 +18,11 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 
+@st.cache_data
 def _logo_data_uri(pasta_atual):
     """logo.png da raiz do projeto (a mesma logo Consorbens da sidebar do ERP)
-    convertida em data URI base64, pra renderizar offline dentro do iframe."""
+    convertida em data URI base64, pra renderizar offline dentro do iframe.
+    Cacheado sem TTL: é um arquivo estático do projeto, só muda em deploy."""
     caminho = os.path.join(pasta_atual, "logo.png")
     try:
         with open(caminho, "rb") as f:
@@ -28,6 +30,15 @@ def _logo_data_uri(pasta_atual):
         return "data:image/png;base64," + b64
     except Exception:
         return ""
+
+
+@st.cache_data
+def _ler_html_yamaha(caminho):
+    """Lê yamaha.html do disco. Cacheado sem TTL: é um arquivo estático do
+    projeto (a lógica do simulador), só muda em deploy — evita reler e
+    reprocessar o arquivo inteiro a cada render da tela."""
+    with open(caminho, "r", encoding="utf-8") as f:
+        return f.read()
 
 
 def _rows(supabase, tabela, colunas="*", ordem=None, desc=False):
@@ -52,7 +63,16 @@ def _max_ts(rows, *campos):
     return max(vals) if vals else None
 
 
-def carregar_base_yamaha(supabase):
+@st.cache_data(ttl=60)
+def carregar_base_yamaha(_supabase):
+    """Lê planos_yamaha, grupos_yamaha, yamaha_assembleias e
+    yamaha_grupo_lance_resumo. Cacheado (ttl=60) porque essas 4 tabelas
+    inteiras eram relidas a cada render do Simulador Yamaha. Escritas feitas
+    aqui no ERP (grupos_yamaha e yamaha_assembleias, nos formulários manuais)
+    chamam carregar_base_yamaha.clear() logo após salvar. As mesmas tabelas
+    também são escritas pelo worker de coleta do robô (fora deste processo);
+    para essas, o ttl=60 é a rede de segurança."""
+    supabase = _supabase
     planos = _rows(supabase, "planos_yamaha", ordem="codigo")
     grupos = _rows(supabase, "grupos_yamaha", ordem="grupo")
     assembleias = _rows(supabase, "yamaha_assembleias", ordem="data_assembleia", desc=True)
@@ -185,6 +205,7 @@ def _form_editar_grupo(supabase, grupos):
         try:
             supabase.table("grupos_yamaha").upsert(
                 payload, on_conflict="grupo,tipo_bem").execute()
+            carregar_base_yamaha.clear()
             st.success(f"Grupo {grupo} salvo ({payload['atualizado_por']}, "
                        f"{datetime.datetime.now():%d/%m/%Y %H:%M}).")
             st.rerun()
@@ -246,6 +267,7 @@ def _form_lancar_assembleia(supabase, grupos):
         try:
             supabase.table("yamaha_assembleias").upsert(
                 payload, on_conflict="grupo,num_assembleia").execute()
+            carregar_base_yamaha.clear()
             st.success(f"Assembleia {int(num_ass)} do grupo {grupo} salva "
                        f"({datetime.datetime.now():%d/%m/%Y %H:%M}).")
             st.rerun()
@@ -256,13 +278,16 @@ def _form_lancar_assembleia(supabase, grupos):
 def render_yamaha_sim(supabase, pasta_atual):
     caminho = os.path.join(pasta_atual, "yamaha.html")
     try:
-        with open(caminho, "r", encoding="utf-8") as f:
-            html_code = f.read()
+        html_code = _ler_html_yamaha(caminho)
     except FileNotFoundError:
         st.error("⚠️ yamaha.html não encontrado no servidor.")
         return
 
-    dados = carregar_base_yamaha(supabase)
+    dados = dict(carregar_base_yamaha(supabase))
+    # "gerado_em" sempre é o instante deste render (não o instante em que os
+    # dados foram buscados no banco) — preserva o comportamento de antes do
+    # cache, em que a leitura acontecia a cada render.
+    dados["gerado_em"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
     payload = json.dumps(dados, ensure_ascii=False, default=str)
 
     # troca o objeto-marcador do HTML pelo JSON real (fallback: injeta no <head>)
