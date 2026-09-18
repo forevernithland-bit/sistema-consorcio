@@ -139,7 +139,12 @@ rastreado abaixo, arquivo por arquivo, conforme vou mexendo em cada um.
       `_ler_html_itau_v2` (`@st.cache_data` sem TTL, mesmo padrão do
       `yamaha_sim.py`). Testado: conteúdo idêntico, latência cai de ~0.10s
       para ~0.0004s.
-- [ ] `modulos/integracao_site.py`
+- [x] `modulos/integracao_site.py` — nenhuma mudança necessária. Já estava
+      corretamente cacheado antes desta tarefa começar: `carregar_operacoes_site`
+      com `@st.cache_data(ttl=120)` e `iniciar_conexao_site` com
+      `@st.cache_resource`. É leitura pura do Supabase do SITE (projeto
+      diferente do ERP) — nunca escrito por este ERP, então nem precisa de
+      `.clear()`.
 - [ ] `modulos/importar_comissoes.py`
 - [ ] `modulos/assistente.py`
 - [ ] `modulos/midias.py`
