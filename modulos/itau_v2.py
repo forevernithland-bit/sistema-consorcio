@@ -267,6 +267,15 @@ def _carregar_dados_itau():
     return dados, log
 
 
+@st.cache_data
+def _ler_html_itau_v2(caminho):
+    """Lê itau_v2.html do disco. Cacheado sem TTL: é um arquivo estático do
+    projeto (a lógica do simulador), só muda em deploy — evita reler o
+    arquivo inteiro a cada render da tela."""
+    with open(caminho, "r", encoding="utf-8") as f:
+        return f.read()
+
+
 # ------------------------------------------------------------------ #
 # Render
 # ------------------------------------------------------------------ #
@@ -307,8 +316,7 @@ def render_itau_v2(pasta_atual):
 
     caminho = os.path.join(pasta_atual, "itau_v2.html")
     try:
-        with open(caminho, "r", encoding="utf-8") as f:
-            html = f.read()
+        html = _ler_html_itau_v2(caminho)
     except FileNotFoundError:
         st.error("⚠️ O arquivo `itau_v2.html` não foi encontrado no servidor (confira se está no GitHub).")
         return

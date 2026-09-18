@@ -132,7 +132,13 @@ rastreado abaixo, arquivo por arquivo, conforme vou mexendo em cada um.
       Testado contra o Supabase real: dado idêntico (exceto `gerado_em`, que
       já era esperado variar) e arquivo idêntico com e sem cache; latência
       cai de ~1.4s/~0.03s/~0.12s para ~0.007s/~0.0005s/~0.0007s.
-- [ ] `modulos/itau_v2.py`
+- [x] `modulos/itau_v2.py` — `_carregar_dados_itau` (Google Drive, ttl=300) já
+      estava cacheada corretamente, com `.clear()` no botão "🔄 Recarregar
+      Guia" — nada a mudar aí. Adicionado só o cache do arquivo estático
+      `itau_v2.html` (~86KB, relido do disco a cada render), na nova
+      `_ler_html_itau_v2` (`@st.cache_data` sem TTL, mesmo padrão do
+      `yamaha_sim.py`). Testado: conteúdo idêntico, latência cai de ~0.10s
+      para ~0.0004s.
 - [ ] `modulos/integracao_site.py`
 - [ ] `modulos/importar_comissoes.py`
 - [ ] `modulos/assistente.py`
