@@ -145,7 +145,26 @@ rastreado abaixo, arquivo por arquivo, conforme vou mexendo em cada um.
       `@st.cache_resource`. É leitura pura do Supabase do SITE (projeto
       diferente do ERP) — nunca escrito por este ERP, então nem precisa de
       `.clear()`.
-- [ ] `modulos/importar_comissoes.py`
+- [x] `modulos/importar_comissoes.py` — nova `_fetch_comissoes_pagas_historico`
+      (leitura crua de `comissoes_pagas` já ordenada por `mes_competencia`,
+      usada pelo Histórico de Pagamentos) cacheada com `@st.cache_data(ttl=60)`
+      — cache próprio, separado dos de financeiro.py/relatorios.py, para
+      preservar a ordenação e o `except` específicos desta tela. Criado o
+      helper `_invalidar_caches_comissoes()` que limpa de uma vez
+      `carregar_dados_iniciais` (database.py) + os 3 caches de
+      `comissoes_pagas` (financeiro.py, relatorios.py, este arquivo);
+      chamado após: confirmar importação de NF, remover 1 lançamento do
+      histórico, excluir o mês inteiro. `carregar_dados_iniciais.clear()`
+      isolado também adicionado após cadastrar uma cota faltante
+      (vendas/clientes). Com isso os 3 caches de `comissoes_pagas` criados
+      nesta tarefa (financeiro.py, relatorios.py, importar_comissoes.py) têm
+      cobertura completa de invalidação em todos os pontos de escrita
+      conhecidos do app.
+      `_chaves_ja_gravadas` (checagem de idempotência antes de gravar) foi
+      **propositalmente deixada sem cache** — decisão registrada abaixo.
+      Testado contra o Supabase real: dado idêntico com e sem cache,
+      latência cai de ~0.44s para ~0.001s. Import isolado do módulo
+      confirmado sem ciclo (importa financeiro.py e relatorios.py).
 - [ ] `modulos/assistente.py`
 - [ ] `modulos/midias.py`
 - [ ] `modulos/senhas.py`
@@ -163,3 +182,9 @@ rastreado abaixo, arquivo por arquivo, conforme vou mexendo em cada um.
 - `modulos/robo_painel.py` (`_robo_online`, `_ja_na_fila`): mesmo motivo —
   além disso, cachear `_ja_na_fila` poderia deixar um botão de tarefa
   clicável mesmo com a tarefa já na fila, gerando pedido duplicado ao robô.
+- `modulos/importar_comissoes.py` (`_chaves_ja_gravadas`): checa se uma
+  parcela já foi importada (evita duplicar lançamento financeiro ao importar
+  a mesma NF duas vezes). É chamada só 1-2x por importação (ação manual e
+  rara, não em todo clique de navegação), então o ganho de cachear seria
+  pequeno — e o risco de, com cache desatualizado, deixar passar uma
+  duplicata financeira não compensa. Mantido sem cache.

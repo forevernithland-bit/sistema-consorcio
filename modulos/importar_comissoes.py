@@ -4,6 +4,9 @@ import re
 from datetime import datetime
 import pdfplumber
 from utils import parse_float_safe, formatar_brl_puro, limpar_str_nan
+from database import carregar_dados_iniciais
+from modulos.financeiro import _carregar_comissoes_pagas
+from modulos.relatorios import _fetch_comissoes_pagas_raw
 
 # ==========================================
 # EXPRESSÕES REGULARES DO PDF DA YAMAHA
@@ -389,6 +392,7 @@ def _render_cadastro_faltantes(supabase, cotas, admin_padrao):
                             c["admin"] = admin_v.strip()
                             c["valor_venda"] = valor_venda
                             c["encontrado"] = True
+                            carregar_dados_iniciais.clear()
                             st.success(f"✅ Venda cadastrada (Grupo {c['grupo']} / Cota {c['cota']}).")
                             st.rerun()
                         except Exception as e:
@@ -456,6 +460,7 @@ def _salvar_pagamentos(supabase, cotas, info, admin_sel):
         _limpar_import()
         st.rerun()
     elif ok:
+        _invalidar_caches_comissoes()
         extra = f" · {pulados} já existia(m) e foi(ram) ignorada(s)" if pulados else ""
         st.success(f"✅ {ok} pagamento(s) registrado(s) no histórico e marcados como PAGO "
                    f"(competência {mes_comp}){extra}.")
@@ -470,14 +475,35 @@ def _limpar_import():
         st.session_state.pop(k, None)
 
 
+def _invalidar_caches_comissoes():
+    """Limpa todos os caches que dependem de vendas/clientes/status_comissoes/
+    comissoes_pagas, para nenhuma tela mostrar dado desatualizado depois de
+    uma escrita feita aqui (importação de NF, cadastro de cota faltante,
+    remoção/exclusão no histórico)."""
+    carregar_dados_iniciais.clear()          # database.py (vendas/clientes/status_comissoes)
+    _carregar_comissoes_pagas.clear()        # financeiro.py
+    _fetch_comissoes_pagas_raw.clear()       # relatorios.py
+    _fetch_comissoes_pagas_historico.clear()  # este arquivo
+
+
 # ==========================================
 # 6. HISTÓRICO MÊS A MÊS
 # ==========================================
+@st.cache_data(ttl=60)
+def _fetch_comissoes_pagas_historico(_supabase):
+    """Leitura cacheada de comissoes_pagas (já ordenada por mes_competencia)
+    para o Histórico de Pagamentos. Cache próprio, separado dos de
+    financeiro.py/relatorios.py, para preservar a ordenação e o tratamento de
+    erro específicos desta tela. Invalidado via _invalidar_caches_comissoes()
+    logo após qualquer escrita em comissoes_pagas/status_comissoes aqui."""
+    return (_supabase.table("comissoes_pagas").select("*")
+            .order("mes_competencia", desc=True).execute().data)
+
+
 def render_historico_comissoes(supabase):
     st.subheader("📚 Histórico de Pagamentos (mês a mês)")
     try:
-        res = supabase.table("comissoes_pagas").select("*").order("mes_competencia", desc=True).execute()
-        df = pd.DataFrame(res.data)
+        df = pd.DataFrame(_fetch_comissoes_pagas_historico(supabase))
     except Exception as e:
         st.error(f"Não foi possível ler o histórico. A tabela 'comissoes_pagas' existe? Detalhes: {e}")
         return
@@ -545,6 +571,7 @@ def render_historico_comissoes(supabase):
                         if chave:
                             supabase.table("status_comissoes").update(
                                 {"Status": "Pendente"}).eq("Chave_Unica", chave).execute()
+                        _invalidar_caches_comissoes()
                         st.success("Lançamento removido e parcela revertida para Pendente.")
                         st.rerun()
                     except Exception as e:
@@ -563,6 +590,7 @@ def render_historico_comissoes(supabase):
                         if chaves:
                             supabase.table("status_comissoes").update(
                                 {"Status": "Pendente"}).in_("Chave_Unica", chaves).execute()
+                        _invalidar_caches_comissoes()
                         st.success(f"Mês {titulo} excluído ({len(dfm)} lançamentos) e baixas revertidas.")
                         st.rerun()
                     except Exception as e:
