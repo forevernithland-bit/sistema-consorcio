@@ -106,7 +106,14 @@ rastreado abaixo, arquivo por arquivo, conforme vou mexendo em cada um.
       config_interna) já têm `.clear()` cobrindo suas escritas conhecidas no
       app (falta só `importar_comissoes.py`, que também mexe em
       vendas/clientes/status_comissoes e será feito mais adiante).
-- [ ] `modulos/robo_painel.py`
+- [x] `modulos/robo_painel.py` — nenhuma mudança. `_robo_online` e
+      `_ja_na_fila` (uma consulta por botão de tarefa, 7 no total) leem
+      `robo_status`/`fila_automacao` — status ao vivo do robô, escrito por
+      processo externo, e a página existe para o usuário decidir se dispara
+      uma tarefa com base no estado atual (cachear arriscaria deixar um botão
+      habilitado quando a tarefa já está na fila, gerando pedido duplicado).
+      Mesma decisão do `ofertar_lance.py`/`emitir_boleto.py`. Nenhuma escrita
+      nas 7 tabelas de `carregar_dados_iniciais` — só em `fila_automacao`.
 - [ ] `modulos/yamaha_sim.py`
 - [ ] `modulos/itau_v2.py`
 - [ ] `modulos/integracao_site.py`
@@ -123,3 +130,8 @@ rastreado abaixo, arquivo por arquivo, conforme vou mexendo em cada um.
   (fora do processo do Streamlit, então `.clear()` local não alcançaria essas
   escritas) e a tela existe justamente para mostrar o andamento ao vivo.
   Não cacheado — segue lendo direto do banco a cada rerun, como já era.
+- `modulos/emitir_boleto.py` (`_mapa_ultimo_boleto`, `_painel_status`): mesmo
+  motivo acima (fila_automacao ao vivo).
+- `modulos/robo_painel.py` (`_robo_online`, `_ja_na_fila`): mesmo motivo —
+  além disso, cachear `_ja_na_fila` poderia deixar um botão de tarefa
+  clicável mesmo com a tarefa já na fila, gerando pedido duplicado ao robô.
