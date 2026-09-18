@@ -64,13 +64,29 @@ def _data_recebimento(data_relatorio):
         return s
 
 
-def _carregar_datas_financeiro(supabase):
-    """Datas exclusivas do Financeiro (tabela financeiro_datas). {chave: 'dd/mm/aaaa'}."""
+@st.cache_data(ttl=60)
+def _carregar_datas_financeiro(_supabase):
+    """Datas exclusivas do Financeiro (tabela financeiro_datas). {chave: 'dd/mm/aaaa'}.
+    Cacheada (ttl=60) porque é lida a cada render do Financeiro E do card
+    'Resumo do mês' do Dashboard. _salvar_data_financeiro chama .clear() logo
+    após gravar, para a edição aparecer na hora."""
     try:
-        rows = supabase.table("financeiro_datas").select("*").execute().data or []
+        rows = _supabase.table("financeiro_datas").select("*").execute().data or []
         return {r["chave_unica"]: r.get("data") for r in rows if r.get("data")}
     except Exception:
         return {}
+
+
+@st.cache_data(ttl=60)
+def _carregar_comissoes_pagas(_supabase):
+    """Leitura cacheada de comissoes_pagas (usada no Financeiro e no card
+    'Resumo do mês' do Dashboard). Escritas em comissoes_pagas (baixas.py,
+    importar_comissoes.py) devem chamar _carregar_comissoes_pagas.clear()
+    logo após o insert/update/delete."""
+    try:
+        return _supabase.table("comissoes_pagas").select("*").execute().data or []
+    except Exception:
+        return []
 
 
 def _salvar_data_financeiro(supabase, chave, data):
@@ -78,6 +94,7 @@ def _salvar_data_financeiro(supabase, chave, data):
     supabase.table("financeiro_datas").upsert(
         {"chave_unica": chave, "data": data}, on_conflict="chave_unica"
     ).execute()
+    _carregar_datas_financeiro.clear()
 
 
 # ==========================================================
@@ -99,10 +116,7 @@ def _recebidos_tradicional(supabase, df_vendas_global, df_admin, cfg, status_dic
     chaves_nf = set()
 
     # Fonte 1 — histórico NF
-    try:
-        cp = supabase.table("comissoes_pagas").select("*").execute().data or []
-    except Exception:
-        cp = []
+    cp = _carregar_comissoes_pagas(supabase)
     for r in cp:
         ch = r.get("chave_unica")
         if ch:

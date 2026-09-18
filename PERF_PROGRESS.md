@@ -40,7 +40,22 @@ rastreado abaixo, arquivo por arquivo, conforme vou mexendo em cada um.
       Nenhuma outra otimização aplicada aqui (os `.apply()` restantes rodam
       sobre recortes pequenos — por cliente — e vetorizá-los não traria ganho
       que justifique o risco).
-- [ ] `modulos/financeiro.py`
+- [x] `modulos/financeiro.py` — `_carregar_datas_financeiro` (tabela
+      `financeiro_datas`) e a nova `_carregar_comissoes_pagas` (tabela
+      `comissoes_pagas`, extraída de dentro de `_recebidos_tradicional`)
+      cacheadas com `@st.cache_data(ttl=60)`. Achado importante: essas duas
+      fetches completas rodavam a cada render do Financeiro **E** a cada
+      Dashboard de usuário Master (via `calcular_resumo_mes_atual` no card
+      "Resumo do mês") — ou seja, em uma das páginas mais visitadas.
+      `_salvar_data_financeiro` chama `.clear()` de `_carregar_datas_financeiro`
+      logo após o upsert. `_carregar_comissoes_pagas.clear()` ainda precisa ser
+      chamado nas escritas de `comissoes_pagas` em `baixas.py` e
+      `importar_comissoes.py` — será feito quando esses arquivos forem
+      processados nesta lista (mesmo padrão do `carregar_dados_iniciais`).
+      `carregar_operacoes_site()` (site) já estava cacheada (ttl=120) e não
+      precisou de mudança — tabela só de leitura, nunca escrita por este ERP.
+      Testado contra o Supabase real: dado idêntico com e sem cache, latência
+      cai para ~0.000s na chamada cacheada.
 - [ ] `modulos/relatorios.py`
 - [ ] `modulos/nova_venda.py`
 - [ ] `modulos/baixas.py`
