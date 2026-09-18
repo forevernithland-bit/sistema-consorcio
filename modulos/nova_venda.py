@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 from datetime import datetime
 from utils import formatar_telefone, formatar_data, formatar_moeda, formatar_cpf
+from database import carregar_dados_iniciais
 
 PRODUTOS = ["Auto", "Imóvel", "Moto", "Caminhão", "Serviços"]
 VENDEDORES = ["BRENO LIMA", "URIEL GOMES", "Particular Breno", "Particular Uriel", "Consorbens", "Vendedor Terceiro"]
@@ -145,6 +146,7 @@ def render_nova_venda(supabase, df_cli, lista_admin_bd):
 
                     supabase.table("vendas").insert(vendas_insert).execute()
                     _salvar_cliente_se_novo(supabase, df_cli, cliente, telefone, email, end_completo, aniversario, profissao, renda, cpf)
+                    carregar_dados_iniciais.clear()
                     st.success(f"✅ {len(cotas_data)} Venda(s) salvas!")
                     st.session_state['qtd_cotas'] = 1
 
@@ -195,4 +197,5 @@ def render_nova_venda(supabase, df_cli, lista_admin_bd):
                 }
                 supabase.table("vendas").insert([venda]).execute()
                 _salvar_cliente_se_novo(supabase, df_cli, cliente, telefone, email, end_completo, aniversario, profissao, renda, cpf)
+                carregar_dados_iniciais.clear()
                 st.success("✅ Venda de Consórcio Contemplado salva!")

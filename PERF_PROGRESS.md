@@ -67,7 +67,10 @@ rastreado abaixo, arquivo por arquivo, conforme vou mexendo em cada um.
       `.clear()` ainda precisa ser adicionado nas escritas de
       `comissoes_pagas` em `baixas.py`/`importar_comissoes.py` (junto com o de
       financeiro.py). Testado: dado idêntico (`.equals()`) com e sem cache.
-- [ ] `modulos/nova_venda.py`
+- [x] `modulos/nova_venda.py` — adicionado `carregar_dados_iniciais.clear()`
+      após os dois pontos que gravam em `vendas`/`clientes` (venda tradicional
+      e venda contemplada), para não deixar o cache de 60s do
+      `database.py` mostrar dado velho na próxima navegação.
 - [ ] `modulos/baixas.py`
 - [ ] `modulos/ofertar_lance.py`
 - [ ] `modulos/emitir_boleto.py`
