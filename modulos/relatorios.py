@@ -126,10 +126,20 @@ def _filtra_vendas_por_mes(df_vendas, yms):
 # ==========================================================
 # FONTES DE DADOS
 # ==========================================================
+@st.cache_data(ttl=60)
+def _fetch_comissoes_pagas_raw(_supabase):
+    """Leitura cacheada e crua de comissoes_pagas, para os Relatórios (cache
+    próprio, separado do de financeiro.py, para preservar o tratamento de erro
+    de cada módulo). Escritas em comissoes_pagas (baixas.py,
+    importar_comissoes.py) devem chamar _fetch_comissoes_pagas_raw.clear()
+    logo após o insert/update/delete."""
+    return _supabase.table("comissoes_pagas").select("*").execute().data or []
+
+
 def _carregar_comissoes(supabase):
     """Histórico de comissões recebidas (Consórcio Tradicional)."""
     try:
-        rows = supabase.table("comissoes_pagas").select("*").execute().data or []
+        rows = _fetch_comissoes_pagas_raw(supabase) or []
     except Exception as e:
         st.error(f"Não consegui ler o histórico de comissões: {e}")
         return pd.DataFrame()

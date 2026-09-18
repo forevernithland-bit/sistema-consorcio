@@ -56,7 +56,17 @@ rastreado abaixo, arquivo por arquivo, conforme vou mexendo em cada um.
       precisou de mudança — tabela só de leitura, nunca escrita por este ERP.
       Testado contra o Supabase real: dado idêntico com e sem cache, latência
       cai para ~0.000s na chamada cacheada.
-- [ ] `modulos/relatorios.py`
+- [x] `modulos/relatorios.py` — `_carregar_comissoes` fazia fetch completo de
+      `comissoes_pagas` a cada render da tela (8 abas todas dependem dela).
+      Extraída a leitura crua para `_fetch_comissoes_pagas_raw`, cacheada com
+      `@st.cache_data(ttl=60)`; o try/except com `st.error` de
+      `_carregar_comissoes` foi mantido por fora, para não mudar o
+      comportamento de erro. Cache próprio (separado do de financeiro.py) de
+      propósito — evita que uma exceção engolida silenciosamente dentro do
+      cache compartilhado faça o aviso de erro do usuário parar de aparecer.
+      `.clear()` ainda precisa ser adicionado nas escritas de
+      `comissoes_pagas` em `baixas.py`/`importar_comissoes.py` (junto com o de
+      financeiro.py). Testado: dado idêntico (`.equals()`) com e sem cache.
 - [ ] `modulos/nova_venda.py`
 - [ ] `modulos/baixas.py`
 - [ ] `modulos/ofertar_lance.py`
