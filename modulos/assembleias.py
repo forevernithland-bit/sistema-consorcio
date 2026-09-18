@@ -3,6 +3,7 @@ import pandas as pd
 import calendar
 from datetime import datetime, timedelta
 import urllib.parse
+from database import carregar_dados_iniciais
 
 def render_assembleias(supabase, df_ass):
     st.markdown("### 📅 Cronograma de Assembleias")
@@ -69,6 +70,7 @@ def render_assembleias(supabase, df_ass):
                 desc_ass = st.text_input("Descrição (Ex: Assembleia Auto Itaú)")
                 if st.form_submit_button("Cadastrar Nova", type="primary") and desc_ass:
                     supabase.table("assembleias").insert({"data_evento": dt_ass.strftime("%d/%m/%Y"), "descricao": desc_ass}).execute()
+                    carregar_dados_iniciais.clear()
                     st.success("Salvo!"); st.rerun()
         with c_del:
             if not df_ass.empty:
@@ -77,4 +79,5 @@ def render_assembleias(supabase, df_ass):
                 if st.button("🚨 Apagar Selecionada", use_container_width=True) and sel_del:
                     id_apagar = int(sel_del.split(" | ")[0].replace("ID:", ""))
                     supabase.table("assembleias").delete().eq("id", id_apagar).execute()
+                    carregar_dados_iniciais.clear()
                     st.rerun()

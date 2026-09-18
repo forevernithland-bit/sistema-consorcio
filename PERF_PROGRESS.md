@@ -99,7 +99,13 @@ rastreado abaixo, arquivo por arquivo, conforme vou mexendo em cada um.
       após todas as escritas em `cad_administradoras`, `administradoras` e
       `config_interna` (cadastrar admin, nova regra, editar/excluir regra,
       salvar regras internas).
-- [ ] `modulos/assembleias.py`
+- [x] `modulos/assembleias.py` — adicionado `carregar_dados_iniciais.clear()`
+      após cadastrar/apagar assembleia. Com isso, TODAS as 7 tabelas do
+      `carregar_dados_iniciais` (vendas, clientes, assembleias,
+      cad_administradoras, administradoras, status_comissoes,
+      config_interna) já têm `.clear()` cobrindo suas escritas conhecidas no
+      app (falta só `importar_comissoes.py`, que também mexe em
+      vendas/clientes/status_comissoes e será feito mais adiante).
 - [ ] `modulos/robo_painel.py`
 - [ ] `modulos/yamaha_sim.py`
 - [ ] `modulos/itau_v2.py`
