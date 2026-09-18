@@ -7,6 +7,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 from utils import formatar_brl_puro, normalizar_string, listar_arquivos_drive, get_drive_service
+from database import carregar_dados_iniciais
 
 
 def _nome_arquivo_boleto(cliente, grupo, cota):
@@ -305,6 +306,7 @@ def _salvar_flags_mensais(supabase, df_antes, df_depois):
             except Exception as e:
                 st.error(f"Erro ao salvar {df_depois.iloc[i]['Cliente']}: {e}")
     if n:
+        carregar_dados_iniciais.clear()
         st.success(f"✅ {n} marcação(ões) de Envio Mensal salva(s).")
         st.rerun()
     else:

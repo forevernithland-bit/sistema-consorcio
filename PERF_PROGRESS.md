@@ -88,7 +88,13 @@ rastreado abaixo, arquivo por arquivo, conforme vou mexendo em cada um.
       seção "Decisões de não cachear" abaixo). `fila_automacao` não é uma das
       7 tabelas do `carregar_dados_iniciais`, então nenhuma invalidação foi
       necessária.
-- [ ] `modulos/emitir_boleto.py`
+- [x] `modulos/emitir_boleto.py` — `_salvar_flags_mensais` grava
+      `BOLETO_MENSAL` em `vendas`; adicionado `carregar_dados_iniciais.clear()`
+      logo após salvar. `_mapa_ultimo_boleto`/`_painel_status` (leem
+      `fila_automacao`) NÃO foram cacheadas, mesmo motivo do
+      `ofertar_lance.py`: status ao vivo do robô, escrito por um processo
+      externo. `listar_arquivos_drive` já estava cacheada (utils.py) e já
+      tinha `.clear()` correto no botão "Atualizar" — nada a mudar.
 - [ ] `modulos/configuracoes.py`
 - [ ] `modulos/assembleias.py`
 - [ ] `modulos/robo_painel.py`
