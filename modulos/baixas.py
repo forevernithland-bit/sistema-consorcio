@@ -3,6 +3,9 @@ import pandas as pd
 from datetime import datetime
 from utils import formatar_brl_puro, parse_float_safe
 from regras import gerar_tabela_parcelas
+from database import carregar_dados_iniciais
+from modulos.financeiro import _carregar_comissoes_pagas
+from modulos.relatorios import _fetch_comissoes_pagas_raw
 from modulos.importar_comissoes import (
     render_importar_comissoes, render_historico_comissoes, dividir_socios
 )
@@ -223,6 +226,9 @@ def _salvar_baixas_manuais(supabase, itens):
             st.error(f"Erro na cota {i.get('Grupo')}/{i.get('Cota')}: {e}")
 
     if ok:
+        carregar_dados_iniciais.clear()
+        _carregar_comissoes_pagas.clear()
+        _fetch_comissoes_pagas_raw.clear()
         st.session_state['cart_baixas'] = []
         st.success(f"✅ {ok} baixa(s) registrada(s) no histórico e marcada(s) como PAGO. "
                    f"Aparecem no 'Histórico' e no Financeiro.")

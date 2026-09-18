@@ -71,7 +71,13 @@ rastreado abaixo, arquivo por arquivo, conforme vou mexendo em cada um.
       após os dois pontos que gravam em `vendas`/`clientes` (venda tradicional
       e venda contemplada), para não deixar o cache de 60s do
       `database.py` mostrar dado velho na próxima navegação.
-- [ ] `modulos/baixas.py`
+- [x] `modulos/baixas.py` — `_salvar_baixas_manuais` grava em `comissoes_pagas`
+      e `status_comissoes` num loop. Adicionado `carregar_dados_iniciais.clear()`
+      (database.py) + `_carregar_comissoes_pagas.clear()` (financeiro.py) +
+      `_fetch_comissoes_pagas_raw.clear()` (relatorios.py) uma vez, após o
+      loop, dentro do `if ok:`. Com isso os caches de `comissoes_pagas`
+      ficam totalmente cobertos entre financeiro.py/relatorios.py/baixas.py.
+      Testado import isolado do módulo (sem import circular).
 - [ ] `modulos/ofertar_lance.py`
 - [ ] `modulos/emitir_boleto.py`
 - [ ] `modulos/configuracoes.py`
