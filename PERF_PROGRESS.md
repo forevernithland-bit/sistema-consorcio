@@ -26,7 +26,13 @@ rastreado abaixo, arquivo por arquivo, conforme vou mexendo em cada um.
       TODOS eles, o cache tecnicamente pode servir dado com até 60s de atraso
       em algum fluxo ainda não coberto. Nunca fizemos `git push`, então isso
       não afeta produção.
-- [ ] `app.py`
+- [x] `app.py` — `_status_robo` e `_trava_login_robo` (leem `robo_status`, chamadas
+      em TODO rerun logado) cacheadas com `@st.cache_data(ttl=15)`. TTL curto
+      porque o worker só atualiza a cada ~30s e o limite de "offline" já é
+      90s, então 15s não muda a percepção do usuário. `.clear()` chamado nas
+      duas logo após o único update que o próprio app faz em `robo_status`
+      (botão "liberar robô"). Testado: leitura cacheada retorna valor
+      idêntico e cai de ~0.87s para ~0.000s.
 - [ ] `modulos/dashboard.py`
 - [ ] `modulos/financeiro.py`
 - [ ] `modulos/relatorios.py`

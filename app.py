@@ -182,9 +182,13 @@ simuladores_dict = {
 LIMITE_SERVER_SEG = 90  # sem sinal por mais que isso => robô desligado (vermelho)
 
 
-def _status_robo(sb):
+@st.cache_data(ttl=15)
+def _status_robo(_sb):
+    # ttl=15: o worker só bate o ponto a cada ~30s, então 15s de cache não
+    # atrasa a percepção do status (limite de "desligado" é 90s) e evita bater
+    # no Supabase a cada clique de navegação/rerun.
     try:
-        res = sb.table("robo_status").select("atualizado_em").eq("id", 1).execute()
+        res = _sb.table("robo_status").select("atualizado_em").eq("id", 1).execute()
         if not res.data:
             return False
         dt = pd.to_datetime(res.data[0]["atualizado_em"], utc=True)
@@ -194,10 +198,11 @@ def _status_robo(sb):
         return False
 
 
-def _trava_login_robo(sb):
+@st.cache_data(ttl=15)
+def _trava_login_robo(_sb):
     """(travado, desde_texto) — o robô marca isso quando erra a senha do Newcon."""
     try:
-        r = (sb.table("robo_status")
+        r = (_sb.table("robo_status")
              .select("login_travado,login_travado_desde").eq("id", 1).execute())
         row = (r.data or [{}])[0]
     except Exception:
@@ -435,6 +440,8 @@ if _trava_on:
                     "login_travado": False, "login_travado_msg": None,
                     "login_liberado_em": datetime.now(timezone.utc).isoformat(),
                 }).eq("id", 1).execute()
+                _status_robo.clear()
+                _trava_login_robo.clear()
                 st.session_state.pop("_trava_toast", None)
                 st.success("Liberado! O robô vai tentar entrar de novo no próximo ciclo (~30s).")
                 st.rerun()
