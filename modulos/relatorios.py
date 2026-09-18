@@ -18,6 +18,7 @@ O faturamento PREVISTO sai do mesmo motor do resto do ERP (`regras.py`), que
 aplica a regra de comissão da administradora + produto (tabela
 `administradoras`, colunas P1..P25), desconta imposto e divide entre os sócios.
 """
+import re
 from datetime import datetime
 
 import altair as alt
@@ -44,6 +45,38 @@ def _label_mes(ym):
         return datetime.strptime(str(ym), "%Y-%m").strftime("%m/%Y")
     except (ValueError, TypeError):
         return str(ym)
+
+
+_MESES_PT = {1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 5: "Maio", 6: "Junho",
+             7: "Julho", 8: "Agosto", 9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"}
+
+
+def _mes_extenso(ym):
+    """'2026-10' -> 'Outubro 2026'."""
+    try:
+        ano, mes = str(ym).split("-")
+        return f"{_MESES_PT[int(mes)]} {ano}"
+    except Exception:
+        return str(ym)
+
+
+def _meses_referencia(yms):
+    """Lista de 'AAAA-MM' -> 'OUTUBRO 2026' (ou 'SETEMBRO 2026 + OUTUBRO 2026')."""
+    return " + ".join(_mes_extenso(m) for m in sorted(yms)).upper()
+
+
+def _nome_curto(nome):
+    """Nome completo -> 'Primeiro Último', descartando anotações tipo '(Mãe do
+    Marx)' ou 'cpf 000...' que às vezes ficam coladas no cadastro."""
+    s = str(nome or "").strip()
+    s = re.sub(r"\(.*?\)", "", s)
+    s = re.sub(r"\bcpf\b.*", "", s, flags=re.IGNORECASE)
+    partes = s.split()
+    if not partes:
+        return str(nome or "").strip()
+    if len(partes) == 1:
+        return partes[0]
+    return f"{partes[0]} {partes[-1]}"
 
 
 def _norm_gc(v):
@@ -530,11 +563,10 @@ def _aba_previsto(prev, site_prev):
 
         with st.expander("🔎 Detalhe parcela a parcela"):
             det = prev.sort_values(["ym", "data", "cliente"])
+            st.caption(f"Mês de referência: **{_meses_referencia(det['ym'].unique())}**.")
             st.dataframe(pd.DataFrame({
-                "Mês": det["ym"].apply(_label_mes).values,
-                "Vencimento": det["data"].values,
-                "Cliente": det["cliente"].values,
                 "Grupo/Cota": det["gc"].values,
+                "Cliente": det["cliente"].apply(_nome_curto).values,
                 "Adm.": det["admin"].values,
                 "Produto": det["produto"].values,
                 "Parcela": det["parcela"].values,
