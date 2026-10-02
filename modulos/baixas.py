@@ -18,10 +18,10 @@ def render_baixas(supabase, df_vendas_global, df_admin, cfg, status_dict, lista_
     )
 
     with aba_import:
-        render_importar_comissoes(supabase, df_vendas_global, cfg, lista_admin_bd or [])
+        render_importar_comissoes(supabase, df_vendas_global, cfg, lista_admin_bd or [], df_admin)
 
     with aba_hist:
-        render_historico_comissoes(supabase)
+        render_historico_comissoes(supabase, df_vendas_global, df_admin)
 
     with aba_manual:
         _render_baixa_manual(supabase, df_vendas_global, df_admin, cfg, status_dict)

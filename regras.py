@@ -2,6 +2,37 @@ import re
 import pandas as pd
 from utils import parse_float_safe, normalizar_string, normalizar_produto
 
+def total_parcelas_regra(admin, produto, tipo_parcela, df_regras):
+    """Quantas parcelas de comissão a administradora paga pra essa combinação
+    de admin+produto(+tipo de parcela linear/reduzida) — é o "de N" do "X de N"
+    mostrado nos relatórios de comissão. Mesmo casamento Admin_Norm/Prod_Norm/
+    Tipo_Norm que `gerar_tabela_parcelas` usa, só que exposto à parte para quem
+    não tem a venda inteira em mãos (ex.: histórico de NF já importado, que só
+    guarda administradora/grupo/cota, não produto/tipo_parcela).
+    Devolve None se não achar regra (não dá pra saber o total)."""
+    if df_regras is None or df_regras.empty:
+        return None
+    df_regras = df_regras.copy()
+    if 'Tipo_Norm' not in df_regras.columns:
+        if 'Tipo_Parcela' in df_regras.columns:
+            df_regras['Tipo_Norm'] = df_regras['Tipo_Parcela'].apply(normalizar_string)
+        else:
+            df_regras['Tipo_Norm'] = ""
+    admin_norm = normalizar_string(admin)
+    prod_norm = normalizar_produto(produto)
+    base = df_regras[(df_regras['Admin_Norm'] == admin_norm) & (df_regras['Prod_Norm'] == prod_norm)]
+    if base.empty:
+        return None
+    tipo_norm = normalizar_string(tipo_parcela or '')
+    regra = base[base['Tipo_Norm'] == tipo_norm]
+    if regra.empty:
+        regra = base[base['Tipo_Norm'] == ""]
+    if regra.empty:
+        regra = base
+    regra = regra.iloc[0]
+    return sum(1 for i in range(1, 26) if parse_float_safe(regra.get(f"P{i}", 0)) > 0)
+
+
 def calcular_comissao_vendedor(df_vendas_global, vendedor_nome, data_venda_dt, cfg):
     """Calcula a taxa e a quantidade de parcelas que o vendedor tem direito com base no volume do mês"""
     if pd.isna(data_venda_dt): return cfg.get('T1_Pct', 1.0), int(cfg.get('T1_Parc', 4))
@@ -118,7 +149,11 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict):
                 'parcela': i, 'data_pagamento': data_pagamento, 'bruto': comissao_bruta,
                 'liquido': corretora_liq, 'vend': vend_rec, 'breno': breno_rec, 'uriel': uriel_rec
             })
-            
+
+        # Total de parcelas da regra (antes de Cancelada/Contemplada cortarem a
+        # lista) — é o "de N" do "X de N" mostrado nos relatórios de comissão.
+        total_parc = len(temp_parcels)
+
         # Lógica de cotas Canceladas e Contempladas
         if status_cota == 'Cancelada':
             temp_parcels = [p for p in temp_parcels if p['data_pagamento'] <= hoje]
@@ -152,8 +187,8 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict):
             if data_custom and pd.notna(data_custom) and str(data_custom).strip() != "":
                 data_str = str(data_custom)
             
-            nome_parcela = f"{p['parcela']}ª Parcela" if isinstance(p['parcela'], int) else "Antecip. (Contemplada)"
-            
+            nome_parcela = f"{p['parcela']} de {total_parc}" if isinstance(p['parcela'], int) else "Antecip. (Contemplada)"
+
             parcelas_finais.append({
                 "Chave": chave_unica,
                 "Cliente": cliente,
@@ -163,7 +198,8 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict):
                 "Cota": cota,
                 "Valor da Venda": val_venda,
                 "Parcela": nome_parcela,
-                "data_pagamento_dt": p['data_pagamento'], 
+                "Total Parcelas": total_parc,
+                "data_pagamento_dt": p['data_pagamento'],
                 "Comissão (Bruta)": p['bruto'],
                 "Comissão (s/ Imposto)": p['liquido'],
                 "Breno": p['breno'],

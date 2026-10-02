@@ -7,6 +7,7 @@ from utils import parse_float_safe, formatar_brl_puro, limpar_str_nan
 from database import carregar_dados_iniciais
 from modulos.financeiro import _carregar_comissoes_pagas
 from modulos.relatorios import _fetch_comissoes_pagas_raw
+from regras import total_parcelas_regra, _gc
 
 # ==========================================
 # EXPRESSÕES REGULARES DO PDF DA YAMAHA
@@ -139,6 +140,7 @@ def _enriquecer(cotas, df_vendas, admin_padrao):
         c["encontrado"] = False
         c["admin"] = admin_padrao
         c["produto"] = ""
+        c["tipo_parcela"] = ""
         c["valor_venda"] = c.get("credito", 0.0)
         if df_vendas is not None and not df_vendas.empty:
             match = df_vendas[
@@ -151,6 +153,7 @@ def _enriquecer(cotas, df_vendas, admin_padrao):
                 c["vendedor"] = str(r.get("VENDEDOR", "") or "")
                 c["admin"] = str(r.get("ADMINISTRADORA", "") or admin_padrao)
                 c["produto"] = str(r.get("PRODUTO", "") or "")
+                c["tipo_parcela"] = str(r.get("TIPO_PARCELA", "") or "")
                 c["valor_venda"] = parse_float_safe(r.get("Valor_Numerico", c.get("credito", 0.0)))
                 c["encontrado"] = True
     return cotas
@@ -159,7 +162,7 @@ def _enriquecer(cotas, df_vendas, admin_padrao):
 # ==========================================
 # 3. TELA DE IMPORTAÇÃO
 # ==========================================
-def render_importar_comissoes(supabase, df_vendas_global, cfg, lista_admin_bd):
+def render_importar_comissoes(supabase, df_vendas_global, cfg, lista_admin_bd, df_admin=None):
     st.subheader("📥 Importar Resumo de Comissionamento")
     st.caption("Importe o PDF do relatório de comissões pagas da administradora. "
                "O sistema busca as cotas, calcula imposto e divisão de sócios e prepara a baixa.")
@@ -212,10 +215,16 @@ def render_importar_comissoes(supabase, df_vendas_global, cfg, lista_admin_bd):
                "atualizam automaticamente. Cotas ⚠️ não foram encontradas — cadastre-as no bloco abaixo.")
 
     df_in = pd.DataFrame(cotas)
+
+    def _parc_de_total(row):
+        total = total_parcelas_regra(row.get("admin"), row.get("produto"), row.get("tipo_parcela"), df_admin) \
+            if row.get("produto") else None
+        return f"{row['parcela']} de {total}" if total else str(row["parcela"])
+
     df_edit = pd.DataFrame({
         "Grupo": df_in["grupo"],
         "Cota": df_in["cota"],
-        "Parc.": df_in["parcela"],
+        "Parc.": df_in.apply(_parc_de_total, axis=1),
         "Cliente": df_in["cliente"],
         "Vendedor": df_in["vendedor"],
         "Valor Nota": df_in["valor_nota"].astype(float),
@@ -500,7 +509,20 @@ def _fetch_comissoes_pagas_historico(_supabase):
             .order("mes_competencia", desc=True).execute().data)
 
 
-def render_historico_comissoes(supabase):
+def _mapa_produto_tipo(df_vendas_global):
+    """{(grupo, cota) normalizados: (produto, tipo_parcela)} — pra achar o total
+    de parcelas de uma linha de `comissoes_pagas`, que só guarda administradora,
+    não produto/tipo_parcela. Cota mais recente vence se houver duplicidade."""
+    mapa = {}
+    if df_vendas_global is None or df_vendas_global.empty:
+        return mapa
+    for _, v in df_vendas_global.iterrows():
+        chave = (_gc(v.get("GRUPO")), _gc(v.get("COTA")))
+        mapa[chave] = (v.get("PRODUTO"), v.get("TIPO_PARCELA"))
+    return mapa
+
+
+def render_historico_comissoes(supabase, df_vendas_global=None, df_admin=None):
     st.subheader("📚 Histórico de Pagamentos (mês a mês)")
     try:
         df = pd.DataFrame(_fetch_comissoes_pagas_historico(supabase))
@@ -511,6 +533,19 @@ def render_historico_comissoes(supabase):
     if df.empty:
         st.info("Ainda não há pagamentos importados.")
         return
+
+    mapa_pt = _mapa_produto_tipo(df_vendas_global)
+
+    def _parc_de_total(row):
+        """'2' -> '2 de 4' (quando dá pra achar a regra); senão devolve só o nº."""
+        num = str(row.get("parcela") or "").strip()
+        produto, tipo_parcela = mapa_pt.get((_gc(row.get("grupo")), _gc(row.get("cota"))), (None, None))
+        total = None
+        if produto and df_admin is not None:
+            total = total_parcelas_regra(row.get("administradora"), produto, tipo_parcela, df_admin)
+        return f"{num} de {total}" if total else num
+
+    df["parcela_fmt"] = df.apply(_parc_de_total, axis=1)
 
     meses = sorted(df["mes_competencia"].dropna().unique(), reverse=True)
     for mes in meses:
@@ -534,7 +569,7 @@ def render_historico_comissoes(supabase):
         with st.expander(titulo_exp):
             show = pd.DataFrame({
                 "Grupo/Cota": dfm["grupo"].astype(str) + "/" + dfm["cota"].astype(str),
-                "Parc.": dfm["parcela"],
+                "Parc.": dfm["parcela_fmt"],
                 "Cliente": dfm["cliente"],
                 "Vendedor": dfm["vendedor"],
                 "Valor Nota": dfm["valor_nota"].apply(formatar_brl_puro),
