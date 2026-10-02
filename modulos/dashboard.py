@@ -416,10 +416,10 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
             df_tab['Grupo e Cota'] = df_tab.apply(lambda x: f"{x['GRUPO']}/{x['COTA']}", axis=1)
             df_tab['Valor Formatado'] = df_tab['Valor_Numerico'].apply(formatar_brl_puro)
             df_tab['Data da Venda'] = df_tab['Data_Real'].apply(formatar_data_br)
-            
+
             df_tab = df_tab[['Nome do cliente', 'PRODUTO', 'ADMINISTRADORA', 'Grupo e Cota', 'VENDEDOR', 'Valor Formatado', 'Data da Venda']]
             df_tab.columns = ['Cliente', 'Produto', 'Administradora', 'Grupo/Cota', 'Vendedor', 'Valor', 'Data da Venda']
-            
+
             tabela = st.dataframe(df_tab, on_select="rerun", selection_mode="single-row", use_container_width=True, hide_index=True)
             if hasattr(tabela, 'selection') and tabela.selection.rows:
                 st.session_state['cliente_visualizado'] = df_tab.iloc[tabela.selection.rows[0]]['Cliente']; st.rerun()
@@ -430,45 +430,49 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
             m1.metric("Volume Total (Filtro)", formatar_brl_puro(vol_total))
             m2.metric("Qtd. Cotas (Filtro)", len(df_view))
             m3.metric("Ticket Médio", formatar_brl_puro(vol_total/len(df_view) if len(df_view)>0 else 0))
+        else:
+            st.info("Nenhuma venda encontrada.")
 
-            # ---- Cartas Contempladas vindas do SITE (só leitura) ----
-            _render_cartas_site(busca_nome)
+        # ---- Cartas Contempladas vindas do SITE (só leitura) ----
+        # Fora do "if not df_view.empty" de propósito: o filtro de Tipo/Grupo/Cota
+        # acima é só da tabela de VENDAS do ERP — as cartas contempladas do site
+        # têm vida própria e sempre têm que aparecer, mesmo com 0 vendas no filtro.
+        _render_cartas_site(busca_nome)
 
-            st.write("")
-            st.subheader("📊 Gráficos Globais (Filtro Independente)")
-            g_f1, g_f2 = st.columns(2)
-            with g_f1:
-                ft_graf = st.selectbox("⏳ Período para o Gráfico:", ["Mês Atual", "Mês Anterior", "Anual", "Todas as Vendas", "Período Personalizado"])
-                if ft_graf == "Período Personalizado":
-                    cg1, cg2 = st.columns(2)
-                    with cg1: gi = st.date_input("Início", format="DD/MM/YYYY", key="g_ini")
-                    with cg2: gf = st.date_input("Fim", format="DD/MM/YYYY", key="g_fim")
-            with g_f2: fp_graf = st.selectbox("📦 Produto:", ["Todos", "Auto", "Imóvel", "Moto", "Caminhão", "Serviços"])
-                
-            df_g = df_vendas_global.copy()
-            if not is_master: df_g = df_g[df_g['VENDEDOR'] == st.session_state['nome_vendedor']]
-            if ft_graf != "Todas as Vendas" and not df_g.empty:
-                mask = df_g['Data_Real'].notna()
-                if ft_graf == "Mês Atual": df_g = df_g[mask & (df_g['Data_Real'].dt.month == hoje.month) & (df_g['Data_Real'].dt.year == hoje.year)]
-                elif ft_graf == "Mês Anterior":
-                    ma, aa = (hoje.month - 1, hoje.year) if hoje.month > 1 else (12, hoje.year - 1)
-                    df_g = df_g[mask & (df_g['Data_Real'].dt.month == ma) & (df_g['Data_Real'].dt.year == aa)]
-                elif ft_graf == "Anual": df_g = df_g[mask & (df_g['Data_Real'].dt.year == hoje.year)]
-                elif ft_graf == "Período Personalizado": df_g = df_g[mask & (df_g['Data_Real'].dt.date >= gi) & (df_g['Data_Real'].dt.date <= gf)]
-                
-            if fp_graf != "Todos" and not df_g.empty: 
-                df_g = df_g[df_g['PRODUTO'].apply(normalizar_produto) == normalizar_produto(fp_graf)]
-                
-            if not df_g.empty:
+        st.write("")
+        st.subheader("📊 Gráficos Globais (Filtro Independente)")
+        g_f1, g_f2 = st.columns(2)
+        with g_f1:
+            ft_graf = st.selectbox("⏳ Período para o Gráfico:", ["Mês Atual", "Mês Anterior", "Anual", "Todas as Vendas", "Período Personalizado"])
+            if ft_graf == "Período Personalizado":
                 cg1, cg2 = st.columns(2)
-                with cg1:
-                    st.markdown("#### Vendas por Produto")
-                    df_p = df_g['PRODUTO'].value_counts().reset_index()
-                    df_p.columns = ['Produto', 'Quantidade']
-                    st.altair_chart(alt.Chart(df_p).mark_arc(innerRadius=50).encode(theta='Quantidade', color='Produto', tooltip=['Produto', 'Quantidade']), use_container_width=True)
-                with cg2:
-                    st.markdown("#### Vendas por Administradora")
-                    df_a = df_g['ADMINISTRADORA'].value_counts().reset_index()
-                    df_a.columns = ['Administradora', 'Quantidade']
-                    st.altair_chart(alt.Chart(df_a).mark_arc(innerRadius=50).encode(theta='Quantidade', color='Administradora', tooltip=['Administradora', 'Quantidade']), use_container_width=True)
-        else: st.info("Nenhuma venda encontrada.")
+                with cg1: gi = st.date_input("Início", format="DD/MM/YYYY", key="g_ini")
+                with cg2: gf = st.date_input("Fim", format="DD/MM/YYYY", key="g_fim")
+        with g_f2: fp_graf = st.selectbox("📦 Produto:", ["Todos", "Auto", "Imóvel", "Moto", "Caminhão", "Serviços"])
+
+        df_g = df_vendas_global.copy()
+        if not is_master: df_g = df_g[df_g['VENDEDOR'] == st.session_state['nome_vendedor']]
+        if ft_graf != "Todas as Vendas" and not df_g.empty:
+            mask = df_g['Data_Real'].notna()
+            if ft_graf == "Mês Atual": df_g = df_g[mask & (df_g['Data_Real'].dt.month == hoje.month) & (df_g['Data_Real'].dt.year == hoje.year)]
+            elif ft_graf == "Mês Anterior":
+                ma, aa = (hoje.month - 1, hoje.year) if hoje.month > 1 else (12, hoje.year - 1)
+                df_g = df_g[mask & (df_g['Data_Real'].dt.month == ma) & (df_g['Data_Real'].dt.year == aa)]
+            elif ft_graf == "Anual": df_g = df_g[mask & (df_g['Data_Real'].dt.year == hoje.year)]
+            elif ft_graf == "Período Personalizado": df_g = df_g[mask & (df_g['Data_Real'].dt.date >= gi) & (df_g['Data_Real'].dt.date <= gf)]
+
+        if fp_graf != "Todos" and not df_g.empty:
+            df_g = df_g[df_g['PRODUTO'].apply(normalizar_produto) == normalizar_produto(fp_graf)]
+
+        if not df_g.empty:
+            cg1, cg2 = st.columns(2)
+            with cg1:
+                st.markdown("#### Vendas por Produto")
+                df_p = df_g['PRODUTO'].value_counts().reset_index()
+                df_p.columns = ['Produto', 'Quantidade']
+                st.altair_chart(alt.Chart(df_p).mark_arc(innerRadius=50).encode(theta='Quantidade', color='Produto', tooltip=['Produto', 'Quantidade']), use_container_width=True)
+            with cg2:
+                st.markdown("#### Vendas por Administradora")
+                df_a = df_g['ADMINISTRADORA'].value_counts().reset_index()
+                df_a.columns = ['Administradora', 'Quantidade']
+                st.altair_chart(alt.Chart(df_a).mark_arc(innerRadius=50).encode(theta='Quantidade', color='Administradora', tooltip=['Administradora', 'Quantidade']), use_container_width=True)
