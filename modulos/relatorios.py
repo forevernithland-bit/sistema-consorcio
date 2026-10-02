@@ -26,7 +26,7 @@ import pandas as pd
 import streamlit as st
 
 from utils import (formatar_brl_puro, parse_float_safe, limpar_str_nan,
-                   normalizar_produto)
+                   normalizar_produto, botao_imprimir)
 from regras import gerar_previsao_pendente, cotas_duplicadas
 from modulos.integracao_site import carregar_operacoes_site
 
@@ -728,7 +728,11 @@ def _aba_comissionamento(df_vendas):
 # TELA PRINCIPAL
 # ==========================================================
 def render_relatorios(supabase, df_vendas_global, df_admin, cfg, status_dict):
-    st.markdown("### 📑 Relatórios Gerenciais")
+    tit_col, imp_col = st.columns([4, 1])
+    with tit_col:
+        st.markdown("### 📑 Relatórios Gerenciais")
+    with imp_col:
+        botao_imprimir("relatorios")
 
     is_master = (st.session_state.get("perfil_logado") == "Master") or \
                 (st.session_state.get("usuario_logado") in ["breno", "uriel"])

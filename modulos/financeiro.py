@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from utils import formatar_brl_puro, parse_float_safe
+from utils import formatar_brl_puro, parse_float_safe, botao_imprimir
 from regras import gerar_tabela_parcelas, gerar_previsao_pendente
 from modulos.integracao_site import carregar_operacoes_site
 
@@ -269,7 +269,11 @@ def _render_previsao_site(site_prev):
 # TELA PRINCIPAL
 # ==========================================================
 def render_financeiro(supabase, df_vendas_global, df_admin, cfg, status_dict):
-    st.markdown("### 💰 Financeiro")
+    tit_col, imp_col = st.columns([4, 1])
+    with tit_col:
+        st.markdown("### 💰 Financeiro")
+    with imp_col:
+        botao_imprimir("financeiro")
     aba_real, aba_prev = st.tabs(["📊 Realizado", "🔮 Faturamento Previsto"])
     with aba_real:
         _aba_realizado(supabase, df_vendas_global, df_admin, cfg, status_dict)

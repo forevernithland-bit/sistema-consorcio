@@ -3,7 +3,7 @@ import pandas as pd
 import re
 from datetime import datetime
 import pdfplumber
-from utils import parse_float_safe, formatar_brl_puro, limpar_str_nan
+from utils import parse_float_safe, formatar_brl_puro, limpar_str_nan, botao_imprimir
 from database import carregar_dados_iniciais
 from modulos.financeiro import _carregar_comissoes_pagas
 from modulos.relatorios import _fetch_comissoes_pagas_raw
@@ -523,7 +523,11 @@ def _mapa_produto_tipo(df_vendas_global):
 
 
 def render_historico_comissoes(supabase, df_vendas_global=None, df_admin=None):
-    st.subheader("📚 Histórico de Pagamentos (mês a mês)")
+    tit_col, imp_col = st.columns([4, 1])
+    with tit_col:
+        st.subheader("📚 Histórico de Pagamentos (mês a mês)")
+    with imp_col:
+        botao_imprimir("historico_comissoes")
     try:
         df = pd.DataFrame(_fetch_comissoes_pagas_historico(supabase))
     except Exception as e:

@@ -61,6 +61,44 @@ def formatar_brl_puro(val):
     if pd.isna(val): return "R$ 0,00"
     return f"R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
+
+def botao_imprimir(key, rotulo="🖨️ Imprimir / Salvar PDF"):
+    """Botão de impressão genérico para qualquer relatório.
+    Ao clicar: esconde sidebar/menu/botões (CSS @media print) e abre o
+    diálogo de impressão do navegador — de lá dá pra mandar pra impressora
+    ou 'Salvar como PDF'. Expanders (st.expander) precisam estar ABERTOS
+    antes de imprimir — o navegador não imprime conteúdo de <details>
+    fechado. `key` precisa ser único por tela para não colidir com outro
+    botão de imprimir na mesma página."""
+    if st.button(rotulo, key=f"btn_imprimir_{key}"):
+        components.html(
+            """
+            <style id="print-style-consorbens">
+                @media print {
+                    [data-testid="stSidebar"], [data-testid="stHeader"],
+                    [data-testid="stToolbar"], [data-testid="stStatusWidget"],
+                    .stButton, footer { display: none !important; }
+                    [data-testid="stAppViewContainer"] { margin: 0 !important; }
+                }
+            </style>
+            <script>
+                (function(){
+                    var doc = window.parent.document;
+                    if (!doc.getElementById('print-style-consorbens')) {
+                        var s = doc.createElement('style');
+                        s.id = 'print-style-consorbens';
+                        s.innerHTML = document.getElementById('print-style-consorbens').innerHTML;
+                        doc.head.appendChild(s);
+                    }
+                    window.parent.print();
+                })();
+            </script>
+            """,
+            height=0,
+        )
+        st.caption("Se não abriu o diálogo de impressão, use Ctrl+P (⌘+P no Mac). "
+                   "Expanders fechados não aparecem na impressão — abra antes de imprimir.")
+
 def parse_float_safe(v):
     # NaN é float, então passava direto e contaminava as contas (uma célula
     # vazia na tabela de regras virava comissão NaN em vez de 0).
