@@ -380,7 +380,7 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
                 st.session_state['menu_lateral'] = "Nova Venda"
                 st.rerun()
         
-        c_f1, c_f2, c_f3, c_f4 = st.columns([1.5, 1.5, 1, 1])
+        c_f1, c_f2, c_f3, c_f4, c_f5 = st.columns([1.3, 1.3, 0.9, 0.9, 1.3])
         with c_f1:
             ft_cli = st.selectbox("⏳ Filtro:", ["Últimos 5 Cadastros", "Todos os Clientes", "Mês Atual", "Mês Anterior", "Ano Atual", "Período Personalizado"])
             if ft_cli == "Período Personalizado":
@@ -390,6 +390,7 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
         with c_f2: busca_nome = st.text_input("🔍 Buscar Cliente:")
         with c_f3: busca_grupo = st.text_input("📦 Grupo:")
         with c_f4: busca_cota = st.text_input("🔢 Cota:")
+        with c_f5: ft_tipo = st.selectbox("🏷️ Tipo:", ["Todos", "Consórcio Tradicional", "Consórcio Contemplado"])
 
         hoje = datetime.today()
         df_view = df_view.sort_values(by="Data_Real", ascending=False)
@@ -407,6 +408,7 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
         if busca_nome: df_view = df_view[df_view['Nome do cliente'].astype(str).str.contains(busca_nome.strip(), case=False, na=False)]
         if busca_grupo: df_view = df_view[df_view['GRUPO'].astype(str).str.contains(busca_grupo.strip(), case=False, na=False)]
         if busca_cota: df_view = df_view[df_view['COTA'].astype(str).str.contains(busca_cota.strip(), case=False, na=False)]
+        if ft_tipo != "Todos": df_view = df_view[df_view['TIPO_PRODUTO'] == ft_tipo]
 
         if not df_view.empty:
             st.write("Clique em uma linha para ver os detalhes do cliente:")
