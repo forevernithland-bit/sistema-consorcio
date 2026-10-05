@@ -145,6 +145,7 @@ body{
 .footer .stat{display:flex;flex-direction:column;gap:3px;padding:9px 11px;border-radius:11px;background:rgba(255,255,255,.07);}
 .footer .lbl{font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:#a7cfcf;font-weight:800;}
 .footer .val{font-size:15px;font-weight:800;}
+.footer .sub{font-size:10.5px;color:#a7cfcf;font-weight:700;min-height:12px;}
 .footer .stat.d-lance{background:rgba(46,110,110,.20);box-shadow:inset 0 0 0 1.5px rgba(46,110,110,.5);}
 .footer .stat.d-lance .lbl{color:#cfe9e9;} .footer .stat.d-lance .val{color:#7fd4d4;}
 .footer .stat.d-liq{background:rgba(16,185,129,.20);box-shadow:inset 0 0 0 1.5px rgba(16,185,129,.5);}
@@ -432,11 +433,24 @@ table.baseTbl tr:hover td{background:#fafafa}
             </div>
 
             <div class="field-group">
+              <label>Estratégia</label>
+              <select id="modoLance" onchange="onModoLance()">
+                <option value="lance">Dar lance</option>
+                <option value="aguardar">Sem lance — pagar parcelas e aguardar contemplação</option>
+              </select>
+            </div>
+            <div class="field-group" id="grpAssembleia" style="display:none">
+              <label>Contemplado em qual assembleia? (nº da parcela)</label>
+              <input id="assembleiaContemp" type="number" min="1" step="1" placeholder="Ex.: 12" oninput="calcular()">
+              <div class="small" id="assembleiaRef">Digite o mês em que a cota será contemplada para ver as parcelas antes e depois.</div>
+            </div>
+
+            <div class="field-group" id="fgEmbutido">
               <label>Lance embutido (%)</label>
               <input id="embutido" placeholder="Embutido (%)">
               <div class="small" id="embRef"></div>
             </div>
-            <div class="field-group">
+            <div class="field-group" id="fgRecurso">
               <label>Recurso próprio (%)</label>
               <input id="recurso" placeholder="Recurso Próprio (%)">
               <div class="small" id="recRef"></div>
@@ -454,11 +468,15 @@ table.baseTbl tr:hover td{background:#fafafa}
             </div>
 
             <div class="footer">
-              <div class="stat"><span class="lbl">% Lance total</span><span class="val" id="lanceTotalPerc"></span></div>
-              <div class="stat d-lance"><span class="lbl">Só recursos próprios</span><span class="val" id="lanceRecFooter"></span></div>
+              <div class="stat"><span class="lbl">Parcela antes</span><span class="val" id="resumoAntes">—</span><span class="sub" id="resumoAntesSub"></span></div>
+              <div class="stat"><span class="lbl">Parcela depois</span><span class="val" id="resumoDepois">—</span><span class="sub" id="resumoDepoisSub"></span></div>
               <div class="stat d-liq"><span class="lbl">Crédito liberado</span><span class="val" id="liberado"></span></div>
-              <div class="stat"><span class="lbl">Parcelas pós</span><span class="val" id="parcelasPos"></span></div>
-              <div class="full">Lance ofertado total (Emb. + Rec.): <b><span id="lanceOf"></span></b></div>
+              <div class="stat" id="stContemp" style="display:none"><span class="lbl">Contemplação</span><span class="val" id="resumoContemp">—</span><span class="sub" id="resumoContempSub"></span></div>
+              <div class="stat" id="stLance"><span class="lbl">% Lance total</span><span class="val" id="lanceTotalPerc"></span></div>
+              <div class="stat d-lance" id="stRec"><span class="lbl">Só recursos próprios</span><span class="val" id="lanceRecFooter"></span></div>
+              <!-- mantido (oculto): gerarProposta e a aba Estruturada leem o texto "Nx de R$ …" daqui -->
+              <div class="stat" style="display:none"><span class="lbl">Parcelas pós</span><span class="val" id="parcelasPos"></span></div>
+              <div class="full" id="fullLance">Lance ofertado total (Emb. + Rec.): <b><span id="lanceOf"></span></b></div>
             </div>
 
             <div class="buttons">
@@ -650,7 +668,10 @@ function numero(v){if(!v)return 0;return parseFloat(v.replace(/[^0-9,]/g,'').rep
 function percent(v){if(!v)return 0;return parseFloat(v.replace('%','').replace(',','.'))/100||0}
 function maskMoeda(v){let n=v.replace(/\D/g,'');if(!n)return'';return(n/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
 function maskPercent(v){let n=v.replace(/[^\d,]/g,'');return n?n+'%':''}
-credito.oninput=e=>{e.target.value=maskMoeda(e.target.value);calcular()}
+credito.oninput=e=>{e.target.value=maskMoeda(e.target.value);
+  // apagou o valor: a lista não pode continuar mostrando um crédito que já não vale
+  if(!e.target.value){ const cs=document.getElementById('creditoSel'); if(cs) cs.value=''; }
+  calcular()}
 taxa.oninput=e=>{e.target.value=maskPercent(e.target.value);calcular()}
 let _embutidoAuto=true;  // true enquanto o embutido foi preenchido pelo grupo (não digitado à mão)
 embutido.oninput=e=>{_embutidoAuto=false;e.target.value=maskPercent(e.target.value);calcular()}
@@ -729,12 +750,89 @@ lanceOf.innerText=moeda(lanceOfertaTotal)
 document.getElementById('lanceRecFooter').innerText = moeda(rec);
 liberado.innerText=moeda(liberadoCalc)
 parcelasPos.innerText=(prazoC-1)+'x de '+moeda(parcelaPos)
+atualizarResumo({cred, prazoC, parcelaAntesCalc, parcelaPos})
 }
 // ===================================================================
 // >>> FIM DO BLOCO DE CÁLCULO — NÃO ALTERAR <<<
 // ===================================================================
 
+// ===================================================================
+// MODO "SEM LANCE" + RESUMO (parcela antes / depois)
+// Só apresentação: usa os valores que calcular() já produziu.
+// Contemplado na assembleia k = paga k parcelas "antes" e (prazo − k)
+// "depois" (k=1 reproduz o comportamento anterior: prazo − 1).
+// ===================================================================
+let _embSalvo=null, _recSalvo=null;
+function _somaMes(ddmmaaaa, n){
+  const m=String(ddmmaaaa||'').match(/^(\d{2})\/(\d{2})\/(\d{4})$/); if(!m) return null;
+  const d=new Date(+m[3], +m[2]-1+n, +m[1]);
+  return String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+}
+function onModoLance(){
+  const aguardar=document.getElementById('modoLance').value==='aguardar';
+  const emb=document.getElementById('embutido'), rcs=document.getElementById('recurso');
+  document.getElementById('grpAssembleia').style.display = aguardar?'':'none';
+  document.getElementById('fgEmbutido').style.display = aguardar?'none':'';
+  document.getElementById('fgRecurso').style.display = aguardar?'none':'';
+  if(aguardar){
+    _embSalvo={v:emb.value, auto:_embutidoAuto}; _recSalvo=rcs.value;
+    emb.value='0%'; rcs.value='';
+  } else if(_embSalvo){
+    emb.value=_embSalvo.v; _embutidoAuto=_embSalvo.auto; rcs.value=_recSalvo||''; _embSalvo=null;
+    if(!emb.value.trim() || emb.value==='0%'){ _embutidoAuto=true;
+      emb.value = GRUPO_ATUAL ? (regrasDoGrupo(GRUPO_ATUAL).embutido+'%') : ''; }
+  }
+  calcular();
+}
+function atualizarResumo(d){
+  const $=id=>document.getElementById(id);
+  const T=(id,t)=>{ $(id).textContent=t; };
+  const aguardar=$('modoLance').value==='aguardar';
+  $('stLance').style.display=$('stRec').style.display=$('fullLance').style.display = aguardar?'none':'';
+  $('stContemp').style.display = aguardar?'':'none';
+  const ok = d.cred>0 && d.prazoC>0 && isFinite(d.parcelaAntesCalc) && isFinite(d.parcelaPos);
+  if(!ok){
+    $('parcelaAntes').value='—';
+    ['resumoAntes','resumoDepois'].forEach(i=>T(i,'—'));
+    ['resumoAntesSub','resumoDepoisSub','resumoContemp','resumoContempSub'].forEach(i=>T(i,''));
+    window._sim={aguardar,k:null,nPos:null,ok:false};
+    return;
+  }
+  let k=1, kInformado=true;
+  if(aguardar){
+    k=parseInt($('assembleiaContemp').value,10);
+    kInformado = k>=1;
+    if(kInformado && k>d.prazoC) k=d.prazoC;
+  }
+  const nPos = kInformado ? Math.max(d.prazoC-k,0) : null;
+  window._sim={aguardar,k:kInformado?k:null,nPos,ok:true};
+  T('resumoAntes', moeda(d.parcelaAntesCalc));
+  if(aguardar && !kInformado){
+    T('resumoAntesSub','por mês até a contemplação');
+    T('resumoDepois','Informe a assembleia'); T('resumoDepoisSub','campo "Contemplado em qual assembleia?"');
+    T('resumoContemp','—'); T('resumoContempSub','');
+    T('assembleiaRef','Digite o mês em que a cota será contemplada para ver as parcelas antes e depois.');
+    return;
+  }
+  T('resumoAntesSub', aguardar ? (k+'x até a contemplação') : 'até a contemplação');
+  if(nPos===0){ T('resumoDepois','—'); T('resumoDepoisSub','cota quitada na contemplação'); }
+  else { T('resumoDepois', moeda(d.parcelaPos)); T('resumoDepoisSub', nPos+'x após a contemplação'); }
+  if(aguardar){
+    T('resumoContemp','Assembleia '+k);
+    const dt = (GRUPO_ATUAL && GRUPO_ATUAL.prox_assembleia) ? _somaMes(GRUPO_ATUAL.prox_assembleia, k-1) : null;
+    T('resumoContempSub', dt ? ('em '+dt) : '');
+    T('assembleiaRef', 'Paga '+k+' parcela'+(k>1?'s':'')+' até contemplar e '+nPos+' depois.'+(dt?(' (assembleia '+k+' ≈ '+dt+')'):''));
+  }
+}
+
 function gerarProposta(){
+const _S = window._sim || {};
+if(_S.aguardar && !_S.k){
+  // modo "sem lance": a proposta precisa da assembleia da contemplação
+  document.getElementById('assembleiaRef').textContent='Informe a assembleia da contemplação para gerar a proposta.';
+  document.getElementById('assembleiaContemp').focus();
+  return;
+}
 let grupoTxt=grupo.value?grupo.value:'-';
 let parcelamento=(produto==='moto')?'':'Pode parcelar em 4x sem juros';
 let img=imagens[produto]||imagens.auto;
@@ -772,12 +870,20 @@ resultado.innerHTML=`
       <div class="proposta-grid">
         <div class="pg-item"><span>Quantidade de cotas</span><b>${cotas.value||'1'}</b></div>
         <div class="pg-item"><span>Prazo contratado (meses)</span><b>${prazo.value||'-'}</b></div>
+        ${_S.aguardar ? `
+        <div class="pg-item"><span>Parcela antes da contemplação</span><b>${_S.k}x de ${parcelaAntes.value||'-'}</b></div>
+        <div class="pg-item"><span>Contemplação prevista</span><b>Assembleia ${_S.k}</b></div>
+        <div class="pg-item d-pos"><span>Parcela após contemplação</span><b>${_S.nPos>0 ? (_S.nPos+'x de '+parcelaPosTxt) : '—'}</b></div>
+        <div class="pg-item d-pos"><span>Prazo após contemplação (meses)</span><b>${_S.nPos>0 ? _S.nPos : '—'}</b></div>
+        <div class="pg-item"><span>Estratégia</span><b class="pg-pay">Sem lance — aguardando contemplação</b></div>
+        ` : `
         <div class="pg-item"><span>Parcela inicial (aprox.)</span><b>${parcelaAntes.value||'-'}</b></div>
         <div class="pg-item"><span>Lance · recursos próprios</span><b>${moeda(rec)}</b></div>
         <div class="pg-item"><span>Lance embutido (valor)</span><b>${embRef.innerText.replace('Equivale a ','')||'-'}</b></div>
         <div class="pg-item d-pos"><span>Parcela após contemplação</span><b>${parcelaPosTxt}</b></div>
         <div class="pg-item d-pos"><span>Prazo após contemplação (meses)</span><b>${(prazo.value-1)||'-'}</b></div>
         <div class="pg-item"><span>Forma de pagamento do lance</span><b class="pg-pay">${parcelamento||'—'}</b></div>
+        `}
       </div>
       <div class="proposta-liquido">
         <span>Crédito líquido na contemplação</span>
@@ -1001,7 +1107,8 @@ function onGrupoSel(){
   // preenche se estiver vazio OU se o valor atual veio de um grupo anterior
   // (não foi digitado à mão); respeita o que o vendedor digitou.
   const _emb=document.getElementById('embutido');
-  if(!_emb.value.trim() || _embutidoAuto){ _emb.value = regrasDoGrupo(g).embutido + '%'; _embutidoAuto=true; }
+  if((!_emb.value.trim() || _embutidoAuto) && document.getElementById('modoLance').value!=='aguardar'){
+    _emb.value = regrasDoGrupo(g).embutido + '%'; _embutidoAuto=true; }
 
   // ---- select de créditos (faixas do plano) ----
   const plano=_planoDoGrupo(g);
@@ -1143,16 +1250,24 @@ function enviarWhats(){
   const _qc=+document.getElementById('cotas').value||1;
   const _cu=numero(document.getElementById('credito').value);
   const _ct=_cu*_qc;
+  const _S=window._sim||{};
+  const _pos=((document.getElementById('parcelasPos').innerText.split(' de ')[1])||document.getElementById('parcelasPos').innerText);
+  const _corpo = _S.aguardar
+    ? ('Estratégia: sem lance — aguardando contemplação\n'
+      +'Contemplação prevista: assembleia '+(_S.k||'-')+'\n'
+      +'Parcela antes da contemplação: '+(_S.k||'-')+'x de '+(document.getElementById('parcelaAntes').value||'-')+'\n'
+      +'Parcela após contemplação: '+(_S.nPos>0 ? (_S.nPos+'x de '+_pos) : '—')+'\n\n')
+    : ('Parcela inicial (aprox.): '+(document.getElementById('parcelaAntes').value||'-')+'\n'
+      +'Lance (recursos próprios): '+moeda(rec)+'\n'
+      +'Parcela após contemplação: '+_pos+'\n'
+      +'Prazo após contemplação: '+((document.getElementById('prazo').value-1)||'-')+' meses\n\n');
   const t='*PROPOSTA DE CONSÓRCIO — CONSORBENS (Yamaha)*\n\n'
     +'Grupo: '+g+'\n'
     +'Crédito contratado: '+(_ct?moeda(_ct):(document.getElementById('credito').value||'-'))
        +(_qc>1?' ('+_qc+' cotas de '+moeda(_cu)+')':'')+'\n'
     +'Quantidade de cotas: '+_qc+'\n'
     +'Prazo contratado: '+(document.getElementById('prazo').value||'-')+' meses\n'
-    +'Parcela inicial (aprox.): '+(document.getElementById('parcelaAntes').value||'-')+'\n'
-    +'Lance (recursos próprios): '+moeda(rec)+'\n'
-    +'Parcela após contemplação: '+((document.getElementById('parcelasPos').innerText.split(' de ')[1])||document.getElementById('parcelasPos').innerText)+'\n'
-    +'Prazo após contemplação: '+((document.getElementById('prazo').value-1)||'-')+' meses\n\n'
+    +_corpo
     +'*Crédito líquido na contemplação: '+document.getElementById('liberado').innerText+'*\n\n'
     +'_Simulado com valores aproximados. Não é garantia de contemplação._';
   window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank');
