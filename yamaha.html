@@ -744,6 +744,14 @@ let parcelaPos = (parcIntSemSeguro * (1 - proporcaoLance)) + seguroVal;
 if(tipoPlano.value === 'integral') {
     let amortizacao = rec / prazoC;
     parcelaPos = parcIntSemSeguro + seguroVal - amortizacao;
+} else {
+    // Parcela reduzida: ao contemplar usando 100% do crédito, a parcela é
+    // recalculada para 100% e a diferença das parcelas reduzidas pagas antes
+    // da contemplação é DILUÍDA nas vincendas (regra da tabela oficial do plano).
+    // k = parcelas reduzidas pagas até contemplar (1 = 1ª assembleia).
+    let kContemp = _assembleiaK(prazoC);
+    let baseReduzida = (reduzido * (1 + tx)) / prazoC;
+    if (prazoC - kContemp > 0) parcelaPos += kContemp * (parcIntSemSeguro - baseReduzida) / (prazoC - kContemp);
 }
 
 lanceOf.innerText=moeda(lanceOfertaTotal)
@@ -763,6 +771,16 @@ atualizarResumo({cred, prazoC, parcelaAntesCalc, parcelaPos})
 // "depois" (k=1 reproduz o comportamento anterior: prazo − 1).
 // ===================================================================
 let _embSalvo=null, _recSalvo=null;
+// Em qual assembleia (nº da parcela) a cota é contemplada: 1 por padrão
+// (comportamento histórico); no modo "sem lance" vem do campo digitado.
+function _assembleiaK(prazoC){
+  const m=document.getElementById('modoLance');
+  if(m && m.value==='aguardar'){
+    const k=parseInt(document.getElementById('assembleiaContemp').value,10);
+    if(k>=1) return Math.min(k, prazoC);
+  }
+  return 1;
+}
 function _somaMes(ddmmaaaa, n){
   const m=String(ddmmaaaa||'').match(/^(\d{2})\/(\d{2})\/(\d{4})$/); if(!m) return null;
   const d=new Date(+m[3], +m[2]-1+n, +m[1]);
@@ -816,7 +834,8 @@ function atualizarResumo(d){
   }
   T('resumoAntesSub', aguardar ? (k+'x até a contemplação') : 'até a contemplação');
   if(nPos===0){ T('resumoDepois','—'); T('resumoDepoisSub','cota quitada na contemplação'); }
-  else { T('resumoDepois', moeda(d.parcelaPos)); T('resumoDepoisSub', nPos+'x após a contemplação'); }
+  else { T('resumoDepois', moeda(d.parcelaPos));
+         T('resumoDepoisSub', nPos+'x após a contemplação'+($('tipoPlano').value==='reduzida' ? ' · crédito 100%' : '')); }
   if(aguardar){
     T('resumoContemp','Assembleia '+k);
     const dt = (GRUPO_ATUAL && GRUPO_ATUAL.prox_assembleia) ? _somaMes(GRUPO_ATUAL.prox_assembleia, k-1) : null;
@@ -1626,11 +1645,14 @@ function _pintaResumo(){
 // garante que a aba Simulador não seja afetada.
 // =====================================================================
 let _estrProduto=null;
-const _EI = ['credito','prazo','prazoGrupo','taxa','cotas','embutido','recurso','tipoPlano','seguroTipo','grupo'];
+const _EI = ['credito','prazo','prazoGrupo','taxa','cotas','embutido','recurso','tipoPlano','seguroTipo','grupo','modoLance'];
 
 function _snapSim(){
   const s={_produto:produto,_embAuto:_embutidoAuto,_rec:rec};
   _EI.forEach(id=>s[id]=document.getElementById(id).value);
+  // a Estruturada sempre simula contemplação na 1ª assembleia, com lance:
+  // não herda o modo "sem lance"/assembleia da aba Simulador
+  document.getElementById('modoLance').value='lance';
   return s;
 }
 function _restoreSim(s){
