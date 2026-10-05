@@ -603,7 +603,11 @@ const LOGO_CONSORBENS = (typeof window.LOGO_CONSORBENS === 'string' && window.LO
 })();
 
 let produto='auto'
-const seguros={auto:0.000884,moto:0.000914,imovel:0.000276,caminhao:0.00036}
+// Taxa MENSAL do seguro prestamista sobre o saldo devedor total do plano
+// (crédito × (1 + taxa adm)). auto/imóvel/caminhão/moto conferidos contra a
+// parcela oficial do Newcon em grupos_yamaha (05/10/2026). Moto era 0.000914
+// (sobre crédito) e os grupos coletados mostram 0.00122 sobre o saldo total.
+const seguros={auto:0.000884,moto:0.00122,imovel:0.000276,caminhao:0.00036}
 
 // Regras GERAIS de lance por produto (botão "Lembretes"). Só valem quando o
 // grupo escolhido NÃO tem regra própria na base (campos g.embutido_max_pct /
@@ -655,7 +659,10 @@ recurso.oninput=e=>{e.target.value=maskPercent(e.target.value);calcular()}
 let rec=0
 
 // ===================================================================
-// >>> BLOCO DE CÁLCULO — NÃO ALTERAR (idêntico à versão validada) <<<
+// >>> BLOCO DE CÁLCULO — validado contra a parcela oficial do Newcon <<<
+// 05/10/2026: seguro passou a incidir sobre crédito×(1+taxa) e os fatores
+// empíricos 1.008 / 1.010236 / 1.00837 / 1.0062 foram removidos. Parcela
+// inicial confere ao centavo em ~30 grupos (integral e reduzida).
 // ===================================================================
 function calcular(){
 let cota=+cotas.value||1
@@ -688,14 +695,18 @@ let lanceOfertaTotal = embVal + rec;
 let lanceTotalPercNum = emb + recPerc;
 lanceTotalPerc.innerText = ((lanceTotalPercNum*100)).toFixed(2)+'%';
 
-let seguroVal = usarSeguro ? (cred * seguro) : 0;
-let parcIntSemSeguro = ((cred * (1 + tx)) / prazoC) * 1.008;
+// Seguro prestamista: o Newcon cobra sobre o SALDO DEVEDOR TOTAL do plano
+// (crédito integral × (1 + taxa adm)), valor fixo em todas as parcelas.
+// Antes aplicávamos só sobre o crédito e compensávamos com fatores
+// empíricos (1.008 / 1.010236) — que derivavam de grupo pra grupo.
+let seguroVal = usarSeguro ? (cred * (1 + tx) * seguro) : 0;
+let parcIntSemSeguro = (cred * (1 + tx)) / prazoC;
 
 let parcelaAntesCalc;
 if(tipoPlano.value === 'integral') {
     parcelaAntesCalc = parcIntSemSeguro + seguroVal;
 } else {
-    parcelaAntesCalc = ((reduzido * (1 + tx)) / prazoC) * 1.010236 + seguroVal;
+    parcelaAntesCalc = ((reduzido * (1 + tx)) / prazoC) + seguroVal;
 }
 parcelaAntes.value=moeda(parcelaAntesCalc)
 
@@ -710,10 +721,8 @@ let proporcaoLance = rec / saldoDevedorTotal;
 let parcelaPos = (parcIntSemSeguro * (1 - proporcaoLance)) + seguroVal;
 
 if(tipoPlano.value === 'integral') {
-    let amortizacao = (rec / prazoC) * 1.00837;
+    let amortizacao = rec / prazoC;
     parcelaPos = parcIntSemSeguro + seguroVal - amortizacao;
-} else {
-    parcelaPos = parcelaPos * 1.0062;
 }
 
 lanceOf.innerText=moeda(lanceOfertaTotal)
