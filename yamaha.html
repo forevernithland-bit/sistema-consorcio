@@ -891,7 +891,6 @@ resultado.innerHTML=`
         <div class="pg-item"><span>Prazo contratado (meses)</span><b>${prazo.value||'-'}</b></div>
         ${_S.aguardar ? `
         <div class="pg-item"><span>Parcela antes da contemplação</span><b>${_S.k}x de ${parcelaAntes.value||'-'}</b></div>
-        <div class="pg-item"><span>Contemplação prevista</span><b>Assembleia ${_S.k}</b></div>
         <div class="pg-item d-pos"><span>Parcela após contemplação</span><b>${_S.nPos>0 ? (_S.nPos+'x de '+parcelaPosTxt) : '—'}</b></div>
         <div class="pg-item d-pos"><span>Prazo após contemplação (meses)</span><b>${_S.nPos>0 ? _S.nPos : '—'}</b></div>
         <div class="pg-item"><span>Estratégia</span><b class="pg-pay">Sem lance — aguardando contemplação</b></div>
@@ -1144,7 +1143,9 @@ function onGrupoSel(){
   cHtml+='<option value="__manual__">✏️ Valor manual</option>';
   document.getElementById('creditoSel').innerHTML=cHtml;
   document.getElementById('creditoSel').style.display='';
-  document.getElementById('credito').value = g.credito!=null ? moeda(+g.credito) : document.getElementById('credito').value;
+  // crédito NÃO é preenchido sozinho: o vendedor escolhe a faixa no select
+  // (ou digita) — assim nunca sai uma simulação com crédito que ninguém escolheu.
+  document.getElementById('credito').value='';
 
   // ---- select de prazos ----
   // O prazo da cota num grupo em andamento é o QUE RESTA (prazo_restante).
@@ -1273,7 +1274,6 @@ function enviarWhats(){
   const _pos=((document.getElementById('parcelasPos').innerText.split(' de ')[1])||document.getElementById('parcelasPos').innerText);
   const _corpo = _S.aguardar
     ? ('Estratégia: sem lance — aguardando contemplação\n'
-      +'Contemplação prevista: assembleia '+(_S.k||'-')+'\n'
       +'Parcela antes da contemplação: '+(_S.k||'-')+'x de '+(document.getElementById('parcelaAntes').value||'-')+'\n'
       +'Parcela após contemplação: '+(_S.nPos>0 ? (_S.nPos+'x de '+_pos) : '—')+'\n\n')
     : ('Parcela inicial (aprox.): '+(document.getElementById('parcelaAntes').value||'-')+'\n'
