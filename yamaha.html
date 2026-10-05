@@ -75,6 +75,17 @@ body{
 
 /* ---------- Passo 2: grupo ---------- */
 .grupo-pick{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px;}
+.grupo-busca{position:relative;margin-bottom:10px}
+.grupo-busca input{width:100%;box-sizing:border-box;padding:13px 12px 13px 38px;border-radius:12px;border:1.5px solid #26344d;background:var(--bg2);color:#e2e8f0;font-size:15px;font-weight:600;outline:none}
+.grupo-busca input:focus{border-color:#4f9d99}
+.grupo-busca .ico{position:absolute;left:13px;top:13px;font-size:15px;opacity:.7;pointer-events:none}
+.grupo-res{display:none;margin-top:6px;max-height:300px;overflow:auto;border-radius:12px;border:1.5px solid #26344d;background:var(--bg2)}
+.grupo-res.show{display:block}
+.grupo-res button{display:block;width:100%;text-align:left;padding:10px 12px;border:0;border-bottom:1px solid #1d2a40;background:transparent;color:#e2e8f0;font-size:13.5px;font-weight:700;cursor:pointer}
+.grupo-res button:last-child{border-bottom:0}
+.grupo-res button:hover,.grupo-res button.sel{background:#173a3a}
+.grupo-res small{display:block;font-weight:600;color:#8fb3b0;margin-top:2px}
+.grupo-res .vazio{padding:12px;color:#8fb3b0;font-size:13px}
 .grupo-pick select.grupoSel{width:100%;padding:13px 12px;border-radius:12px;border:1.5px solid #26344d;background:var(--bg2);color:#e2e8f0;font-size:15px;font-weight:700;outline:none;cursor:pointer;}
 .grupo-status{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;font-size:12.5px;color:#94a3b8;}
 .pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:800;}
@@ -370,6 +381,11 @@ table.baseTbl tr:hover td{background:#fafafa}
         <div class="step">
           <div class="step-label"><span class="step-num">2</span> Grupo</div>
           <div class="grupo-pick">
+            <div class="grupo-busca">
+              <span class="ico">🔍</span>
+              <input id="grupoBusca" type="search" autocomplete="off" placeholder="Buscar grupo: nº (9598), crédito (58 mil), PR, integral, com vaga…" oninput="buscarGrupos()" onkeydown="_buscaTecla(event)">
+              <div id="grupoRes" class="grupo-res"></div>
+            </div>
             <select id="grupoSel" class="grupoSel" onchange="onGrupoSel()">
               <option value="">Selecione o grupo…</option>
             </select>
@@ -991,6 +1007,7 @@ function setProdutoNovo(p,el){
   ['grupo','credito','prazo','prazoGrupo','taxa'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('creditoSel').value='';
   preencherGrupos();
+  { const b=document.getElementById('grupoBusca'); if(b){ b.value=''; buscarGrupos(); } }
   // reseta seleção de grupo
   document.getElementById('grupoSel').value='';
   onGrupoSel();
@@ -1062,6 +1079,75 @@ function preencherGrupos(){
   });
   html+='<option value="__manual__">✏️ Outro grupo (preencher manual)</option>';
   sel.innerHTML=html;
+}
+
+// ---- buscador de grupos (a lista nativa continua sendo a fonte da seleção) ----
+let _buscaItens=[], _buscaIdx=0;
+function _creditosDoGrupo(g){
+  const pl=_planoDoGrupo(g);
+  const v=(pl&&Array.isArray(pl.creditos))?pl.creditos.map(c=>c&&+c.credito).filter(x=>x>0):[];
+  if(!v.length && g.credito!=null) v.push(+g.credito);
+  return [...new Set(v)].sort((a,b)=>a-b);
+}
+function _buscaCasa(g,termo){
+  const t=termo.toLowerCase().replace(/r\$/g,'').trim(); if(!t) return true;
+  const grupo=String(g.grupo), creds=_creditosDoGrupo(g), pr=grupoTemPR(g), vagas=(g.vagas||0)>0;
+  return t.split(/\s+/).every(tok=>{
+    if(tok==='mil'||tok==='k') return true;                       // "58 mil" = 58 + 'mil'
+    if(/^(pr|reduzid[ao]s?|parcela)$/.test(tok)) return pr;
+    if(/^integral|integrais$/.test(tok)) return !pr;
+    if(/^(vaga|vagas|comvaga)$/.test(tok)) return vagas;
+    if(/^(semvaga|cheio)$/.test(tok)) return !vagas;
+    if(/^[\d.,]+k?$/.test(tok)){
+      const k=/k$/.test(tok), raw=tok.replace(/k$/,'');
+      const n=parseFloat(raw.replace(/\./g,'').replace(',','.'));
+      if(!isFinite(n)) return false;
+      if(grupo.includes(raw.replace(/[.,]/g,''))) return true;    // nº do grupo (contém)
+      const mil = k || /mil/.test(t) || (n<1000);          // 58 → 58.000
+      const alvo = mil ? n*1000 : n;
+      return creds.some(c=>Math.abs(c-alvo)<0.5) ||
+             creds.some(c=>String(Math.round(c)).startsWith(raw.replace(/[.,]/g,'')));
+    }
+    return String(g.plano_codigo||'').toLowerCase().includes(tok) ||
+           String(g.bem||'').toLowerCase().includes(tok) ||
+           String(g.plano_txt||'').toLowerCase().includes(tok);
+  });
+}
+function buscarGrupos(){
+  const q=document.getElementById('grupoBusca').value, box=document.getElementById('grupoRes');
+  if(!q.trim()){ box.classList.remove('show'); box.innerHTML=''; _buscaItens=[]; return; }
+  _buscaItens=gruposDoProduto().filter(g=>_buscaCasa(g,q)).sort((a,b)=>{
+    const va=(a.vagas||0)>0?0:1, vb=(b.vagas||0)>0?0:1;
+    if(va!==vb) return va-vb;
+    return String(a.grupo).localeCompare(String(b.grupo),undefined,{numeric:true});
+  });
+  _buscaIdx=0;
+  if(!_buscaItens.length){ box.innerHTML='<div class="vazio">Nenhum grupo encontrado neste produto. Dica: use o nº do grupo ou o crédito (ex.: 58 mil).</div>'; box.classList.add('show'); return; }
+  const mostra=_buscaItens.slice(0,40);
+  box.innerHTML=mostra.map((g,i)=>{
+    const fx=faixaCreditoTxt(g), pr=grupoTemPR(g)?'Parcela reduzida':'Parcela integral';
+    return `<button type="button" class="${i===0?'sel':''}" data-i="${i}" onclick="escolherGrupoBusca(${i})">Grupo ${g.grupo}<small>${pr}${fx?' · '+fx:''} · ${_vagaTxt(g)}</small></button>`;
+  }).join('') + (_buscaItens.length>40?`<div class="vazio">+${_buscaItens.length-40} grupos — refine a busca</div>`:'');
+  box.classList.add('show');
+}
+function escolherGrupoBusca(i){
+  const g=_buscaItens[i]; if(!g) return;
+  const sel=document.getElementById('grupoSel');
+  sel.value=String(g.grupo);
+  document.getElementById('grupoBusca').value='';
+  document.getElementById('grupoRes').classList.remove('show');
+  document.getElementById('grupoRes').innerHTML=''; _buscaItens=[];
+  onGrupoSel();
+}
+function _buscaTecla(e){
+  const box=document.getElementById('grupoRes'), btns=[...box.querySelectorAll('button')];
+  if(e.key==='Escape'){ e.target.value=''; buscarGrupos(); return; }
+  if(!btns.length) return;
+  if(e.key==='Enter'){ e.preventDefault(); escolherGrupoBusca(_buscaIdx); return; }
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+    e.preventDefault(); _buscaIdx=Math.max(0,Math.min(btns.length-1,_buscaIdx+(e.key==='ArrowDown'?1:-1)));
+    btns.forEach((b,i)=>b.classList.toggle('sel',i===_buscaIdx)); btns[_buscaIdx].scrollIntoView({block:'nearest'});
+  }
 }
 
 function _planoDoGrupo(g){
