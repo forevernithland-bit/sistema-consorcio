@@ -1798,7 +1798,7 @@ function onGrupoSelEstr(sel){
   else if(g.credito!=null){ ch+=`<option value="${g.credito}">${moeda(+g.credito)}</option>`; }
   ch+='<option value="__manual__">✏️ manual</option>';
   cSel.innerHTML=ch; cSel.style.display='';
-  q('.e-credito').value = g.credito!=null ? moeda(+g.credito) : q('.e-credito').value;
+  q('.e-credito').value = '';   // crédito nunca vem pré-preenchido: o vendedor escolhe a faixa
 
   const pRest=(g.prazo_restante!=null)?+g.prazo_restante:null, pTot=(g.prazo_total!=null)?+g.prazo_total:null;
   const prazos=[...new Set(faixas.map(c=>c.prazo).filter(Boolean).map(Number))].sort((a,b)=>a-b);
