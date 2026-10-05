@@ -412,12 +412,12 @@ table.baseTbl tr:hover td{background:#fafafa}
 
             <div class="field-group">
               <label>Prazo do grupo</label>
-              <input id="prazoGrupo" type="number" placeholder="Prazo Grupo">
+              <input id="prazoGrupo" type="number" placeholder="Prazo Grupo" oninput="calcular()">
             </div>
             <div class="field-group">
               <label>Prazo da cota (meses)</label>
               <select id="prazoSel" class="sel-disp" onchange="onPrazoSel()" style="display:none"></select>
-              <input id="prazo" type="number" placeholder="Prazo Cota">
+              <input id="prazo" type="number" placeholder="Prazo Cota" oninput="_syncSel(document.getElementById('prazoSel'),+this.value);calcular()">
             </div>
 
             <div class="field-group">
@@ -666,11 +666,20 @@ function fecharModal(id){document.getElementById(id).classList.remove('show')}
 function moeda(v){return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
 function numero(v){if(!v)return 0;return parseFloat(v.replace(/[^0-9,]/g,'').replace(',','.'))||0}
 function percent(v){if(!v)return 0;return parseFloat(v.replace('%','').replace(',','.'))/100||0}
+// Mantém o select auxiliar coerente com o que foi digitado no input ao lado:
+// opção de mesmo valor, senão "manual" (ou vazio) — nunca uma opção velha.
+function _syncSel(sel,val){
+  if(!sel||!sel.options.length) return;
+  const op=[...sel.options].find(o=>o.value!=='' && o.value!=='__manual__' && val>0 && Math.abs(parseFloat(o.value)-val)<0.005);
+  if(op){ sel.value=op.value; return; }
+  const man=[...sel.options].find(o=>o.value==='__manual__');
+  sel.value = (val>0 && man) ? '__manual__' : '';
+}
 function maskMoeda(v){let n=v.replace(/\D/g,'');if(!n)return'';return(n/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
-function maskPercent(v){let n=v.replace(/[^\d,]/g,'');return n?n+'%':''}
+function maskPercent(v){let n=v.replace(/\./g,',').replace(/[^\d,]/g,'');const i=n.indexOf(',');if(i>=0)n=n.slice(0,i+1)+n.slice(i+1).replace(/,/g,'');return n?n+'%':''}
 credito.oninput=e=>{e.target.value=maskMoeda(e.target.value);
   // apagou o valor: a lista não pode continuar mostrando um crédito que já não vale
-  if(!e.target.value){ const cs=document.getElementById('creditoSel'); if(cs) cs.value=''; }
+  _syncSel(document.getElementById('creditoSel'), numero(e.target.value));
   calcular()}
 taxa.oninput=e=>{e.target.value=maskPercent(e.target.value);calcular()}
 let _embutidoAuto=true;  // true enquanto o embutido foi preenchido pelo grupo (não digitado à mão)
@@ -688,9 +697,10 @@ let rec=0
 function calcular(){
 let cota=+cotas.value||1
 let cred=numero(credito.value)*cota
-let prazoC=+prazo.value||1
+let prazoC=+prazo.value||0   // vazio/0 = inválido (resumo mostra —), nunca 1x
 let prazoG=+prazoGrupo.value||1
 let tx=percent(taxa.value)
+const _taxaVazia=!String(taxa.value||'').trim()
 let emb=percent(embutido.value)
 let recPerc=percent(recurso.value)
 let usarSeguro=seguroTipo.value==='com'
@@ -757,8 +767,8 @@ if(tipoPlano.value === 'integral') {
 lanceOf.innerText=moeda(lanceOfertaTotal)
 document.getElementById('lanceRecFooter').innerText = moeda(rec);
 liberado.innerText=moeda(liberadoCalc)
-parcelasPos.innerText=(prazoC-1)+'x de '+moeda(parcelaPos)
-atualizarResumo({cred, prazoC, parcelaAntesCalc, parcelaPos})
+parcelasPos.innerText=(prazoC>0&&isFinite(parcelaPos)) ? (prazoC-1)+'x de '+moeda(parcelaPos) : '—'
+atualizarResumo({cred, prazoC, parcelaAntesCalc, parcelaPos, invalido:_taxaVazia})
 }
 // ===================================================================
 // >>> FIM DO BLOCO DE CÁLCULO — NÃO ALTERAR <<<
@@ -808,7 +818,7 @@ function atualizarResumo(d){
   const aguardar=$('modoLance').value==='aguardar';
   $('stLance').style.display=$('stRec').style.display=$('fullLance').style.display = aguardar?'none':'';
   $('stContemp').style.display = aguardar?'':'none';
-  const ok = d.cred>0 && d.prazoC>0 && isFinite(d.parcelaAntesCalc) && isFinite(d.parcelaPos);
+  const ok = d.cred>0 && !d.invalido && d.prazoC>0 && isFinite(d.parcelaAntesCalc) && isFinite(d.parcelaPos);
   if(!ok){
     $('parcelaAntes').value='—';
     ['resumoAntes','resumoDepois'].forEach(i=>T(i,'—'));
@@ -977,12 +987,31 @@ function setProdutoNovo(p,el){
   document.getElementById('simGate').classList.remove('locked');
   // troca de produto = começo do zero: embutido volta a ser preenchido pelo grupo
   _embutidoAuto=true; document.getElementById('embutido').value='';
+  // ...e não leva grupo/crédito/prazo/taxa do produto anterior (misturava com a alíquota do novo)
+  ['grupo','credito','prazo','prazoGrupo','taxa'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('creditoSel').value='';
   preencherGrupos();
   // reseta seleção de grupo
   document.getElementById('grupoSel').value='';
   onGrupoSel();
   calcular();
 }
+
+// Proposta/relatório já gerados são uma "foto": se qualquer campo muda depois,
+// o card na tela (e o PDF) ficaria com número velho. Então some até gerar de novo.
+function _invalidaProposta(){
+  const r=document.getElementById('resultado');
+  if(r && r.innerHTML.trim()){ r.innerHTML=''; document.getElementById('resumoAcoes').classList.remove('show'); }
+}
+function _invalidaEstr(){
+  const r=document.getElementById('resultadoEstr'), f=document.getElementById('fluxoEstr');
+  if((r&&r.innerHTML.trim())||(f&&f.innerHTML.trim())){ r.innerHTML=''; f.innerHTML='';
+    document.getElementById('resumoAcoesEstr').classList.remove('show'); }
+}
+['input','change'].forEach(ev=>{
+  document.getElementById('abaSim').addEventListener(ev,_invalidaProposta);
+  document.getElementById('abaEstr').addEventListener(ev,_invalidaEstr);
+});
 
 function gruposDoProduto(){
   return (BASE_DADOS.grupos||[]).filter(g=>_prodMatch(g.tipo_bem,produto));
@@ -1734,7 +1763,7 @@ function addLinhaEstr(){
         <input class="e-prazoGrupo" type="number" placeholder="Prazo grupo" oninput="calcTodasEstr()"></div>
       <div class="field-group"><label>Prazo da cota</label>
         <select class="e-prazoSel sel-disp" onchange="onPrazoSelEstr(this)" style="display:none"></select>
-        <input class="e-prazo" type="number" placeholder="Meses" oninput="calcTodasEstr()"></div>
+        <input class="e-prazo" type="number" placeholder="Meses" oninput="_syncSel(this.closest('.estr-linha').querySelector('.e-prazoSel'),+this.value);calcTodasEstr()"></div>
       <div class="field-group"><label>Taxa adm. (%)</label>
         <input class="e-taxa" placeholder="%" oninput="_mPctEstr(this)"></div>
 
@@ -1770,7 +1799,7 @@ function removerLinhaEstr(btn){
   if(document.querySelectorAll('#estrLinhas .estr-linha').length<=1){ return; }
   row.remove(); calcTodasEstr();
 }
-function _mCredEstr(el){ el.value=maskMoeda(el.value); calcTodasEstr(); }
+function _mCredEstr(el){ el.value=maskMoeda(el.value); _syncSel(el.closest('.estr-linha').querySelector('.e-credSel'),numero(el.value)); calcTodasEstr(); }
 function _mPctEstr(el){ el.value=maskPercent(el.value); calcTodasEstr(); }
 
 function onGrupoSelEstr(sel){
@@ -1827,7 +1856,8 @@ function onCredSelEstr(sel){
   if(v){
     q('.e-credito').value=moeda(parseFloat(v));
     const op=sel.options[sel.selectedIndex], pz=op.getAttribute('data-prazo');
-    const temRestante = q('.e-prazoSel') && [...q('.e-prazoSel').options].some(o=>o.textContent.indexOf('restante')>=0 && o.selected);
+    const _gE=_estrGrupos().find(x=>String(x.grupo)===String(q('.e-grupoSel').value));
+    const temRestante = !!(_gE && _gE.prazo_restante!=null);
     if(pz && !temRestante){ q('.e-prazo').value=pz;
       const pSel=q('.e-prazoSel'); if([...pSel.options].some(o=>o.value===String(pz))) pSel.value=String(pz); }
   }
@@ -1906,7 +1936,7 @@ function calcTotaisEstr(){
 }
 
 function _linhasEstrValidas(){
-  return [...document.querySelectorAll('#estrLinhas .estr-linha')].filter(r=>(+r.dataset.credTotal||0)>0);
+  return [...document.querySelectorAll('#estrLinhas .estr-linha')].filter(r=>(+r.dataset.credTotal||0)>0 && (+r.querySelector('.e-prazo').value||0)>0);
 }
 
 function gerarPropostaEstr(){
