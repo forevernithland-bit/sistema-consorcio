@@ -383,7 +383,10 @@ def _vale_a_pena(sb, grupo, forcar):
     except Exception:
         gr = None
     if gr is not None and (gr.get("vagas") or 0) <= 0:
-        return False, "SEM VAGA no catálogo"
+        # Grupo cadastrado à mão pelo Simulador (fonte 'manual…', vagas ainda
+        # desconhecidas = None): vale coletar. Com vagas = 0 explícito, segue pulando.
+        if not (str(gr.get("fonte") or "").startswith("manual") and gr.get("vagas") is None):
+            return False, "SEM VAGA no catálogo"
     realiz_estim = None
     if gr and gr.get("prazo_total") and gr.get("prazo_restante") is not None:
         realiz_estim = int(gr["prazo_total"]) - int(gr["prazo_restante"])

@@ -67,6 +67,14 @@ def coleta_assembleias(sb, ctx, reabrir_fn, *, n_ass=3, salvar=True,
                 prog["grupos_com_vaga"][str(row["grupo"])] = row.get("tipo_bem")
         except Exception as e:
             return {"ok": False, "mensagem": f"não li grupos_yamaha: {e}"}
+    # Grupos cadastrados à mão pelo Simulador (fonte 'manual…', vagas desconhecidas):
+    # sempre entram na fila, mesmo com o progresso do dia já semeado.
+    try:
+        for row in (sb.table("grupos_yamaha").select("grupo,tipo_bem")
+                    .like("fonte", "manual%").is_("vagas", "null").execute().data or []):
+            prog["grupos_com_vaga"].setdefault(str(row["grupo"]), row.get("tipo_bem"))
+    except Exception as e:
+        print(f"  !! não li os grupos manuais de grupos_yamaha: {str(e)[:90]}")
     sx, reabrir = _sx_do_ctx(ctx, reabrir_fn)
     r = RY.fase_assembleias(sx, sb, prog, n_ass, salvar, reabrir, forcar, ceder_cb=ceder_cb)
     if r == "CEDEU":

@@ -944,25 +944,66 @@ resultado.innerHTML=`
     </div>
   </div>
 </div>`;
-document.getElementById('resumoAcoes').classList.add('show');
+document.getElementById('resumoAcoes').classList.add('show'); _propEm=Date.now();
 document.getElementById('resumo').scrollIntoView({behavior:'smooth'});
 
-// Grupo digitado à mão que não está na base → avisa pra cadastrar
+// Grupo digitado à mão que não está na base → cadastra sozinho na Base de Dados
+// (o robô passa a coletar as assembleias dele) e avisa na tela.
 try{
   const gnum=String(document.getElementById('grupo').value||'').trim();
   const naBase=(BASE_DADOS.grupos||[]).some(x=>String(x.grupo)===gnum);
   const av=document.getElementById('avisoGrupoNovo');
   if(gnum && !naBase && (modoManual || !GRUPO_ATUAL)){
-    av.innerHTML='⚠️ <b>Grupo '+gnum+'</b> não está na Base de Dados. '
-      +'Role até <b>"✍️ Editar a Base de Dados manualmente"</b> aqui embaixo e cadastre '
-      +'(crédito '+(document.getElementById('credito').value||'—')
-      +' · prazo '+(document.getElementById('prazo').value||'—')
-      +' · taxa '+(document.getElementById('taxa').value||'—')
-      +' · prazo do grupo '+(document.getElementById('prazoGrupo').value||'—')
-      +') — assim ele já aparece na lista nas próximas vezes.';
+    const dados=_dadosGrupoNovo(gnum);
+    const enviado = dados && _enviarGrupoNovo(dados);
+    if(enviado){
+      av.innerHTML='✅ <b>Grupo '+gnum+'</b> não estava na Base de Dados — <b>cadastrei automaticamente</b> '
+        +'(crédito '+moeda(dados.credito)+' · prazo '+dados.prazo_restante+' · taxa '+String(dados.taxa).replace('.',',')+'%'
+        +' · prazo do grupo '+dados.prazo_total+'). O robô vai buscar o resultado das assembleias dele na próxima rodada; '
+        +'a confirmação aparece logo abaixo do simulador.';
+      av.style.background='#eaf7ef'; av.style.borderColor='#a8d9b8'; av.style.color='#1d5a34';
+    } else {
+      av.innerHTML='⚠️ <b>Grupo '+gnum+'</b> não está na Base de Dados'
+        +(dados?'':' (preencha crédito, prazo e taxa para cadastrar automaticamente)')
+        +'. Role até <b>"✍️ Editar a Base de Dados manualmente"</b> aqui embaixo e cadastre — '
+        +'assim ele já aparece na lista nas próximas vezes.';
+      av.style.background='#fff7e8'; av.style.borderColor='#f6c99b'; av.style.color='#8a5a00';
+    }
     av.style.display='block';
   } else { av.style.display='none'; }
 }catch(e){}
+}
+
+// ---- cadastro automático de grupo digitado à mão ----
+// O simulador roda num iframe sem acesso ao banco: entrega os dados a um campo
+// oculto do Streamlit (na página-mãe), e o Python grava em grupos_yamaha.
+const _grupoNovoEnviado={};
+function _dadosGrupoNovo(gnum){
+  const credito=numero(document.getElementById('credito').value);       // por cota
+  const prazo=+document.getElementById('prazo').value||0;
+  const prazoG=+document.getElementById('prazoGrupo').value||prazo;
+  const taxa=percent(document.getElementById('taxa').value)*100;
+  if(!(credito>0 && prazo>0 && taxa>0)) return null;
+  const red=document.getElementById('tipoPlano').value==='reduzida';
+  return {grupo:gnum, produto:produto, credito:credito, prazo_restante:prazo,
+          prazo_total:Math.max(prazoG,prazo), taxa:Math.round(taxa*100)/100,
+          parcela_reduzida:red, reducao_pct:red?30:null};
+}
+function _enviarGrupoNovo(d){
+  try{
+    const chave=JSON.stringify([d.grupo,d.produto,d.credito,d.prazo_restante,d.prazo_total,d.taxa,d.parcela_reduzida]);
+    if(_grupoNovoEnviado[chave]) return true;                              // já enviado nesta sessão
+    const doc=window.parent && window.parent.document; if(!doc) return false;
+    const inp=doc.querySelector('input[aria-label="yamaha_novo_grupo"]');
+    if(!inp) return false;                                                 // fora do ERP: só avisa
+    d.nonce=Date.now()+'-'+Math.random().toString(36).slice(2,8);
+    const setter=Object.getOwnPropertyDescriptor(window.parent.HTMLInputElement.prototype,'value').set;
+    setter.call(inp,JSON.stringify(d));                                    // sem focus(): não rouba o foco do campo atual
+    inp.dispatchEvent(new window.parent.Event('input',{bubbles:true}));
+    inp.dispatchEvent(new window.parent.KeyboardEvent('keydown',{key:'Enter',code:'Enter',keyCode:13,which:13,bubbles:true}));  // Streamlit confirma no Enter
+    _grupoNovoEnviado[chave]=true;
+    return true;
+  }catch(e){ return false; }
 }
 
 // ===================================================================
@@ -1016,11 +1057,14 @@ function setProdutoNovo(p,el){
 
 // Proposta/relatório já gerados são uma "foto": se qualquer campo muda depois,
 // o card na tela (e o PDF) ficaria com número velho. Então some até gerar de novo.
+let _propEm=0, _estrEm=0;   // quando foi gerada (evita que o blur/foco do próprio clique apague o que acabou de sair)
 function _invalidaProposta(){
+  if(Date.now()-_propEm<1500) return;
   const r=document.getElementById('resultado');
   if(r && r.innerHTML.trim()){ r.innerHTML=''; document.getElementById('resumoAcoes').classList.remove('show'); }
 }
 function _invalidaEstr(){
+  if(Date.now()-_estrEm<1500) return;
   const r=document.getElementById('resultadoEstr'), f=document.getElementById('fluxoEstr');
   if((r&&r.innerHTML.trim())||(f&&f.innerHTML.trim())){ r.innerHTML=''; f.innerHTML='';
     document.getElementById('resumoAcoesEstr').classList.remove('show'); }
@@ -2079,7 +2123,7 @@ function gerarPropostaEstr(){
       <div class="proposta-rodape"><b>CONSORBENS</b> · Consórcio de veículos e imóveis<br>www.consorbens.com</div>
     </div>
   </div>`;
-  document.getElementById('resumoAcoesEstr').classList.add('show');
+  document.getElementById('resumoAcoesEstr').classList.add('show'); _estrEm=Date.now();
   document.getElementById('resumoEstr').scrollIntoView({behavior:'smooth'});
 }
 

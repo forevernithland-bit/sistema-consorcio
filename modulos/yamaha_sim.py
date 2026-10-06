@@ -203,8 +203,8 @@ def _form_editar_grupo(supabase, grupos):
             "atualizado_por": _quem(),
         }
         try:
-            supabase.table("grupos_yamaha").upsert(
-                payload, on_conflict="grupo,tipo_bem").execute()
+            extras = {k: payload.pop(k) for k in ("atualizado_por", "atualizado_em")}
+            _upsert_tolerante(supabase, "grupos_yamaha", payload, "grupo,tipo_bem", extras=extras)
             carregar_base_yamaha.clear()
             st.success(f"Grupo {grupo} salvo ({payload['atualizado_por']}, "
                        f"{datetime.datetime.now():%d/%m/%Y %H:%M}).")
@@ -265,14 +265,119 @@ def _form_lancar_assembleia(supabase, grupos):
             "atualizado_por": _quem(),
         }
         try:
-            supabase.table("yamaha_assembleias").upsert(
-                payload, on_conflict="grupo,num_assembleia").execute()
+            extras = {k: payload.pop(k) for k in ("atualizado_por", "atualizado_em")}
+            _upsert_tolerante(supabase, "yamaha_assembleias", payload, "grupo,num_assembleia", extras=extras)
             carregar_base_yamaha.clear()
             st.success(f"Assembleia {int(num_ass)} do grupo {grupo} salva "
                        f"({datetime.datetime.now():%d/%m/%Y %H:%M}).")
             st.rerun()
         except Exception as e:
             st.error(f"Não consegui gravar: {e}")
+
+
+_PRODUTO_TIPO_BEM = {"auto": "Auto", "moto": "Moto", "imovel": "Imóvel", "caminhao": "Caminhão"}
+_LABEL_PONTE = "yamaha_novo_grupo"
+
+
+def _registrar_grupo_novo(supabase, raw):
+    """Grava em grupos_yamaha um grupo digitado à mão no simulador (via Gerar
+    Proposta) que não estava na base, e enfileira a coleta de assembleias.
+    Devolve (tipo, mensagem) com tipo em {"ok", "info", "erro"}. NUNCA altera
+    um grupo que já existe (os dados do robô têm prioridade)."""
+    import re
+    try:
+        d = json.loads(raw)
+    except Exception:
+        return "erro", "Não entendi os dados do grupo enviados pelo simulador."
+    grupo = re.sub(r"\D", "", str(d.get("grupo") or "")).lstrip("0")
+    tipo_bem = _PRODUTO_TIPO_BEM.get(str(d.get("produto") or ""))
+    try:
+        credito = float(d.get("credito") or 0)
+        taxa = float(d.get("taxa") or 0)
+        prazo_rest = int(d.get("prazo_restante") or 0)
+        prazo_tot = int(d.get("prazo_total") or 0) or prazo_rest
+    except Exception:
+        return "erro", "Dados do grupo inválidos (crédito/prazo/taxa)."
+    if not grupo or not tipo_bem or credito <= 0 or taxa <= 0 or prazo_rest <= 0:
+        return "erro", "Faltam dados para cadastrar o grupo (nº, produto, crédito, prazo e taxa)."
+
+    try:
+        ja = (supabase.table("grupos_yamaha").select("grupo,tipo_bem,fonte")
+              .eq("grupo", grupo).eq("tipo_bem", tipo_bem).execute().data or [])
+    except Exception as e:
+        return "erro", f"Não consegui consultar a base: {e}"
+    if ja:
+        return "info", (f"Grupo {grupo} já está na Base de Dados — não alterei nada. "
+                        "Recarregue a página para escolhê-lo na lista.")
+
+    quem = _quem()
+    payload = {
+        "grupo": grupo, "tipo_bem": tipo_bem,
+        "credito": credito, "taxa": taxa,
+        "prazo_restante": prazo_rest, "prazo_total": prazo_tot,
+        "parcela_reduzida": bool(d.get("parcela_reduzida")),
+        "reducao_pct": d.get("reducao_pct") or None,
+        "fonte": "manual-simulador",          # o robô enxerga como "grupo manual"
+        "consultado_em": _agora_iso(),
+    }
+    try:
+        _upsert_tolerante(supabase, "grupos_yamaha", payload, "grupo,tipo_bem",
+                          extras={"atualizado_por": quem, "atualizado_em": _agora_iso()})
+    except Exception as e:
+        return "erro", f"Não consegui salvar o grupo {grupo}: {e}"
+
+    # Pede ao robô que colete as assembleias (prioridade baixa; não duplica pedido).
+    fila = ""
+    try:
+        aberto = (supabase.table("fila_automacao").select("id").eq("tipo", "COLETA_ASSEMBLEIAS")
+                  .in_("status", ["PENDENTE", "PROCESSANDO"]).limit(1).execute().data or [])
+        if not aberto:
+            supabase.table("fila_automacao").insert({
+                "tipo": "COLETA_ASSEMBLEIAS", "status": "PENDENTE",
+                "solicitado_por": f"SIMULADOR:{quem}", "payload": {},
+            }).execute()
+        fila = " Pedi ao robô a coleta das assembleias dele."
+    except Exception as e:
+        fila = (" (Não consegui enfileirar a coleta agora — ele entra sozinho na "
+                f"próxima rodada do robô. Motivo: {str(e)[:80]})")
+    return "ok", (f"Grupo {grupo} ({tipo_bem}) cadastrado na Base de Dados — crédito "
+                  f"R$ {credito:,.2f}, prazo {prazo_rest}/{prazo_tot}, taxa {taxa}%."
+                  .replace(",", "X").replace(".", ",").replace("X", ".") + fila)
+
+
+def _upsert_tolerante(supabase, tabela, payload, on_conflict, extras=None):
+    """upsert que tenta com as colunas 'extras' (ex.: atualizado_por/atualizado_em,
+    da migração 21) e, se o banco ainda não as tem, repete sem elas."""
+    dados = {**payload, **(extras or {})}
+    for _ in range(len(extras or {}) + 1):
+        try:
+            supabase.table(tabela).upsert(dados, on_conflict=on_conflict).execute()
+            return
+        except Exception as e:
+            faltando = [k for k in (extras or {}) if k in dados and k in str(e)]
+            if not faltando:
+                raise
+            for k in faltando:
+                dados.pop(k)
+    raise RuntimeError("não consegui gravar mesmo sem as colunas opcionais")
+
+
+def _ponte_novo_grupo(supabase):
+    """Campo de texto OCULTO que o simulador (iframe) preenche pela página-mãe
+    para pedir o cadastro de um grupo novo. Mostra o resultado abaixo."""
+    st.markdown(
+        "<style>div[data-testid='stTextInput']:has(input[aria-label='%s'])"
+        "{position:absolute!important;left:-9999px!important;width:1px!important;"
+        "height:1px!important;overflow:hidden!important;opacity:0!important}</style>" % _LABEL_PONTE,
+        unsafe_allow_html=True)
+    raw = st.text_input(_LABEL_PONTE, key="yamaha_novo_grupo_raw", label_visibility="collapsed")
+    if raw and raw != st.session_state.get("_yamaha_novo_proc"):
+        st.session_state["_yamaha_novo_proc"] = raw
+        st.session_state["_yamaha_novo_msg"] = _registrar_grupo_novo(supabase, raw)
+    msg = st.session_state.get("_yamaha_novo_msg")
+    if msg:
+        tipo, texto = msg
+        {"ok": st.success, "info": st.info, "erro": st.error}.get(tipo, st.info)(texto)
 
 
 def render_yamaha_sim(supabase, pasta_atual):
@@ -283,11 +388,11 @@ def render_yamaha_sim(supabase, pasta_atual):
         st.error("⚠️ yamaha.html não encontrado no servidor.")
         return
 
+    # "gerado_em" vem do próprio cache (instante em que os dados foram lidos do
+    # banco, no máx. 60 s atrás). Precisa ser estável entre reruns: se o HTML
+    # mudasse a cada render, o iframe seria recarregado e o usuário perderia a
+    # proposta que acabou de gerar (ex.: ao cadastrar um grupo novo).
     dados = dict(carregar_base_yamaha(supabase))
-    # "gerado_em" sempre é o instante deste render (não o instante em que os
-    # dados foram buscados no banco) — preserva o comportamento de antes do
-    # cache, em que a leitura acontecia a cada render.
-    dados["gerado_em"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
     payload = json.dumps(dados, ensure_ascii=False, default=str)
 
     # troca o objeto-marcador do HTML pelo JSON real (fallback: injeta no <head>)
@@ -314,6 +419,7 @@ def render_yamaha_sim(supabase, pasta_atual):
     # 1600 cobre a aba Simulador; a aba "Estruturada" (várias linhas + relatório
     # + fluxo) é mais alta — scrolling=True cobre o resto, mas dá um respiro.
     components.html(html_code, height=1900, scrolling=True)
+    _ponte_novo_grupo(supabase)
 
     # ---- edição manual da Base de Dados (sem robô) ----
     st.divider()

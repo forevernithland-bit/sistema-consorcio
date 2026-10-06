@@ -133,14 +133,18 @@ def _grupos_da_base(sb, prod_nome):
     {plano_cod: [rows]} + set de grupos com vaga."""
     por_plano, com_vaga = {}, {}
     try:
-        rows = (sb.table("grupos_yamaha").select("grupo,plano_codigo,vagas,consultado_em,tipo_bem")
+        rows = (sb.table("grupos_yamaha").select("grupo,plano_codigo,vagas,consultado_em,tipo_bem,fonte")
                 .eq("tipo_bem", prod_nome).execute().data or [])
     except Exception as e:
         print(f"  !! não li grupos_yamaha de {prod_nome}: {str(e)[:90]}")
         rows = []
     for r in rows:
         por_plano.setdefault(_cod(r.get("plano_codigo")), []).append(r)
-        if (r.get("vagas") or 0) > 0:
+        # grupo cadastrado à mão pelo Simulador (vagas desconhecidas) também entra:
+        # é assim que os resultados de assembleia dele passam a ser coletados.
+        manual_sem_vaga = (str(r.get("fonte") or "").startswith("manual")
+                           and r.get("vagas") is None)
+        if (r.get("vagas") or 0) > 0 or manual_sem_vaga:
             com_vaga[str(r["grupo"])] = prod_nome
     return por_plano, com_vaga
 
