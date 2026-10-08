@@ -524,7 +524,8 @@ table.baseTbl tr:hover td{background:#fafafa}
             <p class="dep-help">Rode a mesma simulação no Newcon e digite abaixo o que ele mostrou. O depurador compara com o simulador, aponta onde diverge e descobre valores "escondidos" (base do lance, alíquota do seguro). Não altera o cálculo do simulador.</p>
             <div class="dep-grid" id="depForm"></div>
             <div class="dep-btns">
-              <button type="button" onclick="depExemplo()">Carregar caso real: 9600, lance 63,36% + 18% embutido</button>
+              <button type="button" onclick="depExemplo(1)">Caso real 1 · auto integral (9600)</button>
+              <button type="button" onclick="depExemplo(2)">Caso real 2 · imóvel parcela reduzida (10018)</button>
               <button type="button" onclick="depLimpar()">Limpar Newcon</button>
               <button type="button" onclick="depCopiar()">📋 Copiar relatório</button>
             </div>
@@ -765,20 +766,12 @@ embRef.innerText = 'Equivale a ' + moeda(embVal);
 let baseRecTotal = baseLance * (1 + tx);
 rec = baseRecTotal * recPerc;
 
-// ---- PARCELA INTEGRAL: lance no modelo do Newcon (conferido em 08/10/2026, grupo 9600) ----
-//  * o "percentual do lance" é o TOTAL (embutido + recurso próprio %), igual ao campo do Newcon;
-//  * o percentual incide sobre uma base = (parcelas a pagar − 2) × parcela pura
-//    (no caso real: 81 × R$ 1.375 = R$ 111.375, não crédito × (1 + taxa));
-//  * recursos próprios (R$) = lance total − embutido (embutido = % do crédito);
-//  * o lance inteiro (embutido + recursos) abate o saldo devedor.
-// Ignoramos a "Dif. Grupo" (≈ 0,06% do crédito, ~R$ 60) — só o Newcon sabe.
+// ---- LANCE NO MODELO DO NEWCON (integral e parcela reduzida) — ver _calcLanceNewcon() ----
 let _nw=null;
-if(tipoPlano.value==='integral' && prazoC>0){
-  const pura0=(cred*(1+tx))/prazoC, kN=_assembleiaK(prazoC), nPagN=prazoC-kN;
-  const sdAtualN=cred*(1+tx)-kN*pura0, baseN=Math.max(nPagN-2,0)*pura0;
-  const lanceN=(emb+recPerc)*baseN;
-  rec=Math.max(lanceN-embVal,0);
-  _nw={pura0,kN,nPagN,sdAtualN,baseN,lanceN};
+if(prazoC>0){
+  _nw=_calcLanceNewcon({cred,tx,prazoC,reduzida:tipoPlano.value==='reduzida',emb,recPerc,k:_assembleiaK(prazoC),seguroVal:0});
+  embVal=_nw.embVal; rec=_nw.rec;
+  embRef.innerText = 'Equivale a ' + moeda(embVal);
 }
 recRef.innerText = 'Equivale a ' + moeda(rec);
 
@@ -813,19 +806,13 @@ let proporcaoLance = rec / saldoDevedorTotal;
 let parcelaPos = (parcIntSemSeguro * (1 - proporcaoLance)) + seguroVal;
 
 window._prazoAlt=null;
-if(tipoPlano.value === 'integral' && _nw) {
-    // reduzir PARCELA: saldo devedor novo ÷ parcelas a pagar (+ seguro).
-    const sdNovo=Math.max(_nw.sdAtualN-(embVal+rec),0);
-    parcelaPos = (_nw.nPagN>0 ? sdNovo/_nw.nPagN : 0) + seguroVal;
-    // alternativa: reduzir PRAZO — mesma parcela, menos parcelas
-    window._prazoAlt={ n:(parcIntSemSeguro>0 ? Math.ceil(sdNovo/parcIntSemSeguro-1e-9) : 0),
-                       parc:parcIntSemSeguro+seguroVal, lance:(embVal+rec)>0 };
-    _nw.sdNovo=sdNovo;
-} else {
-    // Parcela reduzida: ao contemplar usando 100% do crédito, a parcela é
-    // recalculada para 100% e a diferença das parcelas reduzidas pagas antes
-    // da contemplação é DILUÍDA nas vincendas (regra da tabela oficial do plano).
-    // k = parcelas reduzidas pagas até contemplar (1 = 1ª assembleia).
+if(_nw) {
+    // seguro entra aqui (a função do modelo trabalha sem seguro)
+    parcelaPos = _nw.parcelaPos + seguroVal;
+    window._prazoAlt={ n:_nw.nNovo, lance:(embVal+rec)>0,
+                       parc:(tipoPlano.value==='integral' ? parcIntSemSeguro+seguroVal : null) };
+} else if(tipoPlano.value !== 'integral') {
+    // (só se prazo inválido) regra antiga de parcela reduzida
     let kContemp = _assembleiaK(prazoC);
     let baseReduzida = (reduzido * (1 + tx)) / prazoC;
     if (prazoC - kContemp > 0) parcelaPos += kContemp * (parcIntSemSeguro - baseReduzida) / (prazoC - kContemp);
@@ -879,6 +866,45 @@ function _dT(cab,linhas){
     +linhas.map(l=>'<tr>'+l.map((c,i)=>`<td class="${(i>0&&i<l.length-1&&l.length>2)?'n':''}">${c}</td>`).join('')+'</tr>').join('')+'</table>';
 }
 
+// ===================================================================
+// MODELO DE LANCE DO NEWCON (integral e parcela reduzida)
+// Calibrado com 2 casos reais conferidos em 08/10/2026:
+//   A) auto, plano integral  (grupo 9600, 84 meses, taxa 15,5%)
+//   B) imóvel, parcela reduzida 70% (grupo 10018, 240 meses, taxa 24%)
+// Regras que fecharam ao centavo/real nos dois casos:
+//  * "percentual do lance" é o TOTAL (embutido + recursos próprios), como no Newcon;
+//  * o percentual incide sobre uma BASE:
+//        reduzida → crédito reduzido (70%) × (1 + taxa)                  [caso B: R$ 86.800]
+//        integral → (parcelas a pagar − 2) × parcela pura                [caso A: 81 × R$ 1.375 = R$ 111.375]
+//  * o embutido é % de: reduzida → o mesmo R$ 86.800 · integral → o crédito (R$ 100.000);
+//  * recursos próprios = lance total − embutido; o lance inteiro abate o saldo devedor;
+//  * saldo devedor atual = crédito × (1 + taxa) − parcelas pagas × parcela pura paga (reduzida ou integral);
+//  * reduzir PARCELA: parcela = saldo devedor novo ÷ parcelas a pagar + seguro;
+//  * reduzir PRAZO: parcelas do lance = piso(lance ÷ parcela pura paga).
+// Ignorado: "Dif. Grupo" (~0,03–0,06% do crédito, só o Newcon sabe) e alíquota de seguro por idade.
+// Dúvida em aberto: as duas regras de BASE vêm de 1 caso cada (produtos diferentes).
+// ===================================================================
+function _calcLanceNewcon(o){
+  const n=o.prazoC, k=o.k, nPag=n-k;
+  const C1=o.cred*(1+o.tx);
+  const redCred=o.reduzida ? o.cred*0.7 : o.cred;
+  const pura=C1/n;                                  // parcela integral (sem seguro)
+  const puraPaga=(redCred*(1+o.tx))/n;              // parcela (sem seguro) paga até contemplar
+  const sdAtual=C1-k*puraPaga;
+  const B = o.reduzida ? redCred*(1+o.tx) : Math.max(nPag-2,0)*pura;
+  const embBase = o.reduzida ? redCred*(1+o.tx) : o.cred;
+  const embVal=o.emb*embBase;
+  const lanceBruto=(o.emb+o.recPerc)*B;
+  const rec=Math.max(lanceBruto-embVal,0);
+  const lanceTot=embVal+rec;
+  const sdNovo=Math.max(sdAtual-lanceTot,0);
+  const parcelaPos=(nPag>0 ? sdNovo/nPag : 0)+o.seguroVal;
+  const parcLance=Math.floor(lanceTot/puraPaga+0.1);   // +0,1 ≈ efeito da Dif. Grupo
+  const nNovo=Math.max(nPag-parcLance,0);
+  return {n,k,nPag,C1,redCred,pura,puraPaga,sdAtual,B,embBase,embVal,lanceBruto,rec,lanceTot,sdNovo,parcelaPos,parcLance,nNovo,
+          creditoLiberado:o.cred-embVal};
+}
+
 function renderDepurador(){
   const det=document.getElementById('depurador'); if(!det||!det.open) return;
   _depInit();
@@ -887,94 +913,101 @@ function renderDepurador(){
   const N={vlParcela:_depN('dep_vlParcela'),pcPagar:_depN('dep_pcPagar'),sd:_depN('dep_sd'),credNovo:_depN('dep_credNovo'),
            pct:_depN('dep_pctLance'),dif:_depN('dep_dif'),valLance:_depN('dep_valLance'),recProp:_depN('dep_recProp'),
            sdNovo:_depN('dep_sdNovo'),pcNovo:_depN('dep_pcNovo'),vlParcelaPos:_depN('dep_vlParcelaPos')};
-  const C1=d.cred*(1+d.tx), pura=d.parcPura, n=d.prazoC;
-  const pagas = N.pcPagar!=null ? (n-N.pcPagar) : 1;
-  const sdAtual = C1 - pagas*pura;                       // saldo devedor depois das parcelas já pagas
-  const seguroImpl = N.vlParcela!=null ? (N.vlParcela-pura) : null;
-  const aliqImpl = seguroImpl!=null ? seguroImpl/C1 : null;
-  const embVal=d.embVal, lanceSim=d.embVal+d.rec;
+  const red=d.tipoPlano==='reduzida', n=d.prazoC;
+  const pagas = N.pcPagar!=null ? (n-N.pcPagar) : 1;       // parcelas já pagas (do Newcon, senão 1)
+  const puraPagaSim = (d.baseLance*(1+d.tx))/n;            // parcela pura paga até contemplar
+  const seguroI = N.vlParcela!=null ? (N.vlParcela-puraPagaSim) : null;
+  const aliqI = seguroI!=null ? seguroI/(d.cred*(1+d.tx)) : null;
+  // o mesmo modelo, mas com as parcelas pagas informadas pelo Newcon
+  const pctTot = N.pct!=null ? N.pct/100 : (d.emb+d.recPerc);
+  const M=_calcLanceNewcon({cred:d.cred,tx:d.tx,prazoC:n,reduzida:red,emb:d.emb,recPerc:d.recPerc,k:pagas,seguroVal:(seguroI!=null?seguroI:d.seguroVal)});
   let h='';
 
-  // ---- 1) passo a passo do simulador
-  h+='<div class="dep-sec">1 · Passo a passo do nosso simulador</div>';
+  // ---- 1) passo a passo
+  h+='<div class="dep-sec">1 · Passo a passo do nosso simulador (parcelas pagas = '+pagas+')</div>';
   h+=_dT(['Etapa','Valor','Como foi calculado'],[
+    ['Plano',red?'Parcela reduzida (70%)':'Integral',red?'crédito reduzido = '+_dM(d.baseLance):'crédito integral'],
     ['Crédito × cotas',_dM(d.cred),d.cota+' cota(s)'],
     ['Taxa de administração',_dP(d.tx*100,2),'campo Taxa'],
     ['Prazo da cota (n)',String(n),'<span class="mut">campo "Prazo da cota". O "Prazo do grupo" ('+d.prazoG+') não entra na conta</span>'],
-    ['Saldo devedor inicial',_dM(C1),'crédito × (1 + taxa)'],
-    ['Parcela pura (sem seguro)',_dM(pura),'saldo devedor ÷ n'],
-    ['Alíquota do seguro',(d.aliq*100).toFixed(4)+'%','fixa por produto — '+(d.usarSeguro?'com seguro':'sem seguro')],
-    ['Seguro mensal',_dM(d.seguroVal),'saldo devedor inicial × alíquota'],
-    ['Parcela antes da contemplação',_dM(d.parcelaAntesCalc),(d.tipoPlano==='reduzida'?'70% do crédito':'integral')+': pura + seguro'],
-    ['Embutido ('+_dP(d.emb*100,2)+')',_dM(d.embVal),'% × crédito'],
-    ['Base do lance (modelo Newcon, integral)',d.nw?_dM(d.nw.baseN):'—',d.nw?('(parcelas a pagar − 2) × parcela pura = '+(d.nw.nPagN-2)+' × '+_dM(d.parcPura)):'<span class="mut">só no plano integral</span>'],
-    ['Lance total ('+_dP((d.emb+d.recPerc)*100,2)+' = embutido % + recurso %)',_dM(lanceSim),d.nw?'% total × base do lance (o embutido está incluso, como no Newcon)':'embutido % + recurso % (somados)'],
-    ['Recursos próprios',_dM(d.rec),d.nw?'lance total − embutido':'recurso % × saldo devedor inicial'],
-    ['Crédito liberado',_dM(d.liberadoCalc),'crédito − embutido'],
-    ['Parcela depois',_dM(d.parcelaPos),d.nw?'(saldo devedor atual − lance total) ÷ parcelas a pagar + seguro  [reduzindo parcela]':'plano reduzida: regra antiga (a conferir)']
+    ['Saldo devedor inicial (100%)',_dM(M.C1),'crédito × (1 + taxa)'],
+    ['Parcela pura paga até contemplar',_dM(M.puraPaga),(red?'crédito reduzido':'crédito')+' × (1 + taxa) ÷ n'],
+    ['Alíquota / seguro mensal',(d.aliq*100).toFixed(4)+'% → '+_dM(d.seguroVal),'saldo devedor inicial × alíquota — '+(d.usarSeguro?'com seguro':'sem seguro')],
+    ['Parcela antes da contemplação',_dM(d.parcelaAntesCalc),'parcela pura paga + seguro'],
+    ['Saldo devedor atual',_dM(M.sdAtual),'saldo inicial − parcelas pagas × parcela pura paga'],
+    ['Base do percentual do lance',_dM(M.B),red?'crédito reduzido × (1 + taxa)':'(parcelas a pagar − 2) × parcela pura = '+(M.nPag-2)+' × '+_dM(M.pura)],
+    ['Embutido ('+_dP(d.emb*100,2)+')',_dM(M.embVal),'% × '+_dM(M.embBase)],
+    ['Lance total ('+_dP((d.emb+d.recPerc)*100,2)+' = embutido % + recurso %)',_dM(M.lanceTot),'% total × base (o embutido está incluso, como no Newcon)'],
+    ['Recursos próprios',_dM(M.rec),'lance total − embutido'],
+    ['Crédito liberado',_dM(M.creditoLiberado),'crédito − embutido'],
+    ['Saldo devedor novo',_dM(M.sdNovo),'saldo devedor atual − lance total'],
+    ['Parcela depois (reduzindo parcela)',_dM(M.parcelaPos),'saldo devedor novo ÷ '+M.nPag+' parcelas a pagar + seguro'],
+    ['Parcelas a pagar (reduzindo prazo)',String(M.nNovo),M.parcLance+' parcelas amortizadas pelo lance']
   ]);
 
   // ---- 2) Newcon x simulador
   const algum=Object.values(N).some(v=>v!=null);
-  h+='<div class="dep-sec">2 · Newcon × simulador</div>';
+  h+='<div class="dep-sec">2 · Newcon × simulador (mesmo modelo, com as parcelas pagas do Newcon)</div>';
   if(!algum){
-    h+='<div class="dep-note">Digite acima o que o Newcon mostrou (ou clique em "Carregar caso real") para comparar.</div>';
+    h+='<div class="dep-note">Digite acima o que o Newcon mostrou (ou use um dos botões "Carregar caso real") para comparar.</div>';
   } else {
-    const sdNovoEsp = (N.recProp!=null) ? sdAtual-(embVal+N.recProp) : null;
-    const pcNovoEsp = (N.sdNovo!=null) ? Math.ceil(N.sdNovo/pura-1e-9) : null;
-    const parcRed = (N.sdNovo!=null && N.pcPagar!=null) ? N.sdNovo/N.pcPagar : null;
-    h+=_dT(['Item','Newcon','Simulador / esperado','Diferença'],[
-      ['Vl. da parcela (c/ seguro)',_dM(N.vlParcela),_dM(d.parcelaAntesCalc),_dD(N.vlParcela,d.parcelaAntesCalc)],
-      ['↳ seguro implícito do Newcon',_dM(seguroImpl),_dM(d.seguroVal),_dD(seguroImpl,d.seguroVal)],
-      ['↳ alíquota implícita',aliqImpl!=null?(aliqImpl*100).toFixed(4)+'%':'—',(d.aliq*100).toFixed(4)+'%','<span class="mut">varia com a idade do cliente?</span>'],
-      ['Parcelas pagas (prazo − a pagar)',N.pcPagar!=null?String(pagas):'—','1','<span class="mut">o simulador assume 1</span>'],
-      ['Saldo devedor',_dM(N.sd),_dM(sdAtual),_dD(N.sd,sdAtual)],
-      ['Valor do crédito novo',_dM(N.credNovo),_dM(d.liberadoCalc),_dD(N.credNovo,d.liberadoCalc)],
-      ['Valor do lance (c/ dif. grupo)',_dM(N.valLance),_dM(lanceSim),_dD(N.valLance,lanceSim,120)+'<div class="mut">o Newcon soma a Dif. Grupo (~0,06% do crédito); o simulador não</div>'],
-      ['Recursos próprios',_dM(N.recProp),_dM(d.rec),_dD(N.recProp,d.rec,120)],
-      ['Saldo devedor novo',_dM(N.sdNovo),_dM(d.nw?d.nw.sdNovo:sdNovoEsp),_dD(N.sdNovo,d.nw?d.nw.sdNovo:sdNovoEsp,120)+'<div class="mut">esperado = saldo − (embutido + recursos próprios)</div>'],
-      ['Parcelas a pagar novo (reduz prazo)',N.pcNovo!=null?String(N.pcNovo):'—',pcNovoEsp!=null?String(pcNovoEsp):'—',(N.pcNovo!=null&&pcNovoEsp!=null)?(N.pcPagar!=null&&N.pcNovo===N.pcPagar?'<span class="mut">n/d — Newcon simulou "reduzir parcela"</span>':(N.pcNovo===pcNovoEsp?'<span class="ok">✓</span>':'<span class="bad">≠</span>')):'—'],
-      ['Parcela nova se "reduzir parcela"','—',parcRed!=null?_dM(parcRed+(seguroImpl!=null?seguroImpl:d.seguroVal)):'—','<span class="mut">saldo novo ÷ a pagar + seguro</span>'],
-      ['Valor da parcela após o lance (Newcon) × simulador',_dM(N.vlParcelaPos),_dM(d.parcelaPos),_dD(N.vlParcelaPos,d.parcelaPos)]
+    const modoParcela = (N.pcNovo!=null && N.pcPagar!=null && N.pcNovo===N.pcPagar);
+    h+=_dT(['Item','Newcon','Simulador','Diferença'],[
+      ['Vl. da parcela (c/ seguro)',_dM(N.vlParcela),_dM(M.puraPaga+d.seguroVal),_dD(N.vlParcela,M.puraPaga+d.seguroVal)],
+      ['↳ seguro implícito do Newcon',_dM(seguroI),_dM(d.seguroVal),_dD(seguroI,d.seguroVal)],
+      ['↳ alíquota implícita',aliqI!=null?(aliqI*100).toFixed(4)+'%':'—',(d.aliq*100).toFixed(4)+'%','<span class="mut">pode variar com a idade/produto</span>'],
+      ['Parcelas pagas (prazo − a pagar)',N.pcPagar!=null?String(pagas):'—',String(pagas),'<span class="mut">o simulador usa 1 no modo lance</span>'],
+      ['Saldo devedor atual',_dM(N.sd),_dM(M.sdAtual),_dD(N.sd,M.sdAtual)],
+      ['Valor do crédito novo',_dM(N.credNovo),_dM(M.creditoLiberado),_dD(N.credNovo,M.creditoLiberado)],
+      ['Valor do lance (c/ dif. grupo)',_dM(N.valLance),_dM(M.lanceTot),_dD(N.valLance,M.lanceTot,120)+'<div class="mut">o Newcon soma a Dif. Grupo; o simulador não</div>'],
+      ['Recursos próprios',_dM(N.recProp),_dM(M.rec),_dD(N.recProp,M.rec,120)],
+      ['Saldo devedor novo',_dM(N.sdNovo),_dM(M.sdNovo),_dD(N.sdNovo,M.sdNovo,120)],
+      ['Parcelas a pagar novo',N.pcNovo!=null?String(N.pcNovo):'—',modoParcela?'<span class="mut">n/d (Newcon simulou "reduzir parcela")</span>':String(M.nNovo),
+        (!modoParcela&&N.pcNovo!=null)?(N.pcNovo===M.nNovo?'<span class="ok">✓</span>':'<span class="bad">≠ '+(M.nNovo-N.pcNovo)+'</span>'):'—'],
+      ['Valor da parcela após o lance (reduzir parcela)',_dM(N.vlParcelaPos),_dM(M.parcelaPos),_dD(N.vlParcelaPos,M.parcelaPos,10)]
     ]);
 
     // ---- 3) base do percentual
-    h+='<div class="dep-sec">3 · Sobre qual base o Newcon aplica o percentual do lance?</div>';
+    h+='<div class="dep-sec">3 · Base do percentual do lance (descoberta a partir dos números do Newcon)</div>';
     if(N.pct!=null && (N.valLance!=null || N.recProp!=null)){
+      const embN = (N.credNovo!=null) ? (d.cred-N.credNovo) : M.embVal;      // embutido real do Newcon
       const b1 = N.valLance!=null ? N.valLance/(N.pct/100) : null;
-      const lBase = (N.recProp!=null) ? embVal+N.recProp : null;
+      const lBase = (N.recProp!=null) ? embN+N.recProp : null;
       const b2 = (lBase!=null && N.dif!=null) ? lBase/((N.pct-N.dif)/100) : null;
-      const cand=[['Crédito',d.cred],['Crédito × (1 + taxa) — base do nosso recurso próprio',C1],['Saldo devedor atual',sdAtual]];
       const linhas=[];
-      const np=x=>(x/pura).toLocaleString('pt-BR',{maximumFractionDigits:2})+' parcelas puras';
+      const np=x=>(x/M.puraPaga).toLocaleString('pt-BR',{maximumFractionDigits:2})+' parcelas puras';
+      if(N.credNovo!=null) linhas.push(['Embutido real do Newcon = crédito − crédito novo',_dM(embN),(embN/(d.emb||1)).toLocaleString('pt-BR',{maximumFractionDigits:0})+' = base do embutido ('+_dM(d.cred)+' crédito · '+_dM(d.baseLance*(1+d.tx))+' reduzido+taxa)']);
       if(b1!=null) linhas.push(['Base implícita = valor do lance ÷ %',_dM(b1),np(b1)]);
       if(b2!=null) linhas.push(['Base implícita = (embutido + rec.) ÷ (% − dif. grupo)',_dM(b2),np(b2)]);
-      cand.forEach(c=>linhas.push(['Candidata: '+c[0],_dM(c[1]),b1!=null?('Δ '+((c[1]/b1-1)*100).toFixed(2)+'% vs implícita'):'']));
+      linhas.push(['Base do nosso modelo',_dM(M.B),b2!=null?('Δ '+_dM(M.B-b2)):'']);
+      linhas.push(['Candidata: crédito × (1 + taxa)',_dM(M.C1),'']);
+      linhas.push(['Candidata: crédito reduzido × (1 + taxa)',_dM(d.baseLance*(1+d.tx)),'']);
       h+=_dT(['Base','Valor','Observação'],linhas);
-      h+='<div class="dep-note">Se a base implícita não for igual a nenhuma candidata, ainda falta descobrir a regra. Rode mais 2–3 combinações no Newcon (ex.: só lance livre sem embutido; só embutido) e digite aqui — cada ponto fecha uma incógnita.</div>';
+      h+='<div class="dep-note">Se a "base do nosso modelo" estiver diferente da implícita, a regra de base ainda não vale para este tipo de grupo — me mande o caso.</div>';
     } else {
       h+='<div class="dep-note">Preencha "Percentual do lance" e "Valor do lance" (ou "Recursos próprios") do Newcon.</div>';
     }
-
-    // ---- 4) convenção do percentual
-    h+='<div class="dep-sec">4 · O mesmo pedido, nas duas convenções</div>';
-    h+=_dT(['','Percentual','Quem paga o quê'],[
-      ['Nosso simulador',_dP((d.emb+d.recPerc)*100,2),'embutido '+_dP(d.emb*100,2)+' + recurso '+_dP(d.recPerc*100,2)+' → <b>somados</b>'],
-      ['Newcon',N.pct!=null?_dP(N.pct,4):'—','o percentual do lance (livre) <b>já inclui</b> o embutido; recursos próprios = lance − embutido']
-    ]);
   }
   out.innerHTML=h;
 }
-function depExemplo(){
+function depExemplo(qual){
   _depInit();
   const set=(id,v)=>{ document.getElementById(id).value=v; };
-  setProdutoNovo('auto', document.querySelector('.btnProduto'));
-  set('grupo','9600'); set('tipoPlano','integral');
-  set('credito',moeda(100000)); set('prazoGrupo','90'); set('prazo','84'); set('taxa','15,5%');
-  set('embutido','18%'); set('recurso','45,36%');
-  const CASO2={dep_vlParcela:'1.467,40',dep_pcPagar:'83',dep_sd:'114.125,02',dep_credNovo:'82.000,00',dep_pctLance:'63,3600',
-    dep_dif:'0,0617',dep_valLance:'70.557,50',dep_recProp:'52.495,80',dep_sdNovo:'43.629,21',dep_pcNovo:'83',dep_vlParcelaPos:'618,00'};
-  _DEP_CAMPOS.forEach(c=>set(c[0],CASO2[c[0]]||''));
+  const CASOS={
+    1:{prod:'auto',plano:'integral',grupo:'9600',cred:100000,pg:'90',prazo:'84',taxa:'15,5%',emb:'18%',rec:'45,36%',
+       n:{dep_vlParcela:'1.467,40',dep_pcPagar:'83',dep_sd:'114.125,02',dep_credNovo:'82.000,00',dep_pctLance:'63,3600',dep_dif:'0,0617',
+          dep_valLance:'70.557,50',dep_recProp:'52.495,80',dep_sdNovo:'43.629,21',dep_pcNovo:'83',dep_vlParcelaPos:'618,00'}},
+    2:{prod:'imovel',plano:'reduzida',grupo:'10018',cred:100000,pg:'246',prazo:'240',taxa:'24%',emb:'25%',rec:'20%',
+       n:{dep_vlParcela:'395,82',dep_pcPagar:'234',dep_sd:'121.830,29',dep_credNovo:'78.300,00',dep_pctLance:'45,0000',dep_dif:'0,0304',
+          dep_valLance:'39.064,43',dep_recProp:'17.334,03',dep_sdNovo:'82.796,07',dep_pcNovo:'126',dep_vlParcelaPos:''}}
+  };
+  const c=CASOS[qual]||CASOS[1];
+  const btn=[...document.querySelectorAll('.btnProduto')].find(b=>(b.getAttribute('onclick')||'').indexOf("'"+c.prod+"'")>=0) || document.querySelector('.btnProduto');
+  setProdutoNovo(c.prod, btn);
+  set('grupo',c.grupo); set('tipoPlano',c.plano);
+  set('credito',moeda(c.cred)); set('prazoGrupo',c.pg); set('prazo',c.prazo); set('taxa',c.taxa);
+  set('embutido',c.emb); set('recurso',c.rec);
+  _DEP_CAMPOS.forEach(f=>set(f[0],c.n[f[0]]||''));
   document.getElementById('depurador').open=true;
   calcular();
 }
@@ -1056,7 +1089,9 @@ function atualizarResumo(d){
   if(nPos===0){ T('resumoDepois','—'); T('resumoDepoisSub','cota quitada na contemplação'); }
   else { T('resumoDepois', moeda(d.parcelaPos));
          T('resumoDepoisSub', nPos+'x após a contemplação'+($('tipoPlano').value==='reduzida' ? ' · crédito 100%' : '')
-           +((window._prazoAlt && window._prazoAlt.lance && window._prazoAlt.n>0) ? (' · ou '+window._prazoAlt.n+'x de '+moeda(window._prazoAlt.parc)+' (reduzindo prazo)') : '')); }
+           +((window._prazoAlt && window._prazoAlt.lance && window._prazoAlt.n>0)
+              ? (window._prazoAlt.parc!=null ? (' · ou '+window._prazoAlt.n+'x de '+moeda(window._prazoAlt.parc)+' (reduzindo prazo)')
+                                              : (' · ou prazo cai para '+window._prazoAlt.n+'x (reduzindo prazo)')) : '')); }
   if(aguardar){
     T('resumoContemp','Assembleia '+k);
     const dt = (GRUPO_ATUAL && GRUPO_ATUAL.prox_assembleia) ? _somaMes(GRUPO_ATUAL.prox_assembleia, k-1) : null;
