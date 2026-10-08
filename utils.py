@@ -57,6 +57,18 @@ def formatar_moeda(valor):
     val_float = float(nums) / 100
     return f"R$ {val_float:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
+def dt_br(v, fmt="%d/%m/%Y %H:%M"):
+    """Timestamp do Supabase (vem em UTC) -> horário de Brasília formatado.
+    Sem isso, um pedido feito às 21:16 aparece como 00:16 do dia seguinte."""
+    try:
+        t = pd.to_datetime(v, utc=True)
+        if pd.isna(t):
+            return ""
+        return t.tz_convert("America/Sao_Paulo").strftime(fmt)
+    except Exception:
+        return ""
+
+
 def formatar_brl_puro(val):
     if pd.isna(val): return "R$ 0,00"
     return f"R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")

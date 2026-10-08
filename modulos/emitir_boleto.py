@@ -6,7 +6,7 @@ import urllib.parse
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from utils import formatar_brl_puro, normalizar_string, listar_arquivos_drive, get_drive_service
+from utils import formatar_brl_puro, normalizar_string, listar_arquivos_drive, get_drive_service, dt_br
 from database import carregar_dados_iniciais
 
 
@@ -111,7 +111,7 @@ def _rotulo_situacao(pedido):
     if s == "SUCESSO":
         dt = pedido.get("concluido_em") or pedido.get("criado_em") or ""
         try:
-            dt = pd.to_datetime(dt).strftime("%d/%m/%Y")
+            dt = dt_br(dt, "%d/%m/%Y") or str(dt)[:10]
         except Exception:
             dt = str(dt)[:10]
         return f"🧾 Gerado {dt}"

@@ -75,6 +75,21 @@ body{
 
 /* ---------- Passo 2: grupo ---------- */
 .grupo-pick{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px;}
+.depurador{margin-top:14px;border:1.5px dashed #b8d8d6;border-radius:14px;background:#f7fbfb;padding:0 14px}
+.depurador>summary{cursor:pointer;font-weight:800;color:var(--teal-d);padding:12px 0;font-size:13.5px}
+.dep-help{font-size:12px;color:#5c7a73;line-height:1.45;margin:0 0 10px}
+.dep-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
+.dep-grid label{font-size:10.5px;font-weight:800;color:#5c7a73;text-transform:uppercase;letter-spacing:.4px;display:block}
+.dep-grid input{width:100%;box-sizing:border-box;padding:8px 9px;border:1.5px solid #d6e4e2;border-radius:9px;font-size:13px;margin-top:3px;background:#fff}
+.dep-btns{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.dep-btns button{border:1.5px solid #b8d8d6;background:#eef6f5;color:var(--teal-d);border-radius:9px;padding:7px 11px;font-weight:700;font-size:12px;cursor:pointer}
+.dep-sec{margin:14px 0 4px;font-size:12px;font-weight:900;color:var(--teal-d);text-transform:uppercase;letter-spacing:.5px}
+.dep-tab{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:6px}
+.dep-tab th{background:#e4f0ee;text-align:left;padding:6px 8px;font-size:11px;color:#245858}
+.dep-tab td{color:#16302b;padding:6px 8px;border-bottom:1px solid #e4eeec;vertical-align:top;font-variant-numeric:tabular-nums}
+.dep-tab td.n{text-align:right;white-space:nowrap}
+.dep-tab .ok{color:#15803d;font-weight:800}.dep-tab .bad{color:#b91c1c;font-weight:800}.dep-tab .mut{color:#7a948d;font-size:11.5px}
+.dep-note{font-size:12px;line-height:1.5;background:#fff7e8;border:1px solid #f6c99b;color:#7a4b00;border-radius:10px;padding:9px 11px;margin:6px 0}
 .grupo-busca{position:relative;margin-bottom:10px}
 .grupo-busca input{width:100%;box-sizing:border-box;padding:13px 12px 13px 38px;border-radius:12px;border:1.5px solid #26344d;background:var(--bg2);color:#e2e8f0;font-size:15px;font-weight:600;outline:none}
 .grupo-busca input:focus{border-color:#4f9d99}
@@ -503,6 +518,20 @@ table.baseTbl tr:hover td{background:#fafafa}
 
         <div id="avisoGrupoNovo" style="display:none;margin-top:12px;padding:12px 14px;border-radius:12px;background:#fff7e8;border:1px solid #f6c99b;color:#8a5a00;font-size:12.5px;line-height:1.5"></div>
 
+        <details id="depurador" class="depurador" ontoggle="if(this.open)renderDepurador()">
+          <summary>🔬 Depurador — conferir o cálculo com o Newcon</summary>
+          <div id="depBody">
+            <p class="dep-help">Rode a mesma simulação no Newcon e digite abaixo o que ele mostrou. O depurador compara com o simulador, aponta onde diverge e descobre valores "escondidos" (base do lance, alíquota do seguro). Não altera o cálculo do simulador.</p>
+            <div class="dep-grid" id="depForm"></div>
+            <div class="dep-btns">
+              <button type="button" onclick="depExemplo()">Carregar caso real: 9600, lance 63,36% + 18% embutido</button>
+              <button type="button" onclick="depLimpar()">Limpar Newcon</button>
+              <button type="button" onclick="depCopiar()">📋 Copiar relatório</button>
+            </div>
+            <div id="depOut"></div>
+          </div>
+        </details>
+
         <div id="resultado"></div>
 
         <div class="resumo-acoes" id="resumoAcoes">
@@ -735,6 +764,22 @@ embRef.innerText = 'Equivale a ' + moeda(embVal);
 // O Recurso Próprio incide sobre a base com a taxa administrativa
 let baseRecTotal = baseLance * (1 + tx);
 rec = baseRecTotal * recPerc;
+
+// ---- PARCELA INTEGRAL: lance no modelo do Newcon (conferido em 08/10/2026, grupo 9600) ----
+//  * o "percentual do lance" é o TOTAL (embutido + recurso próprio %), igual ao campo do Newcon;
+//  * o percentual incide sobre uma base = (parcelas a pagar − 2) × parcela pura
+//    (no caso real: 81 × R$ 1.375 = R$ 111.375, não crédito × (1 + taxa));
+//  * recursos próprios (R$) = lance total − embutido (embutido = % do crédito);
+//  * o lance inteiro (embutido + recursos) abate o saldo devedor.
+// Ignoramos a "Dif. Grupo" (≈ 0,06% do crédito, ~R$ 60) — só o Newcon sabe.
+let _nw=null;
+if(tipoPlano.value==='integral' && prazoC>0){
+  const pura0=(cred*(1+tx))/prazoC, kN=_assembleiaK(prazoC), nPagN=prazoC-kN;
+  const sdAtualN=cred*(1+tx)-kN*pura0, baseN=Math.max(nPagN-2,0)*pura0;
+  const lanceN=(emb+recPerc)*baseN;
+  rec=Math.max(lanceN-embVal,0);
+  _nw={pura0,kN,nPagN,sdAtualN,baseN,lanceN};
+}
 recRef.innerText = 'Equivale a ' + moeda(rec);
 
 // Lance Ofertado Total é a soma do Embutido + Recurso Próprio real
@@ -767,9 +812,15 @@ let saldoDevedorTotal = cred * (1 + tx);
 let proporcaoLance = rec / saldoDevedorTotal;
 let parcelaPos = (parcIntSemSeguro * (1 - proporcaoLance)) + seguroVal;
 
-if(tipoPlano.value === 'integral') {
-    let amortizacao = rec / prazoC;
-    parcelaPos = parcIntSemSeguro + seguroVal - amortizacao;
+window._prazoAlt=null;
+if(tipoPlano.value === 'integral' && _nw) {
+    // reduzir PARCELA: saldo devedor novo ÷ parcelas a pagar (+ seguro).
+    const sdNovo=Math.max(_nw.sdAtualN-(embVal+rec),0);
+    parcelaPos = (_nw.nPagN>0 ? sdNovo/_nw.nPagN : 0) + seguroVal;
+    // alternativa: reduzir PRAZO — mesma parcela, menos parcelas
+    window._prazoAlt={ n:(parcIntSemSeguro>0 ? Math.ceil(sdNovo/parcIntSemSeguro-1e-9) : 0),
+                       parc:parcIntSemSeguro+seguroVal, lance:(embVal+rec)>0 };
+    _nw.sdNovo=sdNovo;
 } else {
     // Parcela reduzida: ao contemplar usando 100% do crédito, a parcela é
     // recalculada para 100% e a diferença das parcelas reduzidas pagas antes
@@ -784,11 +835,154 @@ lanceOf.innerText=moeda(lanceOfertaTotal)
 document.getElementById('lanceRecFooter').innerText = moeda(rec);
 liberado.innerText=moeda(liberadoCalc)
 parcelasPos.innerText=(prazoC>0&&isFinite(parcelaPos)) ? (prazoC-1)+'x de '+moeda(parcelaPos) : '—'
+try{ window._dbg={cred,cota,tx,prazoC,prazoG,aliq:seguro,seguroVal,parcPura:parcIntSemSeguro,emb,recPerc,embVal,rec,
+  baseLance,tipoPlano:tipoPlano.value,parcelaAntesCalc,parcelaPos,liberadoCalc,saldoDevedorTotal,usarSeguro,nw:_nw};
+  if(typeof renderDepurador==='function') renderDepurador(); }catch(e){}
 atualizarResumo({cred, prazoC, parcelaAntesCalc, parcelaPos, invalido:_taxaVazia})
 }
 // ===================================================================
 // >>> FIM DO BLOCO DE CÁLCULO — NÃO ALTERAR <<<
 // ===================================================================
+
+// ===================================================================
+// DEPURADOR — conferir o cálculo com o Newcon (só leitura: não altera o simulador)
+// ===================================================================
+const _DEP_CAMPOS=[
+ ['dep_vlParcela','Vl. da parcela c/ seguro (R$)','1.467,40'],
+ ['dep_pcPagar','Parcelas a pagar','83'],
+ ['dep_sd','Saldo devedor (R$)','114.125,02'],
+ ['dep_credNovo','Valor do crédito novo (R$)','82.000,00'],
+ ['dep_pctLance','Percentual do lance (%)','45,5000'],
+ ['dep_dif','Dif. grupo (%)','0,0617'],
+ ['dep_valLance','Valor do lance (R$)','50.669,66'],
+ ['dep_recProp','Recursos próprios (R$)','32.607,96'],
+ ['dep_sdNovo','Saldo devedor novo (R$)','63.517,09'],
+ ['dep_pcNovo','Parcelas a pagar novo','47'],
+ ['dep_vlParcelaPos','Valor da parcela após o lance (R$)','618,00']
+];
+function _depInit(){
+  const f=document.getElementById('depForm'); if(!f||f.dataset.ok) return;
+  f.innerHTML=_DEP_CAMPOS.map(c=>`<div><label>${c[1]}</label><input id="${c[0]}" placeholder="ex.: ${c[2]}" oninput="renderDepurador()"></div>`).join('');
+  f.dataset.ok='1';
+}
+function _depN(id){ const el=document.getElementById(id); if(!el||!String(el.value).trim()) return null; const v=numero(el.value); return isFinite(v)?v:null; }
+const _dM=v=>(v==null||!isFinite(v))?'—':moeda(v);
+const _dP=(v,n=4)=>(v==null||!isFinite(v))?'—':v.toLocaleString('pt-BR',{minimumFractionDigits:n,maximumFractionDigits:n})+'%';
+function _dD(a,b,tol=0.05){
+  if(a==null||b==null) return '<span class="mut">—</span>';
+  const d=a-b, ok=Math.abs(d)<=tol;
+  const t=(d>=0?'+':'−')+Math.abs(d).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  return `<span class="${ok?'ok':'bad'}">${t}${ok?' ✓':''}</span>`;
+}
+function _dT(cab,linhas){
+  return '<table class="dep-tab"><tr>'+cab.map(c=>`<th>${c}</th>`).join('')+'</tr>'
+    +linhas.map(l=>'<tr>'+l.map((c,i)=>`<td class="${(i>0&&i<l.length-1&&l.length>2)?'n':''}">${c}</td>`).join('')+'</tr>').join('')+'</table>';
+}
+
+function renderDepurador(){
+  const det=document.getElementById('depurador'); if(!det||!det.open) return;
+  _depInit();
+  const out=document.getElementById('depOut'); const d=window._dbg;
+  if(!d||!(d.cred>0)||!(d.prazoC>0)){ out.innerHTML='<div class="dep-note">Preencha crédito, prazo e taxa no simulador para ver o passo a passo.</div>'; return; }
+  const N={vlParcela:_depN('dep_vlParcela'),pcPagar:_depN('dep_pcPagar'),sd:_depN('dep_sd'),credNovo:_depN('dep_credNovo'),
+           pct:_depN('dep_pctLance'),dif:_depN('dep_dif'),valLance:_depN('dep_valLance'),recProp:_depN('dep_recProp'),
+           sdNovo:_depN('dep_sdNovo'),pcNovo:_depN('dep_pcNovo'),vlParcelaPos:_depN('dep_vlParcelaPos')};
+  const C1=d.cred*(1+d.tx), pura=d.parcPura, n=d.prazoC;
+  const pagas = N.pcPagar!=null ? (n-N.pcPagar) : 1;
+  const sdAtual = C1 - pagas*pura;                       // saldo devedor depois das parcelas já pagas
+  const seguroImpl = N.vlParcela!=null ? (N.vlParcela-pura) : null;
+  const aliqImpl = seguroImpl!=null ? seguroImpl/C1 : null;
+  const embVal=d.embVal, lanceSim=d.embVal+d.rec;
+  let h='';
+
+  // ---- 1) passo a passo do simulador
+  h+='<div class="dep-sec">1 · Passo a passo do nosso simulador</div>';
+  h+=_dT(['Etapa','Valor','Como foi calculado'],[
+    ['Crédito × cotas',_dM(d.cred),d.cota+' cota(s)'],
+    ['Taxa de administração',_dP(d.tx*100,2),'campo Taxa'],
+    ['Prazo da cota (n)',String(n),'<span class="mut">campo "Prazo da cota". O "Prazo do grupo" ('+d.prazoG+') não entra na conta</span>'],
+    ['Saldo devedor inicial',_dM(C1),'crédito × (1 + taxa)'],
+    ['Parcela pura (sem seguro)',_dM(pura),'saldo devedor ÷ n'],
+    ['Alíquota do seguro',(d.aliq*100).toFixed(4)+'%','fixa por produto — '+(d.usarSeguro?'com seguro':'sem seguro')],
+    ['Seguro mensal',_dM(d.seguroVal),'saldo devedor inicial × alíquota'],
+    ['Parcela antes da contemplação',_dM(d.parcelaAntesCalc),(d.tipoPlano==='reduzida'?'70% do crédito':'integral')+': pura + seguro'],
+    ['Embutido ('+_dP(d.emb*100,2)+')',_dM(d.embVal),'% × crédito'],
+    ['Base do lance (modelo Newcon, integral)',d.nw?_dM(d.nw.baseN):'—',d.nw?('(parcelas a pagar − 2) × parcela pura = '+(d.nw.nPagN-2)+' × '+_dM(d.parcPura)):'<span class="mut">só no plano integral</span>'],
+    ['Lance total ('+_dP((d.emb+d.recPerc)*100,2)+' = embutido % + recurso %)',_dM(lanceSim),d.nw?'% total × base do lance (o embutido está incluso, como no Newcon)':'embutido % + recurso % (somados)'],
+    ['Recursos próprios',_dM(d.rec),d.nw?'lance total − embutido':'recurso % × saldo devedor inicial'],
+    ['Crédito liberado',_dM(d.liberadoCalc),'crédito − embutido'],
+    ['Parcela depois',_dM(d.parcelaPos),d.nw?'(saldo devedor atual − lance total) ÷ parcelas a pagar + seguro  [reduzindo parcela]':'plano reduzida: regra antiga (a conferir)']
+  ]);
+
+  // ---- 2) Newcon x simulador
+  const algum=Object.values(N).some(v=>v!=null);
+  h+='<div class="dep-sec">2 · Newcon × simulador</div>';
+  if(!algum){
+    h+='<div class="dep-note">Digite acima o que o Newcon mostrou (ou clique em "Carregar caso real") para comparar.</div>';
+  } else {
+    const sdNovoEsp = (N.recProp!=null) ? sdAtual-(embVal+N.recProp) : null;
+    const pcNovoEsp = (N.sdNovo!=null) ? Math.ceil(N.sdNovo/pura-1e-9) : null;
+    const parcRed = (N.sdNovo!=null && N.pcPagar!=null) ? N.sdNovo/N.pcPagar : null;
+    h+=_dT(['Item','Newcon','Simulador / esperado','Diferença'],[
+      ['Vl. da parcela (c/ seguro)',_dM(N.vlParcela),_dM(d.parcelaAntesCalc),_dD(N.vlParcela,d.parcelaAntesCalc)],
+      ['↳ seguro implícito do Newcon',_dM(seguroImpl),_dM(d.seguroVal),_dD(seguroImpl,d.seguroVal)],
+      ['↳ alíquota implícita',aliqImpl!=null?(aliqImpl*100).toFixed(4)+'%':'—',(d.aliq*100).toFixed(4)+'%','<span class="mut">varia com a idade do cliente?</span>'],
+      ['Parcelas pagas (prazo − a pagar)',N.pcPagar!=null?String(pagas):'—','1','<span class="mut">o simulador assume 1</span>'],
+      ['Saldo devedor',_dM(N.sd),_dM(sdAtual),_dD(N.sd,sdAtual)],
+      ['Valor do crédito novo',_dM(N.credNovo),_dM(d.liberadoCalc),_dD(N.credNovo,d.liberadoCalc)],
+      ['Valor do lance (c/ dif. grupo)',_dM(N.valLance),_dM(lanceSim),_dD(N.valLance,lanceSim,120)+'<div class="mut">o Newcon soma a Dif. Grupo (~0,06% do crédito); o simulador não</div>'],
+      ['Recursos próprios',_dM(N.recProp),_dM(d.rec),_dD(N.recProp,d.rec,120)],
+      ['Saldo devedor novo',_dM(N.sdNovo),_dM(d.nw?d.nw.sdNovo:sdNovoEsp),_dD(N.sdNovo,d.nw?d.nw.sdNovo:sdNovoEsp,120)+'<div class="mut">esperado = saldo − (embutido + recursos próprios)</div>'],
+      ['Parcelas a pagar novo (reduz prazo)',N.pcNovo!=null?String(N.pcNovo):'—',pcNovoEsp!=null?String(pcNovoEsp):'—',(N.pcNovo!=null&&pcNovoEsp!=null)?(N.pcPagar!=null&&N.pcNovo===N.pcPagar?'<span class="mut">n/d — Newcon simulou "reduzir parcela"</span>':(N.pcNovo===pcNovoEsp?'<span class="ok">✓</span>':'<span class="bad">≠</span>')):'—'],
+      ['Parcela nova se "reduzir parcela"','—',parcRed!=null?_dM(parcRed+(seguroImpl!=null?seguroImpl:d.seguroVal)):'—','<span class="mut">saldo novo ÷ a pagar + seguro</span>'],
+      ['Valor da parcela após o lance (Newcon) × simulador',_dM(N.vlParcelaPos),_dM(d.parcelaPos),_dD(N.vlParcelaPos,d.parcelaPos)]
+    ]);
+
+    // ---- 3) base do percentual
+    h+='<div class="dep-sec">3 · Sobre qual base o Newcon aplica o percentual do lance?</div>';
+    if(N.pct!=null && (N.valLance!=null || N.recProp!=null)){
+      const b1 = N.valLance!=null ? N.valLance/(N.pct/100) : null;
+      const lBase = (N.recProp!=null) ? embVal+N.recProp : null;
+      const b2 = (lBase!=null && N.dif!=null) ? lBase/((N.pct-N.dif)/100) : null;
+      const cand=[['Crédito',d.cred],['Crédito × (1 + taxa) — base do nosso recurso próprio',C1],['Saldo devedor atual',sdAtual]];
+      const linhas=[];
+      const np=x=>(x/pura).toLocaleString('pt-BR',{maximumFractionDigits:2})+' parcelas puras';
+      if(b1!=null) linhas.push(['Base implícita = valor do lance ÷ %',_dM(b1),np(b1)]);
+      if(b2!=null) linhas.push(['Base implícita = (embutido + rec.) ÷ (% − dif. grupo)',_dM(b2),np(b2)]);
+      cand.forEach(c=>linhas.push(['Candidata: '+c[0],_dM(c[1]),b1!=null?('Δ '+((c[1]/b1-1)*100).toFixed(2)+'% vs implícita'):'']));
+      h+=_dT(['Base','Valor','Observação'],linhas);
+      h+='<div class="dep-note">Se a base implícita não for igual a nenhuma candidata, ainda falta descobrir a regra. Rode mais 2–3 combinações no Newcon (ex.: só lance livre sem embutido; só embutido) e digite aqui — cada ponto fecha uma incógnita.</div>';
+    } else {
+      h+='<div class="dep-note">Preencha "Percentual do lance" e "Valor do lance" (ou "Recursos próprios") do Newcon.</div>';
+    }
+
+    // ---- 4) convenção do percentual
+    h+='<div class="dep-sec">4 · O mesmo pedido, nas duas convenções</div>';
+    h+=_dT(['','Percentual','Quem paga o quê'],[
+      ['Nosso simulador',_dP((d.emb+d.recPerc)*100,2),'embutido '+_dP(d.emb*100,2)+' + recurso '+_dP(d.recPerc*100,2)+' → <b>somados</b>'],
+      ['Newcon',N.pct!=null?_dP(N.pct,4):'—','o percentual do lance (livre) <b>já inclui</b> o embutido; recursos próprios = lance − embutido']
+    ]);
+  }
+  out.innerHTML=h;
+}
+function depExemplo(){
+  _depInit();
+  const set=(id,v)=>{ document.getElementById(id).value=v; };
+  setProdutoNovo('auto', document.querySelector('.btnProduto'));
+  set('grupo','9600'); set('tipoPlano','integral');
+  set('credito',moeda(100000)); set('prazoGrupo','90'); set('prazo','84'); set('taxa','15,5%');
+  set('embutido','18%'); set('recurso','45,36%');
+  const CASO2={dep_vlParcela:'1.467,40',dep_pcPagar:'83',dep_sd:'114.125,02',dep_credNovo:'82.000,00',dep_pctLance:'63,3600',
+    dep_dif:'0,0617',dep_valLance:'70.557,50',dep_recProp:'52.495,80',dep_sdNovo:'43.629,21',dep_pcNovo:'83',dep_vlParcelaPos:'618,00'};
+  _DEP_CAMPOS.forEach(c=>set(c[0],CASO2[c[0]]||''));
+  document.getElementById('depurador').open=true;
+  calcular();
+}
+function depLimpar(){ _DEP_CAMPOS.forEach(c=>{ const e=document.getElementById(c[0]); if(e) e.value=''; }); renderDepurador(); }
+function depCopiar(){
+  const t=document.getElementById('depOut').innerText; const ta=document.createElement('textarea'); ta.value=t;
+  document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); }catch(e){} ta.remove();
+}
 
 // ===================================================================
 // MODO "SEM LANCE" + RESUMO (parcela antes / depois)
@@ -861,7 +1055,8 @@ function atualizarResumo(d){
   T('resumoAntesSub', aguardar ? (k+'x até a contemplação') : 'até a contemplação');
   if(nPos===0){ T('resumoDepois','—'); T('resumoDepoisSub','cota quitada na contemplação'); }
   else { T('resumoDepois', moeda(d.parcelaPos));
-         T('resumoDepoisSub', nPos+'x após a contemplação'+($('tipoPlano').value==='reduzida' ? ' · crédito 100%' : '')); }
+         T('resumoDepoisSub', nPos+'x após a contemplação'+($('tipoPlano').value==='reduzida' ? ' · crédito 100%' : '')
+           +((window._prazoAlt && window._prazoAlt.lance && window._prazoAlt.n>0) ? (' · ou '+window._prazoAlt.n+'x de '+moeda(window._prazoAlt.parc)+' (reduzindo prazo)') : '')); }
   if(aguardar){
     T('resumoContemp','Assembleia '+k);
     const dt = (GRUPO_ATUAL && GRUPO_ATUAL.prox_assembleia) ? _somaMes(GRUPO_ATUAL.prox_assembleia, k-1) : null;

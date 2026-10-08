@@ -7,6 +7,7 @@ que já rodou (✅ / ❌ / 🔄 / ⏳) com a mensagem de retorno.
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timezone
+from utils import dt_br
 
 LIMITE_SERVER_SEG = 90
 
@@ -73,10 +74,7 @@ def _enfileirar(sb, tipo, prioridade, payload, usuario):
 
 
 def _dt(v):
-    try:
-        return pd.to_datetime(v).strftime("%d/%m %H:%M")
-    except Exception:
-        return ""
+    return dt_br(v, "%d/%m %H:%M")
 
 
 def render_robo_painel(supabase):

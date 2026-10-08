@@ -2,7 +2,7 @@ import re
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from utils import formatar_brl_puro, normalizar_string, normalizar_produto
+from utils import formatar_brl_puro, normalizar_string, normalizar_produto, dt_br
 
 # Administradoras que já têm automação de lance configurada no Worker.
 # Por enquanto só a Yamaha (site newkey.cny.com.br).
@@ -91,7 +91,7 @@ def _rotulo_situacao(pedido):
     if status == "SUCESSO":
         dt = pedido.get("concluido_em") or pedido.get("criado_em") or ""
         try:
-            dt = pd.to_datetime(dt).strftime("%d/%m/%Y")
+            dt = dt_br(dt, "%d/%m/%Y") or str(dt)[:10]
         except Exception:
             dt = str(dt)[:10]
         return f"✅ Ofertado {dt}"
@@ -364,10 +364,7 @@ def _painel_status(supabase, is_master):
     df_f['Situação'] = df_f.apply(lambda x: _rotulo_situacao(x.to_dict()), axis=1)
 
     def _dt(v):
-        try:
-            return pd.to_datetime(v).strftime("%d/%m/%Y %H:%M")
-        except Exception:
-            return ""
+        return dt_br(v)
     df_f['Solicitado em'] = df_f['criado_em'].apply(_dt)
     df_f['Grupo/Cota'] = df_f['grupo'].fillna('').astype(str) + "/" + df_f['cota'].fillna('').astype(str)
 
