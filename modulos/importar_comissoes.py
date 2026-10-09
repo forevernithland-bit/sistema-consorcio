@@ -256,7 +256,7 @@ def render_importar_comissoes(supabase, df_vendas_global, cfg, lista_admin_bd, d
     # ---------- CÁLCULO (imposto + divisão) ----------
     linhas_calc = []
     soma_nota = soma_liq = soma_breno = soma_uriel = 0.0
-    for c in cotas:
+    for i, c in enumerate(cotas):
         vn = c["valor_nota"]
         vimp = round(vn * imp_pct / 100.0, 2)
         vliq = round(vn - vimp, 2)
@@ -266,6 +266,7 @@ def render_importar_comissoes(supabase, df_vendas_global, cfg, lista_admin_bd, d
         soma_nota += vn; soma_liq += vliq; soma_breno += breno; soma_uriel += uriel
         linhas_calc.append({
             "Grupo/Cota": f"{c['grupo']}/{c['cota']}",
+            "Parcela": str(df_edit["Parc."].iloc[i]),          # "N de T" (mesma da tabela de conferência)
             "Cliente": c["cliente"] or "—",
             "Vendedor": c["vendedor"] or "—",
             "Valor Nota": formatar_brl_puro(vn),
