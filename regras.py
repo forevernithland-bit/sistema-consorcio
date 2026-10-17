@@ -3,9 +3,13 @@ import pandas as pd
 from utils import parse_float_safe, normalizar_string, normalizar_produto
 
 def total_parcelas_regra(admin, produto, tipo_parcela, df_regras):
-    """Quantas parcelas de comissão a administradora paga pra essa combinação
-    de admin+produto(+tipo de parcela linear/reduzida) — é o "de N" do "X de N"
-    mostrado nos relatórios de comissão. Mesmo casamento Admin_Norm/Prod_Norm/
+    """Nº da ÚLTIMA parcela que paga comissão pra essa combinação de
+    admin+produto(+tipo de parcela linear/reduzida) — é o "de N" do "X de N"
+    mostrado nos relatórios de comissão.
+    Atenção: NÃO é a contagem de parcelas com comissão. A Yamaha imóvel, por
+    exemplo, paga nas parcelas 1, 2, 4 e 5 (a 3ª não paga): são 4 pagamentos,
+    mas a última é a 5ª — o rótulo certo é "5 de 5" (igual ao "Pcl" da NF), e
+    não "5 de 4". Mesmo casamento Admin_Norm/Prod_Norm/
     Tipo_Norm que `gerar_tabela_parcelas` usa, só que exposto à parte para quem
     não tem a venda inteira em mãos (ex.: histórico de NF já importado, que só
     guarda administradora/grupo/cota, não produto/tipo_parcela).
@@ -30,7 +34,8 @@ def total_parcelas_regra(admin, produto, tipo_parcela, df_regras):
     if regra.empty:
         regra = base
     regra = regra.iloc[0]
-    return sum(1 for i in range(1, 26) if parse_float_safe(regra.get(f"P{i}", 0)) > 0)
+    pagas = [i for i in range(1, 26) if parse_float_safe(regra.get(f"P{i}", 0)) > 0]
+    return max(pagas) if pagas else None
 
 
 def calcular_comissao_vendedor(df_vendas_global, vendedor_nome, data_venda_dt, cfg):
@@ -139,7 +144,9 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict):
                 uriel_rec = corretora_liq  # 100% Uriel
                 breno_rec = 0.0
             else:
-                if i <= tier_parc: vend_rec = val_venda * (tier_pct/100.0) / tier_parc
+                # posição do PAGAMENTO (não o nº da parcela): regra com "buraco" (Yamaha imóvel
+                # paga 1,2,4,5) senão deixava o vendedor sem receber a última fatia.
+                if len(temp_parcels) + 1 <= tier_parc: vend_rec = val_venda * (tier_pct/100.0) / tier_parc
                 sobra = corretora_liq - vend_rec
                 breno_rec = sobra * 0.50
                 uriel_rec = sobra * 0.50
@@ -150,9 +157,10 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict):
                 'liquido': corretora_liq, 'vend': vend_rec, 'breno': breno_rec, 'uriel': uriel_rec
             })
 
-        # Total de parcelas da regra (antes de Cancelada/Contemplada cortarem a
-        # lista) — é o "de N" do "X de N" mostrado nos relatórios de comissão.
-        total_parc = len(temp_parcels)
+        # "de N" do "X de N": nº da ÚLTIMA parcela com comissão na regra (antes de
+        # Cancelada/Contemplada cortarem a lista). Não é a contagem: regra com
+        # "buraco" (ex.: Yamaha imóvel paga 1,2,4,5) tem N=5, senão saía "5 de 4".
+        total_parc = max((p['parcela'] for p in temp_parcels), default=0)
 
         # Lógica de cotas Canceladas e Contempladas
         if status_cota == 'Cancelada':
@@ -300,7 +308,7 @@ def gerar_previsao_pendente(df_vendas, df_admin, cfg, status_dict):
 
     pagas_gcp = _pagas_por_gc_parcela(status_dict)
 
-    st_norm = df_vendas["STATUS"].astype(str).str.strip().str.lower()
+    st_norm = df_vendas["STATUS"].fillna("").astype(str).str.strip().str.lower()
     ativas = df_vendas[st_norm.isin(STATUS_ATIVOS)].copy()
     if ativas.empty:
         return vazio, avisos
@@ -313,8 +321,21 @@ def gerar_previsao_pendente(df_vendas, df_admin, cfg, status_dict):
             + ", ".join(sorted(dups)))
         ativas["_gc"] = [f"{_gc(r.get('GRUPO'))}/{_gc(r.get('COTA'))}"
                          for _, r in ativas.iterrows()]
-        ativas = ativas.sort_values("Data_Real").drop_duplicates("_gc", keep="last")
+        # NaT (sem data) primeiro: a duplicata COM data é a que fica (antes a sem data vencia e a cota sumia)
+        ativas = ativas.sort_values("Data_Real", na_position="first").drop_duplicates("_gc", keep="last")
         ativas = ativas.drop(columns=["_gc"])
+
+    # cota cuja administradora/produto não casa com nenhuma regra cadastrada sairia da
+    # previsão em silêncio — avisa para o cadastro ser corrigido.
+    sem_regra = []
+    for _, v in ativas.iterrows():
+        if normalizar_string(v.get("TIPO_PRODUTO", "")) == "CONSORCIOCONTEMPLADO":
+            continue
+        if total_parcelas_regra(v.get("ADMINISTRADORA"), v.get("PRODUTO"), v.get("TIPO_PARCELA"), df_admin) is None:
+            sem_regra.append(f"{_gc(v.get('GRUPO'))}/{_gc(v.get('COTA'))} ({str(v.get('ADMINISTRADORA') or '—').strip()}/{v.get('PRODUTO') or '—'})")
+    if sem_regra:
+        avisos.append(f"{len(sem_regra)} cota(s) SEM regra de comissão cadastrada ficaram fora da previsão "
+                      "(confira Administradoras): " + ", ".join(sem_regra[:6]) + ("…" if len(sem_regra) > 6 else ""))
 
     df_parc, sem_data = gerar_tabela_parcelas(ativas, df_vendas, df_admin, cfg, status_dict)
     if sem_data:

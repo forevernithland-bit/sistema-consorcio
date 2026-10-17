@@ -526,6 +526,7 @@ table.baseTbl tr:hover td{background:#fafafa}
             <div class="dep-btns">
               <button type="button" onclick="depExemplo(1)">Caso real 1 · auto integral (9600)</button>
               <button type="button" onclick="depExemplo(2)">Caso real 2 · imóvel parcela reduzida (10018)</button>
+              <button type="button" onclick="depExemplo(3)">Caso real 3 · auto parcela reduzida, lance 78,2% (9538)</button>
               <button type="button" onclick="depLimpar()">Limpar Newcon</button>
               <button type="button" onclick="depCopiar()">📋 Copiar relatório</button>
             </div>
@@ -898,10 +899,18 @@ function _calcLanceNewcon(o){
   const rec=Math.max(lanceBruto-embVal,0);
   const lanceTot=embVal+rec;
   const sdNovo=Math.max(sdAtual-lanceTot,0);
-  const parcelaPos=(nPag>0 ? sdNovo/nPag : 0)+o.seguroVal;
+  // Parcela reduzida: o saldo devedor = parte REDUZIDA (parcelas × valor pago) + os 30% "a cobrar na contemplação"
+  // (tranche). Conferido no Newcon (caso C, 9538): com lance, o lance amortiza a parte reduzida e a parcela
+  // "após o pagamento do lance" = (parte reduzida − lance) ÷ parcelas a pagar + seguro — a tranche NÃO entra na parcela
+  // (continua no saldo devedor novo, a cobrar na contemplação). Sem lance vale a diluição oficial (saldo ÷ parcelas).
+  const R = o.reduzida ? Math.max(redCred*(1+o.tx)-k*puraPaga,0) : sdAtual;      // saldo da parte reduzida
+  const tranche = o.reduzida ? Math.max(sdAtual-R,0) : 0;                        // 30% a cobrar na contemplação
+  const baseParc = (o.reduzida && lanceTot>0) ? Math.max(R-lanceTot,0) : sdNovo;
+  const parcelaPos=(nPag>0 ? baseParc/nPag : 0)+o.seguroVal;
+  const fracRed = R>0 ? lanceTot/R : 0;                                           // fração do saldo reduzido amortizada
   const parcLance=Math.floor(lanceTot/puraPaga+0.1);   // +0,1 ≈ efeito da Dif. Grupo
   const nNovo=Math.max(nPag-parcLance,0);
-  return {n,k,nPag,C1,redCred,pura,puraPaga,sdAtual,B,embBase,embVal,lanceBruto,rec,lanceTot,sdNovo,parcelaPos,parcLance,nNovo,
+  return {n,k,nPag,C1,redCred,pura,puraPaga,sdAtual,B,embBase,embVal,lanceBruto,rec,lanceTot,sdNovo,parcelaPos,parcLance,nNovo,R,tranche,fracRed,
           creditoLiberado:o.cred-embVal};
 }
 
@@ -941,7 +950,8 @@ function renderDepurador(){
     ['Recursos próprios',_dM(M.rec),'lance total − embutido'],
     ['Crédito liberado',_dM(M.creditoLiberado),'crédito − embutido'],
     ['Saldo devedor novo',_dM(M.sdNovo),'saldo devedor atual − lance total'],
-    ['Parcela depois (reduzindo parcela)',_dM(M.parcelaPos),'saldo devedor novo ÷ '+M.nPag+' parcelas a pagar + seguro'],
+    ['Parte reduzida do saldo / 30% a cobrar na contemplação',red?(_dM(M.R)+' / '+_dM(M.tranche)):'—',red?'a parcela depois usa só a parte reduzida quando há lance (fração amortizada: '+_dP(M.fracRed*100,2)+')':'<span class="mut">só no plano reduzida</span>'],
+    ['Parcela depois (reduzindo parcela)',_dM(M.parcelaPos),(red&&M.lanceTot>0?'(parte reduzida − lance)':'saldo devedor novo')+' ÷ '+M.nPag+' parcelas a pagar + seguro'],
     ['Parcelas a pagar (reduzindo prazo)',String(M.nNovo),M.parcLance+' parcelas amortizadas pelo lance']
   ]);
 
@@ -988,6 +998,22 @@ function renderDepurador(){
       h+='<div class="dep-note">Preencha "Percentual do lance" e "Valor do lance" (ou "Recursos próprios") do Newcon.</div>';
     }
   }
+  // ---- 4) custo final: crédito + taxa fecha?
+  {
+    const L=M.lanceTot, pagas$=M.k*M.puraPaga;
+    const resto=(red&&L>0)?Math.max(M.R-L,0):M.sdNovo, tr=(red&&L>0)?M.tranche:0;
+    const soma=pagas$+L+resto+tr, seg=d.seguroVal*n;
+    h+='<div class="dep-sec">4 · Custo final: crédito + taxa fecha?</div>';
+    h+=_dT(['Parte da dívida','Valor','Observação'],[
+      ['Parcelas já pagas ('+M.k+')',_dM(pagas$),'sem seguro'],
+      ['Lance (embutido + recursos próprios)',_dM(L),'amortiza o saldo'],
+      ['Parcelas restantes ('+M.nPag+')',_dM(resto),red&&L>0?'parte reduzida − lance':'saldo devedor novo'],
+      ['30% a cobrar na contemplação',red&&L>0?_dM(tr):'—',red&&L>0?'fica no saldo devedor novo, fora da parcela':'(já diluído nas parcelas)'],
+      ['<b>Soma</b>','<b>'+_dM(soma)+'</b>',''],
+      ['<b>Crédito × (1 + taxa)</b>','<b>'+_dM(M.C1)+'</b>',_dD(soma,M.C1,0.05)],
+      ['Seguro total (fora do crédito + taxa)',_dM(seg),_dM(d.seguroVal)+' × '+n+' parcelas']
+    ]);
+  }
   out.innerHTML=h;
 }
 function depExemplo(qual){
@@ -999,7 +1025,10 @@ function depExemplo(qual){
           dep_valLance:'70.557,50',dep_recProp:'52.495,80',dep_sdNovo:'43.629,21',dep_pcNovo:'83',dep_vlParcelaPos:'618,00'}},
     2:{prod:'imovel',plano:'reduzida',grupo:'10018',cred:100000,pg:'246',prazo:'240',taxa:'24%',emb:'25%',rec:'20%',
        n:{dep_vlParcela:'395,82',dep_pcPagar:'234',dep_sd:'121.830,29',dep_credNovo:'78.300,00',dep_pctLance:'45,0000',dep_dif:'0,0304',
-          dep_valLance:'39.064,43',dep_recProp:'17.334,03',dep_sdNovo:'82.796,07',dep_pcNovo:'126',dep_vlParcelaPos:''}}
+          dep_valLance:'39.064,43',dep_recProp:'17.334,03',dep_sdNovo:'82.796,07',dep_pcNovo:'126',dep_vlParcelaPos:''}},
+    3:{prod:'auto',plano:'reduzida',grupo:'9538',cred:40000,pg:'78',prazo:'62',taxa:'16,5%',emb:'0%',rec:'78,2%',
+       n:{dep_vlParcela:'',dep_pcPagar:'61',dep_sd:'46.073,89',dep_credNovo:'40.000,00',dep_pctLance:'78,2000',dep_dif:'0,0725',
+          dep_valLance:'25.255,10',dep_recProp:'25.226,10',dep_sdNovo:'20.847,75',dep_pcNovo:'61',dep_vlParcelaPos:'153,75'}}
   };
   const c=CASOS[qual]||CASOS[1];
   const btn=[...document.querySelectorAll('.btnProduto')].find(b=>(b.getAttribute('onclick')||'').indexOf("'"+c.prod+"'")>=0) || document.querySelector('.btnProduto');

@@ -219,7 +219,8 @@ def render_importar_comissoes(supabase, df_vendas_global, cfg, lista_admin_bd, d
     def _parc_de_total(row):
         total = total_parcelas_regra(row.get("admin"), row.get("produto"), row.get("tipo_parcela"), df_admin) \
             if row.get("produto") else None
-        return f"{row['parcela']} de {total}" if total else str(row["parcela"])
+        num = str(row["parcela"] or "").strip()
+        return f"{num} de {total}" if (total and num) else num
 
     df_edit = pd.DataFrame({
         "Grupo": df_in["grupo"],
@@ -548,7 +549,7 @@ def render_historico_comissoes(supabase, df_vendas_global=None, df_admin=None):
         total = None
         if produto and df_admin is not None:
             total = total_parcelas_regra(row.get("administradora"), produto, tipo_parcela, df_admin)
-        return f"{num} de {total}" if total else num
+        return f"{num} de {total}" if (total and num) else num
 
     df["parcela_fmt"] = df.apply(_parc_de_total, axis=1)
 
