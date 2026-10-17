@@ -807,13 +807,14 @@ let saldoDevedorTotal = cred * (1 + tx);
 let proporcaoLance = rec / saldoDevedorTotal;
 let parcelaPos = (parcIntSemSeguro * (1 - proporcaoLance)) + seguroVal;
 
-window._prazoAlt=null; window._tranche=0;
+window._prazoAlt=null; window._tranche=0; window._trancheMes=0; window._parcSemTranche=0;
 if(_nw) {
     // seguro entra aqui (a função do modelo trabalha sem seguro)
     parcelaPos = _nw.parcelaPos + seguroVal;
     // Parcela reduzida COM lance: a parcela "depois" só cobre a parte reduzida; os 30% do plano ficam
     // "a cobrar na contemplação" (conferido no Newcon, caso 9538). Sem avisar isso o custo parece menor.
-    if(tipoPlano.value==='reduzida' && (embVal+rec)>0 && _nw.tranche>0) window._tranche=_nw.tranche;
+    if(tipoPlano.value==='reduzida' && (embVal+rec)>0 && _nw.trancheRest>0){
+      window._tranche=_nw.trancheRest; window._trancheMes=_nw.trancheMes; window._parcSemTranche=_nw.parcelaSemTranche+seguroVal; }
     window._prazoAlt={ n:_nw.nNovo, lance:(embVal+rec)>0,
                        parc:(tipoPlano.value==='integral' ? parcIntSemSeguro+seguroVal : null) };
 } else if(tipoPlano.value !== 'integral') {
@@ -825,7 +826,8 @@ if(_nw) {
 
 try{ const el=document.getElementById('custoLinha');
   if(el){ if(window._tranche>0){ el.style.display='';
-      el.innerHTML='30% a cobrar na contemplação: <b>'+moeda(window._tranche)+'</b> · custo total (crédito + taxa): <b>'+moeda(cred*(1+tx))+'</b> <span style="opacity:.8">(seguro à parte)</span>'; }
+      el.innerHTML='Nas parcelas depois estão diluídos os 30% do plano: <b>'+moeda(window._tranche)+'</b> ÷ '+_nw.nPagN+' = <b>'+moeda(window._trancheMes)
+        +'/mês</b> · sem os 30%: <b>'+moeda(window._parcSemTranche)+'</b> · custo total (crédito + taxa): <b>'+moeda(cred*(1+tx))+'</b> <span style="opacity:.8">(seguro à parte)</span>'; }
     else el.style.display='none'; } }catch(e){}
 lanceOf.innerText=moeda(lanceOfertaTotal)
 document.getElementById('lanceRecFooter').innerText = moeda(rec);
@@ -913,12 +915,17 @@ function _calcLanceNewcon(o){
   // (continua no saldo devedor novo, a cobrar na contemplação). Sem lance vale a diluição oficial (saldo ÷ parcelas).
   const R = o.reduzida ? Math.max(redCred*(1+o.tx)-k*puraPaga,0) : sdAtual;      // saldo da parte reduzida
   const tranche = o.reduzida ? Math.max(sdAtual-R,0) : 0;                        // 30% a cobrar na contemplação
-  const baseParc = (o.reduzida && lanceTot>0) ? Math.max(R-lanceTot,0) : sdNovo;
-  const parcelaPos=(nPag>0 ? baseParc/nPag : 0)+o.seguroVal;
+  // Os 30% do plano (tranche) são cobrados DILUÍDOS nas parcelas pós-contemplação (regra confirmada pelo Uriel/Breno):
+  // parcela depois = saldo devedor novo (parte reduzida restante + tranche) ÷ parcelas a pagar + seguro.
+  // O Newcon, na tela do lance, mostra "valor da parcela após o pagamento do lance" SEM a tranche (= parcelaSemTranche).
+  const parcelaPos=(nPag>0 ? sdNovo/nPag : 0)+o.seguroVal;
+  const trancheRest = o.reduzida ? Math.max(sdNovo-Math.max(R-lanceTot,0),0) : 0;       // 30% que ainda restam
+  const trancheMes = nPag>0 ? trancheRest/nPag : 0;                                      // quanto entra em cada parcela
+  const parcelaSemTranche = parcelaPos-trancheMes;
   const fracRed = R>0 ? lanceTot/R : 0;                                           // fração do saldo reduzido amortizada
   const parcLance=Math.floor(lanceTot/puraPaga+0.1);   // +0,1 ≈ efeito da Dif. Grupo
   const nNovo=Math.max(nPag-parcLance,0);
-  return {n,k,nPag,C1,redCred,pura,puraPaga,sdAtual,B,embBase,embVal,lanceBruto,rec,lanceTot,sdNovo,parcelaPos,parcLance,nNovo,R,tranche,fracRed,
+  return {n,k,nPag,C1,redCred,pura,puraPaga,sdAtual,B,embBase,embVal,lanceBruto,rec,lanceTot,sdNovo,parcelaPos,parcLance,nNovo,R,tranche,fracRed,trancheRest,trancheMes,parcelaSemTranche,
           creditoLiberado:o.cred-embVal};
 }
 
@@ -959,7 +966,8 @@ function renderDepurador(){
     ['Crédito liberado',_dM(M.creditoLiberado),'crédito − embutido'],
     ['Saldo devedor novo',_dM(M.sdNovo),'saldo devedor atual − lance total'],
     ['Parte reduzida do saldo / 30% a cobrar na contemplação',red?(_dM(M.R)+' / '+_dM(M.tranche)):'—',red?'a parcela depois usa só a parte reduzida quando há lance (fração amortizada: '+_dP(M.fracRed*100,2)+')':'<span class="mut">só no plano reduzida</span>'],
-    ['Parcela depois (reduzindo parcela)',_dM(M.parcelaPos),(red&&M.lanceTot>0?'(parte reduzida − lance)':'saldo devedor novo')+' ÷ '+M.nPag+' parcelas a pagar + seguro'],
+    ['Parcela depois (reduzindo parcela)',_dM(M.parcelaPos),'saldo devedor novo (inclui os 30% do plano diluídos) ÷ '+M.nPag+' parcelas a pagar + seguro'],
+    ['↳ parcela sem os 30% (é a que o Newcon mostra na tela do lance)',red?_dM(M.parcelaSemTranche):'—',red?('os 30% (R$ '+(M.trancheRest||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+') somam '+_dM(M.trancheMes)+'/mês'):'<span class="mut">só no plano reduzida</span>'],
     ['Parcelas a pagar (reduzindo prazo)',String(M.nNovo),M.parcLance+' parcelas amortizadas pelo lance']
   ]);
 
@@ -982,7 +990,7 @@ function renderDepurador(){
       ['Saldo devedor novo',_dM(N.sdNovo),_dM(M.sdNovo),_dD(N.sdNovo,M.sdNovo,120)],
       ['Parcelas a pagar novo',N.pcNovo!=null?String(N.pcNovo):'—',modoParcela?'<span class="mut">n/d (Newcon simulou "reduzir parcela")</span>':String(M.nNovo),
         (!modoParcela&&N.pcNovo!=null)?(N.pcNovo===M.nNovo?'<span class="ok">✓</span>':'<span class="bad">≠ '+(M.nNovo-N.pcNovo)+'</span>'):'—'],
-      ['Valor da parcela após o lance (reduzir parcela)',_dM(N.vlParcelaPos),_dM(M.parcelaPos),_dD(N.vlParcelaPos,M.parcelaPos,10)]
+      ['Valor da parcela após o lance (reduzir parcela)',_dM(N.vlParcelaPos),_dM(red?M.parcelaSemTranche:M.parcelaPos),_dD(N.vlParcelaPos,red?M.parcelaSemTranche:M.parcelaPos,10)+(red?'<div class="mut">comparado SEM os 30% diluídos</div>':'')]
     ]);
 
     // ---- 3) base do percentual
@@ -1015,8 +1023,8 @@ function renderDepurador(){
     h+=_dT(['Parte da dívida','Valor','Observação'],[
       ['Parcelas já pagas ('+M.k+')',_dM(pagas$),'sem seguro'],
       ['Lance (embutido + recursos próprios)',_dM(L),'amortiza o saldo'],
-      ['Parcelas restantes ('+M.nPag+')',_dM(resto),red&&L>0?'parte reduzida − lance':'saldo devedor novo'],
-      ['30% a cobrar na contemplação',red&&L>0?_dM(tr):'—',red&&L>0?'fica no saldo devedor novo, fora da parcela':'(já diluído nas parcelas)'],
+      ['Parcelas restantes ('+M.nPag+') — só a parte reduzida',_dM(resto),red&&L>0?'parte reduzida − lance':'saldo devedor novo'],
+      ['30% do plano (diluídos nas parcelas depois)',red&&L>0?_dM(tr):'—',red&&L>0?('já dentro das '+M.nPag+' parcelas: '+_dM(M.trancheMes)+'/mês'):'(já diluído nas parcelas)'],
       ['<b>Soma</b>','<b>'+_dM(soma)+'</b>',''],
       ['<b>Crédito × (1 + taxa)</b>','<b>'+_dM(M.C1)+'</b>',_dD(soma,M.C1,0.05)],
       ['Seguro total (fora do crédito + taxa)',_dM(seg),_dM(d.seguroVal)+' × '+n+' parcelas']
@@ -1126,6 +1134,7 @@ function atualizarResumo(d){
   if(nPos===0){ T('resumoDepois','—'); T('resumoDepoisSub','cota quitada na contemplação'); }
   else { T('resumoDepois', moeda(d.parcelaPos));
          T('resumoDepoisSub', nPos+'x após a contemplação'+($('tipoPlano').value==='reduzida' ? ' · crédito 100%' : '')
+           +(window._trancheMes>0 ? (' · inclui '+moeda(window._trancheMes)+'/mês dos 30% do plano') : '')
            +((window._prazoAlt && window._prazoAlt.lance && window._prazoAlt.n>0)
               ? (window._prazoAlt.parc!=null ? (' · ou '+window._prazoAlt.n+'x de '+moeda(window._prazoAlt.parc)+' (reduzindo prazo)')
                                               : (' · ou prazo cai para '+window._prazoAlt.n+'x (reduzindo prazo)')) : '')); }
@@ -1193,7 +1202,7 @@ resultado.innerHTML=`
         <div class="pg-item"><span>Lance embutido (valor)</span><b>${embRef.innerText.replace('Equivale a ','')||'-'}</b></div>
         <div class="pg-item d-pos"><span>Parcela após contemplação</span><b>${parcelaPosTxt}</b></div>
         <div class="pg-item d-pos"><span>Prazo após contemplação (meses)</span><b>${(prazo.value-1)||'-'}</b></div>
-        ${window._tranche>0 ? `<div class="pg-item"><span>30% a cobrar na contemplação</span><b>${moeda(window._tranche)}</b></div>` : ''}
+        ${window._trancheMes>0 ? `<div class="pg-item"><span>Dos quais, 30% do plano diluídos</span><b>${moeda(window._trancheMes)}/mês</b></div>` : ''}
         <div class="pg-item"><span>Forma de pagamento do lance</span><b class="pg-pay">${parcelamento||'—'}</b></div>
         `}
       </div>
@@ -1706,7 +1715,7 @@ function enviarWhats(){
     : ('Parcela inicial (aprox.): '+(document.getElementById('parcelaAntes').value||'-')+'\n'
       +'Lance (recursos próprios): '+moeda(rec)+'\n'
       +'Parcela após contemplação: '+_pos+'\n'
-      +(window._tranche>0 ? ('30% a cobrar na contemplação: '+moeda(window._tranche)+'\n') : '')
+      +(window._trancheMes>0 ? ('  (inclui '+moeda(window._trancheMes)+'/mês dos 30% do plano, diluídos nas parcelas)\n') : '')
       +'Prazo após contemplação: '+((document.getElementById('prazo').value-1)||'-')+' meses\n\n');
   const t='*PROPOSTA DE CONSÓRCIO — CONSORBENS (Yamaha)*\n\n'
     +'Grupo: '+g+'\n'
