@@ -422,21 +422,17 @@ if not is_logado:
             
             with t_login:
                 with st.form("form_login"):
-                    st.markdown("##### Selecione ou digite as suas credenciais")
-                    opcoes_usuarios = ["Breno", "Uriel", "Outro (Digitar Manualmente / Novo Usuário)"]
-                    usuario_sel = st.selectbox("Utilizador", opcoes_usuarios, index=0)
-                    
-                    if usuario_sel == "Outro (Digitar Manualmente / Novo Usuário)":
-                        usuario_input = st.text_input("Introduza o Login do Utilizador").strip()
-                    else:
-                        usuario_input = usuario_sel.lower()
-                        
-                    senha_input = st.text_input("Palavra-passe (Senha)", type="password")
+                    st.markdown("##### Acesse o sistema")
+                    usuario_input = st.text_input("Usuário (login)", placeholder="ex.: breno ou o login que você recebeu").strip()
+                    senha_input = st.text_input("Senha", type="password")
+                    st.caption("Primeiro acesso? Entre com o login e a **senha temporária** que o administrador "
+                              "enviou — em seguida o sistema pede para você criar a sua própria senha. "
+                              "Esqueceu a senha? Peça uma nova ao administrador.")
                     st.write("") 
                     
                     if st.form_submit_button("ENTRAR", type="primary", use_container_width=True):
                         if not usuario_input:
-                            st.error("❌ Por favor, introduza o nome do utilizador.")
+                            st.error("❌ Digite o seu usuário (login).")
                         else:
                             user_valido, erro_login = autenticar(supabase, usuario_input, senha_input)
 
@@ -449,7 +445,7 @@ if not is_logado:
                                 })
                                 st.rerun()
                             else:
-                                st.error("❌ " + (erro_login or "Utilizador ou senha incorretos."))
+                                st.error("❌ " + (erro_login or "Usuário ou senha incorretos."))
                                 
             with t_senha:
                 with st.form("form_alterar_senha"):

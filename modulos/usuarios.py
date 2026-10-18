@@ -175,16 +175,38 @@ def _seletor_telas(prefixo, atuais):
     return marcadas
 
 
+def _url_do_erp():
+    """Endereço em que o ERP está aberto (para o texto de boas-vindas); vazio se não der para saber."""
+    try:
+        u = str(st.context.url or "")
+        return u.split("?")[0].rstrip("/") if u.startswith("http") else ""
+    except Exception:
+        return ""
+
+
 def _mostrar_senha_unica():
-    """Mostra a senha temporária recém-gerada UMA vez (some ao fechar)."""
+    """Mostra a senha temporária recém-gerada, com texto pronto para enviar.
+    Fica na tela, junto do botão que a gerou, até clicar em "Já anotei"."""
     info = st.session_state.get("_senha_temp_exibir")
     if not info:
         return
-    st.success(f"Usuário **{info['login']}** — entregue estas credenciais agora (a senha não fica visível depois):")
-    c1, c2 = st.columns(2)
-    c1.code(f"Login: {info['login']}", language=None)
-    c2.code(f"Senha temporária: {info['senha']}", language=None)
-    st.caption("No primeiro acesso o sistema pede para a pessoa criar a própria senha.")
+    login = info["login"]
+    gerada = not str(info["senha"]).startswith("(")
+    st.divider()
+    if gerada:
+        st.success(f"🔑 **Senha temporária de {login}: veja abaixo.** Anote ou copie agora — ela não fica "
+                   "guardada em lugar nenhum e não aparece de novo. Se perder, gere outra.")
+        st.markdown("**Senha temporária**")
+        st.code(info["senha"], language=None)
+    else:
+        st.success(f"Usuário **{login}** criado com a senha que você definiu. "
+                   "Passe a senha a ele por um canal seguro.")
+    link = _url_do_erp() or "(endereço do ERP)"
+    linha_senha = (f"Senha temporária: {info['senha']}" if gerada else "Senha: a que combinamos")
+    msg = (f"Olá! Seu acesso ao ERP da Consorbens:\n\nLink: {link}\nUsuário: {login}\n{linha_senha}\n\n"
+           "No primeiro acesso o sistema pede para você criar a sua própria senha.")
+    st.markdown("**Mensagem pronta para enviar** (use o botão de copiar no canto do quadro)")
+    st.code(msg, language=None)
     if info.get("site_msg"):
         (st.success if info.get("site_ok") else st.warning)(info["site_msg"])
     if st.button("Já anotei — esconder", key="btn_esconder_senha"):
@@ -205,7 +227,6 @@ def render_usuarios(supabase):
     eu = st.session_state.get("usuario_logado")
     com_dados = _dados_ok(supabase)
     lista = _usuarios(supabase, com_dados)
-    _mostrar_senha_unica()
     if not com_dados:
         st.info("Para guardar CNPJ, telefone, endereço e PIX dos vendedores, rode uma vez o arquivo "
                 "`migracoes/27_vendedores_dados.sql` no SQL Editor do Supabase e recarregue esta página.")
@@ -222,6 +243,7 @@ def render_usuarios(supabase):
                 "E-mail": u.get("email") or "—",
                 "Situação": "✅ Ativo" if u.get("ativo") is not False else "⛔ Desativado",
                 "Admin do site": "✅" if u.get("acesso_site_admin") else "—",
+                "Senha": ("⏳ Temporária — ainda não trocada" if u.get("trocar_senha") else "✅ Definida pelo usuário"),
                 "Telas liberadas": str(n_telas),
                 "Último acesso": _fmt_dt(u.get("ultimo_login")),
             })
@@ -269,6 +291,7 @@ def _form_novo(supabase, lista, eu, com_dados=False):
                                  "(mesmo e-mail e senha)", key="usr_novo_site")
         enviar = st.form_submit_button("Criar usuário", type="primary")
 
+    _mostrar_senha_unica()
     if not enviar:
         return
     erros = []
@@ -467,4 +490,5 @@ def _form_editar(supabase, lista, u, eu, com_dados=False):
             st.rerun()
         except Exception as e:
             st.error(f"Não consegui gerar a senha: {str(e)[:200]}")
+    _mostrar_senha_unica()
     st.caption("Usuários nunca são apagados — desative para impedir o acesso e manter o histórico das vendas.")

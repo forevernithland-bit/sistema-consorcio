@@ -242,7 +242,7 @@ def autenticar(supabase: Client, login_input: str, senha_input: str):
     except Exception:
         return None, "Não consegui consultar o banco agora. Tente de novo."
     if not u:
-        return None, "Utilizador ou senha incorretos."
+        return None, "Usuário ou senha incorretos."
 
     agora = datetime.now(timezone.utc)
     if u.get("ativo") is False:
@@ -277,7 +277,7 @@ def autenticar(supabase: Client, login_input: str, senha_input: str):
             campos = {"tentativas_falhas": 0,
                       "bloqueado_ate": (agora + timedelta(minutes=BLOQUEIO_MIN)).isoformat()}
         _atualizar_usuario(supabase, u["id"], campos)
-        return None, "Utilizador ou senha incorretos."
+        return None, "Usuário ou senha incorretos."
 
     campos = {"tentativas_falhas": 0, "bloqueado_ate": None, "ultimo_login": agora.isoformat()}
     if migrar:
