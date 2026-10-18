@@ -86,7 +86,10 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict, _esto
     # (linear x reduzida) — ex.: Itaú imóvel reduzida = 4% em 12 parcelas.
     # Se a coluna ainda não existe (antes da migração 25), tudo cai na
     # regra genérica e nada muda para as outras administradoras.
-    if df_regras is not None and not df_regras.empty and 'Tipo_Norm' not in df_regras.columns:
+    if df_regras is None or df_regras.empty:
+        # sem regras cadastradas: nenhuma cota casa regra (antes dava KeyError 'Admin_Norm' em todas as telas)
+        df_regras = pd.DataFrame(columns=['Admin_Norm', 'Prod_Norm', 'Tipo_Norm'])
+    if not df_regras.empty and 'Tipo_Norm' not in df_regras.columns:
         df_regras = df_regras.copy()
         if 'Tipo_Parcela' in df_regras.columns:
             df_regras['Tipo_Norm'] = df_regras['Tipo_Parcela'].apply(normalizar_string)
