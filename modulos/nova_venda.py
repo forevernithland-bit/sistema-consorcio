@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 from datetime import datetime
 from utils import formatar_telefone, formatar_data, formatar_moeda, formatar_cpf
-from database import carregar_dados_iniciais
+from database import carregar_dados_iniciais, vendedores_cadastrados
 
 PRODUTOS = ["Auto", "Imóvel", "Moto", "Caminhão", "Serviços"]
 VENDEDORES = ["BRENO LIMA", "URIEL GOMES", "Particular Breno", "Particular Uriel", "Consorbens", "Vendedor Terceiro"]
@@ -85,7 +85,7 @@ def render_nova_venda(supabase, df_cli, lista_admin_bd):
         col_v1, col_v2 = st.columns(2)
         with col_v1:
             data = st.date_input("Data da Venda", format="DD/MM/YYYY")
-            vendedor = st.selectbox("Vendedor *", VENDEDORES) if is_master else st.session_state['nome_vendedor']
+            vendedor = st.selectbox("Vendedor *", VENDEDORES + [v for v in vendedores_cadastrados(supabase) if v not in VENDEDORES]) if is_master else st.session_state['nome_vendedor']
         with col_v2:
             admin = st.selectbox("Administradora *", lista_admin_bd)
             produto = st.selectbox("Produto *", PRODUTOS)
@@ -166,7 +166,7 @@ def render_nova_venda(supabase, df_cli, lista_admin_bd):
                 admin = admin_sel
             valor_consorcio = st.number_input("Valor do Consórcio (R$) *", min_value=0.0, step=1000.0, format="%.2f", key="ct_vc")
         with col_v2:
-            vendedor = st.selectbox("Vendedor *", VENDEDORES_CONTEMPLADO, index=0, key="ct_vend") if is_master else st.session_state['nome_vendedor']
+            vendedor = st.selectbox("Vendedor *", VENDEDORES_CONTEMPLADO + [v for v in vendedores_cadastrados(supabase) if v not in VENDEDORES_CONTEMPLADO], index=0, key="ct_vend") if is_master else st.session_state['nome_vendedor']
             produto = st.selectbox("Produto *", PRODUTOS, key="ct_prod")
             valor_entrada = st.number_input("Valor da Entrada (R$)", min_value=0.0, step=1000.0, format="%.2f", key="ct_ve")
 

@@ -168,28 +168,147 @@ def salvar_status_comissoes(supabase: Client, df_editado: pd.DataFrame, df_origi
 # ==========================================
 # FUNÇÕES DE AUTENTICAÇÃO E GESTÃO DE USUÁRIOS
 # ==========================================
-def verificar_login_db(supabase: Client, login_input: str, senha_input: str):
-    """
-    Verifica as credenciais no Supabase. 
-    O login é avaliado de forma CASE-INSENSITIVE (.ilike),
-    e a senha é validada de forma CASE-SENSITIVE exata no Python.
-    """
-    try:
-        # Busca o utilizador ignorando maiúsculas/minúsculas no login
-        res = supabase.table("usuarios").select("*").ilike("login", login_input.strip()).execute()
-        if res.data:
-            usuario = res.data[0]
-            # Validação estrita (Case Sensitive) da senha no Python
-            if usuario["senha"] == senha_input:
-                return usuario
-        return None
-    except Exception as e:
-        return None
+def _escapar_like(txt: str) -> str:
+    """Escapa %, _ e a barra invertida para o ilike tratar o login como texto literal."""
+    barra = chr(92)
+    return str(txt).replace(barra, barra + barra).replace("%", barra + "%").replace("_", barra + "_")
 
-def atualizar_senha_usuario(supabase: Client, login_input: str, nova_senha: str):
-    """Atualiza a senha de um utilizador específico no banco de dados"""
+
+def _buscar_usuario(supabase: Client, login_input: str):
+    """Usuário pelo login (sem diferenciar maiúscula/minúscula), ou None."""
+    login = str(login_input or "").strip()
+    if not login:
+        return None
+    res = supabase.table("usuarios").select("*").ilike("login", _escapar_like(login)).execute()
+    for u in (res.data or []):
+        if str(u.get("login", "")).strip().lower() == login.lower():
+            return u
+    return None
+
+
+def _atualizar_usuario(supabase: Client, user_id, campos: dict):
+    """update tolerante: se a migração 26 ainda não rodou (colunas novas
+    ausentes) o update inteiro falha e NADA é gravado — em especial a senha
+    em texto puro continua intacta (nunca se apaga a senha sem antes ter o
+    hash gravado na mesma operação)."""
     try:
-        res = supabase.table("usuarios").update({"senha": nova_senha}).ilike("login", login_input.strip()).execute()
-        return len(res.data) > 0
+        supabase.table("usuarios").update(campos).eq("id", user_id).execute()
+        return True
+    except Exception:
+        return False
+
+
+@st.cache_data(ttl=30)
+def carregar_sessao_usuario(_supabase, login):
+    """Situação ATUAL do usuário logado (ativo? perfil? telas liberadas?).
+    Reconsultada a cada 30 s: desativar um usuário ou mudar as telas dele no
+    cadastro vale rápido, sem esperar ele sair e entrar."""
+    try:
+        u = _buscar_usuario(_supabase, login)
+    except Exception:
+        return None
+    if not u:
+        return None
+    return {"login": u.get("login"), "nome": u.get("nome"), "perfil": u.get("perfil"),
+            "ativo": u.get("ativo") is not False, "permissoes": u.get("permissoes"),
+            "trocar_senha": bool(u.get("trocar_senha"))}
+
+
+@st.cache_data(ttl=60)
+def vendedores_cadastrados(_supabase):
+    """Nomes dos usuários Vendedor ATIVOS (entram nas listas de vendedor das telas)."""
+    try:
+        res = _supabase.table("usuarios").select("nome,perfil,ativo").execute().data or []
+        return sorted({str(r["nome"]).strip() for r in res
+                       if r.get("perfil") == "Vendedor" and r.get("ativo") is not False and r.get("nome")})
+    except Exception:
+        return []
+
+
+def autenticar(supabase: Client, login_input: str, senha_input: str):
+    """Valida login+senha. Devolve (usuario|None, mensagem_de_erro).
+
+    - senha conferida contra o HASH (PBKDF2); usuário antigo ainda com senha em
+      texto é aceito UMA vez e já convertido para hash (o texto é apagado);
+    - usuário desativado não entra;
+    - 5 erros seguidos bloqueiam o login por 10 minutos.
+    """
+    from datetime import datetime, timezone, timedelta
+    import hmac
+    from seguranca import (verificar_senha, hash_senha, precisa_rehash,
+                           MAX_TENTATIVAS, BLOQUEIO_MIN)
+    try:
+        u = _buscar_usuario(supabase, login_input)
+    except Exception:
+        return None, "Não consegui consultar o banco agora. Tente de novo."
+    if not u:
+        return None, "Utilizador ou senha incorretos."
+
+    agora = datetime.now(timezone.utc)
+    if u.get("ativo") is False:
+        return None, "Este usuário está desativado. Fale com o administrador."
+    bloq = u.get("bloqueado_ate")
+    if bloq:
+        try:
+            ate = datetime.fromisoformat(str(bloq).replace("Z", "+00:00"))
+            if ate > agora:
+                faltam = max(1, int((ate - agora).total_seconds() // 60) + 1)
+                return None, f"Muitas tentativas erradas. Tente de novo em {faltam} min."
+        except Exception:
+            pass
+
+    senha_input = str(senha_input or "")
+    h = (u.get("senha_hash") or "").strip()
+    plano = (u.get("senha") or "")
+    ok = False
+    migrar = False
+    if h:
+        ok = verificar_senha(senha_input, h)
+        if ok and precisa_rehash(h):
+            migrar = True
+    elif plano:                                    # legado: texto puro (case sensitive)
+        ok = hmac.compare_digest(str(plano), senha_input)
+        migrar = ok
+
+    if not ok:
+        falhas = int(u.get("tentativas_falhas") or 0) + 1
+        campos = {"tentativas_falhas": falhas}
+        if falhas >= MAX_TENTATIVAS:
+            campos = {"tentativas_falhas": 0,
+                      "bloqueado_ate": (agora + timedelta(minutes=BLOQUEIO_MIN)).isoformat()}
+        _atualizar_usuario(supabase, u["id"], campos)
+        return None, "Utilizador ou senha incorretos."
+
+    campos = {"tentativas_falhas": 0, "bloqueado_ate": None, "ultimo_login": agora.isoformat()}
+    if migrar:
+        campos.update({"senha_hash": hash_senha(senha_input), "senha": None})
+    _atualizar_usuario(supabase, u["id"], campos)
+    return u, ""
+
+
+def verificar_login_db(supabase: Client, login_input: str, senha_input: str):
+    """Compatível com o código antigo: devolve o usuário ou None."""
+    usuario, _ = autenticar(supabase, login_input, senha_input)
+    return usuario
+
+
+def atualizar_senha_usuario(supabase: Client, login_input: str, nova_senha: str, trocar_no_proximo_login: bool = False):
+    """Grava a nova senha CRIPTOGRAFADA (e apaga qualquer texto puro antigo)."""
+    from seguranca import hash_senha
+    from datetime import datetime, timezone
+    try:
+        u = _buscar_usuario(supabase, login_input)
+        if not u:
+            return False
+        campos = {"senha_hash": hash_senha(nova_senha), "senha": None,
+                  "trocar_senha": bool(trocar_no_proximo_login),
+                  "tentativas_falhas": 0, "bloqueado_ate": None,
+                  "atualizado_em": datetime.now(timezone.utc).isoformat()}
+        try:
+            supabase.table("usuarios").update(campos).eq("id", u["id"]).execute()
+            return True
+        except Exception:
+            # migração 26 ainda não rodou: sem coluna de hash não há como criptografar
+            return False
     except Exception as e:
         return False

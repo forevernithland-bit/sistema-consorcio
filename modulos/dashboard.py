@@ -203,6 +203,8 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
                                    "A cota entra automaticamente neste mesmo perfil.")
                         kp = f"addcota_{cliente_nome}_"
                         opts_v_add = ["BRENO LIMA", "URIEL GOMES", "Particular Breno", "Particular Uriel", "Consorbens", "Vendedor Terceiro"]
+                        from database import vendedores_cadastrados as _vc
+                        opts_v_add += [v for v in _vc(supabase) if v not in opts_v_add]
                         lista_prod_add = ["Auto", "Imóvel", "Moto", "Caminhão", "Serviços"]
                         ca1, ca2, ca3 = st.columns(3)
                         with ca1:

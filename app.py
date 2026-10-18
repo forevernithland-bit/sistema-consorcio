@@ -9,7 +9,10 @@ import base64  # Necessário para codificar imagens caso use futuramente
 # IMPORTAÇÃO DOS NOSSOS MÓDULOS LOCAIS
 # ==========================================
 from utils import carregar_ferramenta, formatar_brl_puro
-from database import iniciar_conexao, carregar_dados_iniciais, salvar_status_comissoes, verificar_login_db, atualizar_senha_usuario
+from database import (iniciar_conexao, iniciar_conexao_site, carregar_dados_iniciais, salvar_status_comissoes,
+                      verificar_login_db, autenticar, atualizar_senha_usuario, carregar_sessao_usuario)
+from seguranca import permissoes_efetivas, MENU_PARA_PERMISSAO, validar_forca
+from site_usuarios import sincronizar_site
 from regras import gerar_tabela_parcelas
 
 from modulos.dashboard import render_dashboard
@@ -26,6 +29,7 @@ from modulos.ofertar_lance import render_ofertar_lance
 from modulos.emitir_boleto import render_emitir_boleto
 from modulos.financeiro import render_financeiro
 from modulos.robo_painel import render_robo_painel
+from modulos.usuarios import render_usuarios
 
 # ==========================================
 # 1. CONFIGURAÇÃO DA PÁGINA E SESSÕES
@@ -252,6 +256,47 @@ with st.sidebar.container(key="server_badge"):
         st.rerun()
 
 logo_path = os.path.join(PASTA_ATUAL, "logo.png")
+# ---- Revalida o usuário logado a cada carregamento (cache de 30 s) ----
+# Desativar alguém, mudar o perfil ou as telas dele passa a valer rápido,
+# sem esperar ele sair e entrar de novo.
+_perm_usuario = set()
+if is_logado:
+    _info_usr = carregar_sessao_usuario(supabase, st.session_state['usuario_logado'])
+    if (not _info_usr) or (not _info_usr.get("ativo")):
+        st.session_state.clear()
+        st.rerun()
+    st.session_state['perfil_logado'] = _info_usr.get("perfil")
+    st.session_state['nome_vendedor'] = _info_usr.get("nome")
+    is_master = (_info_usr.get("perfil") == "Master") or (st.session_state.get('usuario_logado') in ['breno', 'uriel'])
+    _perm_usuario = permissoes_efetivas(_info_usr.get("perfil"), _info_usr.get("permissoes"), is_master)
+    st.session_state['permissoes'] = sorted(_perm_usuario)
+
+    # Senha temporária: a pessoa precisa criar a própria antes de usar o sistema
+    if _info_usr.get("trocar_senha"):
+        st.markdown("### 🔐 Crie a sua senha")
+        st.info("Você entrou com uma senha temporária. Defina uma senha só sua para continuar "
+                "(mínimo 8 caracteres, com letras e números).")
+        with st.form("form_troca_obrigatoria"):
+            _n1 = st.text_input("Nova senha", type="password")
+            _n2 = st.text_input("Confirmar nova senha", type="password")
+            if st.form_submit_button("Salvar e continuar", type="primary"):
+                _ok_f, _msg_f = validar_forca(_n1)
+                if not _ok_f:
+                    st.error("❌ " + _msg_f)
+                elif _n1 != _n2:
+                    st.error("❌ A nova senha e a confirmação não coincidem.")
+                elif atualizar_senha_usuario(supabase, st.session_state['usuario_logado'], _n1):
+                    from database import _buscar_usuario
+                    _u = _buscar_usuario(supabase, st.session_state['usuario_logado']) or {}
+                    if _u.get("acesso_site_admin"):
+                        sincronizar_site(iniciar_conexao_site(), _u.get("email"), _n1, True, _u.get("site_user_id"))
+                    carregar_sessao_usuario.clear()
+                    st.success("Senha criada!")
+                    st.rerun()
+                else:
+                    st.error("❌ Não consegui salvar a senha agora.")
+        st.stop()
+
 if os.path.exists(logo_path):
     st.sidebar.image(logo_path, use_container_width=True)
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
@@ -282,12 +327,18 @@ else:
     if is_master:
         opcoes_principais = ["Dashboard", "Nova Venda", "Ofertar Lance", "Emissão de Boletos", "Financeiro", "Baixar Parcelas", "Relatórios", "Mídias", "Configurações de Sistema"]
     else:
-        opcoes_principais = ["Dashboard", "Nova Venda", "Ofertar Lance", "Emissão de Boletos", "Relatórios", "Mídias"]
+        _todas_vend = ["Dashboard", "Nova Venda", "Ofertar Lance", "Emissão de Boletos", "Relatórios", "Mídias"]
+        opcoes_principais = [o for o in _todas_vend if MENU_PARA_PERMISSAO[o] in _perm_usuario]
+        # a tela inicial padrão pode não estar liberada para este vendedor
+        if st.session_state.get('menu_lateral') not in opcoes_principais + list(simuladores_dict) and opcoes_principais:
+            st.session_state['menu_lateral'] = opcoes_principais[0]
+        if not opcoes_principais and not any(MENU_PARA_PERMISSAO[x] in _perm_usuario for x in simuladores_dict):
+            st.warning("Seu usuário ainda não tem nenhuma tela liberada. Fale com o administrador.")
         
     try: idx_principal = opcoes_principais.index(st.session_state['menu_lateral'])
     except ValueError: idx_principal = None 
         
-    selecao_principal = st.sidebar.radio("Navegação", opcoes_principais, index=idx_principal, label_visibility="collapsed")
+    selecao_principal = st.sidebar.radio("Navegação", opcoes_principais, index=idx_principal, label_visibility="collapsed") if opcoes_principais else None
     
     if selecao_principal and selecao_principal != st.session_state.get('last_radio_selection') and selecao_principal in opcoes_principais:
         st.session_state['menu_lateral'] = selecao_principal
@@ -299,9 +350,12 @@ else:
         st.session_state['last_radio_selection'] = selecao_principal
         
     st.sidebar.write("")
-    with st.sidebar.expander("🛠️ Simuladores", expanded=(st.session_state['menu_lateral'] in simuladores_dict)):
-        st.link_button("📄 Cartas Contempladas", "https://consorbensmg.com.br/admin/", use_container_width=True)
-        for sim in simuladores_dict.keys():
+    _sims_liberados = [x for x in simuladores_dict if is_master or MENU_PARA_PERMISSAO[x] in _perm_usuario]
+    _atalho_site = is_master or ("cartas_site" in _perm_usuario)
+    with st.sidebar.expander("🛠️ Simuladores", expanded=(st.session_state['menu_lateral'] in simuladores_dict)) if (_sims_liberados or _atalho_site) else st.sidebar.container():
+        if _atalho_site:
+            st.link_button("📄 Cartas Contempladas", "https://consorbensmg.com.br/admin/", use_container_width=True)
+        for sim in _sims_liberados:
             btn_type = "primary" if st.session_state['menu_lateral'] == sim else "secondary"
             if st.button(sim, use_container_width=True, type=btn_type):
                 st.session_state['menu_lateral'] = sim
@@ -319,6 +373,13 @@ else:
         st.rerun()
 
 menu_selecionado = st.session_state['menu_lateral']
+
+if is_logado and not is_master:
+    _chave_perm = MENU_PARA_PERMISSAO.get(menu_selecionado)
+    _so_admin = menu_selecionado in ("Financeiro", "Baixar Parcelas", "Configurações de Sistema", "Assembleias", "🤖 Robô")
+    if _so_admin or (_chave_perm is None) or (_chave_perm not in _perm_usuario):
+        st.warning("🔒 Você não tem acesso a esta tela. Escolha uma opção do menu.")
+        st.stop()
 
 # Trava de segurança: simulador só com login. Se cair aqui sem estar logado
 # (sessão antiga, link direto), volta para a tela de login.
@@ -377,8 +438,8 @@ if not is_logado:
                         if not usuario_input:
                             st.error("❌ Por favor, introduza o nome do utilizador.")
                         else:
-                            user_valido = verificar_login_db(supabase, usuario_input, senha_input)
-                            
+                            user_valido, erro_login = autenticar(supabase, usuario_input, senha_input)
+
                             if user_valido:
                                 st.session_state.update({
                                     'usuario_logado': user_valido["login"],
@@ -386,9 +447,9 @@ if not is_logado:
                                     'nome_vendedor': user_valido["nome"],
                                     'menu_lateral': "Dashboard"
                                 })
-                                st.rerun() 
-                            else: 
-                                st.error("❌ Utilizador ou senha incorretos.")
+                                st.rerun()
+                            else:
+                                st.error("❌ " + (erro_login or "Utilizador ou senha incorretos."))
                                 
             with t_senha:
                 with st.form("form_alterar_senha"):
@@ -405,11 +466,20 @@ if not is_logado:
                             st.error("❌ A nova senha e a confirmação não coincidem.")
                         else:
                             checar_atual = verificar_login_db(supabase, alt_usuario, alt_senha_antiga)
-                            if checar_atual:
+                            _ok_forca, _msg_forca = validar_forca(alt_senha_nova)
+                            if checar_atual and not _ok_forca:
+                                st.error("❌ " + _msg_forca)
+                            elif checar_atual:
                                 if atualizar_senha_usuario(supabase, alt_usuario, alt_senha_nova):
                                     st.success("✅ Senha atualizada com sucesso! Já pode iniciar sessão.")
+                                    if checar_atual.get("acesso_site_admin"):
+                                        _ok_s, _msg_s, _uid = sincronizar_site(
+                                            iniciar_conexao_site(), checar_atual.get("email"), alt_senha_nova,
+                                            True, checar_atual.get("site_user_id"))
+                                        (st.success if _ok_s else st.warning)(_msg_s)
                                 else:
-                                    st.error("❌ Erro técnico ao atualizar no banco de dados.")
+                                    st.error("❌ Erro técnico ao atualizar no banco de dados "
+                                             "(a atualização de segurança do banco pode estar pendente).")
                             else:
                                 st.error("❌ Usuário ou Senha Atual incorretos. Operação recusada.")
     st.stop() 
@@ -478,9 +548,11 @@ elif menu_selecionado == "🤖 Robô":
         st.rerun()
 elif menu_selecionado == "Configurações de Sistema":
     # Senhas e Base de Conhecimento agora vivem aqui dentro, como abas.
-    tab_sis, tab_senhas, tab_ia = st.tabs(["⚙️ Sistema", "🔐 Senhas", "🧠 Base de Conhecimento"])
+    tab_sis, tab_usr, tab_senhas, tab_ia = st.tabs(["⚙️ Sistema", "👥 Usuários e acessos", "🔐 Senhas", "🧠 Base de Conhecimento"])
     with tab_sis:
         render_configuracoes(supabase, df_admin_cad, df_admin, lista_admin_bd, cfg, cfg_id)
+    with tab_usr:
+        render_usuarios(supabase)
     with tab_senhas:
         render_senhas(supabase)
     with tab_ia:

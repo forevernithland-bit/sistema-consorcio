@@ -24,6 +24,12 @@ RE_TOTAL      = re.compile(r"Total (?:de Comiss.o do Per.odo|Geral):\s*\(\s*(\d+
 RE_PERIODO    = re.compile(r"Encerramento de:\s*(\d{2}/\d{2}/\d{4})\s*a\s*(\d{2}/\d{2}/\d{4})")
 
 VENDEDORES = ["BRENO LIMA", "URIEL GOMES", "Particular Breno", "Particular Uriel", "Consorbens", "Vendedor Terceiro"]
+
+
+def _lista_vendedores(supabase):
+    """Vendedores fixos + os usuários Vendedor ativos cadastrados em Configurações."""
+    from database import vendedores_cadastrados
+    return VENDEDORES + [v for v in vendedores_cadastrados(supabase) if v not in VENDEDORES]
 PRODUTOS = ["Auto", "Imóvel", "Moto", "Caminhão", "Serviços"]
 
 
@@ -242,7 +248,7 @@ def render_importar_comissoes(supabase, df_vendas_global, cfg, lista_admin_bd, d
             "Cota": st.column_config.TextColumn("Cota", disabled=True),
             "Parc.": st.column_config.TextColumn("Parc.", disabled=True, help="Nº da parcela da comissão (Pcl no PDF)"),
             "Cliente": st.column_config.TextColumn("Cliente"),
-            "Vendedor": st.column_config.SelectboxColumn("Vendedor", options=VENDEDORES),
+            "Vendedor": st.column_config.SelectboxColumn("Vendedor", options=_lista_vendedores(supabase)),
             "Valor Nota": st.column_config.NumberColumn("Valor Nota", format="R$ %.2f"),
             "Situação": st.column_config.TextColumn("Situação", disabled=True),
         },
@@ -363,8 +369,9 @@ def _render_cadastro_faltantes(supabase, cotas, admin_padrao):
             with st.form(f"form_cad_{c['grupo']}_{c['cota']}"):
                 cc1, cc2, cc3 = st.columns(3)
                 nome = cc1.text_input("Nome do Cliente *", value=c.get("cliente", ""))
-                vendedor = cc2.selectbox("Vendedor *", VENDEDORES,
-                                         index=VENDEDORES.index(c["vendedor"]) if c.get("vendedor") in VENDEDORES else 0)
+                _vs = _lista_vendedores(supabase)
+                vendedor = cc2.selectbox("Vendedor *", _vs,
+                                         index=_vs.index(c["vendedor"]) if c.get("vendedor") in _vs else 0)
                 produto = cc3.selectbox("Produto *", PRODUTOS, index=2)  # Moto por padrão (Yamaha)
                 cc4, cc5 = st.columns(2)
                 valor_venda = cc4.number_input("Valor da Venda (R$) *", value=float(c["credito"]), step=1000.0)
