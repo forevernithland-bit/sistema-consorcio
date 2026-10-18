@@ -810,6 +810,10 @@ def render_relatorios(supabase, df_vendas_global, df_admin, cfg, status_dict):
         vendas = filtrar_por_vendedor(vendas, "VENDEDOR", eh_adm=False, nome=nome_vendedor)
         site_ok, site_prev = pd.DataFrame(), pd.DataFrame()
         st.info("🔒 Como Vendedor, você vê apenas os relatórios das suas próprias vendas.")
+        # visão simplificada do vendedor: comissionamento do mês + simulação
+        from modulos.relatorio_vendedor import render_relatorio_vendedor
+        render_relatorio_vendedor(vendas, df_admin, cfg, status_dict, nome_vendedor)
+        return
 
     if com is None:
         com = pd.DataFrame()
@@ -824,7 +828,8 @@ def render_relatorios(supabase, df_vendas_global, df_admin, cfg, status_dict):
                    + ". A previsão conta cada uma só uma vez, mas convém apagar a repetida.")
 
     abas = ["💵 Faturamento por Mês", "🔮 Previsto", "🏢 Administradora", "📦 Produto",
-            "👤 Vendedor", "🎯 Cartas Contempladas", "📊 Produção", "💰 Comissionamento"]
+            "👤 Vendedor", "🎯 Cartas Contempladas", "📊 Produção", "💰 Comissionamento",
+            "🧮 Simulação de comissionamento"]
     t = st.tabs(abas)
     with t[0]:
         _aba_faturamento_mes(com, site_ok, prev)
@@ -843,3 +848,6 @@ def render_relatorios(supabase, df_vendas_global, df_admin, cfg, status_dict):
         _aba_producao(vendas)
     with t[7]:
         _aba_comissionamento(vendas)
+    with t[8]:
+        from modulos.relatorio_vendedor import render_simulacao
+        render_simulacao(df_admin, cfg, master=True)

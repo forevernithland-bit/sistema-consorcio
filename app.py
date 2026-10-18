@@ -250,13 +250,31 @@ st.sidebar.markdown(
     """,
     unsafe_allow_html=True,
 )
+# Nome de quem está logado, no topo, na mesma linha do SERVER
+_nome_topo = ""
+if st.session_state.get('usuario_logado'):
+    _nome_topo = str(st.session_state.get('nome_vendedor') or "").strip()
+    if not _nome_topo:   # 1ª tela logo após o login: busca o nome (cache de 30 s)
+        try:
+            _nome_topo = str((carregar_sessao_usuario(supabase, st.session_state['usuario_logado']) or {}).get("nome") or "").strip()
+        except Exception:
+            _nome_topo = ""
+    _nome_topo = _nome_topo or str(st.session_state['usuario_logado'])
 with st.sidebar.container(key="server_badge"):
-    if st.button("● SERVER", key="btn_server_robo",
-                 help=f"{_titulo} — abrir Painel do Robô"):
-        st.session_state['menu_lateral'] = "🤖 Robô"
-        st.session_state['last_radio_selection'] = None
-        st.session_state['cliente_visualizado'] = None
-        st.rerun()
+    _cb, _cn = st.columns([1, 1.7], vertical_alignment="center") if _nome_topo else (st.container(), None)
+    with _cb:
+        if st.button("● SERVER", key="btn_server_robo",
+                     help=f"{_titulo} — abrir Painel do Robô"):
+            st.session_state['menu_lateral'] = "🤖 Robô"
+            st.session_state['last_radio_selection'] = None
+            st.session_state['cliente_visualizado'] = None
+            st.rerun()
+    if _cn is not None:
+        with _cn:
+            st.markdown(
+                f"<div title='{html.escape(_nome_topo)}' style='text-align:right;font-size:12px;font-weight:700;"
+                f"white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.85'>👤 {html.escape(_nome_topo)}</div>",
+                unsafe_allow_html=True)
 
 logo_path = os.path.join(PASTA_ATUAL, "logo.png")
 # ---- Revalida o usuário logado a cada carregamento (cache de 30 s) ----
@@ -324,16 +342,6 @@ if not is_logado:
         st.markdown(link_cartas, unsafe_allow_html=True)
 else:
     st.sidebar.divider()
-    # Quem está logado (nome + perfil), logo acima do menu
-    _nome_log = str(st.session_state.get('nome_vendedor') or st.session_state.get('usuario_logado') or "").strip()
-    _perfil_log = "Administrador" if is_master else "Vendedor"
-    st.sidebar.markdown(
-        f"<div style='display:flex;align-items:center;gap:10px;padding:8px 4px 14px 4px'>"
-        f"<div style='width:34px;height:34px;border-radius:50%;background:var(--brand-soft, #e3efee);display:flex;"
-        f"align-items:center;justify-content:center;font-size:17px'>👤</div>"
-        f"<div style='line-height:1.25'><div style='font-weight:700;font-size:0.95rem'>{html.escape(_nome_log)}</div>"
-        f"<div style='font-size:0.75rem;opacity:.65'>{_perfil_log}</div></div></div>",
-        unsafe_allow_html=True)
     
     # Menu principal. Senhas e Base de Conhecimento agora ficam DENTRO de
     # "Configurações de Sistema" (abas). Assembleias está oculto por enquanto.

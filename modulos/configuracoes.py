@@ -125,19 +125,19 @@ def render_configuracoes(supabase, df_admin_cad, df_admin, lista_admin_bd, cfg, 
         ct1, ct2, ct3 = st.columns(3)
         with ct1:
             st.markdown("**Base (sempre)**")
-            vd_p1 = st.number_input("1º pagamento (%)", value=rv["VD_P1"], step=0.05, format="%.2f")
-            vd_p2 = st.number_input("2º pagamento (%)", value=rv["VD_P2"], step=0.05, format="%.2f")
+            vd_p1 = st.number_input("1º pagamento (%)", value=rv["VD_P1"], min_value=0.0, step=0.05, format="%.2f")
+            vd_p2 = st.number_input("2º pagamento (%)", value=rv["VD_P2"], min_value=0.0, step=0.05, format="%.2f")
         with ct2:
             st.markdown("**Bônus 1**")
             vd_m1 = cv.parse_brl(st.text_input("Produção do mês acima de (R$)", value=str(int(rv["VD_M1"])), key="vd_m1"), None)
-            vd_m1p3 = st.number_input("Mais no 3º pagamento (%)", value=rv["VD_M1_P3"], step=0.05, format="%.2f")
+            vd_m1p3 = st.number_input("Mais no 3º pagamento (%)", value=rv["VD_M1_P3"], min_value=0.0, step=0.05, format="%.2f")
         with ct3:
             st.markdown("**Bônus 2** (soma ao bônus 1)")
             vd_m2 = cv.parse_brl(st.text_input("Produção do mês acima de (R$) ", value=str(int(rv["VD_M2"])), key="vd_m2"), None)
-            vd_m2p4 = st.number_input("Mais no 4º pagamento (%)", value=rv["VD_M2_P4"], step=0.05, format="%.2f")
+            vd_m2p4 = st.number_input("Mais no 4º pagamento (%)", value=rv["VD_M2_P4"], min_value=0.0, step=0.05, format="%.2f")
         ce1, ce2, ce3 = st.columns(3)
         with ce1:
-            vd_est = st.number_input("Estorno se cancelar (% do crédito)", value=rv["VD_EST_PCT"], step=0.05, format="%.2f")
+            vd_est = st.number_input("Estorno se cancelar (% do crédito)", value=rv["VD_EST_PCT"], min_value=0.0, step=0.05, format="%.2f")
         with ce2:
             vd_estm = st.number_input("Estorno vale até (meses da venda)", value=int(rv["VD_EST_MESES"]), step=1, min_value=0)
         with ce3:

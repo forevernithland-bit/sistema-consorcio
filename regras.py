@@ -44,7 +44,7 @@ def calcular_comissao_vendedor(df_vendas_global, vendedor_nome, data_venda_dt, c
     return cv.percentuais_da_venda(df_vendas_global, vendedor_nome, data_venda_dt, cfg)
 
 
-def _datas_comissao_vendedor(df_global, vendedor, df_regras, cfg, status_dict):
+def _datas_comissao_vendedor(df_global, vendedor, df_regras, cfg, status_dict, indice=None):
     """Datas (ordenadas) em que o vendedor tem comissão a receber, somando TODAS as cotas dele.
     Serve para decidir em quais pagamentos o estorno é abatido."""
     if df_global is None or df_global.empty:
@@ -52,7 +52,7 @@ def _datas_comissao_vendedor(df_global, vendedor, df_regras, cfg, status_dict):
     alvo = df_global[df_global['VENDEDOR'].apply(cv.norm) == cv.norm(vendedor)]
     if alvo.empty:
         return []
-    t, _ = gerar_tabela_parcelas(alvo, df_global, df_regras, cfg, status_dict, _estornos=False)
+    t, _ = gerar_tabela_parcelas(alvo, df_global, df_regras, cfg, status_dict, _estornos=False, _indice=indice)
     if t.empty:
         return []
     t = t[t['Vendedor Recebe'] > 0]
@@ -73,12 +73,12 @@ def _meta_vendedor(pos, perc_pos, data_venda, cfg):
             f"Bônus produção acima de R$ {r['VD_M2']:,.0f} em {mes} — {perc_pos[pos]:.2f}% (4º pagamento)".replace(",", "X").replace(".", ",").replace("X", "."))
 
 
-def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict, _estornos=True):
+def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict, _estornos=True, _indice=None):
     """Gera a tabela completa de previsão de comissionamento e parcelas"""
     hoje = pd.Timestamp.today().normalize()
     _cache_datas_vd = {}
     _cache_regra = {}
-    _indice_vol = cv.indice_volumes(df_global)      # produção por vendedor/mês, calculada uma vez
+    _indice_vol = _indice if _indice is not None else cv.indice_volumes(df_global)      # produção por vendedor/mês, calculada uma vez
     parcelas_finais = []
     vendas_sem_data = []
 
@@ -213,7 +213,7 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict, _esto
                     k = cv.regra(cfg)['VD_EST_PARCELAS']
                     chave_vd = cv.norm(vendedor)
                     if chave_vd not in _cache_datas_vd:
-                        _cache_datas_vd[chave_vd] = _datas_comissao_vendedor(df_global, vendedor, df_regras, cfg, status_dict)
+                        _cache_datas_vd[chave_vd] = _datas_comissao_vendedor(df_global, vendedor, df_regras, cfg, status_dict, _indice_vol)
                     # próximos K "relatórios" (meses) em que o vendedor tem comissão a receber depois do cancelamento
                     meses_dt = {}
                     for d in _cache_datas_vd[chave_vd]:

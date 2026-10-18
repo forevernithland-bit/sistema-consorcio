@@ -23,8 +23,8 @@ def _pct(x):
 
 
 def _vendas_do_vendedor(df_vendas, vendedor):
-    if df_vendas is None or df_vendas.empty:
-        return pd.DataFrame()
+    if df_vendas is None or df_vendas.empty or cv.norm(vendedor) in ("", "NAN", "NONE"):
+        return pd.DataFrame()           # vendedor sem nome nunca herda as vendas "sem vendedor"
     d = df_vendas[df_vendas["VENDEDOR"].apply(cv.norm) == cv.norm(vendedor)]
     return d[d["Data_Real"].notna()] if not d.empty else d
 

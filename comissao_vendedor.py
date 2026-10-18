@@ -82,10 +82,13 @@ def vendas_do_mes(df_vendas, vendedor, ano, mes):
     if df_vendas is None or df_vendas.empty or "Data_Real" not in df_vendas.columns:
         return pd.DataFrame() if df_vendas is None else df_vendas.iloc[0:0]
     d = df_vendas
+    if norm(vendedor) in ("", "NAN", "NONE"):          # sem nome nunca herda as vendas "sem vendedor"
+        return d.iloc[0:0]
     m = (d["VENDEDOR"].apply(norm) == norm(vendedor)) & d["Data_Real"].notna()
     d = d[m]
     d = d[(d["Data_Real"].dt.year == ano) & (d["Data_Real"].dt.month == mes)]
-    return d[_entra_na_producao(d)] if not d.empty else d
+    # cota duplicada conta uma vez só (mesma regra do indice_volumes): a tela do vendedor usa esta lista
+    return _sem_duplicata(d[_entra_na_producao(d)]) if not d.empty else d
 
 
 def _sem_duplicata(d):
@@ -178,7 +181,10 @@ def data_cancelamento(v):
 
 def parse_brl(txt, padrao=0.0):
     """'1.000.000' / '1000000' / '1.000.000,50' / 'R$ 500 mil'(não) -> float. Texto inválido -> padrao."""
-    t = re.sub(r"[^\d,.\-]", "", str(txt if txt is not None else ""))
+    bruto = str(txt if txt is not None else "").upper().replace("R$", "")
+    if re.search(r"[A-Z]", bruto):         # "500 mil", "1e5", "abc": não adivinha número no meio do texto
+        return padrao
+    t = re.sub(r"[^\d,.\-]", "", bruto)
     if t in ("", "-"):
         return padrao
     if "," in t:
@@ -189,3 +195,64 @@ def parse_brl(txt, padrao=0.0):
         return float(t)
     except ValueError:
         return padrao
+
+
+def _soma_meses(ym, n):
+    a, m = int(ym[:4]), int(ym[5:7])
+    t = a * 12 + (m - 1) + n
+    return f"{t // 12:04d}-{t % 12 + 1:02d}"
+
+
+def simular(vendas, cfg, regra_admin=None, imposto=7.16):
+    """Simula o que entra mês a mês a partir das vendas planejadas.
+
+    vendas: lista de (ym 'AAAA-MM', valor vendido no mês). O nível (bônus) de cada mês de venda
+            vem da produção daquele mês. regra_admin: {nº da parcela: % da comissão da administradora}
+            (opcional). Com ela, cada pagamento cai no mês da parcela (parcela i = mês da venda + i-1) e
+            sai também o lado da corretora; sem ela, o 1º pagamento do vendedor cai no mês da venda e os
+            seguintes um por mês.
+    Devolve (DataFrame por mês de recebimento, DataFrame por mês de venda).
+    """
+    por_mes, niveis = {}, []
+    r = regra(cfg)
+    for ym, valor in vendas:
+        try:
+            valor = float(valor or 0)
+        except (TypeError, ValueError):
+            valor = 0.0
+        if not (valor > 0):                 # 0, negativo e NaN (célula em branco do editor) saem da simulação
+            continue
+        pcts = percentuais_por_posicao(valor, cfg)
+        n = nivel(valor, r)
+        prox = None
+        if n == 0:
+            prox = (r["VD_M1"], r["VD_M1_P3"], "Bônus 1")
+        elif n == 1:
+            prox = (r["VD_M2"], r["VD_M2_P4"], "Bônus 2")
+        niveis.append({"ym": ym, "Vendido": valor, "Nível": ["Base", "Bônus 1", "Bônus 2"][n],
+                       "% total": sum(pcts),
+                       "Falta p/ próximo": (round(prox[0] - valor + 0.01, 2) if prox else 0.0),
+                       "Próximo": (f"{prox[2]} (+{prox[1]:.2f}%)".replace(".", ",") if prox else "—")})
+        pagantes = sorted(i for i, p in (regra_admin or {}).items() if p and p > 0)
+        # vendedor: posição k -> mês de recebimento
+        for k, p in enumerate(pcts):
+            if regra_admin and k >= len(pagantes):
+                continue        # a administradora não tem esse pagamento: o motor real (gerar_tabela_parcelas) também não paga
+            off = (pagantes[k] - 1) if (regra_admin and k < len(pagantes)) else k
+            pay = _soma_meses(ym, off)
+            d = por_mes.setdefault(pay, {"Base": 0.0, "Bônus": 0.0, "Bruto": 0.0})
+            d["Base" if k < 2 else "Bônus"] += valor * p / 100.0
+        # corretora: todas as parcelas da administradora
+        for i in pagantes:
+            pay = _soma_meses(ym, i - 1)
+            d = por_mes.setdefault(pay, {"Base": 0.0, "Bônus": 0.0, "Bruto": 0.0})
+            d["Bruto"] += valor * regra_admin[i] / 100.0
+    linhas = []
+    for pay in sorted(por_mes):
+        d = por_mes[pay]
+        vend = d["Base"] + d["Bônus"]
+        liq = d["Bruto"] * (1 - imposto / 100.0)
+        linhas.append({"ym": pay, "Comissão base": d["Base"], "Bônus": d["Bônus"], "Total vendedor": vend,
+                       "Comissão bruta (adm.)": d["Bruto"], "Imposto": d["Bruto"] - liq, "Líquido corretora": liq,
+                       "Consorbens (após vendedor)": liq - vend})
+    return pd.DataFrame(linhas), pd.DataFrame(niveis)
