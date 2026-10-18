@@ -530,7 +530,7 @@ elif menu_selecionado == "Assembleias":
 elif menu_selecionado == "Relatórios":
     render_relatorios(supabase, df_vendas_global, df_admin, cfg, status_dict)
 elif menu_selecionado == "Mídias":
-    render_midias()
+    render_midias(supabase)
 elif menu_selecionado == "Baixar Parcelas":
     render_baixas(supabase, df_vendas_global, df_admin, cfg, status_dict, lista_admin_bd)
 elif menu_selecionado == "🤖 Robô":

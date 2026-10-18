@@ -207,7 +207,7 @@ def listar_arquivos_drive(folder_ids):
             for _ in range(10):   # até 10 páginas de 1000 (antes cortava em 100 arquivos)
                 results = service.files().list(
                     q=query,
-                    fields="nextPageToken, files(id, name, mimeType, webViewLink, webContentLink, thumbnailLink, size, modifiedTime)",
+                    fields="nextPageToken, files(id, name, mimeType, webViewLink, webContentLink, thumbnailLink, size, modifiedTime, md5Checksum)",
                     pageSize=1000, pageToken=token
                 ).execute()
                 todos_arquivos.extend(results.get('files', []))
