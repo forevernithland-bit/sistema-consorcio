@@ -203,12 +203,17 @@ def listar_arquivos_drive(folder_ids):
     for folder_id in folder_ids:
         try:
             query = f"'{folder_id}' in parents and trashed=false"
-            results = service.files().list(
-                q=query, 
-                fields="files(id, name, mimeType, webViewLink, webContentLink, thumbnailLink)",
-                pageSize=100
-            ).execute()
-            todos_arquivos.extend(results.get('files', []))
+            token = None
+            for _ in range(10):   # até 10 páginas de 1000 (antes cortava em 100 arquivos)
+                results = service.files().list(
+                    q=query,
+                    fields="nextPageToken, files(id, name, mimeType, webViewLink, webContentLink, thumbnailLink, size, modifiedTime)",
+                    pageSize=1000, pageToken=token
+                ).execute()
+                todos_arquivos.extend(results.get('files', []))
+                token = results.get('nextPageToken')
+                if not token:
+                    break
         except Exception as e:
             continue
     return todos_arquivos
