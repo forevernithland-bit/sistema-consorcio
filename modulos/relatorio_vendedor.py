@@ -233,9 +233,83 @@ def render_simulacao(df_admin, cfg, master=False):
                "cai no mês da venda e os demais um por mês. Valores previstos, sem estornos.")
 
 
+def _aba_proximos_meses(df_vendas, df_admin, cfg, status_dict, nome):
+    """Comissionamento previsto dos próximos meses (cotas já vendidas), com estornos/abatimentos e o cliente de cada linha."""
+    hoje = datetime.today()
+    ym_atual = f"{hoje.year:04d}-{hoje.month:02d}"
+    st.markdown("#### 📆 Comissionamento previsto — próximos meses")
+    n = st.radio("Período", [3, 6, 12], index=1, horizontal=True, key="rv_horizonte",
+                 format_func=lambda x: f"{x} meses (a partir deste mês)")
+    meses = [cv._soma_meses(ym_atual, i) for i in range(n)]
+
+    t, sem_data = extrato(df_vendas, df_admin, cfg, status_dict, nome)
+    if sem_data:
+        st.warning("Cota(s) cancelada(s) sem data de cancelamento (o estorno só é calculado depois que o "
+                   "administrador informar a data): " + ", ".join(sem_data))
+    if t.empty:
+        st.info("Ainda não há comissões previstas.")
+        return
+    t = t.assign(_ym=pd.to_datetime(t["data_pagamento_dt"]).dt.strftime("%Y-%m"))
+    d = t[t["_ym"].isin(meses) & (t["Status"].astype(str).str.upper() != "PAGO")].copy()
+    if d.empty:
+        st.info("Nenhuma comissão prevista para este período.")
+        return
+    d["_tipo"] = d["Tipo Vendedor"].astype(str)
+
+    resumo = []
+    for ym in meses:
+        x = d[d["_ym"] == ym]
+        resumo.append({
+            "Mês": _rot_mes(ym),
+            "Comissão": _brl(x[x["_tipo"] == "Comissão"]["Vendedor Recebe"].sum()),
+            "Bônus": _brl(x[x["_tipo"] == "Bônus"]["Vendedor Recebe"].sum()),
+            "Estornos (abatimento)": _brl(x[x["_tipo"] == "Estorno"]["Vendedor Recebe"].sum()),
+            "Total do mês": _brl(x["Vendedor Recebe"].sum()),
+            "Lançamentos": len(x),
+        })
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Comissão + bônus previstos", _brl(d[d["_tipo"] != "Estorno"]["Vendedor Recebe"].sum()))
+    c2.metric("Estornos previstos", _brl(d[d["_tipo"] == "Estorno"]["Vendedor Recebe"].sum()))
+    c3.metric("Total líquido previsto", _brl(d["Vendedor Recebe"].sum()))
+    st.dataframe(pd.DataFrame(resumo), use_container_width=True, hide_index=True)
+
+    est = d[d["_tipo"] == "Estorno"].sort_values(["_ym", "Cliente"])
+    if not est.empty:
+        st.markdown(
+            "<div style='margin-top:14px;padding:10px 16px;border-radius:10px;background:#fde8e8;"
+            "border-left:6px solid #d93025;font-weight:800'>🔻 ESTORNOS / ABATIMENTOS PREVISTOS</div>",
+            unsafe_allow_html=True)
+        st.dataframe(pd.DataFrame({
+            "Mês": [_rot_mes(m) for m in est["_ym"]], "Cliente": est["Cliente"].values,
+            "Grupo": est["Grupo"].astype(str).values, "Cota": est["Cota"].astype(str).values,
+            "Parcela do estorno": est["Parcela Vendedor"].values, "%": [_pct(x) for x in est["% Vendedor"]],
+            "Valor": [_brl(x) for x in est["Vendedor Recebe"]],
+            "Motivo": est["Referência"].values,
+        }), use_container_width=True, hide_index=True)
+
+    st.markdown("##### 🔎 Detalhe mês a mês")
+    d = d.sort_values(["_ym", "Cliente", "Grupo", "Cota"])
+    st.dataframe(pd.DataFrame({
+        "Mês": [_rot_mes(m) for m in d["_ym"]],
+        "Cliente": d["Cliente"].values,
+        "Grupo": d["Grupo"].astype(str).values, "Cota": d["Cota"].astype(str).values,
+        "Tipo": ["🔻 Estorno" if x == "Estorno" else x for x in d["_tipo"]],
+        "Parcela": d["Parcela Vendedor"].values,
+        "%": [_pct(x) for x in d["% Vendedor"]],
+        "Valor": [_brl(x) for x in d["Vendedor Recebe"]],
+        "Parc. adm.": ["" if str(x).startswith("Estorno") else x for x in d["Parcela"]],
+        "Referência": d["Referência"].values,
+        "Data": d["Data Recebimento"].values,
+    }), use_container_width=True, hide_index=True)
+    st.caption("Previsão das cotas que você já vendeu. Vendas novas e bônus de produção que ainda não aconteceram "
+               "não entram aqui — use a aba de Simulação para isso.")
+
+
 def render_relatorio_vendedor(df_vendas, df_admin, cfg, status_dict, nome):
-    t1, t2 = st.tabs(["💵 Comissionamento previsto do mês", "🧮 Simulação de comissionamento"])
+    t1, t3, t2 = st.tabs(["💵 Comissionamento previsto do mês", "📆 Próximos meses", "🧮 Simulação de comissionamento"])
     with t1:
         _aba_comissionamento_mes(df_vendas, df_admin, cfg, status_dict, nome)
+    with t3:
+        _aba_proximos_meses(df_vendas, df_admin, cfg, status_dict, nome)
     with t2:
         render_simulacao(df_admin, cfg, master=False)
