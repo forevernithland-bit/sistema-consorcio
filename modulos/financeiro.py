@@ -257,6 +257,7 @@ def _render_previsao_site(site_prev):
     p2.metric("Breno (50%)", formatar_brl_puro(site_prev['breno'].sum()))
     p3.metric("Uriel (50%)", formatar_brl_puro(site_prev['uriel'].sum()))
     view = pd.DataFrame({
+        "Grupo/Cota": site_prev['grupo_cota'].values if 'grupo_cota' in site_prev.columns else "—",
         "Cliente": site_prev['cliente'].values,
         "Vendedor": site_prev['representante'].values,
         "Produto": site_prev['produto'].values,
@@ -571,6 +572,7 @@ def _detalhe_site(df, mes_lbl):
 
     st.caption("Operações **concluídas** no admin do Site neste mês. Para editar, use o painel do Site.")
     view = pd.DataFrame({
+        "Grupo/Cota": df["grupo_cota"].values if "grupo_cota" in df.columns else "—",
         "Cliente": df["cliente"].values,
         "Vendedor": df["representante"].values,
         "Produto": df["produto"].values,
@@ -590,11 +592,11 @@ def _detalhe_socio(nome, col, t_det, s_det, mes_lbl):
     linhas = []
     if t_det is not None and not t_det.empty:
         for _, r in t_det.iterrows():
-            linhas.append({"Origem": "Consórcio Tradicional", "Cliente": r["cliente"],
+            linhas.append({"Origem": "Consórcio Tradicional", "Grupo/Cota": r.get("gc", "—"), "Cliente": r["cliente"],
                            "_v": parse_float_safe(r[col])})
     if s_det is not None and not s_det.empty:
         for _, r in s_det.iterrows():
-            linhas.append({"Origem": "Carta Contemplada — Site", "Cliente": r["cliente"],
+            linhas.append({"Origem": "Carta Contemplada — Site", "Grupo/Cota": r.get("grupo_cota", "—"), "Cliente": r["cliente"],
                            "_v": parse_float_safe(r[col])})
 
     if not linhas:
@@ -605,5 +607,5 @@ def _detalhe_socio(nome, col, t_det, s_det, mes_lbl):
     total = df["_v"].sum()
     df["Recebe"] = df["_v"].apply(formatar_brl_puro)
     st.caption(f"O que **{nome}** recebe em {mes_lbl}, por venda:")
-    st.dataframe(df[["Origem", "Cliente", "Recebe"]], use_container_width=True, hide_index=True)
+    st.dataframe(df[["Origem", "Grupo/Cota", "Cliente", "Recebe"]], use_container_width=True, hide_index=True)
     st.markdown(f"### 💰 Total {nome} em {mes_lbl}: {formatar_brl_puro(total)}")

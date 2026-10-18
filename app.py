@@ -3,6 +3,7 @@ import pandas as pd
 from datetime import datetime, timezone
 import calendar
 import os
+import html
 import base64  # Necessário para codificar imagens caso use futuramente
 
 # ==========================================
@@ -125,11 +126,13 @@ if st.session_state['tela_cheia_relatorio']:
             df_view = df_view[df_view['Status'] != 'PAGO']
             
         if not df_view.empty:
-            df_view = df_view[['Chave', 'Cliente', 'Produto', 'Vendedor', 'Grupo', 'Cota', 'Valor da Venda', 'Parcela', 'Comissão (Bruta)', 'Comissão (s/ Imposto)', 'Breno', 'Uriel', 'Vendedor Recebe', 'Status', 'Data Recebimento']]
+            df_view = df_view[['Chave', 'Cliente', 'Produto', 'Vendedor', 'Grupo', 'Cota', 'Valor da Venda', 'Parcela', 'Comissão (Bruta)', 'Comissão (s/ Imposto)', 'Breno', 'Uriel', 'Vendedor Recebe', 'Tipo Vendedor', 'Parcela Vendedor', '% Vendedor', 'Referência', 'Status', 'Data Recebimento']]
             total_breno, total_uriel, total_vend = df_view['Breno'].sum(), df_view['Uriel'].sum(), df_view['Vendedor Recebe'].sum()
             
             for col in ['Valor da Venda', 'Comissão (Bruta)', 'Comissão (s/ Imposto)', 'Breno', 'Uriel', 'Vendedor Recebe']:
                 df_view[col] = df_view[col].apply(formatar_brl_puro)
+            df_view['% Vendedor'] = df_view['% Vendedor'].apply(lambda x: "" if pd.isna(x) else f"{x:.2f}%".replace(".", ","))
+            df_view = df_view.rename(columns={'Tipo Vendedor': 'Tipo (vendedor)', 'Parcela Vendedor': 'Parc. vendedor', '% Vendedor': '% vend.'})
             
             col_config = {
                 "Chave": None, 
@@ -320,7 +323,17 @@ if not is_logado:
     with st.sidebar.container(key="cartas_link"):
         st.markdown(link_cartas, unsafe_allow_html=True)
 else:
-    st.sidebar.divider() 
+    st.sidebar.divider()
+    # Quem está logado (nome + perfil), logo acima do menu
+    _nome_log = str(st.session_state.get('nome_vendedor') or st.session_state.get('usuario_logado') or "").strip()
+    _perfil_log = "Administrador" if is_master else "Vendedor"
+    st.sidebar.markdown(
+        f"<div style='display:flex;align-items:center;gap:10px;padding:8px 4px 14px 4px'>"
+        f"<div style='width:34px;height:34px;border-radius:50%;background:var(--brand-soft, #e3efee);display:flex;"
+        f"align-items:center;justify-content:center;font-size:17px'>👤</div>"
+        f"<div style='line-height:1.25'><div style='font-weight:700;font-size:0.95rem'>{html.escape(_nome_log)}</div>"
+        f"<div style='font-size:0.75rem;opacity:.65'>{_perfil_log}</div></div></div>",
+        unsafe_allow_html=True)
     
     # Menu principal. Senhas e Base de Conhecimento agora ficam DENTRO de
     # "Configurações de Sistema" (abas). Assembleias está oculto por enquanto.

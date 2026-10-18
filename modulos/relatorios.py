@@ -250,6 +250,28 @@ def _seletor_periodo(chave, meses_disponiveis, default_modo="Mês Atual"):
 # ==========================================================
 # ABA 1 — FATURAMENTO POR MÊS
 # ==========================================================
+def _detalhe_lancamentos(com, yms):
+    """Lançamentos de comissão recebida do período, com GRUPO e COTA e administradora."""
+    det = com[com["ym"].isin(yms)] if (com is not None and not com.empty) else None
+    if det is None or det.empty:
+        return
+    with st.expander("🔎 Lançamentos do período (grupo e cota)"):
+        det = det.sort_values(["ym", "gc"])
+        st.dataframe(pd.DataFrame({
+            "Mês": det["ym"].apply(_label_mes).values,
+            "Grupo": det["grupo"].apply(_norm_gc).values,
+            "Cota": det["cota"].apply(_norm_gc).values,
+            "Parc.": det["parcela"].astype(str).values if "parcela" in det.columns else "",
+            "Cliente": det["cliente"].apply(_nome_curto).values if "cliente" in det.columns else "",
+            "Administradora": det["administradora"].values,
+            "Vendedor": det["vendedor"].values,
+            "Valor Nota": det["valor_nota"].apply(formatar_brl_puro).values,
+            "Líquido": det["valor_liquido"].apply(formatar_brl_puro).values,
+            "Breno": det["breno"].apply(formatar_brl_puro).values,
+            "Uriel": det["uriel"].apply(formatar_brl_puro).values,
+        }), use_container_width=True, hide_index=True)
+
+
 def _aba_faturamento_mes(com, site_ok, prev):
     st.markdown("#### 💵 Faturamento mês a mês")
     st.caption("Dinheiro que **entrou** na Consorbens: comissão do Consórcio Tradicional "
@@ -316,6 +338,8 @@ def _aba_faturamento_mes(com, site_ok, prev):
                 color=alt.Color("Tipo:N", title=None),
                 tooltip=["Mês", "Tipo", alt.Tooltip("Valor:Q", format=",.2f")],
             ).properties(height=300), use_container_width=True)
+
+    _detalhe_lancamentos(com, yms)
 
     st.caption(f"Período: **{rotulo}**. O ágio das Cartas Contempladas hoje entra sem imposto.")
 
@@ -389,6 +413,7 @@ def _aba_administradora(com, df_vendas, prev):
                 theta="Faturamento:Q", color=alt.Color("Administradora:N", title=None),
                 tooltip=["Administradora", alt.Tooltip("Faturamento:Q", format=",.2f")],
             ).properties(height=280), use_container_width=True)
+    _detalhe_lancamentos(com, yms)
     st.caption(f"Período: **{rotulo}**.")
 
 
@@ -447,6 +472,7 @@ def _aba_produto(com, df_vendas, prev):
     st.dataframe(_tabela_brl(res, ["Volume vendido", "Ticket médio", "Faturamento",
                                    "Líquido", "Previsto"]),
                  use_container_width=True, hide_index=True)
+    _detalhe_lancamentos(com, yms)
     st.caption(f"Período: **{rotulo}**.")
 
 
@@ -512,7 +538,27 @@ def _aba_vendedor(com, df_vendas, prev, is_master):
     if is_master:
         moeda += ["Breno", "Uriel"]
     st.dataframe(_tabela_brl(res, moeda), use_container_width=True, hide_index=True)
+    _detalhe_lancamentos(com, yms)
     st.caption(f"Período: **{rotulo}**.")
+
+
+def _extrato_vendedor(vendas, df_admin, cfg, status_dict, is_master, nome_logado):
+    """Produção mensal + extrato de comissão (com estornos) de um vendedor, com grupo e cota."""
+    from modulos.producao_vendedor import render_producao_vendedor
+    from comissao_vendedor import norm
+    st.divider()
+    if vendas is None or vendas.empty:
+        return
+    if is_master:
+        sistema = {"BRENO LIMA", "URIEL GOMES", "CONSORBENS", "PARTICULAR BRENO", "PARTICULAR URIEL"}
+        nomes = sorted({str(x).strip() for x in vendas["VENDEDOR"].dropna() if str(x).strip()
+                        and norm(x) not in sistema})
+        if not nomes:
+            return st.caption("Nenhum vendedor terceiro com vendas.")
+        quem = st.selectbox("🎯 Produção e extrato do vendedor", nomes, key="rel_vend_extrato")
+    else:
+        quem = nome_logado
+    render_producao_vendedor(vendas, df_admin, cfg, status_dict, quem, chave="pv_rel")
 
 
 # ==========================================================
@@ -593,6 +639,7 @@ def _aba_previsto(prev, site_prev):
         st.markdown("##### 🎯 Cartas Contempladas em análise (Site)")
         st.metric("Ágio previsto", formatar_brl_puro(site_prev["agio"].sum()))
         st.dataframe(pd.DataFrame({
+            "Grupo/Cota": site_prev["grupo_cota"].values if "grupo_cota" in site_prev.columns else "—",
             "Cliente": site_prev["cliente"].values,
             "Representante": site_prev["representante"].values,
             "Produto": site_prev["produto"].values,
@@ -639,6 +686,7 @@ def _aba_cartas(site_ok):
     with st.expander("🔎 Operações do período"):
         st.dataframe(pd.DataFrame({
             "Conclusão": d["data_conclusao"].values,
+            "Grupo/Cota": d["grupo_cota"].values if "grupo_cota" in d.columns else "—",
             "Cliente": d["cliente"].values,
             "Representante": d["representante"].values,
             "Produto": d["produto"].values,
@@ -695,6 +743,17 @@ def _aba_producao(df_vendas):
         pr = d.assign(PRODUTO=d["PRODUTO"].apply(lambda x: normalizar_produto(x) or "—")).groupby("PRODUTO").agg(Cotas=("Nome do cliente", "count"),
                                       Volume=("Valor_Numerico", "sum")).reset_index()
         st.dataframe(_tabela_brl(pr, ["Volume"]), use_container_width=True, hide_index=True)
+    with st.expander("🔎 Cotas do período (grupo e cota)"):
+        dd = d.sort_values("Data_Real", ascending=False)
+        st.dataframe(pd.DataFrame({
+            "Grupo": dd["GRUPO"].astype(str).values, "Cota": dd["COTA"].astype(str).values,
+            "Cliente": dd["Nome do cliente"].apply(_nome_curto).values,
+            "Administradora": dd["ADMINISTRADORA"].values, "Produto": dd["PRODUTO"].values,
+            "Vendedor": dd["VENDEDOR"].values,
+            "Valor": dd["Valor_Numerico"].apply(formatar_brl_puro).values,
+            "Data": dd["Data_Real"].dt.strftime("%d/%m/%Y").values,
+            "Status": dd["STATUS"].fillna("").values,
+        }), use_container_width=True, hide_index=True)
     st.caption(f"Período: **{rotulo}**.")
 
 
@@ -777,6 +836,7 @@ def render_relatorios(supabase, df_vendas_global, df_admin, cfg, status_dict):
         _aba_produto(com, vendas, prev)
     with t[4]:
         _aba_vendedor(com, vendas, prev, is_master)
+        _extrato_vendedor(vendas, df_admin, cfg, status_dict, is_master, nome_vendedor)
     with t[5]:
         _aba_cartas(site_ok)
     with t[6]:

@@ -44,6 +44,8 @@ def filtrar_por_vendedor(df, coluna, eh_adm=None, nome=None):
     if coluna not in df.columns:
         return df.iloc[0:0]          # sem a coluna não dá para provar que é dele: não mostra
     alvo = norm(nome if nome is not None else nome_logado())
+    if alvo == "":
+        return df.iloc[0:0]          # usuário sem nome nunca herda as vendas "sem vendedor"
     return df[df[coluna].apply(norm) == alvo]
 
 
@@ -52,6 +54,8 @@ def cotas_do_vendedor(df_vendas, nome=None) -> set:
     if df_vendas is None or df_vendas.empty or "VENDEDOR" not in df_vendas.columns:
         return set()
     alvo = norm(nome if nome is not None else nome_logado())
+    if alvo == "":
+        return set()
     meu = df_vendas[df_vendas["VENDEDOR"].apply(norm) == alvo]
     return {f"{_gc(r.get('GRUPO'))}/{_gc(r.get('COTA'))}" for _, r in meu.iterrows()}
 

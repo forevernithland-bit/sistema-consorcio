@@ -584,6 +584,7 @@ def render_historico_comissoes(supabase, df_vendas_global=None, df_admin=None):
                 "Grupo/Cota": dfm["grupo"].astype(str) + "/" + dfm["cota"].astype(str),
                 "Parc.": dfm["parcela_fmt"],
                 "Cliente": dfm["cliente"],
+                "Administradora": (dfm["administradora"].fillna("—") if "administradora" in dfm.columns else "—"),
                 "Vendedor": dfm["vendedor"],
                 "Valor Nota": dfm["valor_nota"].apply(formatar_brl_puro),
                 "Líquido": dfm["valor_liquido"].apply(formatar_brl_puro),

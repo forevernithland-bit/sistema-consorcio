@@ -1,6 +1,7 @@
 import re
 import pandas as pd
 from utils import parse_float_safe, normalizar_string, normalizar_produto
+import comissao_vendedor as cv
 
 def total_parcelas_regra(admin, produto, tipo_parcela, df_regras):
     """Nº da ÚLTIMA parcela que paga comissão pra essa combinação de
@@ -39,26 +40,45 @@ def total_parcelas_regra(admin, produto, tipo_parcela, df_regras):
 
 
 def calcular_comissao_vendedor(df_vendas_global, vendedor_nome, data_venda_dt, cfg):
-    """Calcula a taxa e a quantidade de parcelas que o vendedor tem direito com base no volume do mês"""
-    if pd.isna(data_venda_dt): return cfg.get('T1_Pct', 1.0), int(cfg.get('T1_Parc', 4))
-    
-    mes = data_venda_dt.month
-    ano = data_venda_dt.year
-    df_mes = df_vendas_global[(df_vendas_global['VENDEDOR'] == vendedor_nome) &
-                              (df_vendas_global['Data_Real'].dt.month == mes) &
-                              (df_vendas_global['Data_Real'].dt.year == ano)]
-    vol_total = df_mes['Valor_Numerico'].sum()
+    """% do crédito por posição de pagamento para a venda do vendedor (regra em comissao_vendedor.py)."""
+    return cv.percentuais_da_venda(df_vendas_global, vendedor_nome, data_venda_dt, cfg)
 
-    if vol_total <= cfg.get('T1_Max', 500000): 
-        return cfg.get('T1_Pct', 1.0), int(cfg.get('T1_Parc', 4))
-    elif vol_total <= cfg.get('T2_Max', 1500000): 
-        return cfg.get('T2_Pct', 1.5), int(cfg.get('T2_Parc', 5))
-    else: 
-        return cfg.get('T3_Pct', 2.0), int(cfg.get('T3_Parc', 5))
 
-def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict):
+def _datas_comissao_vendedor(df_global, vendedor, df_regras, cfg, status_dict):
+    """Datas (ordenadas) em que o vendedor tem comissão a receber, somando TODAS as cotas dele.
+    Serve para decidir em quais pagamentos o estorno é abatido."""
+    if df_global is None or df_global.empty:
+        return []
+    alvo = df_global[df_global['VENDEDOR'].apply(cv.norm) == cv.norm(vendedor)]
+    if alvo.empty:
+        return []
+    t, _ = gerar_tabela_parcelas(alvo, df_global, df_regras, cfg, status_dict, _estornos=False)
+    if t.empty:
+        return []
+    t = t[t['Vendedor Recebe'] > 0]
+    return sorted(pd.to_datetime(t['data_pagamento_dt']).tolist())
+
+
+def _meta_vendedor(pos, perc_pos, data_venda, cfg):
+    """Rótulos da comissão do vendedor na posição `pos` (0 = 1º pagamento): tipo, parcela k/n, %, referência."""
+    r = cv.regra(cfg)
+    mes = data_venda.strftime("%m/%Y")
+    if pos < 2:
+        return ("Comissão", f"{pos + 1}/2", perc_pos[pos],
+                f"Comissão base — {perc_pos[pos]:.2f}% do crédito ({pos + 1}º pagamento da administradora)".replace(".", ","))
+    if pos == 2:
+        return ("Bônus", "1/1", perc_pos[pos],
+                f"Bônus produção acima de R$ {r['VD_M1']:,.0f} em {mes} — {perc_pos[pos]:.2f}% (3º pagamento)".replace(",", "X").replace(".", ",").replace("X", "."))
+    return ("Bônus", "1/1", perc_pos[pos],
+            f"Bônus produção acima de R$ {r['VD_M2']:,.0f} em {mes} — {perc_pos[pos]:.2f}% (4º pagamento)".replace(",", "X").replace(".", ",").replace("X", "."))
+
+
+def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict, _estornos=True):
     """Gera a tabela completa de previsão de comissionamento e parcelas"""
     hoje = pd.Timestamp.today().normalize()
+    _cache_datas_vd = {}
+    _cache_regra = {}
+    _indice_vol = cv.indice_volumes(df_global)      # produção por vendedor/mês, calculada uma vez
     parcelas_finais = []
     vendas_sem_data = []
 
@@ -98,18 +118,26 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict):
         if status_cota in ["Vendido", ""]: status_cota = "Em Andamento"
 
         tipo_norm = normalizar_string(r.get('TIPO_PARCELA', '') or '')
-        base = df_regras[(df_regras['Admin_Norm'] == admin_norm) & (df_regras['Prod_Norm'] == prod_norm)]
-        if base.empty: continue
-        # 1º: regra específica do tipo de parcela da cota; 2º: regra genérica
-        # (Tipo_Norm vazio); 3º: qualquer uma que casou admin+produto.
-        regra = base[base['Tipo_Norm'] == tipo_norm]
-        if regra.empty:
-            regra = base[base['Tipo_Norm'] == ""]
-        if regra.empty:
-            regra = base
-        regra = regra.iloc[0]
+        chave_regra = (admin_norm, prod_norm, tipo_norm)
+        if chave_regra not in _cache_regra:
+            base = df_regras[(df_regras['Admin_Norm'] == admin_norm) & (df_regras['Prod_Norm'] == prod_norm)]
+            if base.empty:
+                _cache_regra[chave_regra] = None
+            else:
+                # 1º: regra específica do tipo de parcela da cota; 2º: regra genérica
+                # (Tipo_Norm vazio); 3º: qualquer uma que casou admin+produto.
+                regra = base[base['Tipo_Norm'] == tipo_norm]
+                if regra.empty:
+                    regra = base[base['Tipo_Norm'] == ""]
+                if regra.empty:
+                    regra = base
+                _cache_regra[chave_regra] = regra.iloc[0]
+        regra = _cache_regra[chave_regra]
+        if regra is None: continue
         
-        tier_pct, tier_parc = calcular_comissao_vendedor(df_global, vendedor, data_venda, cfg)
+        nv = cv.norm(vendedor)
+        eh_terceiro = cv.eh_terceiro(vendedor)
+        perc_pos = cv.percentuais_da_venda(df_global, vendedor, data_venda, cfg, indice=_indice_vol) if eh_terceiro else []
         temp_parcels = []
         
         for i in range(1, 26):
@@ -128,34 +156,39 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict):
             uriel_rec = 0.0
             
             # Divisão societária e de vendedores
-            if vendedor == "BRENO LIMA":
+            if nv == "BRENO LIMA":
                 breno_rec = corretora_liq * (parse_float_safe(cfg.get('Breno_Breno', 70))/100.0)
                 uriel_rec = corretora_liq * (parse_float_safe(cfg.get('Breno_Uriel', 30))/100.0)
-            elif vendedor == "URIEL GOMES":
+            elif nv == "URIEL GOMES":
                 uriel_rec = corretora_liq * (parse_float_safe(cfg.get('Uriel_Uriel', 70))/100.0)
                 breno_rec = corretora_liq * (parse_float_safe(cfg.get('Uriel_Breno', 30))/100.0)
-            elif vendedor == "Consorbens":
+            elif nv == "CONSORBENS":
                 breno_rec = corretora_liq * (parse_float_safe(cfg.get('Cons_Breno', 50))/100.0)
                 uriel_rec = corretora_liq * (parse_float_safe(cfg.get('Cons_Uriel', 50))/100.0)
-            elif vendedor == "Particular Breno":
+            elif nv == "PARTICULAR BRENO":
                 breno_rec = corretora_liq  # 100% Breno
                 uriel_rec = 0.0
-            elif vendedor == "Particular Uriel":
+            elif nv == "PARTICULAR URIEL":
                 uriel_rec = corretora_liq  # 100% Uriel
                 breno_rec = 0.0
             else:
                 # posição do PAGAMENTO (não o nº da parcela): regra com "buraco" (Yamaha imóvel
                 # paga 1,2,4,5) senão deixava o vendedor sem receber a última fatia.
-                if len(temp_parcels) + 1 <= tier_parc: vend_rec = val_venda * (tier_pct/100.0) / tier_parc
+                pos = len(temp_parcels)
+                if eh_terceiro and pos < len(perc_pos): vend_rec = val_venda * (perc_pos[pos] / 100.0)
                 sobra = corretora_liq - vend_rec
                 breno_rec = sobra * 0.50
                 uriel_rec = sobra * 0.50
 
             data_pagamento = data_venda + pd.Timedelta(days=7) + pd.DateOffset(months=i-1)
-            temp_parcels.append({
+            item = {
                 'parcela': i, 'data_pagamento': data_pagamento, 'bruto': comissao_bruta,
                 'liquido': corretora_liq, 'vend': vend_rec, 'breno': breno_rec, 'uriel': uriel_rec
-            })
+            }
+            if eh_terceiro and vend_rec > 0:
+                item['tipo_vd'], item['parc_vd'], item['pct_vd'], item['ref_vd'] = _meta_vendedor(
+                    len(temp_parcels), perc_pos, data_venda, cfg)
+            temp_parcels.append(item)
 
         # "de N" do "X de N": nº da ÚLTIMA parcela com comissão na regra (antes de
         # Cancelada/Contemplada cortarem a lista). Não é a contagem: regra com
@@ -164,7 +197,42 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict):
 
         # Lógica de cotas Canceladas e Contempladas
         if status_cota == 'Cancelada':
-            temp_parcels = [p for p in temp_parcels if p['data_pagamento'] <= hoje]
+            # com a data do cancelamento cadastrada, nada vence depois dela
+            dt_canc = cv.data_cancelamento(r.get('DATA_CANCELAMENTO'))
+            corte = hoje if pd.isna(dt_canc) else min(hoje, dt_canc)
+            def _ja_paga(p):
+                inf = status_dict.get(f"{cliente}_{grupo}_{cota}_{admin}_{p['parcela']}", {})
+                st_p = inf if isinstance(inf, str) else (inf or {}).get('Status', '')
+                return str(st_p).upper() == 'PAGO'
+            temp_parcels = [p for p in temp_parcels if p['data_pagamento'] <= corte or _ja_paga(p)]
+            # estorno do vendedor: cancelou em até N meses da venda -> devolve parte do que recebeu
+            if _estornos and eh_terceiro and not pd.isna(dt_canc):
+                ganho = sum(p['vend'] for p in temp_parcels)
+                est = cv.estorno(val_venda, data_venda, dt_canc, ganho, cfg)
+                if est > 0:
+                    k = cv.regra(cfg)['VD_EST_PARCELAS']
+                    chave_vd = cv.norm(vendedor)
+                    if chave_vd not in _cache_datas_vd:
+                        _cache_datas_vd[chave_vd] = _datas_comissao_vendedor(df_global, vendedor, df_regras, cfg, status_dict)
+                    # próximos K "relatórios" (meses) em que o vendedor tem comissão a receber depois do cancelamento
+                    meses_dt = {}
+                    for d in _cache_datas_vd[chave_vd]:
+                        if d >= dt_canc.normalize():
+                            meses_dt.setdefault((d.year, d.month), d)
+                    datas_est = [meses_dt[m] for m in sorted(meses_dt)][:k]
+                    base = round(est / k, 2)
+                    ref_base = (f"Estorno de {cliente} ({grupo}/{cota}) — cota cancelada em {dt_canc.strftime('%d/%m/%Y')}, "
+                                f"venda de {data_venda.strftime('%d/%m/%Y')}")
+                    for j in range(1, k + 1):
+                        val_j = base if j < k else round(est - base * (k - 1), 2)
+                        aguarda = j > len(datas_est)
+                        dt_j = datas_est[j - 1] if not aguarda else (max([dt_canc] + datas_est) + pd.DateOffset(months=j - len(datas_est)))
+                        temp_parcels.append({
+                            'parcela': f'Estorno{j}', 'data_pagamento': dt_j, 'bruto': 0.0, 'liquido': 0.0,
+                            'vend': -val_j, 'breno': val_j / 2.0, 'uriel': val_j / 2.0,
+                            'tipo_vd': 'Estorno', 'parc_vd': f"{j}/{k}", 'pct_vd': -cv.regra(cfg)['VD_EST_PCT'] / k,
+                            'ref_vd': ref_base + (" — a abater na próxima comissão do vendedor" if aguarda else ""),
+                            'aguarda': aguarda})
         elif status_cota == 'Contemplada':
             past = [p for p in temp_parcels if p['data_pagamento'] <= hoje]
             future = [p for p in temp_parcels if p['data_pagamento'] > hoje]
@@ -172,7 +240,10 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict):
                 past.append({
                     'parcela': 'Antecipação', 'data_pagamento': hoje,
                     'bruto': sum(p['bruto'] for p in future), 'liquido': sum(p['liquido'] for p in future),
-                    'vend': sum(p['vend'] for p in future), 'breno': sum(p['breno'] for p in future), 'uriel': sum(p['uriel'] for p in future)
+                    'vend': sum(p['vend'] for p in future), 'breno': sum(p['breno'] for p in future), 'uriel': sum(p['uriel'] for p in future),
+                    'tipo_vd': 'Comissão' if eh_terceiro else '', 'parc_vd': 'Antecipação' if eh_terceiro else '',
+                    'pct_vd': sum(p.get('pct_vd', 0) for p in future) if eh_terceiro else None,
+                    'ref_vd': 'Antecipação das parcelas restantes (cota contemplada)' if eh_terceiro else ''
                 })
             temp_parcels = past
             
@@ -190,12 +261,15 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict):
             
             data_str = p['data_pagamento'].strftime("%d/%m/%Y")
             if status_cota == 'Em Atraso': data_str = "⚠️ Travada (Atraso)"
+            if p.get('aguarda'): data_str = "⏳ Próxima comissão"
             
             # Se tivermos uma data editada manualmente no banco, sobrescrevemos a calculada
             if data_custom and pd.notna(data_custom) and str(data_custom).strip() != "":
                 data_str = str(data_custom)
             
-            nome_parcela = f"{p['parcela']} de {total_parc}" if isinstance(p['parcela'], int) else "Antecip. (Contemplada)"
+            if isinstance(p['parcela'], int): nome_parcela = f"{p['parcela']} de {total_parc}"
+            elif str(p['parcela']).startswith('Estorno'): nome_parcela = f"Estorno {p['parc_vd']}"
+            else: nome_parcela = "Antecip. (Contemplada)"
 
             parcelas_finais.append({
                 "Chave": chave_unica,
@@ -213,6 +287,10 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict):
                 "Breno": p['breno'],
                 "Uriel": p['uriel'],
                 "Vendedor Recebe": p['vend'],
+                "Tipo Vendedor": p.get('tipo_vd', ''),
+                "Parcela Vendedor": p.get('parc_vd', ''),
+                "% Vendedor": p.get('pct_vd'),
+                "Referência": p.get('ref_vd', ''),
                 "Status": status_pagamento,
                 "Data Recebimento": data_str
             })

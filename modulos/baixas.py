@@ -75,6 +75,8 @@ def _render_baixa_manual(supabase, df_vendas_global, df_admin, cfg, status_dict)
         st.divider()
         st.subheader("2. Configurar Parcela")
         df_p, _ = gerar_tabela_parcelas(pd.DataFrame([v_atual]), df_vendas_global, df_admin, cfg, status_dict)
+        if not df_p.empty and 'Tipo Vendedor' in df_p.columns:
+            df_p = df_p[df_p['Tipo Vendedor'] != 'Estorno'].reset_index(drop=True)   # estorno não é nota da administradora
 
         if df_p.empty:
             st.warning("Não há parcelas de comissão previstas para esta cota "

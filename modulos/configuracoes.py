@@ -1,6 +1,7 @@
 import streamlit as st
 from utils import parse_float_safe, obter_index_produto
 from database import carregar_dados_iniciais
+import comissao_vendedor as cv
 
 def render_configuracoes(supabase, df_admin_cad, df_admin, lista_admin_bd, cfg, cfg_id):
     st.markdown("### 🏢 Configurações de Sistema")
@@ -118,40 +119,70 @@ def render_configuracoes(supabase, df_admin_cad, df_admin, lista_admin_bd, cfg, 
             
         st.divider()
         st.markdown("#### Vendedor Terceiro")
+        st.caption("Percentuais sobre o **valor da carta**, pagos por posição: 1º, 2º, 3º e 4º pagamento de comissão da administradora. "
+                   "A produção é a soma das cartas vendidas pelo vendedor no mês; vale \"acima de\" (acima, não igual).")
+        rv = cv.regra(cfg)
         ct1, ct2, ct3 = st.columns(3)
         with ct1:
-            t1_max = parse_float_safe(st.text_input("N1 Até (R$)", value=str(int(parse_float_safe(cfg.get("T1_Max", 500000))))))
-            t1_pct = st.number_input("Comissão N1 (%)", value=parse_float_safe(cfg.get("T1_Pct", 1.0)), step=0.1)
-            t1_parc = st.number_input("Qtd N1", value=int(parse_float_safe(cfg.get("T1_Parc", 4))), step=1)
+            st.markdown("**Base (sempre)**")
+            vd_p1 = st.number_input("1º pagamento (%)", value=rv["VD_P1"], step=0.05, format="%.2f")
+            vd_p2 = st.number_input("2º pagamento (%)", value=rv["VD_P2"], step=0.05, format="%.2f")
         with ct2:
-            t2_max = parse_float_safe(st.text_input("N2 Até (R$) ", value=str(int(parse_float_safe(cfg.get("T2_Max", 1500000))))))
-            t2_pct = st.number_input("Comissão N2 (%)", value=parse_float_safe(cfg.get("T2_Pct", 1.5)), step=0.1)
-            t2_parc = st.number_input("Qtd N2", value=int(parse_float_safe(cfg.get("T2_Parc", 5))), step=1)
+            st.markdown("**Bônus 1**")
+            vd_m1 = cv.parse_brl(st.text_input("Produção do mês acima de (R$)", value=str(int(rv["VD_M1"])), key="vd_m1"), None)
+            vd_m1p3 = st.number_input("Mais no 3º pagamento (%)", value=rv["VD_M1_P3"], step=0.05, format="%.2f")
         with ct3:
-            st.markdown("**Teto N3**")
-            t3_pct = st.number_input("Comissão N3 (%)", value=parse_float_safe(cfg.get("T3_Pct", 2.0)), step=0.1)
-            t3_parc = st.number_input("Qtd N3", value=int(parse_float_safe(cfg.get("T3_Parc", 5))), step=1)
+            st.markdown("**Bônus 2** (soma ao bônus 1)")
+            vd_m2 = cv.parse_brl(st.text_input("Produção do mês acima de (R$) ", value=str(int(rv["VD_M2"])), key="vd_m2"), None)
+            vd_m2p4 = st.number_input("Mais no 4º pagamento (%)", value=rv["VD_M2_P4"], step=0.05, format="%.2f")
+        ce1, ce2, ce3 = st.columns(3)
+        with ce1:
+            vd_est = st.number_input("Estorno se cancelar (% do crédito)", value=rv["VD_EST_PCT"], step=0.05, format="%.2f")
+        with ce2:
+            vd_estm = st.number_input("Estorno vale até (meses da venda)", value=int(rv["VD_EST_MESES"]), step=1, min_value=0)
+        with ce3:
+            vd_estp = st.number_input("Estorno abatido em (parcelas)", value=int(rv["VD_EST_PARCELAS"]), step=1, min_value=1,
+                                      help="O estorno é dividido em parcelas iguais, abatidas nos próximos pagamentos de comissão do vendedor.")
+        _limites_ok = vd_m1 is not None and vd_m2 is not None and 0 < vd_m1 < vd_m2
+        if not _limites_ok:
+            st.error("Limites inválidos: use números como 500000 ou 500.000, com o bônus 2 maior que o bônus 1.")
+            vd_m1, vd_m2 = (vd_m1 or 0.0), (vd_m2 or 0.0)
+        _tot = vd_p1 + vd_p2
+        st.caption(f"Total ao vendedor: **{_tot:.2f}%** (base) · **{_tot + vd_m1p3:.2f}%** (acima de R$ {vd_m1:,.0f}) · "
+                   f"**{_tot + vd_m1p3 + vd_m2p4:.2f}%** (acima de R$ {vd_m2:,.0f}).".replace(",", "."))
 
         st.divider()
         imp_in = st.number_input("Imposto Nota (%)", value=parse_float_safe(cfg.get("Imposto", 7.16)), step=0.01)
 
         if st.button("Salvar Regras", type="primary", use_container_width=True):
+            if not _limites_ok:
+                st.error("Corrija os limites do vendedor antes de salvar.")
+                st.stop()
             # Converte tudo para tipos nativos do Python (evita numpy.int64/float64,
             # que o banco pode rejeitar). Percentuais/valores = float; qtd parcelas = int.
             n_c = {
                 "Breno_Breno": float(b_b), "Breno_Uriel": float(b_u),
                 "Uriel_Uriel": float(u_u), "Uriel_Breno": float(u_b),
                 "Cons_Breno": float(c_b), "Cons_Uriel": float(c_u),
-                "T1_Max": float(t1_max), "T1_Pct": float(t1_pct), "T1_Parc": int(t1_parc),
-                "T2_Max": float(t2_max), "T2_Pct": float(t2_pct), "T2_Parc": int(t2_parc),
-                "T3_Pct": float(t3_pct), "T3_Parc": int(t3_parc),
                 "Imposto": float(imp_in)
             }
+            n_vd = {"VD_P1": float(vd_p1), "VD_P2": float(vd_p2), "VD_M1": float(vd_m1), "VD_M1_P3": float(vd_m1p3),
+                    "VD_M2": float(vd_m2), "VD_M2_P4": float(vd_m2p4), "VD_EST_PCT": float(vd_est), "VD_EST_MESES": int(vd_estm), "VD_EST_PARCELAS": int(vd_estp)}
             try:
-                if cfg_id:
-                    supabase.table("config_interna").update(n_c).eq("id", int(cfg_id)).execute()
-                else:
-                    supabase.table("config_interna").insert(n_c).execute()
+                try:
+                    if cfg_id:
+                        supabase.table("config_interna").update({**n_c, **n_vd}).eq("id", int(cfg_id)).execute()
+                    else:
+                        supabase.table("config_interna").insert({**n_c, **n_vd}).execute()
+                except Exception:
+                    # colunas da regra do vendedor ainda não existem (migração 29): salva o resto e avisa
+                    if cfg_id:
+                        supabase.table("config_interna").update(n_c).eq("id", int(cfg_id)).execute()
+                    else:
+                        supabase.table("config_interna").insert(n_c).execute()
+                    st.warning("A regra do vendedor não foi salva: rode a migração 29 no Supabase.")
+                    carregar_dados_iniciais.clear()
+                    st.stop()
                 carregar_dados_iniciais.clear()
                 st.success("✅ Regras atualizadas!")
                 st.rerun()

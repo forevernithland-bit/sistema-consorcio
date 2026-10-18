@@ -86,6 +86,8 @@ def carregar_operacoes_site():
             "data_conclusao": str(data_conclusao)[:10],
             "ym": ym,
             "n_cotas": len(cotas),
+            "grupo_cota": ", ".join(f"{c.get('grupo') or '—'}/{c.get('cota') or '—'}" for c in cotas
+                                    if c.get('grupo') or c.get('cota')) or "—",
         })
 
     df = pd.DataFrame(regs)

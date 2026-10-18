@@ -10,6 +10,7 @@ from database import salvar_status_comissoes, carregar_dados_iniciais
 from modulos.integracao_site import carregar_operacoes_site
 from modulos.financeiro import calcular_resumo_mes_atual
 from escopo import filtrar_por_vendedor, eh_master as _eh_master
+import comissao_vendedor as cv
 
 
 def _render_resumo_mes(supabase, df_vendas_global, df_admin, cfg, status_dict):
@@ -286,10 +287,15 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
                         
                         # --- LINHA 1 ---
                         c_ed1, c_ed2, c_ed3 = st.columns(3)
-                        with c_ed1: novo_status = st.selectbox("Status", opcoes_status, index=opcoes_status.index(status_atual))
+                        with c_ed1: novo_status = st.selectbox("Status", opcoes_status, index=opcoes_status.index(status_atual), disabled=not is_master)
                         with c_ed2:
+                            from database import vendedores_cadastrados as _vc_ed
                             opts_v = ["BRENO LIMA", "URIEL GOMES", "Particular Breno", "Particular Uriel", "Consorbens", "Vendedor Terceiro"]
-                            novo_vendedor = st.selectbox("Vendedor", opts_v, index=opts_v.index(vendedor_atual) if vendedor_atual in opts_v else 0) if is_master else st.text_input("Vendedor", value=vendedor_atual, disabled=True)
+                            opts_v += [v for v in _vc_ed(supabase) if v not in opts_v]
+                            _sem_vend = (vendedor_atual is None) or (str(vendedor_atual).strip() in ("", "None", "nan"))
+                            if _sem_vend: opts_v.insert(0, "")                     # cota sem vendedor continua sem vendedor
+                            elif vendedor_atual not in opts_v: opts_v.append(vendedor_atual)   # nunca troca o vendedor sem querer
+                            novo_vendedor = st.selectbox("Vendedor", opts_v, index=(0 if _sem_vend else (opts_v.index(vendedor_atual) if vendedor_atual in opts_v else 0)), format_func=lambda x: x or "(sem vendedor)") if is_master else st.text_input("Vendedor", value=vendedor_atual, disabled=True)
                         with c_ed3: nova_data = st.date_input("Data da Venda", value=data_atual_obj, format="DD/MM/YYYY") if is_master else st.text_input("Data da Venda", value=formatar_data_br(cota_info['Data_Real']), disabled=True)
 
                         # --- LINHA 2 ---
@@ -310,6 +316,23 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
                             try: idx_produto = lista_produtos.index(produto_atual)
                             except ValueError: idx_produto = 0
                             novo_produto = st.selectbox("Tipo do Bem", options=lista_produtos, index=idx_produto, disabled=not is_master)
+
+                        # Cancelada: a data do cancelamento define se o vendedor é estornado (até 5 meses da venda)
+                        nova_data_canc = ""
+                        if novo_status == "Cancelada":
+                            _dc_atual = cv.data_cancelamento(cota_info.get('DATA_CANCELAMENTO'))
+                            if is_master:
+                                # sem data cadastrada o campo vem vazio: nada é inventado ao salvar
+                                _dc_val = st.date_input("Data do cancelamento", value=(_dc_atual.date() if not pd.isna(_dc_atual) else None),
+                                    format="DD/MM/YYYY",
+                                    help="Se foi até 5 meses depois da venda, o vendedor é estornado em 0,5% do crédito, em 2 parcelas.")
+                                nova_data_canc = _dc_val.strftime("%d/%m/%Y") if _dc_val else ""
+                                if not _dc_val:
+                                    st.caption("⚠️ Informe a data do cancelamento para calcular o estorno do vendedor.")
+                            elif not pd.isna(_dc_atual):
+                                nova_data_canc = _dc_atual.strftime("%d/%m/%Y")
+                            if pd.isna(_dc_atual) and not is_master:
+                                st.caption("Cota cancelada — a data do cancelamento é informada pelo administrador.")
 
                         _tp_opts = ["Linear", "Reduzida"]
                         _tp_atual = str(cota_info.get('TIPO_PARCELA') or "Linear").strip().capitalize()
@@ -337,8 +360,15 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
                                     "PRODUTO": novo_produto,
                                     "TIPO_PARCELA": novo_tipo_parcela
                                 }
-                                
-                                supabase.table("vendas").update(dados_atualizados).eq("id", id_cota).execute()
+                                if is_master:
+                                    dados_atualizados["DATA_CANCELAMENTO"] = (nova_data_canc or None) if novo_status == "Cancelada" else None
+                                try:
+                                    supabase.table("vendas").update(dados_atualizados).eq("id", id_cota).execute()
+                                except Exception:
+                                    if "DATA_CANCELAMENTO" not in dados_atualizados: raise
+                                    dados_atualizados.pop("DATA_CANCELAMENTO")
+                                    supabase.table("vendas").update(dados_atualizados).eq("id", id_cota).execute()
+                                    st.warning("A data do cancelamento não foi salva: rode a migração 29 no Supabase.")
                                 carregar_dados_iniciais.clear()
                                 st.success("Cota atualizada com sucesso!"); st.rerun()
                         with col_b2:
@@ -352,9 +382,11 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
                 if vendas_sem_data: st.warning(f"⚠️ Algumas vendas estão sem data: {', '.join(vendas_sem_data)}")
 
                 if not df_parcelas.empty:
-                    df_view_cli = df_parcelas[df_parcelas['Vendedor Recebe'] > 0].copy() if not is_master else df_parcelas.copy()
+                    df_view_cli = df_parcelas[df_parcelas['Vendedor Recebe'] != 0].copy() if not is_master else df_parcelas.copy()
                     if not df_view_cli.empty:
                         for col in ['Valor da Venda', 'Comissão (Bruta)', 'Comissão (s/ Imposto)', 'Breno', 'Uriel', 'Vendedor Recebe']: df_view_cli[col] = df_view_cli[col].apply(formatar_brl_puro)
+                        df_view_cli['% Vendedor'] = df_view_cli['% Vendedor'].apply(lambda x: "" if pd.isna(x) else f"{x:.2f}%".replace(".", ","))
+                        df_view_cli = df_view_cli.rename(columns={'Tipo Vendedor': 'Tipo (vendedor)', 'Parcela Vendedor': 'Parc. vendedor', '% Vendedor': '% vend.'})
                         
                         c_conf = {
                             "Chave": None, 
@@ -380,6 +412,12 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
     # VISÃO GLOBAL (LISTA DE VENDAS E GRÁFICOS)
     # ==========================================
     else:
+        # Controle de produção mensal, nível de comissão e extrato — do próprio vendedor
+        if not is_master:
+            from modulos.producao_vendedor import render_producao_vendedor
+            render_producao_vendedor(df_vendas_global, df_admin, cfg, status_dict,
+                                     st.session_state.get('nome_vendedor') or "", chave="pv_dash")
+            st.divider()
         df_view = df_vendas_global.copy()
         df_view = filtrar_por_vendedor(df_view, 'VENDEDOR', eh_adm=is_master)
 
