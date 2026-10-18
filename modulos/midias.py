@@ -116,14 +116,15 @@ def render_midias():
     # organizado por TIPO e, dentro do tipo, por nome
     arquivos.sort(key=lambda f: (TIPOS.index(f["_tipo"]), str(f.get("name", "")).lower()))
 
-    c1, c2, c3 = st.columns([2, 2, 2])
+    c1, c2 = st.columns([3, 2], gap="large", vertical_alignment="bottom")
     with c1:
-        visao = st.radio("Visualização", VISOES, index=0, horizontal=True, key="midias_visao")
+        visao = st.segmented_control("Visualização", VISOES, default=VISOES[0], key="midias_visao") or VISOES[0]
     with c2:
-        presentes = [t for t in TIPOS if any(f["_tipo"] == t for f in arquivos)]
-        tipos_sel = st.multiselect("Tipo", presentes, default=presentes, key="midias_tipos")
-    with c3:
-        busca = st.text_input("🔍 Buscar pelo nome", key="midias_busca")
+        busca = st.text_input("🔍 Buscar pelo nome", key="midias_busca", placeholder="Digite parte do nome…")
+    presentes = [t for t in TIPOS if any(f["_tipo"] == t for f in arquivos)]
+    st.write("")
+    tipos_sel = st.pills("Tipo", presentes, selection_mode="multi", default=presentes, key="midias_tipos") or []
+    st.write("")
 
     vis = [f for f in arquivos if f["_tipo"] in tipos_sel
            and (not busca.strip() or busca.strip().lower() in str(f.get("name", "")).lower())]
