@@ -17,6 +17,8 @@ import datetime
 import streamlit as st
 import streamlit.components.v1 as components
 
+from escopo import eh_master
+
 
 @st.cache_data
 def _logo_data_uri(pasta_atual):
@@ -421,7 +423,9 @@ def render_yamaha_sim(supabase, pasta_atual):
     components.html(html_code, height=1900, scrolling=True)
     _ponte_novo_grupo(supabase)
 
-    # ---- edição manual da Base de Dados (sem robô) ----
+    # ---- edição manual da Base de Dados (sem robô) — só administrador: a base é de todos ----
+    if not eh_master():
+        return
     st.divider()
     with st.expander("✍️ Editar a Base de Dados manualmente (sem robô)"):
         st.info("Cadastre/edite grupo ou lance o resultado de uma assembleia à "

@@ -14,6 +14,7 @@ from database import (iniciar_conexao, iniciar_conexao_site, carregar_dados_inic
 from seguranca import permissoes_efetivas, MENU_PARA_PERMISSAO, validar_forca
 from site_usuarios import sincronizar_site
 from regras import gerar_tabela_parcelas
+from escopo import filtrar_por_vendedor
 
 from modulos.dashboard import render_dashboard
 from modulos.nova_venda import render_nova_venda
@@ -93,7 +94,7 @@ if st.session_state['tela_cheia_relatorio']:
         
     df_parcelas_todas, vendas_sem_data = gerar_tabela_parcelas(df_vendas_global, df_vendas_global, df_admin, cfg, status_dict)
     
-    if vendas_sem_data:
+    if vendas_sem_data and is_master:
         st.warning(f"⚠️ **Atenção:** As seguintes vendas estão sem data preenchida: **{', '.join(vendas_sem_data)}**.")
 
     if not df_parcelas_todas.empty:
@@ -101,8 +102,7 @@ if st.session_state['tela_cheia_relatorio']:
         mask = df_parcelas_todas['data_pagamento_dt'].notna()
         df_view = df_parcelas_todas.copy()
         
-        if st.session_state['perfil_logado'] == "Vendedor" and not is_master:
-            df_view = df_view[df_view['Vendedor'] == st.session_state['nome_vendedor']]
+        df_view = filtrar_por_vendedor(df_view, 'Vendedor', eh_adm=is_master)
         
         ft_rel = st.session_state.get('rel_periodo', 'Todas as Vendas')
         
@@ -425,10 +425,7 @@ if not is_logado:
                     st.markdown("##### Acesse o sistema")
                     usuario_input = st.text_input("Usuário (login)", placeholder="ex.: breno ou o login que você recebeu").strip()
                     senha_input = st.text_input("Senha", type="password")
-                    st.caption("Primeiro acesso? Entre com o login e a **senha temporária** que o administrador "
-                              "enviou — em seguida o sistema pede para você criar a sua própria senha. "
-                              "Esqueceu a senha? Peça uma nova ao administrador.")
-                    st.write("") 
+                    st.write("")
                     
                     if st.form_submit_button("ENTRAR", type="primary", use_container_width=True):
                         if not usuario_input:

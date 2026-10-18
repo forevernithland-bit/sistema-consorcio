@@ -2,6 +2,7 @@ import re
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+from escopo import filtrar_por_vendedor, filtrar_fila, preencher_cliente
 from utils import formatar_brl_puro, normalizar_string, normalizar_produto, dt_br
 
 # Administradoras que já têm automação de lance configurada no Worker.
@@ -134,12 +135,11 @@ def render_ofertar_lance(supabase, df_vendas_global):
     if 'TIPO_PRODUTO' in df.columns:
         df = df[df['TIPO_PRODUTO'].apply(normalizar_string) != "CONSORCIOCONTEMPLADO"]
 
-    if not is_master:
-        df = df[df['VENDEDOR'] == st.session_state.get('nome_vendedor')]
+    df = filtrar_por_vendedor(df, 'VENDEDOR', eh_adm=is_master)
 
     if df.empty:
         st.success("Nenhuma cota da Yamaha pendente de lance no momento. 🎉")
-        _painel_status(supabase, is_master)
+        _painel_status(supabase, is_master, df_vendas_global)
         return
 
     df = df.sort_values(by="Data_Real", ascending=False)
@@ -156,7 +156,7 @@ def render_ofertar_lance(supabase, df_vendas_global):
         ]
         if df.empty:
             st.info(f"Nenhuma cota encontrada para “{b}”.")
-            _painel_status(supabase, is_master)
+            _painel_status(supabase, is_master, df_vendas_global)
             return
 
     # ------------------------------------------------------------------
@@ -253,7 +253,7 @@ def render_ofertar_lance(supabase, df_vendas_global):
         _enfileirar(supabase, selecionados, mapa_ultimo)
 
     st.divider()
-    _painel_status(supabase, is_master)
+    _painel_status(supabase, is_master, df_vendas_global)
 
 
 def _enfileirar(supabase, selecionados, mapa_ultimo):
@@ -312,7 +312,7 @@ def _enfileirar(supabase, selecionados, mapa_ultimo):
         st.rerun()
 
 
-def _painel_status(supabase, is_master):
+def _painel_status(supabase, is_master, df_vendas_global=None):
     """Mostra os pedidos da fila do mês escolhido (padrão: mês atual)."""
     st.subheader("📋 Andamento dos Lances")
 
@@ -359,6 +359,12 @@ def _painel_status(supabase, is_master):
         return
 
     df_f = pd.DataFrame(dados)
+    # Vendedor só vê os pedidos das cotas dele (os dos outros clientes ficam de fora)
+    df_f = preencher_cliente(df_f, df_vendas_global)
+    df_f = filtrar_fila(df_f, df_vendas_global, eh_adm=is_master)
+    if df_f is None or df_f.empty:
+        st.info(f"Nenhum lance seu registrado em {sel}.")
+        return
     if 'cliente' in df_f.columns:
         df_f['cliente'] = df_f['cliente'].apply(_nome_curto)
     df_f['Situação'] = df_f.apply(lambda x: _rotulo_situacao(x.to_dict()), axis=1)

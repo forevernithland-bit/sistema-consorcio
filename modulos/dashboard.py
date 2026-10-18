@@ -9,6 +9,7 @@ from regras import gerar_tabela_parcelas
 from database import salvar_status_comissoes, carregar_dados_iniciais
 from modulos.integracao_site import carregar_operacoes_site
 from modulos.financeiro import calcular_resumo_mes_atual
+from escopo import filtrar_por_vendedor, eh_master as _eh_master
 
 
 def _render_resumo_mes(supabase, df_vendas_global, df_admin, cfg, status_dict):
@@ -40,6 +41,10 @@ def _render_cartas_site(busca_nome=""):
         site = None
     if site is None or site.empty:
         return
+    # Vendedor só enxerga as operações em que ELE é o representante
+    site = filtrar_por_vendedor(site, "representante")
+    if site is None or site.empty:
+        return
 
     st.divider()
     st.subheader("🌐 Cartas Contempladas — Clientes do Site")
@@ -62,6 +67,8 @@ def _render_cartas_site(busca_nome=""):
         "Status": df['status_label'].values,
         "Ágio": df['agio'].apply(formatar_brl_puro).values,
     })
+    if not _eh_master():
+        view = view.drop(columns=["Ágio"])      # a margem da Consorbens não é do vendedor
     st.dataframe(view, use_container_width=True, hide_index=True)
 
 
@@ -184,6 +191,7 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
         st.subheader("📦 Cotas do Cliente")
         if not df_vendas_global.empty:
             cotas_cliente = df_vendas_global[df_vendas_global['Nome do cliente'] == cliente_nome].copy()
+            cotas_cliente = filtrar_por_vendedor(cotas_cliente, 'VENDEDOR', eh_adm=is_master)   # só as cotas dele
             if not cotas_cliente.empty:
                 info_a, info_b = st.columns(2)
                 info_a.metric("Total de Cotas Adquiridas", len(cotas_cliente))
@@ -373,7 +381,7 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
     # ==========================================
     else:
         df_view = df_vendas_global.copy()
-        if not is_master: df_view = df_view[df_view['VENDEDOR'] == st.session_state['nome_vendedor']]
+        df_view = filtrar_por_vendedor(df_view, 'VENDEDOR', eh_adm=is_master)
 
         col_t1, col_t2 = st.columns([4, 1])
         with col_t2:
@@ -453,7 +461,7 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
         with g_f2: fp_graf = st.selectbox("📦 Produto:", ["Todos", "Auto", "Imóvel", "Moto", "Caminhão", "Serviços"])
 
         df_g = df_vendas_global.copy()
-        if not is_master: df_g = df_g[df_g['VENDEDOR'] == st.session_state['nome_vendedor']]
+        df_g = filtrar_por_vendedor(df_g, 'VENDEDOR', eh_adm=is_master)
         if ft_graf != "Todas as Vendas" and not df_g.empty:
             mask = df_g['Data_Real'].notna()
             if ft_graf == "Mês Atual": df_g = df_g[mask & (df_g['Data_Real'].dt.month == hoje.month) & (df_g['Data_Real'].dt.year == hoje.year)]

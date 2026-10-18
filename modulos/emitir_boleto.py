@@ -8,6 +8,7 @@ import pandas as pd
 from datetime import datetime
 from utils import formatar_brl_puro, normalizar_string, listar_arquivos_drive, get_drive_service, dt_br
 from database import carregar_dados_iniciais
+from escopo import filtrar_por_vendedor, filtrar_fila, preencher_cliente
 
 
 def _nome_arquivo_boleto(cliente, grupo, cota):
@@ -157,12 +158,11 @@ def render_emitir_boleto(supabase, df_vendas_global, df_cli=None):
     df = df[df['_status_norm'].isin(STATUS_MOSTRAR)]
     if 'TIPO_PRODUTO' in df.columns:
         df = df[df['TIPO_PRODUTO'].apply(normalizar_string) != "CONSORCIOCONTEMPLADO"]
-    if not is_master:
-        df = df[df['VENDEDOR'] == st.session_state.get('nome_vendedor')]
+    df = filtrar_por_vendedor(df, 'VENDEDOR', eh_adm=is_master)
 
     if df.empty:
         st.success("Nenhuma cota da Yamaha para emitir boleto no momento. 🎉")
-        _painel_status(supabase, is_master)
+        _painel_status(supabase, is_master, df_vendas_global)
         return
 
     df = df.sort_values(by="Data_Real", ascending=False)
@@ -178,7 +178,7 @@ def render_emitir_boleto(supabase, df_vendas_global, df_cli=None):
         ]
         if df.empty:
             st.info(f"Nenhuma cota encontrada para “{b}”.")
-            _painel_status(supabase, is_master)
+            _painel_status(supabase, is_master, df_vendas_global)
             return
 
     venda_ids = [int(x) for x in df['id'].tolist() if pd.notna(x)]
@@ -255,7 +255,7 @@ def render_emitir_boleto(supabase, df_vendas_global, df_cli=None):
         _salvar_flags_mensais(supabase, df_edit, df_result)
 
     st.divider()
-    _painel_status(supabase, is_master)
+    _painel_status(supabase, is_master, df_vendas_global)
 
 
 def _enfileirar(supabase, selecionados, mapa_ultimo):
@@ -313,7 +313,7 @@ def _salvar_flags_mensais(supabase, df_antes, df_depois):
         st.info("Nenhuma marcação alterada.")
 
 
-def _painel_status(supabase, is_master):
+def _painel_status(supabase, is_master, df_vendas_global=None):
     st.subheader("📋 Andamento dos Boletos")
     hoje = datetime.today()
     meses = []
@@ -356,6 +356,12 @@ def _painel_status(supabase, is_master):
         return
 
     df_f = pd.DataFrame(dados)
+    # Vendedor só vê os boletos das cotas dele; boletos sem nome de cliente recebem o nome da venda
+    df_f = preencher_cliente(df_f, df_vendas_global)
+    df_f = filtrar_fila(df_f, df_vendas_global, eh_adm=is_master)
+    if df_f is None or df_f.empty:
+        st.info(f"Nenhum boleto seu registrado em {sel}.")
+        return
     df_f['Situação'] = df_f.apply(lambda x: _rotulo_situacao(x.to_dict()), axis=1)
     df_f['Grupo/Cota'] = df_f['grupo'].fillna('').astype(str) + "/" + df_f['cota'].fillna('').astype(str)
     if 'codigo_barras' not in df_f.columns:

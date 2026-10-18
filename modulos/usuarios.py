@@ -194,8 +194,7 @@ def _mostrar_senha_unica():
     gerada = not str(info["senha"]).startswith("(")
     st.divider()
     if gerada:
-        st.success(f"🔑 **Senha temporária de {login}: veja abaixo.** Anote ou copie agora — ela não fica "
-                   "guardada em lugar nenhum e não aparece de novo. Se perder, gere outra.")
+        st.success(f"🔑 Senha temporária de **{login}** (aparece só agora):")
         st.markdown("**Senha temporária**")
         st.code(info["senha"], language=None)
     else:

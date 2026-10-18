@@ -28,6 +28,7 @@ import streamlit as st
 from utils import (formatar_brl_puro, parse_float_safe, limpar_str_nan,
                    normalizar_produto, botao_imprimir)
 from regras import gerar_previsao_pendente, cotas_duplicadas
+from escopo import filtrar_por_vendedor
 from modulos.integracao_site import carregar_operacoes_site
 
 
@@ -745,12 +746,9 @@ def render_relatorios(supabase, df_vendas_global, df_admin, cfg, status_dict):
 
     if not is_master:
         # vendedor só enxerga o que é dele; não vê sócios nem cartas do Site
-        if com is not None and not com.empty:
-            com = com[com["vendedor"] == nome_vendedor]
-        if not prev.empty:
-            prev = prev[prev["vendedor"] == nome_vendedor]
-        if vendas is not None and not vendas.empty:
-            vendas = vendas[vendas["VENDEDOR"] == nome_vendedor]
+        com = filtrar_por_vendedor(com, "vendedor", eh_adm=False, nome=nome_vendedor)
+        prev = filtrar_por_vendedor(prev, "vendedor", eh_adm=False, nome=nome_vendedor)
+        vendas = filtrar_por_vendedor(vendas, "VENDEDOR", eh_adm=False, nome=nome_vendedor)
         site_ok, site_prev = pd.DataFrame(), pd.DataFrame()
         st.info("🔒 Como Vendedor, você vê apenas os relatórios das suas próprias vendas.")
 
@@ -758,7 +756,7 @@ def render_relatorios(supabase, df_vendas_global, df_admin, cfg, status_dict):
         com = pd.DataFrame()
 
     # Problemas de cadastro que distorcem os números — mostrar, não esconder.
-    for a in avisos_prev:
+    for a in (avisos_prev if is_master else []):     # avisos de cadastro falam de cotas de todos
         st.warning(f"⚠️ {a}")
     dups = cotas_duplicadas(df_vendas_global)
     if dups and is_master:
