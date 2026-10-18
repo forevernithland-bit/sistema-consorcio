@@ -140,6 +140,9 @@ def salvar_status_comissoes(supabase: Client, df_editado: pd.DataFrame, df_origi
                 nova_data = None
             else:
                 nova_data = str(nova_data).strip()
+                # "⏳ Próxima comissão" / "⚠️ Travada (Atraso)" são avisos da tela, não datas: gravar isso trava a linha sem data
+                if nova_data.startswith(("⏳", "⚠")):
+                    nova_data = None
             
             payload = {
                 "Chave_Unica": chave, 

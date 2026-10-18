@@ -1,3 +1,4 @@
+from ui_valores import input_valor
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
@@ -224,7 +225,7 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
                             add_cota = st.text_input("Cota *", key=kp + "cota")
                         with ca3:
                             add_admin = st.selectbox("Administradora *", lista_admin_bd, key=kp + "admin")
-                            add_valor = st.number_input("Valor da Carta (R$) *", min_value=0.0, step=1000.0, format="%.2f", key=kp + "valor")
+                            add_valor = input_valor("Valor da Carta (R$) *", key=kp + "valor")
                         add_produto = st.selectbox("Tipo do Bem *", lista_prod_add, key=kp + "prod")
 
                         if st.button("➕ Salvar Nova Cota", type="primary", use_container_width=True, key=kp + "btn"):
@@ -302,7 +303,7 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
                         c_ed4, c_ed5, c_ed6 = st.columns(3)
                         with c_ed4: novo_grupo = st.text_input("Grupo", value=grupo_atual, disabled=not is_master)
                         with c_ed5: nova_cota = st.text_input("Cota", value=cota_atual, disabled=not is_master)
-                        with c_ed6: novo_valor = st.number_input("Valor da Carta (R$)", value=float(valor_atual) if pd.notna(valor_atual) else 0.0, step=1000.0, format="%.2f", disabled=not is_master)
+                        with c_ed6: novo_valor = input_valor("Valor da Carta (R$)", value=float(valor_atual) if pd.notna(valor_atual) else 0.0, key=f"vc_cota_{id_cota}", disabled=not is_master)
                                 
                         # --- LINHA 3 ---
                         c_ed7, c_ed8 = st.columns(2)

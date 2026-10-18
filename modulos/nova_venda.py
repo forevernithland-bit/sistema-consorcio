@@ -1,3 +1,4 @@
+from ui_valores import input_valor
 import streamlit as st
 import requests
 from datetime import datetime
@@ -164,13 +165,13 @@ def render_nova_venda(supabase, df_cli, lista_admin_bd):
                 admin = st.text_input("Digite a Administradora *", key="ct_admin_txt").strip()
             else:
                 admin = admin_sel
-            valor_consorcio = st.number_input("Valor do Consórcio (R$) *", min_value=0.0, step=1000.0, format="%.2f", key="ct_vc")
+            valor_consorcio = input_valor("Valor do Consórcio (R$) *", key="ct_vc")
         with col_v2:
             vendedor = st.selectbox("Vendedor *", VENDEDORES_CONTEMPLADO + [v for v in vendedores_cadastrados(supabase) if v not in VENDEDORES_CONTEMPLADO], index=0, key="ct_vend") if is_master else st.session_state['nome_vendedor']
             produto = st.selectbox("Produto *", PRODUTOS, key="ct_prod")
-            valor_entrada = st.number_input("Valor da Entrada (R$)", min_value=0.0, step=1000.0, format="%.2f", key="ct_ve")
+            valor_entrada = input_valor("Valor da Entrada (R$)", key="ct_ve")
 
-        agio = st.number_input("Ágio (R$) — renda da Consorbens *", min_value=0.0, step=500.0, format="%.2f", key="ct_agio")
+        agio = input_valor("Ágio (R$) — renda da Consorbens *", key="ct_agio")
 
         st.markdown("---")
         if st.button("Salvar Venda (Contemplado)", type="primary", use_container_width=True):

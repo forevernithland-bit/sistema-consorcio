@@ -2,6 +2,7 @@ import streamlit as st
 from utils import parse_float_safe, obter_index_produto
 from database import carregar_dados_iniciais
 import comissao_vendedor as cv
+from ui_valores import input_valor
 
 def render_configuracoes(supabase, df_admin_cad, df_admin, lista_admin_bd, cfg, cfg_id):
     st.markdown("### 🏢 Configurações de Sistema")
@@ -129,11 +130,11 @@ def render_configuracoes(supabase, df_admin_cad, df_admin, lista_admin_bd, cfg, 
             vd_p2 = st.number_input("2º pagamento (%)", value=rv["VD_P2"], min_value=0.0, step=0.05, format="%.2f")
         with ct2:
             st.markdown("**Bônus 1**")
-            vd_m1 = cv.parse_brl(st.text_input("Produção do mês acima de (R$)", value=str(int(rv["VD_M1"])), key="vd_m1"), None)
+            vd_m1 = input_valor("Produção do mês acima de (R$)", value=rv["VD_M1"], key="vd_m1", casas=0)
             vd_m1p3 = st.number_input("Mais no 3º pagamento (%)", value=rv["VD_M1_P3"], min_value=0.0, step=0.05, format="%.2f")
         with ct3:
             st.markdown("**Bônus 2** (soma ao bônus 1)")
-            vd_m2 = cv.parse_brl(st.text_input("Produção do mês acima de (R$) ", value=str(int(rv["VD_M2"])), key="vd_m2"), None)
+            vd_m2 = input_valor("Produção do mês acima de (R$) ", value=rv["VD_M2"], key="vd_m2", casas=0)
             vd_m2p4 = st.number_input("Mais no 4º pagamento (%)", value=rv["VD_M2_P4"], min_value=0.0, step=0.05, format="%.2f")
         ce1, ce2, ce3 = st.columns(3)
         with ce1:
@@ -143,10 +144,9 @@ def render_configuracoes(supabase, df_admin_cad, df_admin, lista_admin_bd, cfg, 
         with ce3:
             vd_estp = st.number_input("Estorno abatido em (parcelas)", value=int(rv["VD_EST_PARCELAS"]), step=1, min_value=1,
                                       help="O estorno é dividido em parcelas iguais, abatidas nos próximos pagamentos de comissão do vendedor.")
-        _limites_ok = vd_m1 is not None and vd_m2 is not None and 0 < vd_m1 < vd_m2
+        _limites_ok = 0 < vd_m1 < vd_m2
         if not _limites_ok:
-            st.error("Limites inválidos: use números como 500000 ou 500.000, com o bônus 2 maior que o bônus 1.")
-            vd_m1, vd_m2 = (vd_m1 or 0.0), (vd_m2 or 0.0)
+            st.error("Limites inválidos: o valor do bônus 2 precisa ser maior que o do bônus 1, e os dois maiores que zero.")
         _tot = vd_p1 + vd_p2
         st.caption(f"Total ao vendedor: **{_tot:.2f}%** (base) · **{_tot + vd_m1p3:.2f}%** (acima de R$ {vd_m1:,.0f}) · "
                    f"**{_tot + vd_m1p3 + vd_m2p4:.2f}%** (acima de R$ {vd_m2:,.0f}).".replace(",", "."))

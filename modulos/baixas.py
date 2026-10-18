@@ -1,3 +1,4 @@
+from ui_valores import input_valor
 import streamlit as st
 import pandas as pd
 from datetime import datetime
@@ -100,8 +101,8 @@ def _render_baixa_manual(supabase, df_vendas_global, df_admin, cfg, status_dict)
             linha = df_p[df_p['Parcela'] == sel_parc].iloc[0]
             val_bruto = float(linha['Comissão (Bruta)'])
             # Valor da nota (comissão) — vem sugerido pela regra, mas é editável (ex.: Itaú)
-            vn = cp2.number_input("Valor da Nota (R$):", value=round(val_bruto, 2), step=10.0,
-                                  help="Valor bruto da comissão recebida desta parcela.")
+            vn = input_valor("Valor da Nota (R$):", value=round(val_bruto, 2), key=f"vn_{v_atual.get('id')}_{sel_parc}",
+                             help="Valor bruto da comissão recebida desta parcela.")
             data_baixa = cp3.date_input("Data da baixa:", value=datetime.today(), format="DD/MM/YYYY")
 
             # MESMO cálculo da importação de NF: imposto + dividir_socios

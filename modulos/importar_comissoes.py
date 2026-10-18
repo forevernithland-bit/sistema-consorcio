@@ -1,3 +1,4 @@
+from ui_valores import input_valor
 import streamlit as st
 import pandas as pd
 import re
@@ -374,7 +375,7 @@ def _render_cadastro_faltantes(supabase, cotas, admin_padrao):
                                          index=_vs.index(c["vendedor"]) if c.get("vendedor") in _vs else 0)
                 produto = cc3.selectbox("Produto *", PRODUTOS, index=2)  # Moto por padrão (Yamaha)
                 cc4, cc5 = st.columns(2)
-                valor_venda = cc4.number_input("Valor da Venda (R$) *", value=float(c["credito"]), step=1000.0)
+                valor_venda = input_valor("Valor da Venda (R$) *", value=float(c["credito"]), em_form=True)
                 admin_v = cc5.text_input("Administradora *", value=admin_padrao.upper())
 
                 if st.form_submit_button("💾 Cadastrar Venda", type="primary"):

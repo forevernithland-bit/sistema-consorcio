@@ -104,6 +104,8 @@ if st.session_state['tela_cheia_relatorio']:
         df_view = df_parcelas_todas.copy()
         
         df_view = filtrar_por_vendedor(df_view, 'Vendedor', eh_adm=is_master)
+        if not is_master:
+            df_view = df_view[df_view['Vendedor Recebe'] != 0]      # vendedor só vê linhas com valor para ele (comissão/bônus/estorno), como na ficha da cota
         
         ft_rel = st.session_state.get('rel_periodo', 'Todas as Vendas')
         

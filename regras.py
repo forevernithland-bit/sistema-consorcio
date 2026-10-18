@@ -264,7 +264,7 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict, _esto
             
             data_str = p['data_pagamento'].strftime("%d/%m/%Y")
             if status_cota == 'Em Atraso': data_str = "⚠️ Travada (Atraso)"
-            if p.get('aguarda'): data_str = "⏳ Próxima comissão"
+            if p.get('aguarda') and str(status_pagamento).upper() != 'PAGO': data_str = "⏳ Próxima comissão"
             
             # Se tivermos uma data editada manualmente no banco, sobrescrevemos a calculada
             if data_custom and pd.notna(data_custom) and str(data_custom).strip() != "":

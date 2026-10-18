@@ -9,6 +9,7 @@ Este módulo só:
      /*__BASE_DADOS__*/), pra aba "Base de Dados" renderizar tudo já
      atualizado, com a data da última coleta em evidência.
 """
+from ui_valores import input_valor
 import os
 import json
 import base64
@@ -151,8 +152,8 @@ def _form_editar_grupo(supabase, grupos):
         plano_codigo = c3.text_input("Plano (código)", value=str(atual.get("plano_codigo") or ""))
 
         c1, c2, c3 = st.columns(3)
-        credito = c1.number_input("Crédito (R$)", min_value=0.0, step=1000.0,
-                                  value=float(atual.get("credito") or 0))
+        with c1:
+            credito = input_valor("Crédito (R$)", value=float(atual.get("credito") or 0), em_form=True)
         taxa = c2.number_input("Taxa de adm. (%)", min_value=0.0, step=0.1,
                                value=float(atual.get("taxa") or 0))
         vagas = c3.number_input("Vagas", min_value=0, step=1, value=int(atual.get("vagas") or 0))
@@ -162,8 +163,8 @@ def _form_editar_grupo(supabase, grupos):
                                          value=int(atual.get("prazo_restante") or 0))
         prazo_total = c2.number_input("Prazo total do grupo (meses)", min_value=0, step=1,
                                       value=int(atual.get("prazo_total") or 0))
-        parcela = c3.number_input("Parcela base (R$)", min_value=0.0, step=10.0,
-                                  value=float(atual.get("parcela") or 0))
+        with c3:
+            parcela = input_valor("Parcela base (R$)", value=float(atual.get("parcela") or 0), em_form=True)
 
         c1, c2, c3 = st.columns(3)
         prox_assembleia = c1.text_input("Próxima assembleia (DD/MM/AAAA)",
