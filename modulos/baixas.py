@@ -14,8 +14,8 @@ from modulos.importar_comissoes import (
 def render_baixas(supabase, df_vendas_global, df_admin, cfg, status_dict, lista_admin_bd=None):
     st.markdown("### 💰 Baixar Parcelas de Comissão")
 
-    aba_import, aba_manual, aba_hist = st.tabs(
-        ["📥 Importar Resumo (NF)", "✍️ Baixa Manual", "📚 Histórico"]
+    aba_import, aba_manual, aba_hist, aba_vend = st.tabs(
+        ["📥 Importar Resumo (NF)", "✍️ Baixa Manual", "📚 Histórico", "👥 Pagamento a Vendedores"]
     )
 
     with aba_import:
@@ -26,6 +26,10 @@ def render_baixas(supabase, df_vendas_global, df_admin, cfg, status_dict, lista_
 
     with aba_manual:
         _render_baixa_manual(supabase, df_vendas_global, df_admin, cfg, status_dict)
+
+    with aba_vend:
+        from modulos.pagto_vendedores import render_pagamento_vendedores
+        render_pagamento_vendedores(supabase, df_vendas_global, df_admin, cfg, status_dict)
 
 
 def _mes_competencia(data_ddmmaaaa):

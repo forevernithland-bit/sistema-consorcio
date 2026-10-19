@@ -269,6 +269,8 @@ _CSS = """
 .sc-tr.hd{font-size:.7rem;letter-spacing:.05em;text-transform:uppercase;font-weight:800;color:var(--mut);background:rgba(255,255,255,.06);border-top:none;line-height:1.25;}
 .sc-tb.n8 .sc-tr{grid-template-columns:1.05fr repeat(7,minmax(0,1fr));gap:6px;padding:9px 12px;font-size:.82rem;}
 .sc-tb.n8 .sc-tr.hd{font-size:.66rem;}
+.sc-tb.n9 .sc-tr{grid-template-columns:1fr repeat(8,minmax(0,1fr));gap:5px;padding:9px 10px;font-size:.78rem;}
+.sc-tb.n9 .sc-tr.hd{font-size:.62rem;}
 .sc-tr > div{min-width:0;}
 .sc-tr small{display:block;color:var(--mut);font-size:.7rem;font-weight:500;}
 .sc-tr .m{font-weight:700;color:#fff;}
@@ -327,7 +329,7 @@ _CSS = """
   .sc-wr.res .vl{font-size:1.3rem;}
   .sc-tr.hd{display:none;}
   .sc-tb .sc-sc{max-height:none;}
-  .sc-tb.n8 .sc-tr{grid-template-columns:1fr 1fr;padding:11px 14px;gap:6px 12px;font-size:.86rem;}
+  .sc-tb.n8 .sc-tr, .sc-tb.n9 .sc-tr{grid-template-columns:1fr 1fr;padding:11px 14px;gap:6px 12px;font-size:.86rem;}
   .sc-tr{grid-template-columns:1fr 1fr;padding:11px 14px;gap:6px 12px;}
   .sc-tr > div:first-child{grid-column:1 / -1;font-size:.95rem;}
   .sc-tr > div[data-l]::before{content:attr(data-l);display:block;font-size:.66rem;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);font-weight:700;margin-bottom:1px;}
@@ -537,17 +539,20 @@ def _cel_bruta(valor, pct=None, parc=None):
     return f'{_h(valor)} &middot; {_pct(round(pct, 2))}' + (f'<small>{parc}</small>' if parc else "")
 
 
-def _bloco_corretora(por_mes, regra_adm, imposto, desc=False, vendas=None):
-    """Modo vendedor (master): entrada real da administradora -> imposto -> líquido -> vendedor -> Consorbens -> Breno/Uriel."""
+def _bloco_corretora(por_mes, regra_adm, imposto, modo_desc=2, vendas=None):
+    """Modo vendedor (master): entrada da administradora -> imposto -> líquido -> vendedor -> Consorbens -> Breno/Uriel.
+    modo_desc = cv.desconta_dos_socios(cfg): 0 nada sai da Consorbens, 1 base + prêmio, 2 só o prêmio (padrão; a base é custo da Ecoclim)."""
+    modo_desc = int(modo_desc) if modo_desc in (0, 1, 2, True, False) else 2
     info, pct_t = _info_pct(vendas, regra_adm)
     tp = f" ({_pct(round(pct_t, 2))})" if pct_t is not None else ""
     bruta = float(por_mes["Comissão bruta (adm.)"].sum())
     imp = float(por_mes["Imposto"].sum())
     liq = float(por_mes["Líquido corretora"].sum())
-    vend = float(por_mes["Total vendedor"].sum())
     base = float(por_mes["Comissão base"].sum())
     prem = float(por_mes["Bônus"].sum())
+    vend = base + prem
     sobra = float(por_mes["Consorbens (após vendedor)"].sum())
+    desc_tot = float(por_mes["Descontado da Consorbens"].sum()) if "Descontado da Consorbens" in por_mes.columns else liq - sobra
     esc = max(bruta, liq, vend, abs(sobra), 0.01)
     neg = sobra < -0.004
 
@@ -560,43 +565,50 @@ def _bloco_corretora(por_mes, regra_adm, imposto, desc=False, vendas=None):
                 f'<div class="vl">{valor_txt}</div>'
                 f'<div class="tk"><div class="bar {barcls}" style="left:{pc(ini):.2f}%;width:{max(pc(fim) - pc(ini), 0.6):.2f}%"></div></div></div>')
 
-    if desc:
-        linha_vend = linha("&minus;", "Vendedor recebe", f"base {_h(base)} + prêmios {_h(prem)} · descontado da Consorbens", _hs(-vend),
-                           0 if neg else liq - vend, liq, barcls="gold")
+    if modo_desc == 2:      # base = custo da Ecoclim (informativa); prêmio sai da Consorbens
+        linhas_vend = (linha("&nbsp;", "Comissão base do vendedor (custo da Ecoclim, não desconta)", "1º e 2º pagamentos do vendedor", _h(base), 0, base, barcls="gold")
+                       + linha("&minus;", "Prêmios pagos ao vendedor (descontados da Consorbens)", "bônus de produção (3º e 4º pagamentos)", _hs(-prem),
+                               0 if neg else max(liq - prem, 0.0), liq, barcls="gold"))
+        sub_fica = "o líquido menos os prêmios do vendedor"
+        c_base, c_prem = ("Base do vendedor (Ecoclim)", ""), ("Prêmio do vendedor (descontado)", "&minus; ")
+    elif modo_desc == 1:    # tudo sai da Consorbens
+        linhas_vend = linha("&minus;", "Pago ao vendedor", f"base {_h(base)} + prêmios {_h(prem)} · descontado da Consorbens", _hs(-vend),
+                            0 if neg else max(liq - vend, 0.0), liq, barcls="gold")
         sub_fica = "depois de pagar o vendedor"
-        rot_v, op_v = "&minus; Vendedor recebe", "&minus; "
-    else:   # custo do vendedor fica com a Ecoclim: aparece só como informação, não desconta da Consorbens
-        linha_vend = linha("&nbsp;", "Vendedor recebe (custo da Ecoclim)",
-                           f"base {_h(base)} + prêmios {_h(prem)} · não é descontado da Consorbens", _h(vend), 0, vend, barcls="gold")
+        c_base, c_prem = ("Base do vendedor (descontada)", "&minus; "), ("Prêmio do vendedor (descontado)", "&minus; ")
+    else:                   # nada sai da Consorbens
+        linhas_vend = linha("&nbsp;", "Vendedor recebe (custo da Ecoclim)",
+                            f"base {_h(base)} + prêmios {_h(prem)} · não é descontado da Consorbens", _h(vend), 0, vend, barcls="gold")
         sub_fica = "o líquido inteiro; o custo do vendedor é da Ecoclim"
-        rot_v, op_v = "Vendedor recebe (Ecoclim)", ""
+        c_base, c_prem = ("Base do vendedor (Ecoclim)", ""), ("Prêmio do vendedor (Ecoclim)", "")
     rows = (linha("&nbsp;", f"Entrada bruta da administradora{tp}", "comissão que a administradora nos paga, pela regra cadastrada", _h(bruta), 0, bruta)
             + linha("&minus;", "Imposto", f"{_pct(imposto)} sobre a bruta", _hs(-imp), liq, bruta, barcls="neg")
             + linha("=", "Líquido que entra na corretora", "", _h(liq), 0, liq)
-            + linha_vend
+            + linhas_vend
             + linha("=", "Consorbens recebe", sub_fica, _hs(sobra), 0, abs(sobra),
                     cls="res" + (" bad" if neg else ""), barcls="neg" if neg else ""))
-    split = (f'<div class="sc-split"><div class="sc-t"><span>Breno · 50% da Consorbens</span><b>{_hs(sobra / 2)}</b></div>'
-             f'<div class="sc-t"><span>Uriel · 50% da Consorbens</span><b>{_hs(sobra / 2)}</b></div></div>')
+    split = (f'<div class="sc-split"><div class="sc-t"><span>Breno · 50% do que a Consorbens recebe</span><b>{_hs(sobra / 2)}</b></div>'
+             f'<div class="sc-t"><span>Uriel · 50% do que a Consorbens recebe</span><b>{_hs(sobra / 2)}</b></div></div>')
 
     cab = (f'<div class="sc-tr hd"><div>Mês</div><div>Entrada bruta (adm.){tp}</div><div>&minus; Imposto</div><div>= Líquido que entra</div>'
-           f'<div>{rot_v}</div><div>Consorbens recebe</div><div>Breno 50%</div><div>Uriel 50%</div></div>')
+           f'<div>{c_base[1]}{c_base[0]}</div><div>{c_prem[1]}{c_prem[0]}</div><div>= Consorbens recebe</div><div>Breno 50%</div><div>Uriel 50%</div></div>')
+
+    def celulas(bruta_cel, imp_v, liq_v, base_v, prem_v, sb, ng):
+        return (f'<div data-l="Entrada bruta (adm.)">{bruta_cel}</div>'
+                f'<div data-l="&minus; Imposto">{_h(imp_v)}</div>'
+                f'<div data-l="= Líquido que entra">{_h(liq_v)}</div>'
+                f'<div data-l="{c_base[1]}{c_base[0]}">{_h(base_v)}</div>'
+                f'<div data-l="{c_prem[1]}{c_prem[0]}">{_h(prem_v)}</div>'
+                f'<div data-l="= Consorbens recebe" class="fi{" ng" if ng else ""}">{_hs(sb)}</div>'
+                f'<div data-l="Breno 50%">{_hs(sb / 2)}</div><div data-l="Uriel 50%">{_hs(sb / 2)}</div>')
     lin = []
     for _, x in por_mes.iterrows():
         sb = float(x["Consorbens (após vendedor)"])
         lin.append(f'<div class="sc-tr"><div class="m">{_rot_mes(x["ym"])}</div>'
-                   f'<div data-l="Entrada bruta (adm.)">{_cel_bruta(x["Comissão bruta (adm.)"], *info.get(x["ym"], (None, None)))}</div>'
-                   f'<div data-l="&minus; Imposto">{_h(x["Imposto"])}</div>'
-                   f'<div data-l="= Líquido que entra">{_h(x["Líquido corretora"])}</div>'
-                   f'<div data-l="{op_v}Vendedor recebe">{_h(x["Total vendedor"])}{("<small>base " + _h(x["Comissão base"]) + " · prêmio " + _h(x["Bônus"]) + "</small>") if x["Total vendedor"] > 0 else ""}</div>'
-                   f'<div data-l="Consorbens recebe" class="fi{" ng" if sb < -0.004 else ""}">{_hs(sb)}</div>'
-                   f'<div data-l="Breno 50%">{_hs(sb / 2)}</div><div data-l="Uriel 50%">{_hs(sb / 2)}</div></div>')
-    tot = (f'<div class="sc-tr tt"><div class="m">TOTAL</div><div data-l="Entrada bruta (adm.)">{_cel_bruta(bruta, pct_t)}</div>'
-           f'<div data-l="&minus; Imposto">{_h(imp)}</div><div data-l="= Líquido que entra">{_h(liq)}</div>'
-           f'<div data-l="{op_v}Vendedor recebe">{_h(vend)}</div>'
-           f'<div data-l="Consorbens recebe" class="fi{" ng" if neg else ""}">{_hs(sobra)}</div>'
-           f'<div data-l="Breno 50%">{_hs(sobra / 2)}</div><div data-l="Uriel 50%">{_hs(sobra / 2)}</div></div>')
-    tabela = f'<div class="sc-tb n8">{cab}<div class="sc-sc">{"".join(lin)}</div>{tot}</div>'
+                   + celulas(_cel_bruta(x["Comissão bruta (adm.)"], *info.get(x["ym"], (None, None))), x["Imposto"],
+                             x["Líquido corretora"], x["Comissão base"], x["Bônus"], sb, sb < -0.004) + '</div>')
+    tot = ('<div class="sc-tr tt"><div class="m">TOTAL</div>' + celulas(_cel_bruta(bruta, pct_t), imp, liq, base, prem, sobra, neg) + '</div>')
+    tabela = f'<div class="sc-tb n9">{cab}<div class="sc-sc">{"".join(lin)}</div>{tot}</div>'
     return ('<div class="sc-sec"><h4>🏢 Entrada real da administradora e divisão</h4>'
             '<small>Seguindo a regra de comissão da administradora escolhida</small></div>'
             + _chips_regra(regra_adm) + f'<div class="sc-wf">{rows}</div>' + split

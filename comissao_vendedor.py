@@ -36,8 +36,9 @@ REGRA_PADRAO = {
     "VD_EST_PCT": 0.5,       # estorno: % do crédito
     "VD_EST_MESES": 5,       # estorno vale se cancelar em até N meses da venda
     "VD_EST_PARCELAS": 2,    # o estorno é abatido em N parcelas iguais, nos próximos N pagamentos do vendedor
-    "VD_DESCONTA_SOCIOS": 0,  # 0 = a comissão do vendedor NÃO sai do que Breno/Uriel recebem (custo da Ecoclim, por ora);
-                              # 1 = sai da corretora antes da divisão 50/50
+    "VD_DESCONTA_SOCIOS": 1,  # o que da comissão do vendedor sai do que a corretora divide entre Breno/Uriel:
+                              # 0 = nada (tudo custo da Ecoclim); 1 = tudo (base + bônus);
+                              # 2 = só o BÔNUS de superação (a base fica como custo da Ecoclim). Padrão: 1 — tudo sai da comissão da corretora
 }
 
 
@@ -59,8 +60,14 @@ def regra(cfg):
 
 
 def desconta_dos_socios(cfg):
-    """True se a comissão do vendedor deve ser descontada da corretora antes de dividir entre os sócios."""
-    return bool(_num((cfg or {}).get("VD_DESCONTA_SOCIOS"), REGRA_PADRAO["VD_DESCONTA_SOCIOS"]))
+    """Modo do desconto da comissão do vendedor sobre o que a corretora divide: 0 nada, 1 tudo, 2 só o bônus."""
+    m = int(_num((cfg or {}).get("VD_DESCONTA_SOCIOS"), REGRA_PADRAO["VD_DESCONTA_SOCIOS"]))
+    return m if m in (0, 1, 2) else REGRA_PADRAO["VD_DESCONTA_SOCIOS"]
+
+
+def parte_descontada(modo, base, bonus):
+    """Quanto da comissão do vendedor sai da corretora, conforme o modo."""
+    return base + bonus if modo == 1 else (bonus if modo == 2 else 0.0)
 
 
 def norm(s):
@@ -262,7 +269,8 @@ def simular(vendas, cfg, regra_admin=None, imposto=7.16):
         liq = d["Bruto"] * (1 - imposto / 100.0)
         linhas.append({"ym": pay, "Comissão base": d["Base"], "Bônus": d["Bônus"], "Total vendedor": vend,
                        "Comissão bruta (adm.)": d["Bruto"], "Imposto": d["Bruto"] - liq, "Líquido corretora": liq,
-                       "Consorbens (após vendedor)": liq - (vend if desconta else 0.0)})
+                       "Descontado da Consorbens": parte_descontada(desconta, d["Base"], d["Bônus"]),
+                       "Consorbens (após vendedor)": liq - parte_descontada(desconta, d["Base"], d["Bônus"])})
     return pd.DataFrame(linhas), pd.DataFrame(niveis)
 
 

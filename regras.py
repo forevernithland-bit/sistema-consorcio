@@ -155,6 +155,7 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict, _esto
             corretora_liq = comissao_bruta - imposto_val
             
             vend_rec = 0.0
+            vend_desc = 0.0
             breno_rec = 0.0
             uriel_rec = 0.0
             
@@ -179,16 +180,18 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict, _esto
                 # paga 1,2,4,5) senão deixava o vendedor sem receber a última fatia.
                 pos = len(temp_parcels)
                 if eh_terceiro and pos < len(perc_pos): vend_rec = val_venda * (perc_pos[pos] / 100.0)
-                # por ora o custo do vendedor fica com a Ecoclim: a corretora divide o líquido inteiro
-                # (cfg VD_DESCONTA_SOCIOS=1 desconta o vendedor antes de dividir)
-                sobra = corretora_liq - (vend_rec if cv.desconta_dos_socios(cfg) else 0.0)
+                # o que sai da corretora: por padrão TUDO (base + bônus do vendedor);
+                # cfg VD_DESCONTA_SOCIOS: 0 nada, 1 tudo, 2 só o bônus
+                vend_desc = cv.parte_descontada(cv.desconta_dos_socios(cfg), vend_rec if pos < 2 else 0.0, vend_rec if pos >= 2 else 0.0)
+                sobra = corretora_liq - vend_desc
                 breno_rec = sobra * 0.50
                 uriel_rec = sobra * 0.50
 
             data_pagamento = data_venda + pd.Timedelta(days=7) + pd.DateOffset(months=i-1)
             item = {
                 'parcela': i, 'data_pagamento': data_pagamento, 'bruto': comissao_bruta,
-                'liquido': corretora_liq, 'vend': vend_rec, 'breno': breno_rec, 'uriel': uriel_rec
+                'liquido': corretora_liq, 'vend': vend_rec, 'breno': breno_rec, 'uriel': uriel_rec,
+                'vend_desc': vend_desc
             }
             if eh_terceiro and vend_rec > 0:
                 item['tipo_vd'], item['parc_vd'], item['pct_vd'], item['ref_vd'] = _meta_vendedor(
@@ -232,7 +235,7 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict, _esto
                         val_j = base if j < k else round(est - base * (k - 1), 2)
                         aguarda = j > len(datas_est)
                         dt_j = datas_est[j - 1] if not aguarda else (max([dt_canc] + datas_est) + pd.DateOffset(months=j - len(datas_est)))
-                        _volta = val_j / 2.0 if cv.desconta_dos_socios(cfg) else 0.0   # só volta aos sócios se o vendedor saiu do bolso deles
+                        _volta = val_j / 2.0 if cv.desconta_dos_socios(cfg) == 1 else 0.0   # só volta aos sócios se a base do vendedor saiu do bolso deles
                         temp_parcels.append({
                             'parcela': f'Estorno{j}', 'data_pagamento': dt_j, 'bruto': 0.0, 'liquido': 0.0,
                             'vend': -val_j, 'breno': _volta, 'uriel': _volta,
