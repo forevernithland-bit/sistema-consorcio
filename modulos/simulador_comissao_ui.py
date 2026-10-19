@@ -783,7 +783,9 @@ def render_simulador(df_admin, cfg, master=False):
                     quem = "BRENO"          # só rotula: o par Breno_* do cfg vale para "sócio que vendeu" / "outro sócio"
                 if df_admin is not None and not df_admin.empty:
                     a1, a2, a3 = st.columns(3)
-                    adm = a1.selectbox("Administradora", sorted(df_admin["Administradora"].dropna().unique()), key="sim_adm")
+                    _adms = sorted(df_admin["Administradora"].dropna().unique())
+                    _i_adm = next((i for i, x in enumerate(_adms) if str(x).strip().upper() == "YAMAHA"), 0)   # abre em YAMAHA
+                    adm = a1.selectbox("Administradora", _adms, index=_i_adm, key="sim_adm")
                     prods = sorted(df_admin[df_admin["Administradora"] == adm]["Produto"].dropna().unique())
                     prod = a2.selectbox("Produto", prods, key="sim_prod")
                     sub = df_admin[(df_admin["Administradora"] == adm) & (df_admin["Produto"] == prod)]
