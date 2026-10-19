@@ -159,7 +159,7 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
         with c2:
             email = st.text_input("Email", key=key_email, disabled=not is_master)
             aniversario_edit = st.text_input("Data de Aniversário (DD/MM/AAAA)", key=key_aniv, on_change=lambda: st.session_state.update({key_aniv: formatar_data(st.session_state[key_aniv])}), disabled=not is_master, placeholder="DD/MM/AAAA")
-            renda_edit = st.text_input("Renda Mensal (R$)", key=key_renda, on_change=lambda: st.session_state.update({key_renda: formatar_moeda(st.session_state[key_renda])}), disabled=not is_master)
+            renda_edit = st.text_input("Renda Mensal (R$)‍", key=key_renda, on_change=lambda: st.session_state.update({key_renda: formatar_moeda(st.session_state[key_renda])}), disabled=not is_master)
         
         if is_master:
             col_b1, col_b2 = st.columns(2)
@@ -347,7 +347,7 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
 
                         col_b1, col_b2 = st.columns(2)
                         with col_b1:
-                            if st.button("💾 Salvar Alterações na Cota", type="primary", use_container_width=True):
+                            if is_master and st.button("💾 Salvar Alterações na Cota", type="primary", use_container_width=True):   # vendedor não grava nada na cota (campos já vêm desabilitados)
                                 data_formatada = nova_data.strftime("%d/%m/%Y") if not isinstance(nova_data, str) else nova_data
                                 
                                 dados_atualizados = {

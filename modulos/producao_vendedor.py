@@ -8,7 +8,7 @@ import pandas as pd
 import streamlit as st
 
 import comissao_vendedor as cv
-from regras import gerar_tabela_parcelas
+from regras import gerar_tabela_parcelas, _gc
 from utils import formatar_brl_puro
 
 _NOMES_NIVEL = ["Base", "Bônus 1", "Bônus 2"]
@@ -45,11 +45,23 @@ def resumo_meses(df_vendas, vendedor, cfg):
     return pd.DataFrame(linhas).sort_values("ym", ascending=False).reset_index(drop=True)
 
 
+def _sem_cota_duplicada(d):
+    """Mesma cota (grupo/cota) cadastrada duas vezes: fica uma só (a mais recente, igual à previsão do Financeiro),
+    senão o extrato do vendedor dobraria a comissão e o estorno dessa cota."""
+    if d.empty or "GRUPO" not in d.columns or "COTA" not in d.columns:
+        return d
+    gc = pd.Series([f"{_gc(g)}/{_gc(c)}" for g, c in zip(d["GRUPO"], d["COTA"])], index=d.index)
+    ordenado = d.assign(_gc=gc).sort_values("Data_Real", na_position="first", kind="stable")
+    dup = ordenado["_gc"].duplicated(keep="last") & (ordenado["_gc"] != "/")
+    return ordenado[~dup].drop(columns="_gc").sort_index()
+
+
 def extrato(df_vendas, df_admin, cfg, status_dict, vendedor):
     """Parcelas de comissão do vendedor (inclui linhas de estorno, negativas)."""
     d = _vendas_do_vendedor(df_vendas, vendedor)
     if d.empty:
         return pd.DataFrame(), []
+    d = _sem_cota_duplicada(d)
     t, _ = gerar_tabela_parcelas(d, df_vendas, df_admin, cfg, status_dict)
     if t.empty:
         return t, []

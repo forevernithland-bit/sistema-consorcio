@@ -41,7 +41,7 @@ def render_nova_venda(supabase, df_cli, lista_admin_bd):
     with col_c2:
         email = st.text_input("Email", key="v_email")
         aniversario = st.text_input("Data de Aniversário (DD/MM/AAAA)", key="v_ani", on_change=lambda: st.session_state.update({'v_ani': formatar_data(st.session_state.get('v_ani',''))}), placeholder="DD/MM/AAAA", max_chars=10)
-        renda = st.text_input("Renda Mensal (R$)", key="v_ren", on_change=lambda: st.session_state.update({'v_ren': formatar_moeda(st.session_state.get('v_ren',''))}), placeholder="R$ 0,00")
+        renda = st.text_input("Renda Mensal (R$)‍", key="v_ren", on_change=lambda: st.session_state.update({'v_ren': formatar_moeda(st.session_state.get('v_ren',''))}), placeholder="R$ 0,00")
 
     st.markdown("##### Busca Rápida de Endereço")
     col_cep1, col_cep2 = st.columns([1, 3])
@@ -107,7 +107,7 @@ def render_nova_venda(supabase, df_cli, lista_admin_bd):
             cq1, cq2, cq3 = st.columns(3)
             with cq1: grp = st.text_input(f"Grupo *", key=f"g_{i}")
             with cq2: cta = st.text_input(f"Cota *", key=f"c_{i}")
-            with cq3: val_str = st.text_input(f"Valor (R$) *", key=f"v_{i}", on_change=lambda idx=i: st.session_state.update({f'v_{idx}': formatar_moeda(st.session_state.get(f'v_{idx}',''))}), placeholder="R$ 0,00")
+            with cq3: val_str = st.text_input(f"Valor (R$) *‍", key=f"v_{i}", on_change=lambda idx=i: st.session_state.update({f'v_{idx}': formatar_moeda(st.session_state.get(f'v_{idx}',''))}), placeholder="R$ 0,00")
             cotas_data.append({"grupo": grp, "cota": cta, "valor_str": val_str})
 
         if st.button("➕ Adicionar mais uma Cota"):

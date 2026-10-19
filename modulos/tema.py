@@ -297,57 +297,7 @@ def montar_css(chave_tema=None):
     ::-webkit-scrollbar-thumb {{ background: #cbd5e1; border-radius: 10px; }}
     ::-webkit-scrollbar-thumb:hover {{ background: var(--brand); }}
 
-    /* ==========================================================
-       SIDEBAR
-       ========================================================== */
-    [data-testid="stSidebar"] {{ border-right: 1px solid var(--line) !important; box-shadow: 6px 0 28px rgba(15,23,42,0.04); }}
-    [data-testid="stSidebar"] > div:first-child {{ background: linear-gradient(180deg, #ffffff 0%, #fafbfd 100%) !important; }}
-    [data-testid="stSidebar"] p, [data-testid="stSidebar"] span, [data-testid="stSidebar"] div {{ color: #0f172a !important; }}
-    [data-testid="stSidebar"] hr {{ border-bottom-color: var(--line) !important; margin: 0.5rem 0 !important; }}
-    [data-testid="stSidebar"] button {{ border: 1px solid #cbd5e1 !important; background-color: #f8fafc !important; }}
-
-    /* Navegação em pílulas com barra de destaque animada */
-    [data-testid="stSidebar"] div[role="radiogroup"] label {{
-        padding: 5px 12px !important; border-radius: 10px !important; margin: 1.5px 0 !important;
-        position: relative; overflow: hidden;
-        transition: background-color 0.2s var(--ease), color 0.2s var(--ease), transform 0.2s var(--ease) !important;
-    }}
-    [data-testid="stSidebar"] div[role="radiogroup"] label::before {{
-        content: ""; position: absolute; left: 0; top: 18%; bottom: 18%; width: 3px; border-radius: 3px;
-        background: var(--brand); transform: scaleY(0); transition: transform 0.25s var(--ease);
-    }}
-    [data-testid="stSidebar"] div[role="radiogroup"] label:hover {{ background-color: #f1f5f9 !important; transform: translateX(2px); }}
-    [data-testid="stSidebar"] div[role="radiogroup"] label:hover p {{ color: var(--brand) !important; }}
-    [data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) {{ background-color: var(--brand-soft) !important; }}
-    [data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked)::before {{ transform: scaleY(1); }}
-    [data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) p {{ color: var(--brand) !important; font-weight: 700 !important; }}
-
-    /* MENU DO VISITANTE (antes de logar): tem layout próprio com margens
-       ajustadas — não pode receber as pílulas altas (senão o link "Cartas
-       Contempladas" sobrepõe). Aqui neutralizamos o espaçamento extra. */
-    [data-testid="stSidebar"] .st-key-menu_login div[role="radiogroup"] label,
-    [data-testid="stSidebar"] .st-key-menu_sim div[role="radiogroup"] label {{
-        padding: 0 !important;
-        margin: 0 !important;
-        transform: none !important;
-    }}
-    [data-testid="stSidebar"] .st-key-menu_login div[role="radiogroup"] label::before,
-    [data-testid="stSidebar"] .st-key-menu_sim div[role="radiogroup"] label::before {{
-        display: none !important;
-    }}
-
-    /* Links externos no menu (ex: Cartas Contempladas) com o mesmo visual dos botões */
-    [data-testid="stSidebar"] [data-testid="stLinkButton"] a, [data-testid="stSidebar"] a[kind="secondary"] {{ border: 1px solid #cbd5e1 !important; background-color: #f8fafc !important; color: #0f172a !important; text-decoration: none !important; }}
-    [data-testid="stSidebar"] [data-testid="stLinkButton"] a:hover, [data-testid="stSidebar"] a[kind="secondary"]:hover {{ border-color: var(--brand) !important; color: var(--brand) !important; }}
-    /* Link externo no menu de visitante, com o mesmo visual das opções (bolinha + texto).
-       As margens negativas encostam o link nas opções de cima e de baixo. */
-    [data-testid="stSidebar"] .st-key-cartas_link {{ margin-top: -2.1rem !important; }}
-    [data-testid="stSidebar"] .st-key-menu_sim {{ margin-top: -1.7rem !important; }}
-    [data-testid="stSidebar"] .menu-link-externo {{ display: flex !important; align-items: center; gap: 9px; text-decoration: none !important; padding: 0 0 0 1px; height: 22.4px; }}
-    [data-testid="stSidebar"] .menu-link-bolinha {{ width: 14px; height: 14px; border-radius: 50%; background-color: #f0f2f6; flex: 0 0 auto; box-sizing: border-box; }}
-    [data-testid="stSidebar"] .menu-link-texto {{ color: #0f172a !important; font-size: 14px; line-height: 22.4px; }}
-    [data-testid="stSidebar"] .menu-link-externo:hover .menu-link-bolinha {{ background-color: var(--brand-soft); }}
-    [data-testid="stSidebar"] .menu-link-externo:hover .menu-link-texto {{ color: var(--brand) !important; }}
+    /* SIDEBAR: ver modulos/sidebar.py (css_sidebar) */
     header[data-testid="stHeader"] {{ background-color: transparent !important; }}
 
     /* ==========================================================

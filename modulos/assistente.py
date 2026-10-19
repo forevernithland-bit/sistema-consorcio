@@ -21,7 +21,7 @@ def render_widget_ia(supabase):
     is_master = (st.session_state.get('perfil_logado') == "Master") or (st.session_state.get('usuario_logado') in ['breno', 'uriel'])
 
     if "GEMINI_API_KEY" not in st.secrets:
-        st.sidebar.warning("⚠️ Chave API da IA não configurada.")
+        st.warning("⚠️ Chave API da IA não configurada.")
         return
 
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
@@ -60,9 +60,8 @@ def render_widget_ia(supabase):
     css_popover += "</style>"
     st.markdown(css_popover, unsafe_allow_html=True)
 
-    st.sidebar.divider()
-    
-    with st.sidebar.popover("🤖 Falar com o Bento", use_container_width=True):
+    # chamada dentro de um container da sidebar (rodapé) — ver app.py / modulos/sidebar.py
+    with st.popover("Falar com o Bento", use_container_width=True, key="sb_bento"):
         
         # Cabeçalho SUPER COMPACTO e fixo no topo
         c1, c2, c3 = st.columns([5, 2.5, 2.5])

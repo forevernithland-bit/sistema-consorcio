@@ -551,8 +551,11 @@ def _extrato_vendedor(vendas, df_admin, cfg, status_dict, is_master, nome_logado
         return
     if is_master:
         sistema = {"BRENO LIMA", "URIEL GOMES", "CONSORBENS", "PARTICULAR BRENO", "PARTICULAR URIEL"}
-        nomes = sorted({str(x).strip() for x in vendas["VENDEDOR"].dropna() if str(x).strip()
-                        and norm(x) not in sistema})
+        _por_norm = {}
+        for x in vendas["VENDEDOR"].dropna():
+            if str(x).strip() and norm(x) not in sistema:
+                _por_norm.setdefault(norm(x), str(x).strip())      # "João  Silva" e "JOÃO SILVA" são o mesmo vendedor
+        nomes = sorted(_por_norm.values())
         if not nomes:
             return st.caption("Nenhum vendedor terceiro com vendas.")
         quem = st.selectbox("🎯 Produção e extrato do vendedor", nomes, key="rel_vend_extrato")

@@ -32,6 +32,7 @@ from modulos.emitir_boleto import render_emitir_boleto
 from modulos.financeiro import render_financeiro
 from modulos.robo_painel import render_robo_painel
 from modulos.usuarios import render_usuarios
+from modulos import sidebar as sidebar_ui
 
 # ==========================================
 # 1. CONFIGURAÇÃO DA PÁGINA E SESSÕES
@@ -226,57 +227,10 @@ def _trava_login_robo(_sb):
 
 
 _online = _status_robo(supabase)
-_cor = "#22c55e" if _online else "#ef4444"          # verde / vermelho
 _titulo = "Robô ligado" if _online else "Robô desligado"
-# "SERVER" é um botão (não um <a href>): link real recarregaria a página inteira
-# e derrubaria a sessão de login. Estilizado via container com key p/ parecer selo.
-st.sidebar.markdown(
-    f"""
-    <style>
-      /* Encosta o conteúdo da sidebar no topo (sobe a bolinha SERVER o máximo possível) */
-      [data-testid="stSidebarUserContent"] {{ padding-top: 0.6rem !important; }}
-      section[data-testid="stSidebar"] > div:first-child {{ padding-top: 0.6rem !important; }}
-      div.st-key-server_badge {{ margin: -6px 0 2px 2px; }}
-      div.st-key-server_badge button {{
-        background: transparent !important; border: none !important;
-        box-shadow: none !important; padding: 0 !important;
-        min-height: 0 !important; height: auto !important; width: auto !important;
-        line-height: 1 !important;
-      }}
-      div.st-key-server_badge button:hover {{ opacity: .7; }}
-      div.st-key-server_badge button p {{
-        color: {_cor} !important; font-size: 12px !important;
-        font-weight: 700 !important; letter-spacing: 1px !important; margin: 0 !important;
-      }}
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-# Nome de quem está logado, no topo, na mesma linha do SERVER
-_nome_topo = ""
-if st.session_state.get('usuario_logado'):
-    _nome_topo = str(st.session_state.get('nome_vendedor') or "").strip()
-    if not _nome_topo:   # 1ª tela logo após o login: busca o nome (cache de 30 s)
-        try:
-            _nome_topo = str((carregar_sessao_usuario(supabase, st.session_state['usuario_logado']) or {}).get("nome") or "").strip()
-        except Exception:
-            _nome_topo = ""
-    _nome_topo = _nome_topo or str(st.session_state['usuario_logado'])
-with st.sidebar.container(key="server_badge"):
-    _cb, _cn = st.columns([1, 1.7], vertical_alignment="center") if _nome_topo else (st.container(), None)
-    with _cb:
-        if st.button("● SERVER", key="btn_server_robo",
-                     help=f"{_titulo} — abrir Painel do Robô"):
-            st.session_state['menu_lateral'] = "🤖 Robô"
-            st.session_state['last_radio_selection'] = None
-            st.session_state['cliente_visualizado'] = None
-            st.rerun()
-    if _cn is not None:
-        with _cn:
-            st.markdown(
-                f"<div title='{html.escape(_nome_topo)}' style='text-align:right;font-size:12px;font-weight:700;"
-                f"white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.85'>👤 {html.escape(_nome_topo)}</div>",
-                unsafe_allow_html=True)
+# CSS da sidebar (modulos/sidebar.py): placeholder no topo, preenchido ao final
+# do bloco da sidebar, quando já se sabe quais itens do menu existem.
+_ph_css_sidebar = st.sidebar.empty()
 
 logo_path = os.path.join(PASTA_ATUAL, "logo.png")
 # ---- Revalida o usuário logado a cada carregamento (cache de 30 s) ----
@@ -320,31 +274,36 @@ if is_logado:
                     st.error("❌ Não consegui salvar a senha agora.")
         st.stop()
 
-if os.path.exists(logo_path):
-    st.sidebar.image(logo_path, use_container_width=True)
-st.sidebar.markdown("<br>", unsafe_allow_html=True)
+# ---- Marca + status do robô (topo da sidebar) ----
+with st.sidebar.container(key="sb_brand"):
+    if os.path.exists(logo_path):
+        st.image(logo_path, use_container_width=True)
+    if is_logado:
+        # "SERVER" é um botão (não um <a href>): link real recarregaria a página
+        # inteira e derrubaria a sessão de login. Vira um "pill" de status via CSS.
+        with st.container(key="sb_robo"):
+            if st.button("Robô online" if _online else "Robô offline", key="btn_server_robo",
+                         help=f"{_titulo} — abrir Painel do Robô", disabled=not is_master):
+                st.session_state['menu_lateral'] = "🤖 Robô"
+                st.session_state['last_radio_selection'] = None
+                st.session_state['cliente_visualizado'] = None
+                st.rerun()
 
+_itens_css = []
+_sims_css = []
 if not is_logado:
     OPC_LOGIN = "🔐 Login (Área Restrita)"
 
     # Sem login, o ÚNICO destino é a tela de login. Os simuladores só aparecem
     # para usuário autenticado (regra definida pelo Breno/Uriel, ago/2026).
     st.session_state['menu_lateral'] = OPC_LOGIN
+    _itens_css = [OPC_LOGIN]
 
-    link_cartas = """
-    <div class="menu-link-wrap">
-        <a href="https://consorbensmg.com.br/admin/" target="_blank" class="menu-link-externo">
-            <span class="menu-link-bolinha"></span><span class="menu-link-texto">📄 Cartas Contempladas</span>
-        </a>
-    </div>
-    """
-
-    st.sidebar.radio(" ", [OPC_LOGIN], key="menu_login", label_visibility="collapsed")
-    with st.sidebar.container(key="cartas_link"):
-        st.markdown(link_cartas, unsafe_allow_html=True)
+    st.sidebar.radio(" ", [OPC_LOGIN], key="menu_login", label_visibility="collapsed",
+                    format_func=lambda _o: "Login (Área Restrita)")   # só o texto exibido; o valor segue igual (ícone vem do CSS)
+    with st.sidebar.container(key="sb_cartas"):
+        st.link_button("Cartas Contempladas", "https://consorbensmg.com.br/admin/", use_container_width=True)
 else:
-    st.sidebar.divider()
-    
     # Menu principal. Senhas e Base de Conhecimento agora ficam DENTRO de
     # "Configurações de Sistema" (abas). Assembleias está oculto por enquanto.
     if is_master:
@@ -372,28 +331,34 @@ else:
     if selecao_principal in opcoes_principais:
         st.session_state['last_radio_selection'] = selecao_principal
         
-    st.sidebar.write("")
     _sims_liberados = [x for x in simuladores_dict if is_master or MENU_PARA_PERMISSAO[x] in _perm_usuario]
     _atalho_site = is_master or ("cartas_site" in _perm_usuario)
-    with st.sidebar.expander("🛠️ Simuladores", expanded=(st.session_state['menu_lateral'] in simuladores_dict)) if (_sims_liberados or _atalho_site) else st.sidebar.container():
-        if _atalho_site:
-            st.link_button("📄 Cartas Contempladas", "https://consorbensmg.com.br/admin/", use_container_width=True)
-        for sim in _sims_liberados:
-            btn_type = "primary" if st.session_state['menu_lateral'] == sim else "secondary"
-            if st.button(sim, use_container_width=True, type=btn_type):
-                st.session_state['menu_lateral'] = sim
-                st.session_state['cliente_visualizado'] = None
-                st.session_state['last_radio_selection'] = None
+    _itens_css, _sims_css = list(opcoes_principais), list(_sims_liberados)
+    with st.sidebar.expander("Simuladores", expanded=(st.session_state['menu_lateral'] in simuladores_dict)) if (_sims_liberados or _atalho_site) else st.sidebar.container():
+        with st.container(key="sb_sims"):
+            if _atalho_site:
+                st.link_button("Cartas Contempladas", "https://consorbensmg.com.br/admin/", use_container_width=True, key="sb_cartas_link")
+            for sim in _sims_liberados:
+                btn_type = "primary" if st.session_state['menu_lateral'] == sim else "secondary"
+                if st.button(sidebar_ui.nome_simulador(sim), key=sidebar_ui.key_simulador(sim), use_container_width=True, type=btn_type):
+                    st.session_state['menu_lateral'] = sim
+                    st.session_state['cliente_visualizado'] = None
+                    st.session_state['last_radio_selection'] = None
+                    st.rerun()
+
+    # ---- Rodapé ancorado: assistente (Bento) + cartão do usuário com "Sair" ----
+    with st.sidebar.container(key="sb_footer"):
+        # --- CHAMA O WIDGET FLUTUANTE DA IA AQUI ---
+        render_widget_ia(supabase)
+        _nome_card = str(st.session_state.get('nome_vendedor') or "").strip() or str(st.session_state['usuario_logado'])
+        with st.container(key="sb_user"):
+            st.markdown(sidebar_ui.html_cartao_usuario(_nome_card, sidebar_ui.rotulo_perfil(st.session_state.get('perfil_logado'), is_master)),
+                        unsafe_allow_html=True)
+            if st.button("Sair do Sistema", key="sb_logout", help="Sair do sistema"):
+                st.session_state.clear()
                 st.rerun()
-                
-    st.sidebar.write("")
-    
-    # --- CHAMA O WIDGET FLUTUANTE DA IA AQUI ---
-    render_widget_ia(supabase)
-    
-    if st.sidebar.button("Sair do Sistema"):
-        st.session_state.clear()
-        st.rerun()
+
+_ph_css_sidebar.markdown(sidebar_ui.css_sidebar(_itens_css, _sims_css, logado=is_logado, online=_online), unsafe_allow_html=True)
 
 menu_selecionado = st.session_state['menu_lateral']
 
@@ -420,6 +385,10 @@ else:
     # O brilho superior usa a cor do tema escolhido pelo usuário
     css += """ <style>.stApp { background: radial-gradient(1150px 500px at 100% -8%, var(--brand-soft), transparent 58%), linear-gradient(180deg, #f7f9fc 0%, #eaeef4 100%) !important; background-attachment: fixed !important; }</style> """
 st.markdown(css, unsafe_allow_html=True)
+# Campos de valor: separador de milhares enquanto digita (ui_valores.input_valor)
+from ui_valores import ativar_mascara_milhar
+ativar_mascara_milhar()
+st.markdown("<style>iframe[height='0']{position:absolute;height:0;border:0}div[data-testid='stElementContainer']:has(> iframe[height='0']){margin:0;height:0;overflow:hidden}</style>", unsafe_allow_html=True)
 
 # ==========================================
 # 6. DISTRIBUIÇÃO DAS TELAS
