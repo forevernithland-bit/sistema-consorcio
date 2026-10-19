@@ -264,3 +264,49 @@ def simular(vendas, cfg, regra_admin=None, imposto=7.16):
                        "Comissão bruta (adm.)": d["Bruto"], "Imposto": d["Bruto"] - liq, "Líquido corretora": liq,
                        "Consorbens (após vendedor)": liq - (vend if desconta else 0.0)})
     return pd.DataFrame(linhas), pd.DataFrame(niveis)
+
+
+def divisao_socios(cfg, modo, quem=None):
+    """(% Breno, % Uriel) do líquido da corretora. modo 'consorbens' = venda da própria Consorbens (Cons_Breno/Cons_Uriel,
+    padrão 50/50); modo 'socios' = venda de um sócio: quem 'BRENO' (Breno_Breno/Breno_Uriel) ou 'URIEL' (Uriel_Breno/Uriel_Uriel),
+    padrão 70/30 para quem vendeu."""
+    cfg = cfg or {}
+    if modo == "consorbens":
+        return _num(cfg.get("Cons_Breno"), 50.0), _num(cfg.get("Cons_Uriel"), 50.0)
+    if modo == "socios":
+        q = norm(quem)
+        if q.startswith("BRENO"):
+            return _num(cfg.get("Breno_Breno"), 70.0), _num(cfg.get("Breno_Uriel"), 30.0)
+        if q.startswith("URIEL"):
+            return _num(cfg.get("Uriel_Breno"), 30.0), _num(cfg.get("Uriel_Uriel"), 70.0)
+        raise ValueError("modo 'socios' pede quem='BRENO' ou 'URIEL'")
+    raise ValueError("modo deve ser 'consorbens' ou 'socios'")
+
+
+def simular_corretora(vendas, cfg, regra_admin, imposto=7.16, modo="consorbens", quem=None):
+    """Entrada da corretora (sem vendedor e sem bônus) para vendas da própria Consorbens ou de um sócio.
+
+    vendas: lista de (ym 'AAAA-MM', valor vendido). regra_admin: {nº da parcela: % da comissão da administradora}:
+    a parcela i cai no mês da venda + (i - 1). Devolve um DataFrame por mês de recebimento com
+    'ym', 'Comissão bruta (adm.)', 'Imposto', 'Líquido corretora', 'Breno', 'Uriel' (a divisão do líquido vem de divisao_socios).
+    Sem regra da administradora (ou sem venda > 0) devolve o DataFrame vazio com essas colunas."""
+    pb, pu = divisao_socios(cfg, modo, quem)
+    pagantes = sorted(i for i, p in (regra_admin or {}).items() if p and p > 0)
+    por_mes = {}
+    for ym, valor in vendas:
+        try:
+            valor = float(valor or 0)
+        except (TypeError, ValueError):
+            valor = 0.0
+        if not (valor > 0):
+            continue
+        for i in pagantes:
+            pay = _soma_meses(ym, i - 1)
+            por_mes[pay] = por_mes.get(pay, 0.0) + valor * regra_admin[i] / 100.0
+    linhas = []
+    for pay in sorted(por_mes):
+        bruto = por_mes[pay]
+        liq = bruto * (1 - imposto / 100.0)
+        linhas.append({"ym": pay, "Comissão bruta (adm.)": bruto, "Imposto": bruto - liq, "Líquido corretora": liq,
+                       "Breno": liq * pb / 100.0, "Uriel": liq * pu / 100.0})
+    return pd.DataFrame(linhas, columns=["ym", "Comissão bruta (adm.)", "Imposto", "Líquido corretora", "Breno", "Uriel"])
