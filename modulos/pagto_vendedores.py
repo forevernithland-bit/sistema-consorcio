@@ -24,6 +24,13 @@ def _brl(v):
     return formatar_brl_puro(v)
 
 
+def _conf_vendedor(f):
+    """Coluna do histórico: o vendedor confirmou que recebeu? (só faz sentido em fechamento PAGO)"""
+    if f.get("confirmado_vendedor_em"):
+        return "✅ " + fv.data_br(f["confirmado_vendedor_em"])
+    return "⏳ aguardando" if f.get("status") == "PAGO" else ""
+
+
 def _todas(sb, tabela, colunas="*", filtros=None):
     return fv._todas(sb, tabela, colunas, filtros)
 
@@ -288,6 +295,7 @@ def render_pagamento_vendedores(supabase, df_vendas, df_admin, cfg, status_dict)
                 "Pago em": [str(f.get("data_pagamento") or "") for f in todos],
                 "Valor pago": [(_brl(f["valor_pago"]) if f.get("valor_pago") is not None else "") for f in todos],
                 "Forma": [f.get("forma_pagamento") or "" for f in todos], "Por": [f.get("pago_por") or f.get("gerado_por") or "" for f in todos],
+                "Confirmado pelo vendedor": [_conf_vendedor(f) for f in todos],
             }), use_container_width=True, hide_index=True)
             sel = st.selectbox("Ver detalhe do fechamento", [None] + todos,
                                format_func=lambda f: "—" if f is None else f"FV-{int(f['id']):04d} · {f['vendedor_nome']} · {f['competencia']}",

@@ -214,7 +214,15 @@ def _aba_proximos_meses(df_vendas, df_admin, cfg, status_dict, nome):
 
 
 def render_relatorio_vendedor(df_vendas, df_admin, cfg, status_dict, nome):
-    t1, t3, t2 = st.tabs(["💵 Comissionamento previsto do mês", "📆 Próximos meses", "🧮 Simulação de comissionamento"])
+    t1, t3, t4, t2 = st.tabs(["💵 Comissionamento previsto do mês", "📆 Próximos meses", "💳 Meus pagamentos",
+                              "🧮 Simulação de comissionamento"])
+    with t4:
+        try:        # um problema nesta aba não pode derrubar as demais abas do vendedor
+            from database import iniciar_conexao
+            from modulos.meus_pagamentos import render_meus_pagamentos
+            render_meus_pagamentos(iniciar_conexao())
+        except Exception:
+            st.error("Não consegui carregar seus pagamentos agora. Tente de novo em instantes.")
     with t1:
         _aba_comissionamento_mes(df_vendas, df_admin, cfg, status_dict, nome)
     with t3:

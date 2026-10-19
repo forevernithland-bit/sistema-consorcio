@@ -53,6 +53,15 @@ def _data(s):
         return pd.NaT
 
 
+def data_br(ts):
+    """timestamptz do banco (UTC) -> 'dd/mm/aaaa' no horário de Brasília (UTC-3, sem horário de verão).
+    Evita mostrar o dia seguinte para quem confirma/paga à noite (str(ts)[:10] é a data em UTC)."""
+    try:
+        return (pd.to_datetime(ts, utc=True) - pd.Timedelta(hours=3)).strftime("%d/%m/%Y")
+    except Exception:
+        return str(ts or "")[:10]
+
+
 def _txt(v):
     """Texto limpo para gravar no banco (None/NaN -> '')."""
     try:
@@ -427,3 +436,12 @@ small{{color:#667}}</style></head><body>
 <p class="t">Total do fechamento: {brl(cab.get('total', 0))}</p>
 <p><small>Código de autenticidade (SHA-256): {e(cab.get('hash_conteudo')) or '(rascunho — ainda não travado)'}<br>
 Documento gerado pelo ERP Consorbens a partir do fechamento gravado. Confira o número e o código com a Consorbens.</small></p></body></html>"""
+
+
+def confirmar_recebimento(sb, fid, vendedor_id, ator):
+    """O PRÓPRIO vendedor confirma que recebeu (só fechamento PAGO dele, uma vez). Controle independente do master."""
+    res = (sb.table("pagamentos_vendedor").update({"confirmado_vendedor_em": _agora(), "confirmado_vendedor_por": ator})
+           .eq("id", fid).eq("vendedor_id", vendedor_id).eq("status", "PAGO").is_("confirmado_vendedor_em", "null").execute())
+    if not res.data:
+        raise ErroFechamento("Não foi possível confirmar (já confirmado, ou o fechamento não está pago).")
+    _log(sb, fid, "RECEBIMENTO_CONFIRMADO", "PAGO", "PAGO", ator, {"vendedor_id": vendedor_id})
