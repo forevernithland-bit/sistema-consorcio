@@ -179,7 +179,9 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict, _esto
                 # paga 1,2,4,5) senão deixava o vendedor sem receber a última fatia.
                 pos = len(temp_parcels)
                 if eh_terceiro and pos < len(perc_pos): vend_rec = val_venda * (perc_pos[pos] / 100.0)
-                sobra = corretora_liq - vend_rec
+                # por ora o custo do vendedor fica com a Ecoclim: a corretora divide o líquido inteiro
+                # (cfg VD_DESCONTA_SOCIOS=1 desconta o vendedor antes de dividir)
+                sobra = corretora_liq - (vend_rec if cv.desconta_dos_socios(cfg) else 0.0)
                 breno_rec = sobra * 0.50
                 uriel_rec = sobra * 0.50
 
@@ -230,9 +232,10 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict, _esto
                         val_j = base if j < k else round(est - base * (k - 1), 2)
                         aguarda = j > len(datas_est)
                         dt_j = datas_est[j - 1] if not aguarda else (max([dt_canc] + datas_est) + pd.DateOffset(months=j - len(datas_est)))
+                        _volta = val_j / 2.0 if cv.desconta_dos_socios(cfg) else 0.0   # só volta aos sócios se o vendedor saiu do bolso deles
                         temp_parcels.append({
                             'parcela': f'Estorno{j}', 'data_pagamento': dt_j, 'bruto': 0.0, 'liquido': 0.0,
-                            'vend': -val_j, 'breno': val_j / 2.0, 'uriel': val_j / 2.0,
+                            'vend': -val_j, 'breno': _volta, 'uriel': _volta,
                             'tipo_vd': 'Estorno', 'parc_vd': f"{j}/{k}", 'pct_vd': -cv.regra(cfg)['VD_EST_PCT'] / k,
                             'ref_vd': ref_base + (" — a abater na próxima comissão do vendedor" if aguarda else ""),
                             'aguarda': aguarda})

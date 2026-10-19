@@ -482,7 +482,7 @@ def _hs(v, centavos=False):
     return ("&minus;" + _h(-v, centavos)) if v < -0.004 else _h(v, centavos)
 
 
-def _bloco_corretora(por_mes, regra_adm, imposto):
+def _bloco_corretora(por_mes, regra_adm, imposto, desc=False):
     """Cascata: bruta da administradora - imposto = líquido da corretora - pago ao vendedor = fica com a Consorbens."""
     bruta = float(por_mes["Comissão bruta (adm.)"].sum())
     imp = float(por_mes["Imposto"].sum())
@@ -503,12 +503,19 @@ def _bloco_corretora(por_mes, regra_adm, imposto):
                 f'<div class="vl">{valor_txt}</div>'
                 f'<div class="tk"><div class="bar {barcls}" style="left:{pc(ini):.2f}%;width:{max(pc(fim) - pc(ini), 0.6):.2f}%"></div></div></div>')
 
+    if desc:
+        linha_vend = linha("&minus;", "Pago ao vendedor", f"base {_h(base)} + prêmios {_h(prem)}", _hs(-vend),
+                           0 if neg else liq - vend, liq, barcls="gold")
+        sub_fica = "depois de pagar o vendedor"
+    else:   # custo do vendedor fica com a Ecoclim: aparece só como informação, não desconta da Consorbens
+        linha_vend = linha("&nbsp;", "Comissão do vendedor (custo da Ecoclim)",
+                           f"base {_h(base)} + prêmios {_h(prem)} · não é descontada da Consorbens", _h(vend), 0, vend, barcls="gold")
+        sub_fica = "o líquido inteiro; a comissão do vendedor é custo da Ecoclim"
     rows = (linha("&nbsp;", "Comissão bruta da administradora", "soma das parcelas pagas pela administradora", _h(bruta), 0, bruta)
             + linha("&minus;", "Imposto", f"{_pct(imposto)} sobre a bruta", _hs(-imp), liq, bruta, barcls="neg")
             + linha("=", "Líquido da corretora", "", _h(liq), 0, liq)
-            + linha("&minus;", "Pago ao vendedor", f"base {_h(base)} + prêmios {_h(prem)}", _hs(-vend),
-                    0 if neg else liq - vend, liq, barcls="gold")
-            + linha("=", "Fica com a Consorbens", "depois de pagar o vendedor", _hs(sobra), 0, abs(sobra),
+            + linha_vend
+            + linha("=", "Fica com a Consorbens", sub_fica, _hs(sobra), 0, abs(sobra),
                     cls="res" + (" bad" if neg else ""), barcls="neg" if neg else ""))
     split = (f'<div class="sc-split"><div class="sc-t"><span>Breno · 50% da sobra</span><b>{_hs(sobra / 2)}</b></div>'
              f'<div class="sc-t"><span>Uriel · 50% da sobra</span><b>{_hs(sobra / 2)}</b></div></div>')
@@ -518,7 +525,7 @@ def _bloco_corretora(por_mes, regra_adm, imposto):
              + "".join(f'<span class="p">{i}ª parcela {_pct(p)}</span>' for i, p in pg) + '</div>')
 
     cab = ('<div class="sc-tr hd"><div>Mês</div><div>Comissão bruta (adm.)</div><div>&minus; Imposto</div><div>= Líquido corretora</div>'
-           '<div>&minus; Pago ao vendedor</div><div>= Fica com a Consorbens</div></div>')
+           '<div>' + ('&minus; Pago ao vendedor' if desc else 'Vendedor (Ecoclim)') + '</div><div>= Fica com a Consorbens</div></div>')
     lin = []
     for _, x in por_mes.iterrows():
         sb = float(x["Consorbens (após vendedor)"])
@@ -526,11 +533,11 @@ def _bloco_corretora(por_mes, regra_adm, imposto):
                    f'<div data-l="Bruta (adm.)">{_h(x["Comissão bruta (adm.)"])}</div>'
                    f'<div data-l="&minus; Imposto">{_h(x["Imposto"])}</div>'
                    f'<div data-l="= Líquido corretora">{_h(x["Líquido corretora"])}</div>'
-                   f'<div data-l="&minus; Vendedor">{_h(x["Total vendedor"])}<small>base {_h(x["Comissão base"])} · prêmio {_h(x["Bônus"])}</small></div>'
+                   f'<div data-l="{"&minus; " if desc else ""}Vendedor">{_h(x["Total vendedor"])}<small>base {_h(x["Comissão base"])} · prêmio {_h(x["Bônus"])}</small></div>'
                    f'<div data-l="= Consorbens" class="fi{" ng" if sb < -0.004 else ""}">{_hs(sb)}</div></div>')
     tot = (f'<div class="sc-tr tt"><div class="m">TOTAL</div><div data-l="Bruta (adm.)">{_h(bruta)}</div>'
            f'<div data-l="&minus; Imposto">{_h(imp)}</div><div data-l="= Líquido corretora">{_h(liq)}</div>'
-           f'<div data-l="&minus; Vendedor">{_h(vend)}</div>'
+           f'<div data-l="{"&minus; " if desc else ""}Vendedor">{_h(vend)}</div>'
            f'<div data-l="= Consorbens" class="fi{" ng" if neg else ""}">{_hs(sobra)}</div></div>')
     tabela = f'<div class="sc-tb">{cab}<div class="sc-sc">{"".join(lin)}</div>{tot}</div>'
     return ('<div class="sc-sec"><h4>🏢 O que a Consorbens recebe com essa produção</h4>'
@@ -693,7 +700,7 @@ def render_simulador(df_admin, cfg, master=False):
         # ---- master: cadeia da corretora (cascata + mês a mês + 50/50)
         if master and regra_adm and tem:
             with s_master:
-                _html(_bloco_corretora(por_mes, regra_adm, imposto))
+                _html(_bloco_corretora(por_mes, regra_adm, imposto, cv.desconta_dos_socios(cfg)))
         elif master and regra_adm:
             with s_master:
                 _html('<div class="sc-goal">Informe um valor de venda acima de zero para ver o que a Consorbens recebe, mês a mês.</div>')

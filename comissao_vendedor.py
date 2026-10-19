@@ -36,6 +36,8 @@ REGRA_PADRAO = {
     "VD_EST_PCT": 0.5,       # estorno: % do crédito
     "VD_EST_MESES": 5,       # estorno vale se cancelar em até N meses da venda
     "VD_EST_PARCELAS": 2,    # o estorno é abatido em N parcelas iguais, nos próximos N pagamentos do vendedor
+    "VD_DESCONTA_SOCIOS": 0,  # 0 = a comissão do vendedor NÃO sai do que Breno/Uriel recebem (custo da Ecoclim, por ora);
+                              # 1 = sai da corretora antes da divisão 50/50
 }
 
 
@@ -54,6 +56,11 @@ def regra(cfg):
     r["VD_EST_MESES"] = int(r["VD_EST_MESES"])
     r["VD_EST_PARCELAS"] = max(int(r["VD_EST_PARCELAS"]), 1)
     return r
+
+
+def desconta_dos_socios(cfg):
+    """True se a comissão do vendedor deve ser descontada da corretora antes de dividir entre os sócios."""
+    return bool(_num((cfg or {}).get("VD_DESCONTA_SOCIOS"), REGRA_PADRAO["VD_DESCONTA_SOCIOS"]))
 
 
 def norm(s):
@@ -215,6 +222,7 @@ def simular(vendas, cfg, regra_admin=None, imposto=7.16):
     """
     por_mes, niveis = {}, []
     r = regra(cfg)
+    desconta = desconta_dos_socios(cfg)
     for ym, valor in vendas:
         try:
             valor = float(valor or 0)
@@ -254,5 +262,5 @@ def simular(vendas, cfg, regra_admin=None, imposto=7.16):
         liq = d["Bruto"] * (1 - imposto / 100.0)
         linhas.append({"ym": pay, "Comissão base": d["Base"], "Bônus": d["Bônus"], "Total vendedor": vend,
                        "Comissão bruta (adm.)": d["Bruto"], "Imposto": d["Bruto"] - liq, "Líquido corretora": liq,
-                       "Consorbens (após vendedor)": liq - vend})
+                       "Consorbens (após vendedor)": liq - (vend if desconta else 0.0)})
     return pd.DataFrame(linhas), pd.DataFrame(niveis)

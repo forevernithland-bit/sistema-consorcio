@@ -812,7 +812,6 @@ def render_relatorios(supabase, df_vendas_global, df_admin, cfg, status_dict):
         prev = filtrar_por_vendedor(prev, "vendedor", eh_adm=False, nome=nome_vendedor)
         vendas = filtrar_por_vendedor(vendas, "VENDEDOR", eh_adm=False, nome=nome_vendedor)
         site_ok, site_prev = pd.DataFrame(), pd.DataFrame()
-        st.info("🔒 Como Vendedor, você vê apenas os relatórios das suas próprias vendas.")
         # visão simplificada do vendedor: comissionamento do mês + simulação
         from modulos.relatorio_vendedor import render_relatorio_vendedor
         render_relatorio_vendedor(vendas, df_admin, cfg, status_dict, nome_vendedor)
