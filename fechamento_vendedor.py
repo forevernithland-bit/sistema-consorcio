@@ -290,10 +290,22 @@ def criar_rascunho(sb, vendedor, itens, data_corte, ator, snapshot_vendedor=None
     if dup:
         raise ErroFechamento(f"Já existe um rascunho aberto (FV-{int(dup[0]['id']):04d}) para este vendedor. Trave ou cancele antes.")
     corte = pd.Timestamp(data_corte)
+    # fechamento MENSAL: um por vendedor e mês (cancelado não conta) — baixa que chegar depois vai para o mês seguinte
+    mesmo_mes = (sb.table("pagamentos_vendedor").select("id,status").eq("vendedor_id", vendedor["id"])
+                 .eq("competencia", corte.strftime("%Y-%m")).execute().data) or []
+    mesmo_mes = [f for f in mesmo_mes if f.get("status") != "CANCELADO"]
+    if mesmo_mes:
+        raise ErroFechamento(f"Já existe o fechamento FV-{int(mesmo_mes[0]['id']):04d} de {corte.strftime('%m/%Y')} para este vendedor "
+                             f"({mesmo_mes[0]['status']}). Cancele-o para refazer, ou deixe as baixas novas para o fechamento do mês seguinte.")
     cab = {"vendedor_id": vendedor["id"], "vendedor_nome": vendedor.get("nome"), "competencia": corte.strftime("%Y-%m"),
            "data_corte": corte.strftime("%Y-%m-%d"), "status": "RASCUNHO", "total": total_itens(itens), "qtd_itens": len(itens),
            "snapshot_vendedor": snapshot_vendedor or {}, "regra_vigente": regra or {}, "gerado_por": ator}
-    res = sb.table("pagamentos_vendedor").insert(cab).execute()
+    try:
+        res = sb.table("pagamentos_vendedor").insert(cab).execute()
+    except Exception as e:                 # outra sessão criou o rascunho/fechamento do mês no mesmo instante (índice único)
+        if "ux_pv_um" in str(e):
+            raise ErroFechamento("Já existe um fechamento aberto deste vendedor neste mês (outra sessão acabou de criar). Atualize a tela.")
+        raise ErroFechamento(f"Não consegui criar o rascunho: {str(e)[:160]}")
     fid = res.data[0]["id"]
     try:
         linhas = [{**{k: v for k, v in it.items()}, "fechamento_id": fid, "vendedor_id": vendedor["id"]} for it in itens]

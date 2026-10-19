@@ -41,6 +41,7 @@ create table if not exists public.pagamentos_vendedor (
     motivo_cancelamento text
 );
 create unique index if not exists ux_pv_um_rascunho on public.pagamentos_vendedor(vendedor_id) where status = 'RASCUNHO';
+create unique index if not exists ux_pv_um_por_mes   on public.pagamentos_vendedor(vendedor_id, competencia) where status <> 'CANCELADO';
 create unique index if not exists ux_pv_pix_e2e     on public.pagamentos_vendedor(pix_e2e) where pix_e2e is not null and pix_e2e <> '';
 create index if not exists ix_pv_vendedor           on public.pagamentos_vendedor(vendedor_id, status);
 

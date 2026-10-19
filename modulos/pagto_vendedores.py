@@ -2,6 +2,7 @@
 
 Fluxo: montar rascunho (itens vindos das baixas reais) → travar (gera relatório + código) → marcar enviado →
 registrar pagamento (ou compensar saldo negativo) → histórico por vendedor. Regras e gravação em fechamento_vendedor.py."""
+import calendar
 from datetime import date, datetime
 
 import pandas as pd
@@ -13,6 +14,7 @@ from escopo import eh_master
 from utils import formatar_brl_puro
 from ui_valores import input_valor
 
+_MESES = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
 _COR = {"RASCUNHO": "🟡", "GERADO": "🔵", "ENVIADO": "🟠", "PAGO": "🟢", "COMPENSADO": "⚪", "CANCELADO": "⚫"}
 _ROT = {"RASCUNHO": "Rascunho", "GERADO": "Gerado (travado)", "ENVIADO": "Enviado — a pagar", "PAGO": "PAGO",
         "COMPENSADO": "Compensado", "CANCELADO": "Cancelado"}
@@ -155,7 +157,8 @@ def render_pagamento_vendedores(supabase, df_vendas, df_admin, cfg, status_dict)
         return
 
     usuarios = _usuarios_vendedores(supabase)
-    vendedores = sorted([u for u in usuarios if str(u.get("perfil")) == "Vendedor" and u.get("ativo") is not False],
+    vendedores = sorted([u for u in usuarios if str(u.get("perfil")) == "Vendedor" and u.get("ativo") is not False
+                         and cv.eh_terceiro(u.get("nome"))],      # sócios/Consorbens/Particular não recebem comissão de vendedor
                         key=lambda u: cv.norm(u.get("nome")))
     abas = st.tabs(["🧾 Gerar fechamento", "📂 Em aberto", "📚 Histórico por vendedor"])
 
@@ -168,8 +171,16 @@ def render_pagamento_vendedores(supabase, df_vendas, df_admin, cfg, status_dict)
         else:
             c1, c2 = st.columns([2, 1])
             vend = c1.selectbox("Vendedor", vendedores, format_func=lambda u: u["nome"], key="pv_vend")
-            corte = c2.date_input("Data de corte", value=date.today(), max_value=date.today(), format="DD/MM/YYYY", key="pv_corte",
-                                  help="Entram as baixas recebidas até esta data (não pode ser futura).")
+            hoje_d = date.today()
+            meses_op = []
+            for k in range(13):
+                t = hoje_d.year * 12 + (hoje_d.month - 1) - k
+                meses_op.append((t // 12, t % 12 + 1))
+            mes_sel = c2.selectbox("Mês de recebimento", meses_op, index=0, key="pv_mes",
+                                   format_func=lambda m: f"{_MESES[m[1]]}/{m[0]}",
+                                   help="Fechamento mensal: entram todas as baixas da administradora recebidas até o fim deste mês "
+                                        "(inclusive as de meses anteriores que ainda não foram pagas).")
+            corte = date(mes_sel[0], mes_sel[1], calendar.monthrange(mes_sel[0], mes_sel[1])[1])
             if st.button("🔎 Montar rascunho", type="primary", key="pv_montar"):
                 pend = fv.pendencias_bloqueantes(df_vendas, usuarios, vend["nome"])
                 try:
@@ -200,7 +211,7 @@ def render_pagamento_vendedores(supabase, df_vendas, df_admin, cfg, status_dict)
                     st.session_state.pop("pv_prev", None)
             prev = st.session_state.get("pv_prev")
             if prev and prev["vend_id"] == vend["id"] and prev["corte"] != str(corte):
-                st.info("A data de corte mudou desde a última montagem — clique em “Montar rascunho” de novo.")
+                st.info("O mês mudou desde a última montagem — clique em “Montar rascunho” de novo.")
             elif prev and prev["vend_id"] == vend["id"]:
                 for p in prev["pend"]:
                     st.error("⛔ " + p)
@@ -208,7 +219,7 @@ def render_pagamento_vendedores(supabase, df_vendas, df_admin, cfg, status_dict)
                     st.warning("⚠️ " + a)
                 itens = prev["itens"]
                 if not itens:
-                    st.info("Nada novo para fechar até esta data.")
+                    st.info("Nada novo para fechar neste mês.")
                 else:
                     total = fv.total_itens(itens)
                     m1, m2, m3 = st.columns(3)
@@ -229,7 +240,7 @@ def render_pagamento_vendedores(supabase, df_vendas, df_admin, cfg, status_dict)
                         except fv.ErroFechamento as e:
                             st.error(str(e))
                 if prev["aguard"]:
-                    with st.expander(f"⏳ {len(prev['aguard'])} item(ns) ainda sem baixa até o corte (não entram)"):
+                    with st.expander(f"⏳ {len(prev['aguard'])} item(ns) ainda sem baixa até o fim do mês (não entram)"):
                         st.dataframe(pd.DataFrame({
                             "Grupo/Cota": [f"{a['grupo']}/{a['cota']}" for a in prev["aguard"]],
                             "Cliente": [a.get("cliente") for a in prev["aguard"]], "Tipo": [a["tipo"] for a in prev["aguard"]],
