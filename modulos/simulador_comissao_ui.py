@@ -326,6 +326,7 @@ _CSS = """
   .sc-wr .vl{grid-column:2;grid-row:1;font-size:1rem;}
   .sc-wr.res .vl{font-size:1.3rem;}
   .sc-tr.hd{display:none;}
+  .sc-tb .sc-sc{max-height:none;}
   .sc-tb.n8 .sc-tr{grid-template-columns:1fr 1fr;padding:11px 14px;gap:6px 12px;font-size:.86rem;}
   .sc-tr{grid-template-columns:1fr 1fr;padding:11px 14px;gap:6px 12px;}
   .sc-tr > div:first-child{grid-column:1 / -1;font-size:.95rem;}
@@ -498,8 +499,48 @@ def _hs(v, centavos=False):
     return ("&minus;" + _h(-v, centavos)) if v < -0.004 else _h(v, centavos)
 
 
-def _bloco_corretora(por_mes, regra_adm, imposto, desc=False):
+def _ord(i):
+    return f"{i}ª"
+
+
+def _info_pct(vendas, regra_adm):
+    """Só apresentação: {ym de recebimento: (% efetivo, 'parcelas')} e % total (soma das parcelas / vendido).
+    Parcela i da administradora cai no mês da venda + (i - 1). Com várias vendas contribuindo para o mesmo mês,
+    % efetivo = bruta do mês / soma dos valores vendidos que contribuem."""
+    pagantes = sorted(i for i, p in (regra_adm or {}).items() if p and p > 0)
+    mes, vendido_total, bruta_total = {}, 0.0, 0.0
+    for ym, valor in (vendas or []):
+        try:
+            valor = float(valor or 0)
+        except (TypeError, ValueError):
+            valor = 0.0
+        if not (valor > 0) or not pagantes:
+            continue
+        vendido_total += valor
+        for i in pagantes:
+            m = mes.setdefault(cv._soma_meses(ym, i - 1), {"vend": 0.0, "bruta": 0.0, "parc": set()})
+            m["vend"] += valor
+            m["bruta"] += valor * regra_adm[i] / 100.0
+            m["parc"].add(i)
+            bruta_total += valor * regra_adm[i] / 100.0
+    info = {}
+    for ym, m in mes.items():
+        ps = sorted(m["parc"])
+        info[ym] = (m["bruta"] / m["vend"] * 100.0, "/".join(_ord(i) for i in ps) + " parcela")
+    return info, (bruta_total / vendido_total * 100.0 if vendido_total > 0 else None)
+
+
+def _cel_bruta(valor, pct=None, parc=None):
+    """'R$ 6.000 · 1%' com '1ª parcela' pequeno embaixo (sem % se não houver regra/venda)."""
+    if pct is None:
+        return _h(valor)
+    return f'{_h(valor)} &middot; {_pct(round(pct, 2))}' + (f'<small>{parc}</small>' if parc else "")
+
+
+def _bloco_corretora(por_mes, regra_adm, imposto, desc=False, vendas=None):
     """Modo vendedor (master): entrada real da administradora -> imposto -> líquido -> vendedor -> Consorbens -> Breno/Uriel."""
+    info, pct_t = _info_pct(vendas, regra_adm)
+    tp = f" ({_pct(round(pct_t, 2))})" if pct_t is not None else ""
     bruta = float(por_mes["Comissão bruta (adm.)"].sum())
     imp = float(por_mes["Imposto"].sum())
     liq = float(por_mes["Líquido corretora"].sum())
@@ -529,7 +570,7 @@ def _bloco_corretora(por_mes, regra_adm, imposto, desc=False):
                            f"base {_h(base)} + prêmios {_h(prem)} · não é descontado da Consorbens", _h(vend), 0, vend, barcls="gold")
         sub_fica = "o líquido inteiro; o custo do vendedor é da Ecoclim"
         rot_v, op_v = "Vendedor recebe (Ecoclim)", ""
-    rows = (linha("&nbsp;", "Entrada bruta da administradora", "comissão que a administradora nos paga, pela regra cadastrada", _h(bruta), 0, bruta)
+    rows = (linha("&nbsp;", f"Entrada bruta da administradora{tp}", "comissão que a administradora nos paga, pela regra cadastrada", _h(bruta), 0, bruta)
             + linha("&minus;", "Imposto", f"{_pct(imposto)} sobre a bruta", _hs(-imp), liq, bruta, barcls="neg")
             + linha("=", "Líquido que entra na corretora", "", _h(liq), 0, liq)
             + linha_vend
@@ -538,19 +579,19 @@ def _bloco_corretora(por_mes, regra_adm, imposto, desc=False):
     split = (f'<div class="sc-split"><div class="sc-t"><span>Breno · 50% da Consorbens</span><b>{_hs(sobra / 2)}</b></div>'
              f'<div class="sc-t"><span>Uriel · 50% da Consorbens</span><b>{_hs(sobra / 2)}</b></div></div>')
 
-    cab = ('<div class="sc-tr hd"><div>Mês</div><div>Entrada bruta (adm.)</div><div>&minus; Imposto</div><div>= Líquido que entra</div>'
+    cab = (f'<div class="sc-tr hd"><div>Mês</div><div>Entrada bruta (adm.){tp}</div><div>&minus; Imposto</div><div>= Líquido que entra</div>'
            f'<div>{rot_v}</div><div>Consorbens recebe</div><div>Breno 50%</div><div>Uriel 50%</div></div>')
     lin = []
     for _, x in por_mes.iterrows():
         sb = float(x["Consorbens (após vendedor)"])
         lin.append(f'<div class="sc-tr"><div class="m">{_rot_mes(x["ym"])}</div>'
-                   f'<div data-l="Entrada bruta (adm.)">{_h(x["Comissão bruta (adm.)"])}</div>'
+                   f'<div data-l="Entrada bruta (adm.)">{_cel_bruta(x["Comissão bruta (adm.)"], *info.get(x["ym"], (None, None)))}</div>'
                    f'<div data-l="&minus; Imposto">{_h(x["Imposto"])}</div>'
                    f'<div data-l="= Líquido que entra">{_h(x["Líquido corretora"])}</div>'
                    f'<div data-l="{op_v}Vendedor recebe">{_h(x["Total vendedor"])}{("<small>base " + _h(x["Comissão base"]) + " · prêmio " + _h(x["Bônus"]) + "</small>") if x["Total vendedor"] > 0 else ""}</div>'
                    f'<div data-l="Consorbens recebe" class="fi{" ng" if sb < -0.004 else ""}">{_hs(sb)}</div>'
                    f'<div data-l="Breno 50%">{_hs(sb / 2)}</div><div data-l="Uriel 50%">{_hs(sb / 2)}</div></div>')
-    tot = (f'<div class="sc-tr tt"><div class="m">TOTAL</div><div data-l="Entrada bruta (adm.)">{_h(bruta)}</div>'
+    tot = (f'<div class="sc-tr tt"><div class="m">TOTAL</div><div data-l="Entrada bruta (adm.)">{_cel_bruta(bruta, pct_t)}</div>'
            f'<div data-l="&minus; Imposto">{_h(imp)}</div><div data-l="= Líquido que entra">{_h(liq)}</div>'
            f'<div data-l="{op_v}Vendedor recebe">{_h(vend)}</div>'
            f'<div data-l="Consorbens recebe" class="fi{" ng" if neg else ""}">{_hs(sobra)}</div>'
@@ -574,8 +615,10 @@ def _rot_div(modo):
     return ("Breno", "Uriel") if modo == "consorbens" else ("Sócio que vendeu", "Outro sócio")
 
 
-def _bloco_socios(df, regra_adm, imposto, modo, quem, pb, pu):
+def _bloco_socios(df, regra_adm, imposto, modo, quem, pb, pu, vendas=None):
     """Modos Consorbens (50/50) e Sócios (70/30): bruta -> imposto -> líquido -> Breno / Uriel, mês a mês e total."""
+    info, pct_t = _info_pct(vendas, regra_adm)
+    tp = f" ({_pct(round(pct_t, 2))})" if pct_t is not None else ""
     bruta = float(df["Comissão bruta (adm.)"].sum())
     imp = float(df["Imposto"].sum())
     liq = float(df["Líquido corretora"].sum())
@@ -592,21 +635,21 @@ def _bloco_socios(df, regra_adm, imposto, modo, quem, pb, pu):
                 f'<div class="vl">{valor_txt}</div>'
                 f'<div class="tk"><div class="bar {barcls}" style="left:{pc(ini):.2f}%;width:{max(pc(fim) - pc(ini), 0.6):.2f}%"></div></div></div>')
     l1, l2 = _rot_div(modo)
-    rows = (linha("&nbsp;", "Entrada bruta da administradora", "comissão que a administradora nos paga, pela regra cadastrada", _h(bruta), 0, bruta)
+    rows = (linha("&nbsp;", f"Entrada bruta da administradora{tp}", "comissão que a administradora nos paga, pela regra cadastrada", _h(bruta), 0, bruta)
             + linha("&minus;", "Imposto", f"{_pct(imposto)} sobre a bruta", _hs(-imp), liq, bruta, barcls="neg")
             + linha("=", "Líquido que entra na corretora", "", _h(liq), 0, liq)
             + linha("&rarr;", l1, f"{_pct(pb)} do líquido", _h(br), 0, br, barcls="gold")
             + linha("&rarr;", l2, f"{_pct(pu)} do líquido", _h(ur), 0, ur, barcls="gold"))
-    cab = ('<div class="sc-tr hd"><div>Mês</div><div>Entrada bruta (adm.)</div><div>&minus; Imposto</div><div>= Líquido que entra</div>'
+    cab = (f'<div class="sc-tr hd"><div>Mês</div><div>Entrada bruta (adm.){tp}</div><div>&minus; Imposto</div><div>= Líquido que entra</div>'
            f'<div>{l1} {_pct(pb)}</div><div>{l2} {_pct(pu)}</div></div>')
     lin = []
     for _, x in df.iterrows():
         lin.append(f'<div class="sc-tr"><div class="m">{_rot_mes(x["ym"])}</div>'
-                   f'<div data-l="Entrada bruta (adm.)">{_h(x["Comissão bruta (adm.)"])}</div>'
+                   f'<div data-l="Entrada bruta (adm.)">{_cel_bruta(x["Comissão bruta (adm.)"], *info.get(x["ym"], (None, None)))}</div>'
                    f'<div data-l="&minus; Imposto">{_h(x["Imposto"])}</div>'
                    f'<div data-l="= Líquido que entra" class="fi">{_h(x["Líquido corretora"])}</div>'
                    f'<div data-l="{l1} {_pct(pb)}">{_h(x["Breno"])}</div><div data-l="{l2} {_pct(pu)}">{_h(x["Uriel"])}</div></div>')
-    tot = (f'<div class="sc-tr tt"><div class="m">TOTAL</div><div data-l="Entrada bruta (adm.)">{_h(bruta)}</div>'
+    tot = (f'<div class="sc-tr tt"><div class="m">TOTAL</div><div data-l="Entrada bruta (adm.)">{_cel_bruta(bruta, pct_t)}</div>'
            f'<div data-l="&minus; Imposto">{_h(imp)}</div><div data-l="= Líquido que entra" class="fi">{_h(liq)}</div>'
            f'<div data-l="{l1} {_pct(pb)}">{_h(br)}</div><div data-l="{l2} {_pct(pu)}">{_h(ur)}</div></div>')
     tabela = f'<div class="sc-tb">{cab}<div class="sc-sc">{"".join(lin)}</div>{tot}</div>'
@@ -817,7 +860,7 @@ def render_simulador(df_admin, cfg, master=False):
                 _html(f'<div class="sc-soma"><span>Entrada líquida total estimada{extra}</span><b>{_h(liq_t)}</b></div>')
             with s_master:
                 if tem:
-                    _html(_bloco_socios(df_c, regra_adm, imposto, modo, quem, pb, pu))
+                    _html(_bloco_socios(df_c, regra_adm, imposto, modo, quem, pb, pu, vendas))
                 elif regra_adm:
                     _html('<div class="sc-goal">Informe um valor de venda acima de zero para ver a entrada da administradora, mês a mês.</div>')
             st.markdown(
@@ -874,7 +917,7 @@ def render_simulador(df_admin, cfg, master=False):
         # ---- master: entrada real, vendedor, Consorbens e sócios (cascata + mês a mês)
         if master and regra_adm and tem:
             with s_master:
-                _html(_bloco_corretora(por_mes, regra_adm, imposto, cv.desconta_dos_socios(cfg)))
+                _html(_bloco_corretora(por_mes, regra_adm, imposto, cv.desconta_dos_socios(cfg), vendas))
         elif master and regra_adm:
             with s_master:
                 _html('<div class="sc-goal">Informe um valor de venda acima de zero para ver a entrada da administradora, mês a mês.</div>')
