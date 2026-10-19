@@ -106,9 +106,12 @@ def pendencias_bloqueantes(df_vendas, usuarios, vendedor_nome):
     return out
 
 
-def montar_itens(df_vendas, df_admin, cfg, status_dict, comissoes_pagas, vendedor_nome, data_corte, chaves_existentes=(), saldo_anterior=None):
+def montar_itens(df_vendas, df_admin, cfg, status_dict, comissoes_pagas, vendedor_nome, data_corte, chaves_existentes=(), saldo_anterior=None,
+                 orfas=None):
     """Itens candidatos ao fechamento do vendedor.
-    Devolve (itens, aguardando) — `aguardando` = linhas previstas que ainda não têm baixa real até o corte."""
+    Devolve (itens, aguardando) — `aguardando` = linhas previstas que ainda não têm baixa real até o corte.
+    `orfas` (lista opcional, preenchida aqui): baixas reais das cotas do vendedor, até o corte, cuja parcela NÃO existe na
+    previsão (ex.: cota cancelada antes do vencimento, parcela fora da regra) — hoje não geram item e ninguém veria."""
     itens, aguardando = [], []
     if df_vendas is None or df_vendas.empty:
         return itens, aguardando
@@ -146,6 +149,15 @@ def montar_itens(df_vendas, df_admin, cfg, status_dict, comissoes_pagas, vendedo
     if not partes:
         return itens, aguardando
     tab = pd.concat(partes, ignore_index=True)
+    if orfas is not None:
+        previstas = {(cv.norm(r["_adm"]), _gc(r["Grupo"]), _gc(r["Cota"]), _dig(r["Parcela"])) for _, r in tab.iterrows()
+                     if str(r.get("Tipo Vendedor") or "") != "Estorno"}
+        cotas_meu = {(cv.norm(r.get("ADMINISTRADORA")), _gc(r.get("GRUPO")), _gc(r.get("COTA"))) for _, r in meu.iterrows()}
+        for k, (b, dt) in baixas.items():
+            if k[:3] in cotas_meu and k not in previstas and not pd.isna(dt) and dt.normalize() <= corte:
+                orfas.append({"grupo": k[1], "cota": k[2], "parcela": k[3], "valor_nota": b.get("valor_nota"),
+                              "data": b.get("data_pagamento"), "cliente": _txt(b.get("cliente")),
+                              "motivo": "baixa recebida de parcela que não está na previsão desta cota (cota cancelada antes do vencimento? parcela fora da regra?)"})
     tab = tab[tab["Vendedor Recebe"] != 0]
     existentes = set(chaves_existentes or ())
     for _, r in tab.iterrows():
