@@ -136,9 +136,10 @@ def _regra_admin(df_admin, adm, prod, tipo):
 
 
 def render_simulacao(df_admin, cfg, master=False):
-    """Simulador de comissionamento: todo o visual/UX vive em modulos/simulador_comissao_ui.py."""
-    from modulos.simulador_comissao_ui import render_simulador
-    render_simulador(df_admin, cfg, master=master)
+    """Simulador de comissionamento: componente interativo em modulos/simulador_comissao_v2.py
+    (a versão anterior, em Streamlit puro, fica em modulos/simulador_comissao_ui.py como reserva)."""
+    from modulos.simulador_comissao_v2 import render_simulador_v2
+    render_simulador_v2(df_admin, cfg, master=master)
 
 
 def _aba_proximos_meses(df_vendas, df_admin, cfg, status_dict, nome):
