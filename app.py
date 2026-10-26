@@ -412,6 +412,10 @@ if not is_logado:
         _, col_meio, _ = st.columns([1, 1.3, 1])
         
         with col_meio:
+            st.markdown('<div class="cb-login-hd"><div class="cb-eyebrow">Portal Consorbens</div>'
+                        '<div class="cb-login-t">Bem-vindo de volta 👋</div>'
+                        '<div class="cb-login-s">Entre para acompanhar vendas, lances, boletos e comissões.</div></div>',
+                        unsafe_allow_html=True)
             t_login, t_senha = st.tabs(["🔐 Entrar no Sistema", "🔄 Alterar Minha Senha"])
             
             with t_login:
@@ -437,7 +441,10 @@ if not is_logado:
                                 st.rerun()
                             else:
                                 st.error("❌ " + (erro_login or "Usuário ou senha incorretos."))
-                                
+                st.markdown('<div class="cb-chiprow" style="justify-content:center;margin-top:12px">'
+                            '<span class="cb-chip ok">Conexão segura</span><span class="cb-chip plain">Senha protegida</span>'
+                            '<span class="cb-chip plain">Acesso por perfil</span></div>', unsafe_allow_html=True)
+
             with t_senha:
                 with st.form("form_alterar_senha"):
                     st.markdown("##### Atualizar Palavra-passe")

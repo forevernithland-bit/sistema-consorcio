@@ -36,8 +36,8 @@ def tema_atual():
 def render_seletor_tema():
     """Barra superior com o seletor de cor do sistema."""
     t = tema_atual()
-    _, col_sel = st.columns([6, 1.15])
-    with col_sel:
+    # Fica "flutuando" no canto superior direito (CSS .st-key-cb_tema_bar): não empurra o conteúdo para baixo
+    with st.container(key="cb_tema_bar"):
         with st.popover(f"🎨 Tema", use_container_width=True):
             st.markdown("##### Cor do sistema")
             st.caption("Escolha a identidade visual do painel.")
@@ -390,6 +390,15 @@ _CSS_V2 = """
     .cb-chip.danger { background: var(--danger-soft); border-color: #fecaca; color: #991b1b; } .cb-chip.danger::before { background: var(--danger); }
     .cb-chip.info { background: var(--info-soft); border-color: #bfdbfe; color: #1e40af; } .cb-chip.info::before { background: var(--info); }
     .cb-chiprow { display: flex; flex-wrap: wrap; gap: 7px; margin: 2px 0 12px; }
+    a.cb-chip { text-decoration: none !important; transition: transform .18s var(--ease), box-shadow .18s var(--ease); }
+    a.cb-chip:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+
+    /* ---------- login ---------- */
+    .cb-login-hd { text-align: center; margin: 0 0 14px; animation: cbUp .55s var(--ease) both; }
+    .cb-login-hd .cb-eyebrow { color: var(--brand); }
+    .cb-login-hd .cb-eyebrow::before { background: var(--brand); }
+    .cb-login-t { font-family: 'Plus Jakarta Sans', 'Inter', sans-serif; font-weight: 800; font-size: 1.9rem; letter-spacing: -.03em; color: var(--ink); margin-top: 4px; }
+    .cb-login-s { color: var(--muted); font-size: 14.5px; margin-top: 2px; }
 
     /* ---------- cartões de KPI ---------- */
     .cb-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin: 4px 0 18px; }
@@ -465,6 +474,18 @@ _CSS_V2 = """
         box-shadow: 0 6px 16px -6px var(--brand-glow); }
     button[data-baseweb="tab"][aria-selected="true"] p { color: #fff !important; }
     [data-baseweb="tab-highlight"], [data-baseweb="tab-border"] { display: none !important; }
+    /* Streamlit novo (react-aria): mesmas pílulas */
+    [data-testid="stTabs"] [role="tablist"] { gap: 4px !important; background: #fff; border: 1px solid var(--line) !important; border-radius: 14px;
+        padding: 4px !important; box-shadow: var(--shadow-sm); overflow-x: auto; scrollbar-width: thin; width: fit-content; max-width: 100%; }
+    [data-testid="stTab"] { border-radius: 10px !important; padding: 7px 15px !important; white-space: nowrap; cursor: pointer;
+        transition: background-color .2s var(--ease), color .2s var(--ease), box-shadow .2s var(--ease) !important; }
+    [data-testid="stTab"] p { font-weight: 600 !important; color: var(--muted); font-size: 14.5px !important; }
+    [data-testid="stTab"]:hover { background: #f1f5f9; } [data-testid="stTab"]:hover p { color: var(--brand) !important; }
+    [data-testid="stTab"][aria-selected="true"] { background: linear-gradient(135deg, var(--brand), var(--brand-dark)) !important;
+        box-shadow: 0 6px 16px -6px var(--brand-glow); }
+    [data-testid="stTab"][aria-selected="true"] p { color: #fff !important; }
+    [data-testid="stTabs"] .react-aria-SelectionIndicator { display: none !important; }
+    [data-testid="stTabs"] [role="tablist"] + div, [data-testid="stTabs"] > div > div:has(> [role="tablist"])::after { border: 0 !important; }
     /* alertas com faixa lateral por tipo */
     [data-testid="stAlert"] { border-radius: 14px !important; animation: cbPop .35s var(--ease) both; }
     [data-testid="stAlert"] > div { border-left: 4px solid transparent; border-radius: 14px !important; }
@@ -480,7 +501,13 @@ _CSS_V2 = """
     [data-testid="stProgress"] div[role="progressbar"] > div > div > div { background: linear-gradient(90deg, var(--brand), var(--brand-dark)) !important;
         border-radius: 99px !important; transform-origin: left; animation: cbGrow 1s var(--ease) both; }
     /* caixas com borda (st.container(border=True)) */
-    [data-testid="stMain"] [data-testid="stVerticalBlockBorderWrapper"] { border-radius: 18px !important; }
+    [data-testid="stMain"] [data-testid="stVerticalBlockBorderWrapper"] { border-radius: 18px !important; background: var(--card);
+        border-color: var(--line) !important; box-shadow: var(--shadow-sm); transition: box-shadow .24s var(--ease), border-color .24s var(--ease); }
+    [data-testid="stMain"] [data-testid="stVerticalBlockBorderWrapper"]:hover { box-shadow: var(--shadow-md); border-color: var(--brand-mid) !important; }
+    .st-key-cb_tema_bar { position: fixed; top: 12px; right: 64px; z-index: 999991; width: 116px !important; }
+    .st-key-cb_tema_bar [data-testid="stPopover"] button { padding: .3rem .8rem !important; min-height: 0 !important; background: rgba(255,255,255,.85);
+        backdrop-filter: blur(6px); font-size: 13.5px !important; }
+    [class*="st-key-dash_atr_"] button { padding: .2rem .7rem !important; min-height: 0 !important; font-size: 13px !important; border-radius: 9px !important; }
     /* diálogos, popovers e toasts */
     div[role="dialog"] { border-radius: 22px !important; box-shadow: 0 30px 80px -24px rgba(15,23,42,.45) !important; }
     [data-testid="stToast"] { border-radius: 14px !important; box-shadow: var(--shadow-lg) !important; border: 1px solid var(--line); }

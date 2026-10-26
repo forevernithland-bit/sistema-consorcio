@@ -108,8 +108,8 @@ def render_producao_vendedor(df_vendas, df_admin, cfg, status_dict, vendedor, ch
     if alvo:
         falta = max(alvo - vol, 0.0)
         st.progress(min(vol / alvo, 1.0))
-        st.caption(f"Faltam **{_brl(falta + 0.01)}** para passar de {_brl(alvo)} e liberar o {rot} "
-                   f"(+{_pct(bonus)} do crédito).")
+        st.caption((f"Faltam **{_brl(falta + 0.01)}** para passar de {_brl(alvo)} e liberar o {rot} "
+                    f"(+{_pct(bonus)} do crédito).").replace("$", "\\$"))   # '$' cru vira LaTeX no Markdown
     else:
         st.success("🏆 Nível máximo do mês atingido.")
     st.caption("Pagamento por posição: " + " · ".join(f"{i + 1}º pagamento {_pct(p)}" for i, p in enumerate(pcts))
