@@ -111,6 +111,18 @@ def botao_imprimir(key, rotulo="🖨️ Imprimir / Salvar PDF"):
         st.caption("Se não abriu o diálogo de impressão, use Ctrl+P (⌘+P no Mac). "
                    "Expanders fechados não aparecem na impressão — abra antes de imprimir.")
 
+def iter_linhas(df):
+    """Percorre as linhas de um DataFrame como dicionários {coluna: valor}.
+    Mesmos valores do `iterrows()` (r['COL'] / r.get('COL')), só que muito mais
+    rápido: lê cada coluna uma vez em vez de montar uma Series por linha."""
+    if df is None or len(df) == 0:
+        return
+    cols = list(df.columns)
+    valores = [df.iloc[:, i].tolist() for i in range(len(cols))]
+    for linha in zip(*valores):
+        yield dict(zip(cols, linha))
+
+
 def parse_float_safe(v):
     # NaN é float, então passava direto e contaminava as contas (uma célula
     # vazia na tabela de regras virava comissão NaN em vez de 0).

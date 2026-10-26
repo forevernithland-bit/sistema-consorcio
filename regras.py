@@ -1,9 +1,10 @@
 import re
 import hashlib
 import threading
+import weakref
 from collections import OrderedDict
 import pandas as pd
-from utils import parse_float_safe, normalizar_string, normalizar_produto
+from utils import parse_float_safe, normalizar_string, normalizar_produto, iter_linhas
 import comissao_vendedor as cv
 
 def total_parcelas_regra(admin, produto, tipo_parcela, df_regras):
@@ -20,19 +21,24 @@ def total_parcelas_regra(admin, produto, tipo_parcela, df_regras):
     Devolve None se não achar regra (não dá pra saber o total)."""
     if df_regras is None or df_regras.empty:
         return None
+    # Desempenho: memória por TABELA DE REGRAS (o mesmo objeto, conferido por
+    # referência fraca — se a tabela for outra, a memória é outra) e pelos 3 valores.
     try:
-        chave = (id(df_regras), _digital_df(df_regras), str(admin), str(produto), str(tipo_parcela))
-        hash(chave)
-    except Exception:
+        chave = tuple((type(x).__name__, str(x)) for x in (admin, produto, tipo_parcela))
+        with _MEMO_LOCK:
+            ent = _MEMO_TOTAL.get(id(df_regras))
+            if ent is None or ent[0]() is not df_regras:
+                ent = (weakref.ref(df_regras), {})
+                if len(_MEMO_TOTAL) > 50:
+                    _MEMO_TOTAL.clear()
+                _MEMO_TOTAL[id(df_regras)] = ent
+            if chave in ent[1]:
+                return ent[1][chave]
+    except TypeError:
         return _total_parcelas_regra_impl(admin, produto, tipo_parcela, df_regras)
-    with _MEMO_LOCK:
-        if chave in _MEMO_TOTAL:
-            return _MEMO_TOTAL[chave]
     v = _total_parcelas_regra_impl(admin, produto, tipo_parcela, df_regras)
     with _MEMO_LOCK:
-        if len(_MEMO_TOTAL) > 5000:
-            _MEMO_TOTAL.clear()
-        _MEMO_TOTAL[chave] = v
+        ent[1][chave] = v
     return v
 
 
@@ -202,7 +208,7 @@ def _gerar_tabela_parcelas_impl(df_alvo, df_global, df_regras, cfg, status_dict,
         else:
             df_regras['Tipo_Norm'] = ""
 
-    for r in df_alvo.to_dict("records"):
+    for r in iter_linhas(df_alvo):
         data_venda = r['Data_Real']
         cliente = r.get('Nome do cliente', 'Desconhecido')
         grupo = r.get('GRUPO', '')
@@ -542,7 +548,7 @@ def _gerar_previsao_pendente_impl(df_vendas, df_admin, cfg, status_dict):
     # cota cuja administradora/produto não casa com nenhuma regra cadastrada sairia da
     # previsão em silêncio — avisa para o cadastro ser corrigido.
     sem_regra = []
-    for v in ativas.to_dict("records"):
+    for v in iter_linhas(ativas):
         if normalizar_string(v.get("TIPO_PRODUTO", "")) == "CONSORCIOCONTEMPLADO":
             continue
         if total_parcelas_regra(v.get("ADMINISTRADORA"), v.get("PRODUTO"), v.get("TIPO_PARCELA"), df_admin) is None:
@@ -567,7 +573,7 @@ def _gerar_previsao_pendente_impl(df_vendas, df_admin, cfg, status_dict):
         return vazio, avisos
 
     info = {}
-    for v in ativas.to_dict("records"):
+    for v in iter_linhas(ativas):
         info[f"{_gc(v.get('GRUPO'))}/{_gc(v.get('COTA'))}"] = (
             str(v.get("ADMINISTRADORA") or "—").strip().upper(),
             normalizar_produto(v.get("PRODUTO")) or "—")
@@ -575,7 +581,7 @@ def _gerar_previsao_pendente_impl(df_vendas, df_admin, cfg, status_dict):
     hoje = pd.Timestamp.today().normalize()
     regs = []
     puladas_pagas = 0
-    for p in pend.to_dict("records"):
+    for p in iter_linhas(pend):
         gc = f"{_gc(p['Grupo'])}/{_gc(p['Cota'])}"
         # já paga sob outra grafia do nome do cliente? não é previsão.
         if (_gc(p["Grupo"]), _gc(p["Cota"]), _parc_num(p["Parcela"])) in pagas_gcp:

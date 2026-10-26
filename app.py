@@ -550,7 +550,7 @@ elif menu_selecionado == "Configurações de Sistema":
     # Senhas e Base de Conhecimento agora vivem aqui dentro, como abas.
     from modulos.tema import cabecalho
     cabecalho("Configurações de Sistema", "⚙️", "Administradoras e regras, usuários e acessos, senhas e a base do Bento.", eyebrow="Ferramentas")
-    tab_sis, tab_usr, tab_senhas, tab_ia = st.tabs(["⚙️ Sistema", "👥 Usuários e acessos", "🔐 Senhas", "🧠 Base de Conhecimento"])
+    tab_sis, tab_usr, tab_senhas, tab_ia, tab_bk = st.tabs(["⚙️ Sistema", "👥 Usuários e acessos", "🔐 Senhas", "🧠 Base de Conhecimento", "🛟 Backup e Lixeira"])
     with tab_sis:
         render_configuracoes(supabase, df_admin_cad, df_admin, lista_admin_bd, cfg, cfg_id)
     with tab_usr:
@@ -559,3 +559,7 @@ elif menu_selecionado == "Configurações de Sistema":
         render_senhas(supabase)
     with tab_ia:
         render_config_ia(supabase)
+    with tab_bk:
+        # Backup diário (robô) + download na hora + lixeira com restauração
+        from modulos.backup_painel import render_backup_lixeira
+        render_backup_lixeira(supabase)

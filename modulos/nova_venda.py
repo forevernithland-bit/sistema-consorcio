@@ -12,7 +12,9 @@ VENDEDORES_CONTEMPLADO = ["Consorbens", "BRENO LIMA", "URIEL GOMES", "Particular
 
 
 def _salvar_cliente_se_novo(supabase, df_cli, cliente, telefone, email, end_completo, aniversario, profissao, renda, cpf=""):
-    """Insere o cliente na tabela de clientes, se ainda não existir."""
+    """Insere o cliente na tabela de clientes, se ainda não existir.
+    Se falhar, AVISA (antes o erro era engolido: a venda ficava salva e o
+    cliente sumia do cadastro sem ninguém saber)."""
     try:
         if df_cli.empty or cliente not in df_cli['Nome'].tolist():
             supabase.table("clientes").insert([{
@@ -20,8 +22,9 @@ def _salvar_cliente_se_novo(supabase, df_cli, cliente, telefone, email, end_comp
                 "Aniversario": aniversario, "Profissao": profissao, "Renda": renda,
                 "Data_Cadastro": datetime.today().strftime("%d/%m/%Y")
             }]).execute()
-    except Exception:
-        pass
+    except Exception as e:
+        st.warning(f"⚠️ A venda foi salva, mas o cadastro do cliente falhou ({e}). "
+                   "Abra o cliente no Dashboard e clique em Salvar Alterações Cadastrais.")
 
 
 def render_nova_venda(supabase, df_cli, lista_admin_bd):
@@ -147,11 +150,16 @@ def render_nova_venda(supabase, df_cli, lista_admin_bd):
                             "VALOR": vf
                         })
 
-                    supabase.table("vendas").insert(vendas_insert).execute()
-                    _salvar_cliente_se_novo(supabase, df_cli, cliente, telefone, email, end_completo, aniversario, profissao, renda, cpf)
-                    carregar_dados_iniciais.clear()
-                    st.success(f"✅ {len(cotas_data)} Venda(s) salvas!")
-                    st.session_state['qtd_cotas'] = 1
+                    try:
+                        # todas as cotas num único insert: ou entram todas, ou nenhuma
+                        supabase.table("vendas").insert(vendas_insert).execute()
+                    except Exception as e:
+                        st.error(f"❌ NADA foi salvo — erro ao gravar as vendas: {e}. Confira os dados e tente de novo.")
+                    else:
+                        _salvar_cliente_se_novo(supabase, df_cli, cliente, telefone, email, end_completo, aniversario, profissao, renda, cpf)
+                        carregar_dados_iniciais.clear()
+                        st.success(f"✅ {len(cotas_data)} Venda(s) salvas!")
+                        st.session_state['qtd_cotas'] = 1
 
     # ----------------------------------------------------------
     # 2B. CONSÓRCIO CONTEMPLADO (venda de carta contemplada, com ágio)
@@ -198,7 +206,11 @@ def render_nova_venda(supabase, df_cli, lista_admin_bd):
                     "VALOR_ENTRADA": valor_entrada,
                     "AGIO": agio
                 }
-                supabase.table("vendas").insert([venda]).execute()
-                _salvar_cliente_se_novo(supabase, df_cli, cliente, telefone, email, end_completo, aniversario, profissao, renda, cpf)
-                carregar_dados_iniciais.clear()
-                st.success("✅ Venda de Consórcio Contemplado salva!")
+                try:
+                    supabase.table("vendas").insert([venda]).execute()
+                except Exception as e:
+                    st.error(f"❌ A venda NÃO foi salva: {e}")
+                else:
+                    _salvar_cliente_se_novo(supabase, df_cli, cliente, telefone, email, end_completo, aniversario, profissao, renda, cpf)
+                    carregar_dados_iniciais.clear()
+                    st.success("✅ Venda de Consórcio Contemplado salva!")

@@ -24,6 +24,7 @@ from datetime import datetime
 import altair as alt
 import pandas as pd
 import streamlit as st
+from utils import iter_linhas
 
 from utils import (formatar_brl_puro, parse_float_safe, limpar_str_nan,
                    normalizar_produto, botao_imprimir)
@@ -184,7 +185,7 @@ def _enriquecer_com_venda(df_com, df_vendas):
         return df_com
     mapa = {}
     if df_vendas is not None and not df_vendas.empty:
-        for v in df_vendas.to_dict("records"):
+        for v in iter_linhas(df_vendas):
             mapa[f"{_norm_gc(v.get('GRUPO'))}/{_norm_gc(v.get('COTA'))}"] = {
                 "produto": normalizar_produto(v.get("PRODUTO")) or "—",
                 "vendedor": v.get("VENDEDOR") or "—",

@@ -1,5 +1,6 @@
 from ui_valores import input_valor
 import streamlit as st
+from utils import iter_linhas
 import pandas as pd
 import re
 from datetime import datetime
@@ -547,7 +548,7 @@ def _mapa_produto_tipo(df_vendas_global):
     mapa = {}
     if df_vendas_global is None or df_vendas_global.empty:
         return mapa
-    for v in df_vendas_global.to_dict("records"):
+    for v in iter_linhas(df_vendas_global):
         chave = (_gc(v.get("GRUPO")), _gc(v.get("COTA")))
         mapa[chave] = (v.get("PRODUTO"), v.get("TIPO_PARCELA"))
     return mapa

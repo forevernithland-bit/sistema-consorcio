@@ -2,6 +2,7 @@ import time
 import threading
 from functools import lru_cache, wraps
 import streamlit as st
+from utils import iter_linhas
 import pandas as pd
 from datetime import datetime
 from utils import formatar_brl_puro, parse_float_safe, botao_imprimir
@@ -167,7 +168,7 @@ def _recebidos_tradicional(supabase, df_vendas_global, df_admin, cfg, status_dic
     if df_vendas_global is not None and not df_vendas_global.empty:
         df_parc, _ = gerar_tabela_parcelas(df_vendas_global, df_vendas_global, df_admin, cfg, status_dict)
         if not df_parc.empty:
-            for p in df_parc[df_parc["Status"] == "PAGO"].to_dict("records"):
+            for p in iter_linhas(df_parc[df_parc["Status"] == "PAGO"]):
                 if p["Chave"] in chaves_nf:
                     continue
                 padrao = str(p["Data Recebimento"])

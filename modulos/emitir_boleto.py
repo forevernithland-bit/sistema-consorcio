@@ -4,6 +4,7 @@ import zipfile
 import unicodedata
 import urllib.parse
 import streamlit as st
+from utils import iter_linhas
 import pandas as pd
 from datetime import datetime
 from utils import formatar_brl_puro, normalizar_string, listar_arquivos_drive, get_drive_service, dt_br
@@ -141,7 +142,7 @@ def render_emitir_boleto(supabase, df_vendas_global, df_cli=None):
     # mapa nome do cliente -> telefone (para o link do WhatsApp)
     tel_por_cliente = {}
     if df_cli is not None and not df_cli.empty and 'Nome' in df_cli.columns:
-        for c in df_cli.to_dict("records"):
+        for c in iter_linhas(df_cli):
             tel_por_cliente[str(c.get('Nome', ''))] = c.get('Telefone', '')
     st.session_state['_bol_tel'] = tel_por_cliente
 
@@ -197,7 +198,7 @@ def render_emitir_boleto(supabase, df_vendas_global, df_cli=None):
 
     # ---------------- TABELA EDITÁVEL ----------------
     linhas = []
-    for r in df.to_dict("records"):
+    for r in iter_linhas(df):
         vid = int(r['id'])
         pedido = mapa_ultimo.get(vid)
         status_atual = (pedido.get("status") or "").upper() if pedido else ""
