@@ -70,7 +70,7 @@ def calcular_comissao_vendedor(df_vendas_global, vendedor_nome, data_venda_dt, c
     return cv.percentuais_da_venda(df_vendas_global, vendedor_nome, data_venda_dt, cfg)
 
 
-def _datas_comissao_vendedor(df_global, vendedor, df_regras, cfg, status_dict, indice=None, _norm_vend=None):
+def _datas_comissao_vendedor(df_global, vendedor, df_regras, cfg, status_dict, indice=None, _norm_vend=None, _caches=None):
     """Datas (ordenadas) em que o vendedor tem comissão a receber, somando TODAS as cotas dele.
     Serve para decidir em quais pagamentos o estorno é abatido.
     `_norm_vend` = df_global['VENDEDOR'] já normalizado (só desempenho: não renormaliza a cada vendedor)."""
@@ -80,7 +80,7 @@ def _datas_comissao_vendedor(df_global, vendedor, df_regras, cfg, status_dict, i
     alvo = df_global[nv_serie == cv.norm(vendedor)]
     if alvo.empty:
         return []
-    t, _ = _gerar_tabela_parcelas_impl(alvo, df_global, df_regras, cfg, status_dict, _estornos=False, _indice=indice)
+    t, _ = _gerar_tabela_parcelas_impl(alvo, df_global, df_regras, cfg, status_dict, _estornos=False, _indice=indice, _caches=_caches)
     if t.empty:
         return []
     t = t[t['Vendedor Recebe'] > 0]
@@ -170,15 +170,18 @@ def gerar_tabela_parcelas(df_alvo, df_global, df_regras, cfg, status_dict, _esto
     return df.copy(), list(sem_data)
 
 
-def _gerar_tabela_parcelas_impl(df_alvo, df_global, df_regras, cfg, status_dict, _estornos=True, _indice=None):
+def _gerar_tabela_parcelas_impl(df_alvo, df_global, df_regras, cfg, status_dict, _estornos=True, _indice=None, _caches=None):
     """Cálculo de verdade (sem memória). Mesma regra de sempre; só não refaz contas
     repetidas por linha (regra da administradora, % de cada parcela, parâmetros
     da configuração, nome normalizado do vendedor)."""
     hoje = pd.Timestamp.today().normalize()
     _cache_datas_vd = {}
-    _cache_regra = {}
-    _cache_pvals = {}
-    _cache_nv = {}
+    # caches de regra/vendedor: compartilhados com as chamadas internas do estorno
+    # (mesma df_regras/cfg) — só desempenho
+    _caches = _caches if _caches is not None else {"regra": {}, "pvals": {}, "nv": {}}
+    _cache_regra = _caches["regra"]
+    _cache_pvals = _caches["pvals"]
+    _cache_nv = _caches["nv"]
     _norm_vend = {}
     # parâmetros da configuração lidos uma vez (mesmos valores de antes)
     _imp = parse_float_safe(cfg.get('Imposto', 7.16)) / 100.0
@@ -247,7 +250,7 @@ def _gerar_tabela_parcelas_impl(df_alvo, df_global, df_regras, cfg, status_dict,
                 if regra.empty:
                     regra = base
                 _cache_regra[chave_regra] = regra.iloc[0]
-                _cache_pvals[chave_regra] = [parse_float_safe(regra.iloc[0].get(f"P{i}", 0)) / 100.0 for i in range(1, 26)]
+                _cache_pvals[chave_regra] = [parse_float_safe(_cache_regra[chave_regra].get(f"P{i}", 0)) / 100.0 for i in range(1, 26)]
         regra = _cache_regra[chave_regra]
         if regra is None: continue
         pvals = _cache_pvals[chave_regra]
@@ -340,7 +343,7 @@ def _gerar_tabela_parcelas_impl(df_alvo, df_global, df_regras, cfg, status_dict,
                         if "s" not in _norm_vend:
                             _norm_vend["s"] = df_global['VENDEDOR'].apply(cv.norm) if (df_global is not None and not df_global.empty) else None
                         _cache_datas_vd[chave_vd] = _datas_comissao_vendedor(df_global, vendedor, df_regras, cfg, status_dict, _indice_vol,
-                                                                            _norm_vend=_norm_vend["s"])
+                                                                            _norm_vend=_norm_vend["s"], _caches=_caches)
                     # próximos K "relatórios" (meses) em que o vendedor tem comissão a receber depois do cancelamento
                     meses_dt = {}
                     for d in _cache_datas_vd[chave_vd]:
