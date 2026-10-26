@@ -214,7 +214,7 @@ def _mostrar_senha_unica():
 
 
 def render_usuarios(supabase):
-    st.markdown("#### 👥 Usuários e acessos")
+    from modulos.tema import secao; secao("Usuários e acessos", "👥", "Quem entra no sistema, com qual perfil e quais telas.")
 
     if not _migracao_ok(supabase):
         st.error("A atualização do banco para senhas criptografadas ainda não foi aplicada.")

@@ -84,7 +84,8 @@ except Exception as e:
 # ==========================================
 if st.session_state['tela_cheia_relatorio']:
     st.markdown(montar_css(), unsafe_allow_html=True)
-    st.markdown("## 💰 Relatório de Comissionamento Detalhado")
+    from modulos.tema import cabecalho
+    cabecalho("Relatório de Comissionamento Detalhado", "💰", "Parcela a parcela, com status de pagamento e data de recebimento.", eyebrow="Relatórios")
     
     col_bt, col_chk = st.columns([1, 3])
     with col_bt:
@@ -250,7 +251,8 @@ if is_logado:
 
     # Senha temporária: a pessoa precisa criar a própria antes de usar o sistema
     if _info_usr.get("trocar_senha"):
-        st.markdown("### 🔐 Crie a sua senha")
+        from modulos.tema import cabecalho
+        cabecalho("Crie a sua senha", "🔐", "Só falta este passo para começar a usar o sistema.", eyebrow="Primeiro acesso")
         st.info("Você entrou com uma senha temporária. Defina uma senha só sua para continuar "
                 "(mínimo 8 caracteres, com letras e números).")
         with st.form("form_troca_obrigatoria"):
@@ -533,6 +535,8 @@ elif menu_selecionado == "🤖 Robô":
         st.rerun()
 elif menu_selecionado == "Configurações de Sistema":
     # Senhas e Base de Conhecimento agora vivem aqui dentro, como abas.
+    from modulos.tema import cabecalho
+    cabecalho("Configurações de Sistema", "⚙️", "Administradoras e regras, usuários e acessos, senhas e a base do Bento.", eyebrow="Ferramentas")
     tab_sis, tab_usr, tab_senhas, tab_ia = st.tabs(["⚙️ Sistema", "👥 Usuários e acessos", "🔐 Senhas", "🧠 Base de Conhecimento"])
     with tab_sis:
         render_configuracoes(supabase, df_admin_cad, df_admin, lista_admin_bd, cfg, cfg_id)

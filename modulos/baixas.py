@@ -12,7 +12,7 @@ from modulos.importar_comissoes import (
 )
 
 def render_baixas(supabase, df_vendas_global, df_admin, cfg, status_dict, lista_admin_bd=None):
-    st.markdown("### 💰 Baixar Parcelas de Comissão")
+    from modulos.tema import cabecalho; cabecalho("Baixar Parcelas de Comissão", "💰", "Importe a NF, dê baixa manual, consulte o histórico e pague os vendedores.", eyebrow="Gestão")
 
     aba_import, aba_manual, aba_hist, aba_vend = st.tabs(
         ["📥 Importar Resumo (NF)", "✍️ Baixa Manual", "📚 Histórico", "👥 Pagamento a Vendedores"]

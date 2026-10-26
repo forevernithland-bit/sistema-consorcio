@@ -150,7 +150,7 @@ def _cancelar_ui(sb, fid, container):
 
 
 def render_pagamento_vendedores(supabase, df_vendas, df_admin, cfg, status_dict):
-    st.markdown("#### 👥 Pagamento de comissão aos vendedores")
+    from modulos.tema import secao; secao("Pagamento de comissão aos vendedores", "👥", "Gere o fechamento, acompanhe o que está em aberto e o histórico.")
     if not eh_master():
         st.warning("Somente o administrador acessa esta área.")
         return

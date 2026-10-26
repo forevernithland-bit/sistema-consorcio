@@ -207,7 +207,7 @@ def _enviar_midias(supabase, arquivos, tabela_ok):
 
 
 def render_midias(supabase):
-    st.markdown("### 🖼️ Portal de Mídias (Google Drive)")
+    from modulos.tema import cabecalho; cabecalho("Portal de Mídias (Google Drive)", "🖼️", "Cards, tabelas, vídeos e apresentações prontos para enviar ao cliente.", eyebrow="Ferramentas")
 
     drive_ok = "gcp_service_account" in st.secrets and "DRIVE_FOLDER_IDS" in st.secrets
     arquivos = []

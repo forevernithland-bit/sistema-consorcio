@@ -107,7 +107,8 @@ def render_ofertar_lance(supabase, df_vendas_global):
                 (st.session_state.get('usuario_logado') in ['breno', 'uriel'])
 
     mes_atual = datetime.today().strftime("%m/%Y")
-    st.markdown("### 🎯 Ofertar Lance (Yamaha)")
+    from modulos.tema import cabecalho; cabecalho("Ofertar Lance (Yamaha)", "🎯", "Marque as cotas e o robô do escritório oferta no Newcon, uma a uma.",
+              chips=[(f"Referência {mes_atual}", "plain"), ("Lance Fixo", "brand")], eyebrow="Robô Yamaha")
     st.caption(
         f"Marque as cotas e clique em **Ofertar Lance**. O robô do escritório oferta cota a cota "
         f"no Newcon, aguardando a confirmação de cada uma. **Canceladas e contempladas não aparecem** "
@@ -164,6 +165,7 @@ def render_ofertar_lance(supabase, df_vendas_global):
     # ------------------------------------------------------------------
     venda_ids = [int(x) for x in df['id'].tolist() if pd.notna(x)]
     mapa_ultimo = _mapa_ultimo_lance(supabase, venda_ids)
+    _resumo_situacoes(venda_ids, mapa_ultimo)
 
     # ------------------------------------------------------------------
     # 3. Monta a tabela editável
@@ -256,6 +258,21 @@ def render_ofertar_lance(supabase, df_vendas_global):
     _painel_status(supabase, is_master, df_vendas_global)
 
 
+def _resumo_situacoes(venda_ids, mapa_ultimo):
+    """Pílulas com a situação do mês das cotas listadas (só leitura do que já foi carregado)."""
+    from modulos.tema import linha_chips
+    st_ = [((mapa_ultimo.get(v) or {}).get("status") or "").upper() for v in venda_ids]
+    disp = sum(1 for s in st_ if s in ("", "ERRO"))
+    fila = sum(1 for s in st_ if s in ("PENDENTE", "PROCESSANDO"))
+    feito = sum(1 for s in st_ if s in ("SUCESSO", "JA_OFERTADO"))
+    erro = sum(1 for s in st_ if s == "ERRO")
+    chips = [(f"{len(venda_ids)} cota(s) na lista", "plain"), (f"{disp} disponível(is) para ofertar", "brand"),
+             (f"{fila} na fila do robô", "info" if fila else "plain"), (f"{feito} já ofertada(s) no mês", "ok" if feito else "plain")]
+    if erro:
+        chips.append((f"{erro} com erro — pode reofertar", "danger"))
+    linha_chips(chips)
+
+
 def _enfileirar(supabase, selecionados, mapa_ultimo):
     """Grava os pedidos selecionados na fila_automacao (status PENDENTE)."""
     usuario = st.session_state.get('usuario_logado', 'desconhecido')
@@ -314,7 +331,7 @@ def _enfileirar(supabase, selecionados, mapa_ultimo):
 
 def _painel_status(supabase, is_master, df_vendas_global=None):
     """Mostra os pedidos da fila do mês escolhido (padrão: mês atual)."""
-    st.subheader("📋 Andamento dos Lances")
+    from modulos.tema import secao; secao("Andamento dos Lances", "📋", "Tudo o que foi pedido ao robô no mês escolhido.")
 
     # Seletor de mês (mês atual + históricos dos meses anteriores)
     hoje = datetime.today()

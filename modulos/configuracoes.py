@@ -5,7 +5,7 @@ import comissao_vendedor as cv
 from ui_valores import input_valor
 
 def render_configuracoes(supabase, df_admin_cad, df_admin, lista_admin_bd, cfg, cfg_id):
-    st.markdown("### 🏢 Configurações de Sistema")
+    from modulos.tema import secao; secao("Administradoras e regras", "🏢", "Cadastro das administradoras, regras de comissão e regras internas.")
     t_cad_adm, t_regras, t_reg_int = st.tabs(["🏢 Cadastrar Admin", "📋 Regras", "👥 Regras Internas"])
     
     with t_cad_adm:

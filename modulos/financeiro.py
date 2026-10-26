@@ -270,9 +270,9 @@ def _render_previsao_site(site_prev):
 # TELA PRINCIPAL
 # ==========================================================
 def render_financeiro(supabase, df_vendas_global, df_admin, cfg, status_dict):
-    tit_col, imp_col = st.columns([4, 1])
+    tit_col, imp_col = st.columns([4, 1], vertical_alignment="center")
     with tit_col:
-        st.markdown("### 💰 Financeiro")
+        from modulos.tema import cabecalho; cabecalho("Financeiro", "💰", "Faturamento realizado e previsto da Consorbens, mês a mês.", eyebrow="Gestão")
     with imp_col:
         botao_imprimir("financeiro")
     aba_real, aba_prev = st.tabs(["📊 Realizado", "🔮 Faturamento Previsto"])

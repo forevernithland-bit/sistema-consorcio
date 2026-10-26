@@ -33,7 +33,7 @@ def _tabela(itens):
 
 
 def render_meus_pagamentos(supabase):
-    st.markdown("#### 💳 Meus pagamentos de comissão")
+    from modulos.tema import secao; secao("Meus pagamentos de comissão", "💳", "Fechamentos já recebidos e a receber.")
     if fv.diagnostico_tabelas(supabase)[0] != "ok":
         st.info("Seus fechamentos de comissão ainda não estão disponíveis.")
         return

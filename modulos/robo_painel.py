@@ -78,15 +78,12 @@ def _dt(v):
 
 
 def render_robo_painel(supabase):
-    st.markdown("### 🤖 Painel do Robô")
     online = _robo_online(supabase)
     cor, txt = ("#22c55e", "🟢 Robô ligado — as tarefas rodam em segundos") if online \
         else ("#ef4444", "🔴 Robô desligado — as tarefas ficam na fila até ele ligar")
-    st.markdown(
-        f"<div style='display:inline-block;padding:6px 14px;border-radius:999px;"
-        f"background:{cor}22;color:{cor};font-weight:700;font-size:13px'>{txt}</div>",
-        unsafe_allow_html=True,
-    )
+    from modulos.tema import cabecalho
+    cabecalho("Painel do Robô", "🤖", "Dispare as tarefas do robô do escritório e acompanhe o resultado.",
+              chips=[(txt, "ok" if online else "danger"), (f"{len(TAREFAS)} tarefas disponíveis", "plain")], eyebrow="Automação")
     st.caption("Clique num botão pra pedir a tarefa. O robô do escritório executa e "
                "o resultado aparece na tabela abaixo (atualize a página pra ver).")
 

@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 
 def render_senhas(supabase):
-    st.markdown("### 🔐 Gestão de Senhas e Acessos")
+    from modulos.tema import secao; secao("Gestão de Senhas e Acessos", "🔐", "Logins dos portais das administradoras e sistemas.")
     
     # Trava de segurança extra: garante que só os Masters vejam o conteúdo
     is_master = (st.session_state.get('perfil_logado') == "Master") or (st.session_state.get('usuario_logado') in ['breno', 'uriel'])

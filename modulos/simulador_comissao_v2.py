@@ -113,6 +113,7 @@ def montar_html(df_admin, cfg, master=False, hoje=None):
 _CSS_PAGINA = """
 <style>
 .st-key-sim_v2 iframe{display:block;width:100%;border:0;}
+.st-key-sim_v2 [data-testid="stElementContainer"]:has(> iframe){height:auto!important;}
 @media (max-width:640px){ .st-key-sim_v2{margin-left:-19px;margin-right:-19px;width:calc(100% + 38px)!important;max-width:none!important;} }
 </style>
 """
@@ -122,5 +123,10 @@ def render_simulador_v2(df_admin, cfg, master=False):
     html = montar_html(df_admin, cfg, master)
     with st.container(key="sim_v2"):
         st.markdown(_CSS_PAGINA, unsafe_allow_html=True)
-        # altura inicial aproximada; o próprio componente ajusta a altura do iframe ao conteúdo
-        components.html(html, height=4200 if master else 2900, scrolling=False)
+        # altura inicial aproximada; o próprio componente ajusta a altura do iframe ao conteúdo.
+        # st.iframe (Streamlit novo) substitui components.v1.html (descontinuado); os dois usam srcdoc same-origin.
+        altura = 4200 if master else 2900
+        if hasattr(st, "iframe"):
+            st.iframe(html, height=altura)
+        else:
+            components.html(html, height=altura, scrolling=False)

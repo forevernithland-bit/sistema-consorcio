@@ -101,7 +101,8 @@ def _tabela_brl(df, colunas_moeda, ordem=None):
 
 
 def _vazio(msg):
-    st.info(msg)
+    from modulos.tema import estado_vazio
+    estado_vazio(msg, "Ajuste o período ou volte quando houver novos lançamentos.", "📭")
 
 
 def _meses_de(*fontes):
@@ -791,9 +792,9 @@ def _aba_comissionamento(df_vendas):
 # TELA PRINCIPAL
 # ==========================================================
 def render_relatorios(supabase, df_vendas_global, df_admin, cfg, status_dict):
-    tit_col, imp_col = st.columns([4, 1])
+    tit_col, imp_col = st.columns([4, 1], vertical_alignment="center")
     with tit_col:
-        st.markdown("### 📑 Relatórios Gerenciais")
+        from modulos.tema import cabecalho; cabecalho("Relatórios Gerenciais", "📑", "Faturamento, previsões, produção e comissionamento em um só lugar.", eyebrow="Análises")
     with imp_col:
         botao_imprimir("relatorios")
 

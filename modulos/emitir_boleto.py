@@ -137,7 +137,8 @@ def render_emitir_boleto(supabase, df_vendas_global, df_cli=None):
     st.session_state['_bol_tel'] = tel_por_cliente
 
     mes_atual = datetime.today().strftime("%m/%Y")
-    st.markdown("### 🧾 Emissão de Boletos (Yamaha)")
+    from modulos.tema import cabecalho; cabecalho("Emissão de Boletos (Yamaha)", "🧾", "Boleto e código de barras de cada cota, prontos para enviar ao cliente.",
+              chips=[(f"Referência {mes_atual}", "plain"), ("Envio mensal: todo dia 05", "brand")], eyebrow="Robô Yamaha")
     st.caption(
         f"Marque as cotas e clique em **Gerar Boletos**. O robô do escritório entra no Newcon, "
         f"gera o boleto e o **código de barras** de cada cota (para envio ao cliente). Aparecem cotas "
@@ -183,6 +184,7 @@ def render_emitir_boleto(supabase, df_vendas_global, df_cli=None):
 
     venda_ids = [int(x) for x in df['id'].tolist() if pd.notna(x)]
     mapa_ultimo = _mapa_ultimo_boleto(supabase, venda_ids)
+    _resumo_situacoes(venda_ids, mapa_ultimo, df)
 
     # ---------------- TABELA EDITÁVEL ----------------
     linhas = []
@@ -258,6 +260,25 @@ def render_emitir_boleto(supabase, df_vendas_global, df_cli=None):
     _painel_status(supabase, is_master, df_vendas_global)
 
 
+def _resumo_situacoes(venda_ids, mapa_ultimo, df):
+    """Pílulas com a situação dos boletos do mês (só leitura do que já foi carregado)."""
+    from modulos.tema import linha_chips
+    st_ = [((mapa_ultimo.get(v) or {}).get("status") or "").upper() for v in venda_ids]
+    gerados = sum(1 for s in st_ if s in ("SUCESSO", "JA_PAGO", "SEM_BOLETO"))
+    fila = sum(1 for s in st_ if s in ("PENDENTE", "PROCESSANDO"))
+    erro = sum(1 for s in st_ if s == "ERRO")
+    atraso = int((df["_status_norm"] == "EMATRASO").sum()) if "_status_norm" in df.columns else 0
+    mensais = int(df["BOLETO_MENSAL"].fillna(False).astype(bool).sum()) if "BOLETO_MENSAL" in df.columns else 0
+    chips = [(f"{len(venda_ids)} cota(s) na lista", "plain"), (f"{len(venda_ids) - gerados - fila} sem boleto no mês", "brand"),
+             (f"{fila} na fila do robô", "info" if fila else "plain"), (f"{gerados} resolvido(s) no mês", "ok" if gerados else "plain"),
+             (f"{mensais} com envio mensal", "plain")]
+    if atraso:
+        chips.append((f"{atraso} cota(s) em atraso", "warn"))
+    if erro:
+        chips.append((f"{erro} com erro", "danger"))
+    linha_chips(chips)
+
+
 def _enfileirar(supabase, selecionados, mapa_ultimo):
     usuario = st.session_state.get('usuario_logado', 'desconhecido')
     inseridos, pulados = 0, 0
@@ -314,7 +335,7 @@ def _salvar_flags_mensais(supabase, df_antes, df_depois):
 
 
 def _painel_status(supabase, is_master, df_vendas_global=None):
-    st.subheader("📋 Andamento dos Boletos")
+    from modulos.tema import secao; secao("Andamento dos Boletos", "📋", "Boletos pedidos no mês escolhido — baixe o PDF ou copie o código.")
     hoje = datetime.today()
     meses = []
     y, m = hoje.year, hoje.month

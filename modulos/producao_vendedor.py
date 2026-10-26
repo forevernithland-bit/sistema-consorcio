@@ -77,7 +77,7 @@ def render_producao_vendedor(df_vendas, df_admin, cfg, status_dict, vendedor, ch
     hoje = datetime.today()
     ym_atual = f"{hoje.year:04d}-{hoje.month:02d}"
 
-    st.markdown(f"### 🎯 Produção mensal — {vendedor}")
+    from modulos.tema import secao; secao(f"Produção mensal — {vendedor}", "🎯", "Seu volume do mês, nível de comissão e quanto falta para o próximo bônus.")
     hist = resumo_meses(df_vendas, vendedor, cfg)
     meses = [ym_atual] + [m for m in hist["ym"].tolist() if m != ym_atual]
     meses = sorted(set(meses), reverse=True)

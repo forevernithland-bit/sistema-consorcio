@@ -49,7 +49,8 @@ def _render_cartas_site(busca_nome=""):
         return
 
     st.divider()
-    st.subheader("🌐 Cartas Contempladas — Clientes do Site")
+    from modulos.tema import secao
+    secao("Cartas Contempladas — Clientes do Site", "🌐")
     st.caption("Operações cadastradas no admin do Site (consorbensmg.com.br/admin). "
                "Visão somente leitura — para editar, use o painel do Site.")
 
@@ -74,8 +75,182 @@ def _render_cartas_site(busca_nome=""):
     st.dataframe(view, use_container_width=True, hide_index=True)
 
 
+def _aniversariantes(df_cli, nomes_ok=None, dias=7):
+    """[(nome, 'dd/mm', telefone, em_quantos_dias)] dos próximos `dias` dias (só leitura)."""
+    if df_cli is None or df_cli.empty or 'Aniversario' not in df_cli.columns or 'Nome' not in df_cli.columns:
+        return []
+    hoje = datetime.today().date()
+    out = []
+    for _, c in df_cli.iterrows():
+        nome = str(c.get('Nome') or '').strip()
+        if not nome or (nomes_ok is not None and nome not in nomes_ok):
+            continue
+        s = str(c.get('Aniversario') or '').strip()
+        try:
+            d, m = int(s[0:2]), int(s[3:5])
+            prox = hoje.replace(month=m, day=d)
+        except Exception:
+            continue
+        if prox < hoje:
+            try:
+                prox = prox.replace(year=hoje.year + 1)
+            except ValueError:
+                continue
+        falta = (prox - hoje).days
+        if falta <= dias:
+            out.append((nome, f"{d:02d}/{m:02d}", str(c.get('Telefone') or ''), falta))
+    return sorted(out, key=lambda x: x[3])
+
+
+def _render_hero_dashboard(df_vendas_global, df_ass, is_master):
+    """Saudação + chips do dia. Só apresentação: usa os dados já carregados e o
+    mesmo escopo do vendedor (filtrar_por_vendedor)."""
+    from modulos.tema import cabecalho, saudacao, data_extenso
+    nome = str(st.session_state.get('nome_vendedor') or st.session_state.get('usuario_logado') or '').strip()
+    primeiro = nome.split()[0].capitalize() if nome else ""
+    chips = []
+    df = filtrar_por_vendedor(df_vendas_global.copy(), 'VENDEDOR', eh_adm=is_master) if not df_vendas_global.empty else df_vendas_global
+    if df is not None and not df.empty and 'Data_Real' in df.columns:
+        hoje = datetime.today()
+        mes = df[df['Data_Real'].notna() & (df['Data_Real'].dt.month == hoje.month) & (df['Data_Real'].dt.year == hoje.year)]
+        chips.append((f"{len(mes)} venda(s) neste mês", "ok" if len(mes) else ""))
+        atraso = int((df['STATUS'].astype(str).str.strip() == "Em Atraso").sum()) if 'STATUS' in df.columns else 0
+        if atraso:
+            chips.append((f"{atraso} cota(s) em atraso", "warn"))
+    if df_ass is not None and not df_ass.empty and 'data_dt' in df_ass.columns:
+        hd = datetime.today().date()
+        prox = df_ass[(df_ass['data_dt'].dt.date >= hd) & (df_ass['data_dt'].dt.date <= hd + timedelta(days=7))]
+        if not prox.empty:
+            chips.append((f"{len(prox)} assembleia(s) em até 7 dias", "info"))
+    cabecalho(f"{saudacao()}, {primeiro} 👋" if primeiro else "Dashboard", icone="📊",
+              subtitulo="Seu painel de vendas, clientes e pendências — tudo num lugar só.",
+              chips=chips, eyebrow=data_extenso())
+
+
+def _render_painel_do_dia(df_vendas_global, df_cli, is_master):
+    """KPIs animados + pendências (cotas em atraso, aniversariantes) + atalhos.
+    Só leitura dos dados já carregados; respeita o escopo do vendedor."""
+    from modulos.tema import kpis, _esc
+    from seguranca import MENU_PARA_PERMISSAO
+    df = filtrar_por_vendedor(df_vendas_global.copy(), 'VENDEDOR', eh_adm=is_master) if not df_vendas_global.empty else df_vendas_global
+    hoje = datetime.today()
+    vol_mes = vol_ant = 0.0
+    n_mes = ativas = atraso = 0
+    df_atraso = pd.DataFrame()
+    if df is not None and not df.empty and 'Data_Real' in df.columns:
+        ok_d = df['Data_Real'].notna()
+        mes = df[ok_d & (df['Data_Real'].dt.month == hoje.month) & (df['Data_Real'].dt.year == hoje.year)]
+        ma, aa = (hoje.month - 1, hoje.year) if hoje.month > 1 else (12, hoje.year - 1)
+        ant = df[ok_d & (df['Data_Real'].dt.month == ma) & (df['Data_Real'].dt.year == aa)]
+        n_mes, vol_mes, vol_ant = len(mes), float(mes['Valor_Numerico'].sum()), float(ant['Valor_Numerico'].sum())
+        stt = df['STATUS'].astype(str).str.strip() if 'STATUS' in df.columns else pd.Series(dtype=str)
+        ativas = int(stt.isin(["Em Andamento", "Em Atraso"]).sum())
+        atraso = int((stt == "Em Atraso").sum())
+        df_atraso = df[stt == "Em Atraso"]
+    if vol_ant > 0:
+        dv = (vol_mes - vol_ant) / vol_ant * 100
+        sub_vol = f'<b class="{"up" if dv >= 0 else "down"}">{"▲" if dv >= 0 else "▼"} {abs(dv):.0f}%</b> vs. mês anterior'
+    else:
+        sub_vol = _esc(f"{n_mes} cota(s) vendida(s) no mês")
+    nomes_ok = None if is_master else set(df['Nome do cliente'].astype(str)) if (df is not None and not df.empty and 'Nome do cliente' in df.columns) else set()
+    aniv = _aniversariantes(df_cli, nomes_ok)
+    kpis([
+        {"rotulo": "Vendido no mês", "valor": vol_mes, "tipo": "brl", "icone": "💼", "sub_html": sub_vol,
+         "barra": (vol_mes / vol_ant) if vol_ant > 0 else None},
+        {"rotulo": "Cotas no mês", "valor": n_mes, "icone": "🧾", "tom": "info", "sub": "vendas registradas neste mês"},
+        {"rotulo": "Carteira ativa", "valor": ativas, "icone": "📦", "tom": "ok", "sub": "cotas em andamento ou em atraso"},
+        {"rotulo": "Em atraso", "valor": atraso, "icone": "⏰", "tom": "danger" if atraso else "ok",
+         "sub": "precisam de atenção" if atraso else "nenhuma pendência 🎉",
+         "barra": (atraso / ativas) if (ativas and atraso) else None},
+    ])
+
+    # ---- atalhos rápidos (só telas liberadas para o usuário) ----
+    perms = set(st.session_state.get('permissoes') or [])
+    atalhos = [("➕ Nova Venda", "Nova Venda"), ("🎯 Ofertar Lance", "Ofertar Lance"),
+               ("🧾 Emitir Boletos", "Emissão de Boletos"), ("📑 Relatórios", "Relatórios")]
+    atalhos = [a for a in atalhos if is_master or MENU_PARA_PERMISSAO.get(a[1]) in perms]
+    if atalhos:
+        cols = st.columns(len(atalhos))
+        for col, (rot, destino) in zip(cols, atalhos):
+            with col:
+                if st.button(rot if destino != "Nova Venda" else "Nova Venda", key=f"dash_atalho_{destino}",
+                             use_container_width=True, type="primary" if destino == "Nova Venda" else "secondary"):
+                    st.session_state['menu_lateral'] = destino
+                    st.rerun()
+
+    # ---- pendências: cotas em atraso + aniversariantes ----
+    p1, p2 = st.columns(2)
+    with p1:
+        with st.container(border=True):
+            st.markdown(f'<div class="cb-panel-h"><span>⏰ Cotas em atraso</span><span class="cb-chip {"danger" if atraso else "ok"}">{atraso}</span></div>',
+                        unsafe_allow_html=True)
+            if df_atraso.empty:
+                st.markdown('<div class="cb-ok-msg">Tudo em dia por aqui. ✅</div>', unsafe_allow_html=True)
+            else:
+                for i, (_, r) in enumerate(df_atraso.sort_values('Data_Real', ascending=False).head(4).iterrows()):
+                    a, b = st.columns([4, 1.3], vertical_alignment="center")
+                    a.markdown(f'<div class="cb-li"><span class="n">{_esc(r.get("Nome do cliente"))}</span>'
+                               f'<span class="cb-chip warn">{_esc(r.get("GRUPO"))}/{_esc(r.get("COTA"))}</span></div>', unsafe_allow_html=True)
+                    if b.button("Abrir", key=f"dash_atr_{i}", use_container_width=True):
+                        st.session_state['cliente_visualizado'] = r.get("Nome do cliente")
+                        st.rerun()
+                if atraso > 4:
+                    st.caption(f"+ {atraso - 4} outra(s) — use a busca abaixo.")
+    with p2:
+        with st.container(border=True):
+            st.markdown(f'<div class="cb-panel-h"><span>🎂 Aniversariantes (7 dias)</span><span class="cb-chip brand">{len(aniv)}</span></div>',
+                        unsafe_allow_html=True)
+            if not aniv:
+                st.markdown('<div class="cb-ok-msg">Nenhum aniversário nos próximos dias.</div>', unsafe_allow_html=True)
+            else:
+                linhas = []
+                for nome, dm, tel, falta in aniv[:5]:
+                    quando = "hoje 🎉" if falta == 0 else ("amanhã" if falta == 1 else f"em {falta} dias")
+                    dig = "".join(ch for ch in tel if ch.isdigit())
+                    zap = (f'<a href="https://wa.me/55{dig}" target="_blank" rel="noopener">WhatsApp ↗</a>'
+                           if len(dig) >= 10 else "")
+                    linhas.append(f'<div class="cb-li"><span class="n">{_esc(nome)}</span>'
+                                  f'<span class="cb-chip {"ok" if falta == 0 else "plain"}">{dm} · {quando}</span>{zap}</div>')
+                st.markdown("".join(linhas), unsafe_allow_html=True)
+
+
+def _render_hero_ficha(cliente_nome, df_cli, df_vendas_global, is_master):
+    """Cabeçalho da ficha: iniciais, resumo das cotas (escopo do vendedor) e
+    contatos rápidos (WhatsApp / e-mail). Só leitura."""
+    from modulos.tema import cabecalho, iniciais, _esc
+    chips = []
+    if df_vendas_global is not None and not df_vendas_global.empty:
+        cc = filtrar_por_vendedor(df_vendas_global[df_vendas_global['Nome do cliente'] == cliente_nome], 'VENDEDOR', eh_adm=is_master)
+        if not cc.empty:
+            chips.append((f"{len(cc)} cota(s)", "brand"))
+            chips.append((formatar_brl_puro(cc['Valor_Numerico'].sum()) + " em cartas", "plain"))
+            for stt, tom in (("Em Andamento", "ok"), ("Em Atraso", "warn"), ("Contemplada", "info"), ("Cancelada", "danger")):
+                n = int((cc['STATUS'].astype(str).str.strip() == stt).sum())
+                if n:
+                    chips.append((f"{n} {stt.lower()}", tom))
+    tel = email = ""
+    if df_cli is not None and not df_cli.empty and 'Nome' in df_cli.columns:
+        b = df_cli[df_cli['Nome'] == cliente_nome]
+        if not b.empty:
+            tel = str(b.iloc[0].get('Telefone') or "")
+            email = str(b.iloc[0].get('Email') or "")
+    cabecalho(cliente_nome, avatar=iniciais(cliente_nome), eyebrow="Ficha do cliente", chips=chips)
+    dig = "".join(ch for ch in tel if ch.isdigit())
+    links = []
+    if len(dig) >= 10:
+        links.append(f'<a class="cb-chip ok" href="https://wa.me/55{dig}" target="_blank" rel="noopener">WhatsApp · {_esc(tel)}</a>')
+    if email and "@" in email and email.lower() not in ("nan", "none"):
+        links.append(f'<a class="cb-chip info" href="mailto:{_esc(email)}">{_esc(email)}</a>')
+    if links:
+        st.markdown(f'<div class="cb-chiprow">{"".join(links)}</div>', unsafe_allow_html=True)
+
+
 def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd, df_admin, status_dict, cfg):
     is_master = (st.session_state.get('perfil_logado') == "Master") or (st.session_state.get('usuario_logado') in ['breno', 'uriel'])
+
+    # Cabeçalho com saudação + pulso do dia (só na visão geral; a ficha tem o próprio)
+    if st.session_state.get('cliente_visualizado') is None:
+        _render_hero_dashboard(df_vendas_global, df_ass, is_master)
 
     # Resumo do mês (Tradicional + Cotas Contempladas) — só Master, valores sensíveis
     if is_master:
@@ -94,8 +269,8 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
     # ==========================================
     if st.session_state['cliente_visualizado'] is not None:
         cliente_nome = st.session_state['cliente_visualizado']
-        st.markdown(f"### {cliente_nome}")
-        
+        _render_hero_ficha(cliente_nome, df_cli, df_vendas_global, is_master)
+
         if st.button("⬅️ Voltar ao Dashboard", type="primary"):
             st.session_state['cliente_visualizado'] = None
             st.session_state['key_tabela'] += 1
@@ -422,13 +597,12 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
         df_view = df_vendas_global.copy()
         df_view = filtrar_por_vendedor(df_view, 'VENDEDOR', eh_adm=is_master)
 
-        col_t1, col_t2 = st.columns([4, 1])
-        with col_t2:
-            st.write("")
-            if st.button("Nova Venda", use_container_width=True, type="primary"): 
-                st.session_state['menu_lateral'] = "Nova Venda"
-                st.rerun()
-        
+        # Painel do dia: KPIs animados, atalhos (inclui o botão "Nova Venda") e pendências
+        _render_painel_do_dia(df_vendas_global, df_cli, is_master)
+
+        from modulos.tema import secao
+        secao("Clientes e vendas", "🔎", "Filtre, busque e clique numa linha para abrir a ficha do cliente.")
+
         c_f1, c_f2, c_f3, c_f4, c_f5 = st.columns([1.3, 1.3, 0.9, 0.9, 1.3])
         with c_f1:
             ft_cli = st.selectbox("⏳ Filtro:", ["Últimos 5 Cadastros", "Todos os Clientes", "Mês Atual", "Mês Anterior", "Ano Atual", "Período Personalizado"])
@@ -480,7 +654,8 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
             m2.metric("Qtd. Cotas (Filtro)", len(df_view))
             m3.metric("Ticket Médio", formatar_brl_puro(vol_total/len(df_view) if len(df_view)>0 else 0))
         else:
-            st.info("Nenhuma venda encontrada.")
+            from modulos.tema import estado_vazio
+            estado_vazio("Nenhuma venda encontrada.", "Tente outro período no filtro ou limpe a busca para ver todos os clientes.", "🔍")
 
         # ---- Cartas Contempladas vindas do SITE (só leitura) ----
         # Fora do "if not df_view.empty" de propósito: o filtro de Tipo/Grupo/Cota
@@ -489,7 +664,9 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
         _render_cartas_site(busca_nome)
 
         st.write("")
-        st.subheader("📊 Gráficos Globais (Filtro Independente)")
+        from modulos.tema import secao, tema_atual
+        secao("Gráficos Globais (Filtro Independente)", "📊", "Distribuição das vendas por produto e por administradora.")
+        _pal = [tema_atual()["brand"], "#f59e0b", "#6366f1", "#0ea5e9", "#ef4444", "#a855f7", "#14b8a6", "#64748b"]
         g_f1, g_f2 = st.columns(2)
         with g_f1:
             ft_graf = st.selectbox("⏳ Período para o Gráfico:", ["Mês Atual", "Mês Anterior", "Anual", "Todas as Vendas", "Período Personalizado"])
@@ -519,9 +696,9 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
                 st.markdown("#### Vendas por Produto")
                 df_p = df_g['PRODUTO'].value_counts().reset_index()
                 df_p.columns = ['Produto', 'Quantidade']
-                st.altair_chart(alt.Chart(df_p).mark_arc(innerRadius=50).encode(theta='Quantidade', color='Produto', tooltip=['Produto', 'Quantidade']), use_container_width=True)
+                st.altair_chart(alt.Chart(df_p).mark_arc(innerRadius=62, cornerRadius=6, padAngle=0.02).encode(theta='Quantidade', color=alt.Color('Produto', scale=alt.Scale(range=_pal)), tooltip=['Produto', 'Quantidade']).configure_view(strokeWidth=0), use_container_width=True)
             with cg2:
                 st.markdown("#### Vendas por Administradora")
                 df_a = df_g['ADMINISTRADORA'].value_counts().reset_index()
                 df_a.columns = ['Administradora', 'Quantidade']
-                st.altair_chart(alt.Chart(df_a).mark_arc(innerRadius=50).encode(theta='Quantidade', color='Administradora', tooltip=['Administradora', 'Quantidade']), use_container_width=True)
+                st.altair_chart(alt.Chart(df_a).mark_arc(innerRadius=62, cornerRadius=6, padAngle=0.02).encode(theta='Quantidade', color=alt.Color('Administradora', scale=alt.Scale(range=_pal)), tooltip=['Administradora', 'Quantidade']).configure_view(strokeWidth=0), use_container_width=True)

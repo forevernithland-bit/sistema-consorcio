@@ -25,7 +25,9 @@ def _salvar_cliente_se_novo(supabase, df_cli, cliente, telefone, email, end_comp
 
 
 def render_nova_venda(supabase, df_cli, lista_admin_bd):
-    st.markdown("### 📝 Cadastrar Nova Venda")
+    from modulos.tema import cabecalho; cabecalho("Cadastrar Nova Venda", "📝", "Cliente, endereço e cotas em poucos passos — campos com * são obrigatórios.",
+              chips=[("1 · Cliente", "brand"), ("2 · Endereço", "plain"), ("3 · Venda e cotas", "plain")], eyebrow="Vendas")
+    from modulos.tema import secao; secao("1. Dados do Cliente", "👤")
 
     is_master = (st.session_state.get('perfil_logado') == "Master") or (st.session_state.get('usuario_logado') in ['breno', 'uriel'])
 
@@ -43,7 +45,7 @@ def render_nova_venda(supabase, df_cli, lista_admin_bd):
         aniversario = st.text_input("Data de Aniversário (DD/MM/AAAA)", key="v_ani", on_change=lambda: st.session_state.update({'v_ani': formatar_data(st.session_state.get('v_ani',''))}), placeholder="DD/MM/AAAA", max_chars=10)
         renda = st.text_input("Renda Mensal (R$)‍", key="v_ren", on_change=lambda: st.session_state.update({'v_ren': formatar_moeda(st.session_state.get('v_ren',''))}), placeholder="R$ 0,00")
 
-    st.markdown("##### Busca Rápida de Endereço")
+    from modulos.tema import secao; secao("Busca Rápida de Endereço", "📍", "Digite o CEP e clique fora: rua, bairro, cidade e UF se preenchem sozinhos.")
     col_cep1, col_cep2 = st.columns([1, 3])
     with col_cep1:
         cep = st.text_input("CEP (Digite e clique fora)", max_chars=9)
@@ -76,7 +78,7 @@ def render_nova_venda(supabase, df_cli, lista_admin_bd):
     # ==========================================================
     # 2. DADOS DA VENDA
     # ==========================================================
-    st.subheader("2. Dados da Venda")
+    from modulos.tema import secao; secao("2. Dados da Venda", "💼")
     tipo_produto = st.selectbox("Tipo de Produto *", ["Consórcio Tradicional", "Consórcio Contemplado"])
 
     # ----------------------------------------------------------

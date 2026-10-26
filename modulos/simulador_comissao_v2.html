@@ -367,7 +367,9 @@ svg.tl.hov .hb{opacity:.35}svg.tl.hov .hb.cur{opacity:1}
   .track .tm b{font-size:12px}
   .m4{grid-template-columns:1fr 1fr;gap:10px}
   .mc{padding:14px 12px 12px}
-  .mc .v{font-size:22px}
+  .mc .v{font-size:20px}
+  .prods{grid-template-columns:repeat(auto-fit,minmax(66px,1fr));gap:6px}
+  .prods button{min-height:64px;font-size:12px;padding:9px 4px 8px}
   .mc .d{font-size:12.5px}
   .split{grid-template-columns:1fr 1fr}
   .split b{font-size:20px}
@@ -1133,10 +1135,12 @@ function fit(){
     document.documentElement.classList.add("fit");
     const h=Math.ceil(document.getElementById("wrap").getBoundingClientRect().height)+2;
     if(Math.abs((parseFloat(fe.style.height)||0)-h)>1){ fe.style.height=h+"px"; fe.setAttribute("height",String(h)); }
+    const pai=fe.parentElement;   // o contêiner do Streamlit nasce com a altura inicial fixa: acompanha o iframe
+    if(pai && pai.getAttribute("data-testid")==="stElementContainer" && pai.style.height!==h+"px"){ pai.style.height=h+"px"; pai.style.minHeight=h+"px"; }
   }catch(e){ document.documentElement.classList.remove("fit"); }
 }
 try{ new ResizeObserver(()=>fit()).observe(document.getElementById("wrap")); }catch(e){}
-try{ if(window.frameElement) new MutationObserver(()=>fit()).observe(window.frameElement,{attributes:true,attributeFilter:["style","height"]}); }catch(e){}
+try{ if(window.frameElement){ const mo=new MutationObserver(()=>fit()); mo.observe(window.frameElement,{attributes:true,attributeFilter:["style","height"]}); if(window.frameElement.parentElement) mo.observe(window.frameElement.parentElement,{attributes:true,attributeFilter:["style","height","class"]}); } }catch(e){}
 window.addEventListener("load",fit);
 let _rw=0; window.addEventListener("resize",()=>{ clearTimeout(_rw); _rw=setTimeout(()=>{ $("#tlchart")._k=null; render(); },150); });
 

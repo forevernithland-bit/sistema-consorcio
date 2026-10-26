@@ -145,7 +145,7 @@ def render_widget_ia(supabase):
 # 2. TELA DE CADASTRO DE REGRAS (Só para Masters)
 # ==========================================
 def render_config_ia(supabase):
-    st.markdown("### ⚙️ Base de Conhecimento do Bento")
+    from modulos.tema import secao; secao("Base de Conhecimento do Bento", "🧠", "O que o assistente sabe sobre a Consorbens — edite, importe ou exporte.")
     st.markdown("Aqui você escreve tudo o que o Bento precisa saber para responder à equipe com precisão.")
     
     try:
