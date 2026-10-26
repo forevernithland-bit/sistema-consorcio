@@ -1,3 +1,6 @@
+import time
+import threading
+from functools import lru_cache, wraps
 import streamlit as st
 import pandas as pd
 from datetime import datetime
@@ -9,6 +12,22 @@ from modulos.integracao_site import carregar_operacoes_site
 # ==========================================================
 # HELPERS DE DATA
 # ==========================================================
+def _memo_valor(fn):
+    """Desempenho: guarda o resultado destas conversões de data (funções puras de
+    um valor só). Converter a mesma data com pd.to_datetime milhares de vezes por
+    clique era o maior custo do Financeiro e do card do Dashboard."""
+    guardada = lru_cache(maxsize=50000, typed=True)(fn)
+
+    @wraps(fn)
+    def _f(v):
+        try:
+            return guardada(v)
+        except TypeError:          # valor que não dá para guardar (lista etc.)
+            return fn(v)
+    return _f
+
+
+@_memo_valor
 def _ym(data_str):
     """Data (dd/mm/aaaa ou texto) -> 'AAAA-MM'. None se inválida."""
     try:
@@ -25,6 +44,7 @@ def _label_mes(ym):
         return ym
 
 
+@_memo_valor
 def _ddmmaaaa(valor):
     """Converte qualquer data para 'dd/mm/aaaa' ('' se inválida).
     Detecta automaticamente ISO (2026-08-06T...) x brasileiro (dd/mm/aaaa):
@@ -40,6 +60,7 @@ def _ddmmaaaa(valor):
         return ""
 
 
+@_memo_valor
 def _data_recebimento(data_relatorio):
     """Regime de CAIXA. A Yamaha paga ~uma quinzena depois de fechar o período:
       - período que fecha no MEIO do mês (01–15)  -> recebido no MESMO mês
@@ -70,11 +91,10 @@ def _carregar_datas_financeiro(_supabase):
     Cacheada (ttl=60) porque é lida a cada render do Financeiro E do card
     'Resumo do mês' do Dashboard. _salvar_data_financeiro chama .clear() logo
     após gravar, para a edição aparecer na hora."""
-    try:
-        rows = _supabase.table("financeiro_datas").select("*").execute().data or []
-        return {r["chave_unica"]: r.get("data") for r in rows if r.get("data")}
-    except Exception:
-        return {}
+    # Todas as páginas; erro de leitura SOBE (não fica 60 s no cache como "sem datas").
+    from database import ler_tudo
+    rows = ler_tudo(_supabase, "financeiro_datas")
+    return {r["chave_unica"]: r.get("data") for r in rows if r.get("data")}
 
 
 @st.cache_data(ttl=60)
@@ -82,11 +102,11 @@ def _carregar_comissoes_pagas(_supabase):
     """Leitura cacheada de comissoes_pagas (usada no Financeiro e no card
     'Resumo do mês' do Dashboard). Escritas em comissoes_pagas (baixas.py,
     importar_comissoes.py) devem chamar _carregar_comissoes_pagas.clear()
-    logo após o insert/update/delete."""
-    try:
-        return _supabase.table("comissoes_pagas").select("*").execute().data or []
-    except Exception:
-        return []
+    logo após o insert/update/delete.
+    Lê TODAS as páginas (antes parava nas primeiras 1000 linhas e o faturamento
+    saía menor). Erro de leitura SOBE: não é guardado no cache como "zero"."""
+    from database import ler_tudo
+    return ler_tudo(_supabase, "comissoes_pagas")
 
 
 def _salvar_data_financeiro(supabase, chave, data):
@@ -147,7 +167,7 @@ def _recebidos_tradicional(supabase, df_vendas_global, df_admin, cfg, status_dic
     if df_vendas_global is not None and not df_vendas_global.empty:
         df_parc, _ = gerar_tabela_parcelas(df_vendas_global, df_vendas_global, df_admin, cfg, status_dict)
         if not df_parc.empty:
-            for _, p in df_parc[df_parc["Status"] == "PAGO"].iterrows():
+            for p in df_parc[df_parc["Status"] == "PAGO"].to_dict("records"):
                 if p["Chave"] in chaves_nf:
                     continue
                 padrao = str(p["Data Recebimento"])
@@ -229,16 +249,30 @@ def calcular_resumo_mes_atual(supabase, df_vendas_global, df_admin, cfg, status_
     }
 
 
+_PUBLICADO = {}                 # ym -> ((breno, uriel), quando) — último valor já gravado
+_PUBLICADO_LOCK = threading.Lock()
+_REPUBLICAR_SEG = 600
+
+
 def _publicar_resultado_socios(supabase, ym, breno, uriel):
     """Grava o resultado do mês (Breno/Uriel) em resultado_socios_mensal, para o
     ERP_ECOCLIM ler (linha 'CONS INVESTIMENTOS' do Controle Financeiro) sem
-    duplicar a lógica de comissionamento. Nunca deve travar a tela Financeiro."""
+    duplicar a lógica de comissionamento. Nunca deve travar a tela Financeiro.
+    Desempenho: só grava quando o valor muda (ou a cada 10 min) — antes era uma
+    escrita no banco por mês selecionado em TODO clique da tela."""
     try:
         ano, mes = ym.split("-")
+        valores = (round(float(breno), 2), round(float(uriel), 2))
+        with _PUBLICADO_LOCK:
+            ult = _PUBLICADO.get(ym)
+        if ult and ult[0] == valores and (time.time() - ult[1]) < _REPUBLICAR_SEG:
+            return
         supabase.table("resultado_socios_mensal").upsert(
-            {"ano": int(ano), "mes": int(mes), "breno": round(float(breno), 2), "uriel": round(float(uriel), 2)},
+            {"ano": int(ano), "mes": int(mes), "breno": valores[0], "uriel": valores[1]},
             on_conflict="ano,mes",
         ).execute()
+        with _PUBLICADO_LOCK:
+            _PUBLICADO[ym] = (valores, time.time())
     except Exception:
         pass
 
@@ -275,19 +309,29 @@ def render_financeiro(supabase, df_vendas_global, df_admin, cfg, status_dict):
         from modulos.tema import cabecalho; cabecalho("Financeiro", "💰", "Faturamento realizado e previsto da Consorbens, mês a mês.", eyebrow="Gestão")
     with imp_col:
         botao_imprimir("financeiro")
-    aba_real, aba_prev = st.tabs(["📊 Realizado", "🔮 Faturamento Previsto"])
-    with aba_real:
-        _aba_realizado(supabase, df_vendas_global, df_admin, cfg, status_dict)
-    with aba_prev:
-        _aba_previsto(df_vendas_global, df_admin, cfg, status_dict)
+    # Abas sob demanda: só a aba aberta é calculada (on_change="rerun" + .open).
+    aba_real, aba_prev = st.tabs(["📊 Realizado", "🔮 Faturamento Previsto"], key="fin_abas", on_change="rerun")
+    if aba_real.open is not False:
+        with aba_real:
+            _aba_realizado(supabase, df_vendas_global, df_admin, cfg, status_dict)
+    if aba_prev.open is not False:
+        with aba_prev:
+            _aba_previsto(df_vendas_global, df_admin, cfg, status_dict)
 
 
 def _aba_realizado(supabase, df_vendas_global, df_admin, cfg, status_dict):
     st.caption("Faturamento da Consorbens por mês: comissões recebidas (Consórcio Tradicional) "
                "+ ágio das Cartas Contempladas. Selecione o ano e um ou mais meses para comparar.")
 
-    datas_fin = _carregar_datas_financeiro(supabase)
-    trad = _recebidos_tradicional(supabase, df_vendas_global, df_admin, cfg, status_dict, datas_fin)
+    try:
+        datas_fin = _carregar_datas_financeiro(supabase)
+        trad = _recebidos_tradicional(supabase, df_vendas_global, df_admin, cfg, status_dict, datas_fin)
+    except Exception as e:
+        # sem o histórico completo os totais sairiam errados — e seriam publicados
+        # para o ERP da Ecoclim. Melhor parar e avisar.
+        st.error(f"❌ Não consegui ler o histórico de comissões agora ({e}). "
+                 "Os valores não foram calculados nem publicados. Tente de novo em instantes.")
+        return
 
     # Cartas contempladas: fonte única é o SITE (só leitura). concluído = realizado
     # no mês da conclusão; em análise = previsão.

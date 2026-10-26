@@ -60,11 +60,20 @@ def _tel_wa(tel):
     return d
 
 
+_LIMPEZA_FEITA = {"mes": None}
+
+
 def _limpar_boletos_antigos(supabase):
-    """Ao virar o mês, apaga os boletos dos meses anteriores (housekeeping)."""
+    """Ao virar o mês, apaga os boletos dos meses anteriores (housekeeping).
+    Desempenho: roda UMA vez por mês por servidor (antes era um DELETE no banco a
+    cada clique da tela). Com a migração 32, cada linha apagada fica na lixeira."""
+    mes = _inicio_mes_atual()
+    if _LIMPEZA_FEITA["mes"] == mes:
+        return
     try:
         supabase.table("fila_automacao").delete() \
-            .eq("tipo", "BOLETO").lt("criado_em", _inicio_mes_atual()).execute()
+            .eq("tipo", "BOLETO").lt("criado_em", mes).execute()
+        _LIMPEZA_FEITA["mes"] = mes
     except Exception:
         pass
 
@@ -132,7 +141,7 @@ def render_emitir_boleto(supabase, df_vendas_global, df_cli=None):
     # mapa nome do cliente -> telefone (para o link do WhatsApp)
     tel_por_cliente = {}
     if df_cli is not None and not df_cli.empty and 'Nome' in df_cli.columns:
-        for _, c in df_cli.iterrows():
+        for c in df_cli.to_dict("records"):
             tel_por_cliente[str(c.get('Nome', ''))] = c.get('Telefone', '')
     st.session_state['_bol_tel'] = tel_por_cliente
 
@@ -188,7 +197,7 @@ def render_emitir_boleto(supabase, df_vendas_global, df_cli=None):
 
     # ---------------- TABELA EDITÁVEL ----------------
     linhas = []
-    for _, r in df.iterrows():
+    for r in df.to_dict("records"):
         vid = int(r['id'])
         pedido = mapa_ultimo.get(vid)
         status_atual = (pedido.get("status") or "").upper() if pedido else ""

@@ -8,28 +8,34 @@ from database import carregar_dados_iniciais
 from modulos.financeiro import _carregar_comissoes_pagas
 from modulos.relatorios import _fetch_comissoes_pagas_raw
 from modulos.importar_comissoes import (
-    render_importar_comissoes, render_historico_comissoes, dividir_socios
+    render_importar_comissoes, render_historico_comissoes, dividir_socios, _invalidar_caches_comissoes
 )
 
 def render_baixas(supabase, df_vendas_global, df_admin, cfg, status_dict, lista_admin_bd=None):
     from modulos.tema import cabecalho; cabecalho("Baixar Parcelas de Comissão", "💰", "Importe a NF, dê baixa manual, consulte o histórico e pague os vendedores.", eyebrow="Gestão")
 
+    # Abas sob demanda: só a aba aberta é montada (on_change="rerun" + .open).
     aba_import, aba_manual, aba_hist, aba_vend = st.tabs(
-        ["📥 Importar Resumo (NF)", "✍️ Baixa Manual", "📚 Histórico", "👥 Pagamento a Vendedores"]
+        ["📥 Importar Resumo (NF)", "✍️ Baixa Manual", "📚 Histórico", "👥 Pagamento a Vendedores"],
+        key="baixas_abas", on_change="rerun"
     )
 
-    with aba_import:
-        render_importar_comissoes(supabase, df_vendas_global, cfg, lista_admin_bd or [], df_admin)
+    if aba_import.open is not False:
+        with aba_import:
+            render_importar_comissoes(supabase, df_vendas_global, cfg, lista_admin_bd or [], df_admin)
 
-    with aba_hist:
-        render_historico_comissoes(supabase, df_vendas_global, df_admin)
+    if aba_hist.open is not False:
+        with aba_hist:
+            render_historico_comissoes(supabase, df_vendas_global, df_admin)
 
-    with aba_manual:
-        _render_baixa_manual(supabase, df_vendas_global, df_admin, cfg, status_dict)
+    if aba_manual.open is not False:
+        with aba_manual:
+            _render_baixa_manual(supabase, df_vendas_global, df_admin, cfg, status_dict)
 
-    with aba_vend:
-        from modulos.pagto_vendedores import render_pagamento_vendedores
-        render_pagamento_vendedores(supabase, df_vendas_global, df_admin, cfg, status_dict)
+    if aba_vend.open is not False:
+        with aba_vend:
+            from modulos.pagto_vendedores import render_pagamento_vendedores
+            render_pagamento_vendedores(supabase, df_vendas_global, df_admin, cfg, status_dict)
 
 
 def _mes_competencia(data_ddmmaaaa):
@@ -187,6 +193,7 @@ def _salvar_baixas_manuais(supabase, itens):
     a parcela como PAGO (status_comissoes). Usa a MESMA chave_unica do gerar_tabela_parcelas,
     então o Financeiro não duplica (ele já prioriza comissoes_pagas)."""
     ok, erros = 0, 0
+    falharam = []
     for i in itens:
         chave = i['Chave']
         data_pgto = i['Data Baixa']
@@ -230,12 +237,18 @@ def _salvar_baixas_manuais(supabase, itens):
             ok += 1
         except Exception as e:
             erros += 1
+            falharam.append(i)
             st.error(f"Erro na cota {i.get('Grupo')}/{i.get('Cota')}: {e}")
 
-    if ok:
-        carregar_dados_iniciais.clear()
-        _carregar_comissoes_pagas.clear()
-        _fetch_comissoes_pagas_raw.clear()
+    if ok and erros:
+        # PARCIAL: as que deram erro CONTINUAM na lista (antes a lista era limpa e
+        # a tela recarregada — o erro sumia e parecia que tudo tinha sido salvo).
+        _invalidar_caches_comissoes()     # inclui o cache do Histórico (antes ficava até 60 s desatualizado)
+        st.session_state['cart_baixas'] = falharam
+        st.warning(f"⚠️ Gravação PARCIAL: {ok} baixa(s) registrada(s); {erros} com erro continuam na lista "
+                   "abaixo — confira e clique em Confirmar de novo.")
+    elif ok:
+        _invalidar_caches_comissoes()     # inclui o cache do Histórico (antes ficava até 60 s desatualizado)
         st.session_state['cart_baixas'] = []
         st.success(f"✅ {ok} baixa(s) registrada(s) no histórico e marcada(s) como PAGO. "
                    f"Aparecem no 'Histórico' e no Financeiro.")

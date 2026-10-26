@@ -48,6 +48,14 @@ quando = ["diario 07:00", "diario 12:00", "diario 15:00", "diario 20:00"]
 ativo  = true
 quando = ["diario 06:00", "diario 11:00", "diario 16:00", "diario 21:00"]
 
+# BACKUP diário de TODAS as tabelas do ERP (JSON + CSV) no Google Drive local:
+#   G:\Meu Drive\CLODE\BACKUP_ERP\AAAA-MM-DD\
+# Retenção e opções na seção [backup] abaixo. O botão "Pedir backup ao robô"
+# em Configurações -> Backup e Lixeira roda o mesmo backup na hora.
+[timers.backup_erp]
+ativo  = true
+quando = "diario 01:30"
+
 # ------------------------------------------------------------------------
 # COLETA — tarefas que USAM o Newcon. O supervisor enfileira na
 # fila_automacao (prioridade baixa) e roda "cedendo a vez" pra LANCE/BOLETO.
@@ -76,6 +84,16 @@ COLETA_GRUPOS      = 50
 COLETA_ASSEMBLEIAS = 50
 COLETA_TABELAS     = 50
 RELATORIO_COMISSAO = 60
+BACKUP_ERP         = 20
+
+# ------------------------------------------------------------------------
+# Backup do ERP: quantos guardar e o que incluir.
+# ------------------------------------------------------------------------
+[backup]
+diarios = 30              # últimos 30 dias, um por dia
+mensais = 12              # + o 1º backup de cada um dos últimos 12 meses
+midias  = true            # copia também os arquivos enviados em Mídias (só os novos)
+incluir_senhas_sistema = false   # senhas das administradoras (texto) ficam FORA do backup
 
 # ------------------------------------------------------------------------
 # Caminhos (Drive montado). O robô se recusa a subir se estes não existirem.
@@ -87,3 +105,4 @@ gmail_yamaha_scripts = 'G:\Meu Drive\CLODE\ATUALIZA_YAMAHA_TABELAS\scripts'
 gmail_itau_scripts   = 'G:\Meu Drive\CLODE\GUIA_DE_OPORTUNIDADES_ITAU\scripts'
 anglo_dir            = 'G:\Meu Drive\CLODE\IMPORTA_ANGLO_CONSORCIO'
 fraga_bitello_scripts = 'C:\Users\desta\.claude\skills\cartas-contempladas-consorbens\scripts'
+backup_erp           = 'G:\Meu Drive\CLODE\BACKUP_ERP'

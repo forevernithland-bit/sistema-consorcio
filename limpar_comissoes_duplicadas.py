@@ -80,10 +80,9 @@ def main():
     confirmar = "--confirmar" in args
     periodo = args[args.index("--periodo") + 1] if "--periodo" in args else None
 
-    q = sb().table("comissoes_pagas").select("*")
-    if periodo:
-        q = q.eq("periodo_fim", periodo)
-    linhas = q.execute().data or []
+    # todas as páginas (o Supabase corta em 1000 linhas por consulta)
+    from database import ler_tudo
+    linhas = ler_tudo(sb(), "comissoes_pagas", filtros=[("eq", "periodo_fim", periodo)] if periodo else None)
     print(f"\n{'='*92}")
     print(f"{'LIMPEZA DE COMISSOES DUPLICADAS':^92}")
     print(f"{('APAGANDO DE VERDADE' if confirmar else 'MODO ANALISE - nada sera apagado'):^92}")
@@ -131,6 +130,24 @@ def main():
         return
 
     print(f"\nApagando {len(apagar_ids)} linha(s)...")
+    # cópia de segurança ANTES de apagar: arquivo local + lixeira do banco (migração 32)
+    import json
+    from datetime import datetime
+    pasta = Path(__file__).resolve().parent / "backups"
+    pasta.mkdir(exist_ok=True)
+    por_id = {r["id"]: r for r in linhas}
+    copia = [por_id[i] for i in apagar_ids if i in por_id]
+    arq = pasta / f"duplicadas_apagadas_{datetime.now():%Y%m%d_%H%M%S}.json"
+    arq.write_text(json.dumps(copia, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
+    print(f"Copia das linhas apagadas: {arq}")
+    try:
+        from auditoria import registrar
+        ok_aud, aviso = registrar(sb(), "comissoes_pagas", copia, "limpar_comissoes_duplicadas.py")
+        if aviso:
+            print("AVISO:", aviso)
+    except Exception as e:
+        print(f"!!! Nao consegui gravar a copia na lixeira do banco ({e}). Nada foi apagado.")
+        return
     apagados = 0
     for i in range(0, len(apagar_ids), 50):
         lote = apagar_ids[i:i + 50]

@@ -35,6 +35,22 @@ from modulos.integracao_site import carregar_operacoes_site
 # ==========================================================
 # HELPERS
 # ==========================================================
+def _memo_valor(fn):
+    """Desempenho: guarda o resultado de conversões puras de um valor (a mesma
+    data/grupo aparece milhares de vezes no histórico de comissões)."""
+    from functools import lru_cache, wraps
+    guardada = lru_cache(maxsize=50000, typed=True)(fn)
+
+    @wraps(fn)
+    def _f(v):
+        try:
+            return guardada(v)
+        except TypeError:
+            return fn(v)
+    return _f
+
+
+@_memo_valor
 def _ym_de(data_br):
     """'31/07/2026' -> '2026-07'. None se inválida."""
     d = pd.to_datetime(data_br, dayfirst=True, errors="coerce")
@@ -80,6 +96,7 @@ def _nome_curto(nome):
     return f"{partes[0]} {partes[-1]}"
 
 
+@_memo_valor
 def _norm_gc(v):
     """Grupo/cota comparável ('009045', '9045', 9045.0 -> '9045')."""
     s = limpar_str_nan(v)
@@ -134,8 +151,10 @@ def _fetch_comissoes_pagas_raw(_supabase):
     próprio, separado do de financeiro.py, para preservar o tratamento de erro
     de cada módulo). Escritas em comissoes_pagas (baixas.py,
     importar_comissoes.py) devem chamar _fetch_comissoes_pagas_raw.clear()
-    logo após o insert/update/delete."""
-    return _supabase.table("comissoes_pagas").select("*").execute().data or []
+    logo após o insert/update/delete.
+    Lê TODAS as páginas (o Supabase corta em 1000 linhas por consulta)."""
+    from database import ler_tudo
+    return ler_tudo(_supabase, "comissoes_pagas")
 
 
 def _carregar_comissoes(supabase):
@@ -165,7 +184,7 @@ def _enriquecer_com_venda(df_com, df_vendas):
         return df_com
     mapa = {}
     if df_vendas is not None and not df_vendas.empty:
-        for _, v in df_vendas.iterrows():
+        for v in df_vendas.to_dict("records"):
             mapa[f"{_norm_gc(v.get('GRUPO'))}/{_norm_gc(v.get('COTA'))}"] = {
                 "produto": normalizar_produto(v.get("PRODUTO")) or "—",
                 "vendedor": v.get("VENDEDOR") or "—",
@@ -173,9 +192,9 @@ def _enriquecer_com_venda(df_com, df_vendas):
     df = df_com.copy()
     df["produto"] = df["gc"].map(lambda k: mapa.get(k, {}).get("produto", "—"))
     # o vendedor gravado na NF é a fonte da verdade; a venda é só reserva
-    df["vendedor"] = df.apply(
-        lambda r: (str(r.get("vendedor") or "").strip()
-                   or mapa.get(r["gc"], {}).get("vendedor", "—")), axis=1)
+    _vend_nf = df["vendedor"].tolist() if "vendedor" in df.columns else [None] * len(df)
+    df["vendedor"] = [(str(v or "").strip() or mapa.get(g, {}).get("vendedor", "—"))
+                      for v, g in zip(_vend_nf, df["gc"].tolist())]
     return df
 
 
@@ -794,7 +813,7 @@ def _aba_comissionamento(df_vendas):
 def render_relatorios(supabase, df_vendas_global, df_admin, cfg, status_dict):
     tit_col, imp_col = st.columns([4, 1], vertical_alignment="center")
     with tit_col:
-        from modulos.tema import cabecalho; cabecalho("Relatórios Gerenciais", "📑", "Faturamento, previsões, produção e comissionamento em um só lugar.", eyebrow="Análises")
+        from modulos.tema import cabecalho; from escopo import eh_master as _eh_m; cabecalho("Relatórios Gerenciais", "📑", "Faturamento, previsões, produção e comissionamento em um só lugar." if _eh_m() else "Sua comissão do mês, os próximos meses e os seus pagamentos.", eyebrow="Análises")
     with imp_col:
         botao_imprimir("relatorios")
 
@@ -802,21 +821,21 @@ def render_relatorios(supabase, df_vendas_global, df_admin, cfg, status_dict):
                 (st.session_state.get("usuario_logado") in ["breno", "uriel"])
     nome_vendedor = st.session_state.get("nome_vendedor", "")
 
-    com = _enriquecer_com_venda(_carregar_comissoes(supabase), df_vendas_global)
-    prev, avisos_prev = _previsto(df_vendas_global, df_admin, cfg, status_dict)
-    site_ok, site_prev = _cartas_site()
     vendas = df_vendas_global
 
     if not is_master:
-        # vendedor só enxerga o que é dele; não vê sócios nem cartas do Site
-        com = filtrar_por_vendedor(com, "vendedor", eh_adm=False, nome=nome_vendedor)
-        prev = filtrar_por_vendedor(prev, "vendedor", eh_adm=False, nome=nome_vendedor)
+        # vendedor só enxerga o que é dele; não vê sócios nem cartas do Site.
+        # (Desempenho: a visão do vendedor não usa o histórico de comissões nem a
+        # previsão geral da corretora — não calcula mais isso para ele.)
         vendas = filtrar_por_vendedor(vendas, "VENDEDOR", eh_adm=False, nome=nome_vendedor)
-        site_ok, site_prev = pd.DataFrame(), pd.DataFrame()
         # visão simplificada do vendedor: comissionamento do mês + simulação
         from modulos.relatorio_vendedor import render_relatorio_vendedor
         render_relatorio_vendedor(vendas, df_admin, cfg, status_dict, nome_vendedor)
         return
+
+    com = _enriquecer_com_venda(_carregar_comissoes(supabase), df_vendas_global)
+    prev, avisos_prev = _previsto(df_vendas_global, df_admin, cfg, status_dict)
+    site_ok, site_prev = _cartas_site()
 
     if com is None:
         com = pd.DataFrame()
@@ -833,24 +852,35 @@ def render_relatorios(supabase, df_vendas_global, df_admin, cfg, status_dict):
     abas = ["💵 Faturamento por Mês", "🔮 Previsto", "🏢 Administradora", "📦 Produto",
             "👤 Vendedor", "🎯 Cartas Contempladas", "📊 Produção", "💰 Comissionamento",
             "🧮 Simulação de comissionamento"]
-    t = st.tabs(abas)
-    with t[0]:
-        _aba_faturamento_mes(com, site_ok, prev)
-    with t[1]:
-        _aba_previsto(prev, site_prev)
-    with t[2]:
-        _aba_administradora(com, vendas, prev)
-    with t[3]:
-        _aba_produto(com, vendas, prev)
-    with t[4]:
-        _aba_vendedor(com, vendas, prev, is_master)
-        _extrato_vendedor(vendas, df_admin, cfg, status_dict, is_master, nome_vendedor)
-    with t[5]:
-        _aba_cartas(site_ok)
-    with t[6]:
-        _aba_producao(vendas)
-    with t[7]:
-        _aba_comissionamento(vendas)
-    with t[8]:
-        from modulos.relatorio_vendedor import render_simulacao
-        render_simulacao(df_admin, cfg, master=True)
+    # Abas sob demanda: só a aba aberta é montada (on_change="rerun" + .open).
+    t = st.tabs(abas, key="rel_abas", on_change="rerun")
+    _ab = lambda i: t[i].open is not False
+    if _ab(0):
+        with t[0]:
+            _aba_faturamento_mes(com, site_ok, prev)
+    if _ab(1):
+        with t[1]:
+            _aba_previsto(prev, site_prev)
+    if _ab(2):
+        with t[2]:
+            _aba_administradora(com, vendas, prev)
+    if _ab(3):
+        with t[3]:
+            _aba_produto(com, vendas, prev)
+    if _ab(4):
+        with t[4]:
+            _aba_vendedor(com, vendas, prev, is_master)
+            _extrato_vendedor(vendas, df_admin, cfg, status_dict, is_master, nome_vendedor)
+    if _ab(5):
+        with t[5]:
+            _aba_cartas(site_ok)
+    if _ab(6):
+        with t[6]:
+            _aba_producao(vendas)
+    if _ab(7):
+        with t[7]:
+            _aba_comissionamento(vendas)
+    if _ab(8):
+        with t[8]:
+            from modulos.relatorio_vendedor import render_simulacao
+            render_simulacao(df_admin, cfg, master=True)

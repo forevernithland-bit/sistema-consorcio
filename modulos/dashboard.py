@@ -80,36 +80,29 @@ def _aniversariantes(df_cli, nomes_ok=None, dias=7):
     if df_cli is None or df_cli.empty or 'Aniversario' not in df_cli.columns or 'Nome' not in df_cli.columns:
         return []
     hoje = datetime.today().date()
+    c = df_cli
+    if nomes_ok is not None:
+        c = c[c['Nome'].astype(str).str.strip().isin(nomes_ok)]
+    # filtro vetorizado: só datas 'dd/mm' que caem nos próximos `dias` dias (sem laço em todos os clientes)
+    alvos = {(hoje + timedelta(days=k)).strftime("%d/%m"): k for k in range(dias + 1)}
+    dm = c['Aniversario'].astype(str).str.strip().str[:5]
+    c = c[dm.isin(alvos.keys())]
     out = []
-    for _, c in df_cli.iterrows():
-        nome = str(c.get('Nome') or '').strip()
-        if not nome or (nomes_ok is not None and nome not in nomes_ok):
-            continue
-        s = str(c.get('Aniversario') or '').strip()
-        try:
-            d, m = int(s[0:2]), int(s[3:5])
-            prox = hoje.replace(month=m, day=d)
-        except Exception:
-            continue
-        if prox < hoje:
-            try:
-                prox = prox.replace(year=hoje.year + 1)
-            except ValueError:
-                continue
-        falta = (prox - hoje).days
-        if falta <= dias:
-            out.append((nome, f"{d:02d}/{m:02d}", str(c.get('Telefone') or ''), falta))
+    for _, r in c.iterrows():
+        nome = str(r.get('Nome') or '').strip()
+        s = str(r.get('Aniversario')).strip()[:5]
+        if nome:
+            out.append((nome, s, str(r.get('Telefone') or ''), alvos[s]))
     return sorted(out, key=lambda x: x[3])
 
 
-def _render_hero_dashboard(df_vendas_global, df_ass, is_master):
+def _render_hero_dashboard(df, df_ass, is_master):
     """Saudação + chips do dia. Só apresentação: usa os dados já carregados e o
     mesmo escopo do vendedor (filtrar_por_vendedor)."""
     from modulos.tema import cabecalho, saudacao, data_extenso
     nome = str(st.session_state.get('nome_vendedor') or st.session_state.get('usuario_logado') or '').strip()
     primeiro = nome.split()[0].capitalize() if nome else ""
     chips = []
-    df = filtrar_por_vendedor(df_vendas_global.copy(), 'VENDEDOR', eh_adm=is_master) if not df_vendas_global.empty else df_vendas_global
     if df is not None and not df.empty and 'Data_Real' in df.columns:
         hoje = datetime.today()
         mes = df[df['Data_Real'].notna() & (df['Data_Real'].dt.month == hoje.month) & (df['Data_Real'].dt.year == hoje.year)]
@@ -127,12 +120,11 @@ def _render_hero_dashboard(df_vendas_global, df_ass, is_master):
               chips=chips, eyebrow=data_extenso())
 
 
-def _render_painel_do_dia(df_vendas_global, df_cli, is_master):
+def _render_painel_do_dia(df, df_cli, is_master):
     """KPIs animados + pendências (cotas em atraso, aniversariantes) + atalhos.
     Só leitura dos dados já carregados; respeita o escopo do vendedor."""
     from modulos.tema import kpis, _esc
     from seguranca import MENU_PARA_PERMISSAO
-    df = filtrar_por_vendedor(df_vendas_global.copy(), 'VENDEDOR', eh_adm=is_master) if not df_vendas_global.empty else df_vendas_global
     hoje = datetime.today()
     vol_mes = vol_ant = 0.0
     n_mes = ativas = atraso = 0
@@ -247,10 +239,15 @@ def _render_hero_ficha(cliente_nome, df_cli, df_vendas_global, is_master):
 
 def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd, df_admin, status_dict, cfg):
     is_master = (st.session_state.get('perfil_logado') == "Master") or (st.session_state.get('usuario_logado') in ['breno', 'uriel'])
+    if st.session_state.get('_aviso_lixeira'):
+        st.warning(st.session_state.pop('_aviso_lixeira'))
 
     # Cabeçalho com saudação + pulso do dia (só na visão geral; a ficha tem o próprio)
+    _df_escopo = None
     if st.session_state.get('cliente_visualizado') is None:
-        _render_hero_dashboard(df_vendas_global, df_ass, is_master)
+        # mesmo escopo da lista (vendedor só vê o que é dele); calculado 1x e reaproveitado no painel do dia
+        _df_escopo = filtrar_por_vendedor(df_vendas_global, 'VENDEDOR', eh_adm=is_master) if not df_vendas_global.empty else df_vendas_global
+        _render_hero_dashboard(_df_escopo, df_ass, is_master)
 
     # Resumo do mês (Tradicional + Cotas Contempladas) — só Master, valores sensíveis
     if is_master:
@@ -358,11 +355,27 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
                     except Exception as e: st.error(f"❌ Erro ao salvar: {e}")
 
             with col_b2:
-                if st.button("🚨 Excluir Cliente (Apagar Todas as Cotas)", use_container_width=True):
-                    if id_cliente_db: supabase.table("clientes").delete().eq("id", int(id_cliente_db)).execute()
-                    supabase.table("vendas").delete().eq("NOME", cliente_nome).execute()
-                    carregar_dados_iniciais.clear()
-                    st.session_state['cliente_visualizado'] = None; st.session_state['key_tabela'] += 1; st.rerun()
+                # Proteção: confirmação explícita, apaga as cotas pelo ID (não pelo nome)
+                # e guarda cópia de tudo na lixeira (Configurações → Backup e Lixeira).
+                _ids_cotas_cli = (df_vendas_global.loc[df_vendas_global['Nome do cliente'] == cliente_nome, 'id'].tolist()
+                                  if (not df_vendas_global.empty and 'id' in df_vendas_global.columns) else [])
+                _conf_cli = st.checkbox(f"Confirmo apagar o cliente e as {len(_ids_cotas_cli)} cota(s) dele",
+                                        key=f"conf_del_cli_{cliente_nome}")
+                if st.button("🚨 Excluir Cliente (Apagar Todas as Cotas)", use_container_width=True, disabled=not _conf_cli):
+                    try:
+                        from auditoria import apagar_com_lixeira
+                        _motivo = f"Dashboard: excluir cliente {cliente_nome}"
+                        _nv, _av1 = apagar_com_lixeira(supabase, "vendas", _ids_cotas_cli, _motivo)
+                        _av2 = None
+                        if id_cliente_db:
+                            _nc, _av2 = apagar_com_lixeira(supabase, "clientes", [id_cliente_db], _motivo)
+                        carregar_dados_iniciais.clear()
+                        if _av1 or _av2:
+                            st.session_state['_aviso_lixeira'] = _av1 or _av2
+                        st.session_state['cliente_visualizado'] = None; st.session_state['key_tabela'] += 1; st.rerun()
+                    except Exception as e:
+                        carregar_dados_iniciais.clear()
+                        st.error(f"❌ Não apaguei o cliente: {e}")
 
         st.divider()
         st.subheader("📦 Cotas do Cliente")
@@ -539,19 +552,32 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
                                 if is_master:
                                     dados_atualizados["DATA_CANCELAMENTO"] = (nova_data_canc or None) if novo_status == "Cancelada" else None
                                 try:
-                                    supabase.table("vendas").update(dados_atualizados).eq("id", id_cota).execute()
-                                except Exception:
-                                    if "DATA_CANCELAMENTO" not in dados_atualizados: raise
-                                    dados_atualizados.pop("DATA_CANCELAMENTO")
-                                    supabase.table("vendas").update(dados_atualizados).eq("id", id_cota).execute()
-                                    st.warning("A data do cancelamento não foi salva: rode a migração 29 no Supabase.")
-                                carregar_dados_iniciais.clear()
-                                st.success("Cota atualizada com sucesso!"); st.rerun()
+                                    try:
+                                        supabase.table("vendas").update(dados_atualizados).eq("id", id_cota).execute()
+                                    except Exception:
+                                        if "DATA_CANCELAMENTO" not in dados_atualizados: raise
+                                        dados_atualizados.pop("DATA_CANCELAMENTO")
+                                        supabase.table("vendas").update(dados_atualizados).eq("id", id_cota).execute()
+                                        st.warning("A data do cancelamento não foi salva: rode a migração 29 no Supabase.")
+                                    carregar_dados_iniciais.clear()
+                                    st.success("Cota atualizada com sucesso!"); st.rerun()
+                                except Exception as e:
+                                    st.error(f"❌ A cota NÃO foi salva: {e}")
                         with col_b2:
-                            if is_master and st.button("🚨 Apagar Esta Cota", use_container_width=True):
-                                supabase.table("vendas").delete().eq("id", id_cota).execute()
-                                carregar_dados_iniciais.clear()
-                                st.success("Cota apagada com sucesso!"); st.rerun()
+                            _conf_cota = is_master and st.checkbox(f"Confirmo apagar a cota {grupo_atual}/{cota_atual}",
+                                                                   key=f"conf_del_cota_{id_cota}")
+                            if is_master and st.button("🚨 Apagar Esta Cota", use_container_width=True, disabled=not _conf_cota):
+                                try:
+                                    from auditoria import apagar_com_lixeira
+                                    _n, _av = apagar_com_lixeira(supabase, "vendas", [id_cota],
+                                                                 f"Dashboard: apagar cota {grupo_atual}/{cota_atual} de {cliente_nome}")
+                                    carregar_dados_iniciais.clear()
+                                    if _av:
+                                        st.session_state['_aviso_lixeira'] = _av
+                                    st.success("Cota apagada com sucesso!"); st.rerun()
+                                except Exception as e:
+                                    carregar_dados_iniciais.clear()
+                                    st.error(f"❌ Não apaguei a cota: {e}")
 
                 st.subheader("📈 Previsão de Comissionamento")
                 df_parcelas, vendas_sem_data = gerar_tabela_parcelas(cotas_cliente, df_vendas_global, df_admin, cfg, status_dict)
@@ -598,7 +624,7 @@ def render_dashboard(supabase, df_vendas_global, df_cli, df_ass, lista_admin_bd,
         df_view = filtrar_por_vendedor(df_view, 'VENDEDOR', eh_adm=is_master)
 
         # Painel do dia: KPIs animados, atalhos (inclui o botão "Nova Venda") e pendências
-        _render_painel_do_dia(df_vendas_global, df_cli, is_master)
+        _render_painel_do_dia(_df_escopo, df_cli, is_master)
 
         from modulos.tema import secao
         secao("Clientes e vendas", "🔎", "Filtre, busque e clique numa linha para abrir a ficha do cliente.")

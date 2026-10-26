@@ -390,6 +390,8 @@ _CSS_V2 = """
     .cb-chip.danger { background: var(--danger-soft); border-color: #fecaca; color: #991b1b; } .cb-chip.danger::before { background: var(--danger); }
     .cb-chip.info { background: var(--info-soft); border-color: #bfdbfe; color: #1e40af; } .cb-chip.info::before { background: var(--info); }
     .cb-chiprow { display: flex; flex-wrap: wrap; gap: 7px; margin: 2px 0 12px; }
+    .cb-hero .cb-chip.brand, .cb-hero .cb-chip.plain { background: rgba(255,255,255,.16); border-color: rgba(255,255,255,.30); color: #fff; }
+    .cb-hero .cb-chip.brand::before { background: #fff; }
     a.cb-chip { text-decoration: none !important; transition: transform .18s var(--ease), box-shadow .18s var(--ease); }
     a.cb-chip:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
 
@@ -504,7 +506,7 @@ _CSS_V2 = """
     [data-testid="stMain"] [data-testid="stVerticalBlockBorderWrapper"] { border-radius: 18px !important; background: var(--card);
         border-color: var(--line) !important; box-shadow: var(--shadow-sm); transition: box-shadow .24s var(--ease), border-color .24s var(--ease); }
     [data-testid="stMain"] [data-testid="stVerticalBlockBorderWrapper"]:hover { box-shadow: var(--shadow-md); border-color: var(--brand-mid) !important; }
-    .st-key-cb_tema_bar { position: fixed; top: 12px; right: 64px; z-index: 999991; width: 116px !important; }
+    .st-key-cb_tema_bar { position: fixed; top: 12px; right: 136px; z-index: 999991; width: 116px !important; }
     .st-key-cb_tema_bar [data-testid="stPopover"] button { padding: .3rem .8rem !important; min-height: 0 !important; background: rgba(255,255,255,.85);
         backdrop-filter: blur(6px); font-size: 13.5px !important; }
     [class*="st-key-dash_atr_"] button { padding: .2rem .7rem !important; min-height: 0 !important; font-size: 13px !important; border-radius: 9px !important; }

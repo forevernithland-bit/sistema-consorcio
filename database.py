@@ -29,12 +29,42 @@ def iniciar_conexao_site():
     except Exception:
         return None
 
-def carregar_tabela(supabase: Client, nome_tabela: str) -> pd.DataFrame:
-    """Busca todos os dados de uma tabela específica"""
+PAGINA = 1000   # o PostgREST do Supabase devolve no máximo 1000 linhas por consulta
+
+
+def ler_tudo(supabase: Client, nome_tabela: str, colunas: str = "*", ordem: str = "id", desc: bool = False,
+             filtros=None) -> list:
+    """Lê a tabela INTEIRA, de 1000 em 1000 (o Supabase corta em 1000 linhas
+    sem avisar — sem isto, vendas/comissões acima de 1000 sumiam das telas e da
+    checagem de duplicidade). Ordenado por `ordem` para a paginação ser estável.
+    `filtros` = lista de (metodo, coluna, valor), ex.: [("eq", "tipo", "BOLETO")].
+    Erro de rede/banco SOBE (não vira tabela vazia)."""
+    linhas, ini = [], 0
+    while True:
+        q = supabase.table(nome_tabela).select(colunas)
+        for metodo, col, val in (filtros or []):
+            q = getattr(q, metodo)(col, val)
+        if ordem:
+            q = q.order(ordem, desc=desc)
+        if not hasattr(q, "range"):          # cliente simplificado (testes): sem paginação
+            return list(q.execute().data or [])
+        lote = q.range(ini, ini + PAGINA - 1).execute().data or []
+        linhas.extend(lote)
+        if len(lote) < PAGINA:
+            return linhas
+        ini += PAGINA
+
+
+def carregar_tabela(supabase: Client, nome_tabela: str, tolerante: bool = True) -> pd.DataFrame:
+    """Busca todos os dados de uma tabela específica (todas as páginas).
+    tolerante=True: erro vira tabela vazia (comportamento antigo);
+    tolerante=False: o erro sobe — usado nas tabelas essenciais, para uma falha
+    de rede não ser confundida com "não há dados" (nem ficar 60 s no cache)."""
     try:
-        res = supabase.table(nome_tabela).select("*").execute()
-        return pd.DataFrame(res.data)
-    except:
+        return pd.DataFrame(ler_tudo(supabase, nome_tabela))
+    except Exception:
+        if not tolerante:
+            raise
         return pd.DataFrame()
 
 # ==========================================
@@ -55,7 +85,7 @@ def carregar_dados_iniciais(_supabase: Client):
     supabase = _supabase
 
     # 1. Carregar Vendas
-    df_vendas_bd = carregar_tabela(supabase, "vendas")
+    df_vendas_bd = carregar_tabela(supabase, "vendas", tolerante=False)
     if not df_vendas_bd.empty:
         df_vendas_global = df_vendas_bd.copy()
         df_vendas_global.rename(columns={"NOME": "Nome do cliente"}, inplace=True)
@@ -68,19 +98,19 @@ def carregar_dados_iniciais(_supabase: Client):
         df_vendas_global = pd.DataFrame()
 
     # 2. Carregar Clientes
-    df_cli = carregar_tabela(supabase, "clientes")
+    df_cli = carregar_tabela(supabase, "clientes", tolerante=False)
     
     # 3. Carregar Assembleias
-    df_ass = carregar_tabela(supabase, "assembleias")
+    df_ass = carregar_tabela(supabase, "assembleias", tolerante=False)
     if not df_ass.empty:
         df_ass['data_dt'] = pd.to_datetime(df_ass['data_evento'], format="%d/%m/%Y", errors='coerce')
 
     # 4. Carregar Administradoras
-    df_admin_cad = carregar_tabela(supabase, "cad_administradoras")
+    df_admin_cad = carregar_tabela(supabase, "cad_administradoras", tolerante=False)
     lista_admin_bd = df_admin_cad['Administradora'].tolist() if not df_admin_cad.empty else ["Nenhuma administradora cadastrada"]
 
     # 5. Carregar Regras de Comissionamento
-    df_admin = carregar_tabela(supabase, "administradoras")
+    df_admin = carregar_tabela(supabase, "administradoras", tolerante=False)
     if not df_admin.empty:
         df_admin['Admin_Norm'] = df_admin['Administradora'].apply(normalizar_string)
         df_admin['Prod_Norm'] = df_admin['Produto'].apply(normalizar_produto)
@@ -92,7 +122,7 @@ def carregar_dados_iniciais(_supabase: Client):
             df_admin['Tipo_Norm'] = ""
 
     # 6. Carregar Status das Comissões (Pagas ou Pendentes)
-    df_status = carregar_tabela(supabase, "status_comissoes")
+    df_status = carregar_tabela(supabase, "status_comissoes", tolerante=False)
     # Novo formato: armazena status e data de pagamento para permitir edição
     status_dict = df_status.set_index('Chave_Unica').to_dict('index') if not df_status.empty else {}
 
@@ -103,13 +133,15 @@ def carregar_dados_iniciais(_supabase: Client):
         "T2_Max": 1500000.0, "T2_Pct": 1.5, "T2_Parc": 5, "T3_Pct": 2.0, "T3_Parc": 5, "Imposto": 7.16
     }
     
-    df_cfg = carregar_tabela(supabase, "config_interna")
+    df_cfg = carregar_tabela(supabase, "config_interna", tolerante=False)
     cfg_id = None
     if not df_cfg.empty:
         cfg = df_cfg.iloc[0].to_dict()
         cfg_id = cfg.get('id')
     else:
-        # Se não houver configuração, insere o padrão
+        # Se não houver configuração, insere o padrão. Só chega aqui se a LEITURA
+        # deu certo e a tabela está mesmo vazia (erro de rede agora sobe — antes
+        # uma falha momentânea gravava uma 2ª configuração com valores padrão).
         res = supabase.table("config_interna").insert(cfg_padrao).execute()
         cfg = cfg_padrao
         cfg_id = res.data[0]['id'] if res.data else None
@@ -150,10 +182,9 @@ def salvar_status_comissoes(supabase: Client, df_editado: pd.DataFrame, df_origi
                 "Data_Pagamento": nova_data
             }
             
-            # Verifica se já existe um registro para esta parcela
-            existe = supabase.table("status_comissoes").select("id").eq("Chave_Unica", chave).execute()
-            
             try:
+                # Verifica se já existe um registro para esta parcela
+                existe = supabase.table("status_comissoes").select("id").eq("Chave_Unica", chave).execute()
                 if existe.data:
                     # Atualiza o existente
                     supabase.table("status_comissoes").update(payload).eq("id", existe.data[0]['id']).execute()
@@ -161,7 +192,11 @@ def salvar_status_comissoes(supabase: Client, df_editado: pd.DataFrame, df_origi
                     # Cria um novo registro
                     supabase.table("status_comissoes").insert(payload).execute()
             except Exception as e:
-                st.error(f"Erro ao salvar a parcela {chave}: {e}")
+                # as parcelas anteriores JÁ foram gravadas: limpa o cache para a tela
+                # mostrar o que de fato ficou no banco, e diz claramente onde parou.
+                carregar_dados_iniciais.clear()
+                st.error(f"Erro ao salvar a parcela {chave}: {e}. As parcelas antes dela já foram salvas; "
+                         "confira e salve de novo as que faltaram.")
                 return False
 
         carregar_dados_iniciais.clear()

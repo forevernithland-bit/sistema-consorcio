@@ -91,7 +91,8 @@ def _dt(p):
 # --------------------------------------------------------------------------
 def carregar_contexto():
     """Le vendas, config e o que ja foi importado."""
-    vendas = sb().table("vendas").select("*").execute().data or []
+    from database import ler_tudo     # todas as páginas (o Supabase corta em 1000)
+    vendas = ler_tudo(sb(), "vendas")
     idx = {}
     for v in vendas:
         idx[(_norm_gc(v.get("GRUPO")), _norm_gc(v.get("COTA")))] = v
@@ -100,7 +101,7 @@ def carregar_contexto():
 
     # marca de idempotencia = (chave_unica, periodo_fim). A mesma parcela pode
     # reaparecer noutro periodo como estorno/reativacao — sao eventos distintos.
-    ja = sb().table("comissoes_pagas").select("chave_unica,periodo_fim").execute().data or []
+    ja = ler_tudo(sb(), "comissoes_pagas", colunas="id,chave_unica,periodo_fim")
     chaves = {(r.get("chave_unica"), r.get("periodo_fim")) for r in ja}
     return idx, cfg, chaves
 

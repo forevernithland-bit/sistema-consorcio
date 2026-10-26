@@ -72,9 +72,15 @@ if _pg in _PG_MAP:
 # ==========================================
 try:
     supabase = iniciar_conexao()
-    # Carrega as tabelas uma única vez e distribui para os módulos
-    (df_vendas_global, df_cli, df_ass, df_admin_cad, 
-     lista_admin_bd, df_admin, status_dict, cfg, cfg_id) = carregar_dados_iniciais(supabase)
+    # Carrega as tabelas uma única vez e distribui para os módulos.
+    # Na tela de login nada disso é usado: não baixa as tabelas antes de entrar
+    # (login abre na hora e nenhum dado vai para quem não se identificou).
+    if is_logado:
+        (df_vendas_global, df_cli, df_ass, df_admin_cad,
+         lista_admin_bd, df_admin, status_dict, cfg, cfg_id) = carregar_dados_iniciais(supabase)
+    else:
+        (df_vendas_global, df_cli, df_ass, df_admin_cad, lista_admin_bd, df_admin, status_dict, cfg, cfg_id) = (
+            pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), [], pd.DataFrame(), {}, {}, None)
 except Exception as e:
     st.error(f"⚠️ Erro ao conectar com o Supabase. Detalhes: {e}")
     st.stop()

@@ -83,7 +83,7 @@ def render_robo_painel(supabase):
         else ("#ef4444", "🔴 Robô desligado — as tarefas ficam na fila até ele ligar")
     from modulos.tema import cabecalho
     cabecalho("Painel do Robô", "🤖", "Dispare as tarefas do robô do escritório e acompanhe o resultado.",
-              chips=[(txt, "ok" if online else "danger"), (f"{len(TAREFAS)} tarefas disponíveis", "plain")], eyebrow="Automação")
+              chips=[(txt.split(" ", 1)[1], "ok" if online else "danger"), (f"{len(TAREFAS)} tarefas disponíveis", "plain")], eyebrow="Automação")
     st.caption("Clique num botão pra pedir a tarefa. O robô do escritório executa e "
                "o resultado aparece na tabela abaixo (atualize a página pra ver).")
 

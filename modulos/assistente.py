@@ -280,6 +280,7 @@ def render_config_ia(supabase):
                 st.markdown("**Regras de Comissionamento:**")
                 st.write(row['regras_comissionamento'])
                 if st.button(f"🚨 Apagar Regras da {row['administradora']}", key=f"del_{row['id']}"):
-                    supabase.table("base_conhecimento_ia").delete().eq("id", row['id']).execute()
+                    from auditoria import apagar_com_lixeira
+                    apagar_com_lixeira(supabase, "base_conhecimento_ia", [row['id']], "Base de Conhecimento: apagar")
                     _carregar_base_conhecimento.clear()
                     st.rerun()

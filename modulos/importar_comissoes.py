@@ -64,11 +64,12 @@ def _chave_evento(c, data_pgto):
 
 
 def _chaves_ja_gravadas(supabase):
-    """Conjunto de (chave_unica, periodo_fim) que já existem em comissoes_pagas."""
-    try:
-        rows = supabase.table("comissoes_pagas").select("chave_unica,periodo_fim").execute().data or []
-    except Exception:
-        return set()
+    """Conjunto de (chave_unica, periodo_fim) que já existem em comissoes_pagas.
+    Lê TODAS as páginas (antes só as 1000 primeiras: acima disso a trava contra
+    importar a mesma nota 2x deixava passar duplicata). Erro de leitura SOBE —
+    sem conseguir checar, não se grava nada (evita duplicar lançamento)."""
+    from database import ler_tudo
+    rows = ler_tudo(supabase, "comissoes_pagas", colunas="id,chave_unica,periodo_fim")
     return {(r.get("chave_unica"), r.get("periodo_fim")) for r in rows}
 
 
@@ -321,7 +322,12 @@ def render_importar_comissoes(supabase, df_vendas_global, cfg, lista_admin_bd, d
 
     # Nota já importada? (mesma nota entrando 2x) — checa (chave_unica, periodo_fim)
     data_pgto_prev = info.get("periodo_fim") or ""
-    ja_no_historico = _chaves_ja_gravadas(supabase)
+    try:
+        ja_no_historico = _chaves_ja_gravadas(supabase)
+    except Exception as e:
+        st.error(f"❌ Não consegui conferir o histórico agora ({e}). Para não duplicar lançamentos, "
+                 "a gravação fica bloqueada até a leitura voltar. Tente de novo em instantes.")
+        return
     repetidas = [c for c in cotas if _chave_evento(c, data_pgto_prev) in ja_no_historico]
     if repetidas:
         st.warning(
@@ -402,8 +408,9 @@ def _render_cadastro_faltantes(supabase, cotas, admin_padrao):
                                         "Nome": nome.strip(),
                                         "Data_Cadastro": datetime.today().strftime("%d/%m/%Y"),
                                     }]).execute()
-                            except Exception:
-                                pass
+                            except Exception as _e_cli:
+                                st.warning(f"A venda foi cadastrada, mas o cadastro do cliente falhou ({_e_cli}). "
+                                           "Cadastre o cliente depois no Dashboard.")
                             # atualiza a cota na sessão
                             c["cliente"] = nome.strip()
                             c["vendedor"] = vendedor
@@ -427,7 +434,11 @@ def _salvar_pagamentos(supabase, cotas, info, admin_sel):
     mes_comp = _mes_competencia(data_pgto)
 
     # Idempotência: não regravar o que já está no histórico (mesma nota 2x).
-    ja_existe = _chaves_ja_gravadas(supabase)
+    try:
+        ja_existe = _chaves_ja_gravadas(supabase)
+    except Exception as e:
+        st.error(f"❌ Não consegui conferir o histórico ({e}). Nada foi gravado — tente de novo.")
+        return
 
     ok, erros, pulados = 0, 0, 0
     for c in cotas:
@@ -478,6 +489,13 @@ def _salvar_pagamentos(supabase, cotas, info, admin_sel):
                 f"(competência {mes_comp}). Nenhuma duplicata foi criada.")
         _limpar_import()
         st.rerun()
+    elif ok and erros:
+        # gravação PARCIAL: não some com a tela nem com as mensagens de erro.
+        # As que entraram já estão no histórico; confirmar de novo grava só as que
+        # faltaram (as gravadas são reconhecidas e ignoradas).
+        _invalidar_caches_comissoes()
+        st.warning(f"⚠️ Gravação PARCIAL: {ok} pagamento(s) registrado(s), {erros} com erro (veja acima). "
+                   "Clique em Confirmar de novo para gravar só as que faltaram — as já gravadas são ignoradas.")
     elif ok:
         _invalidar_caches_comissoes()
         extra = f" · {pulados} já existia(m) e foi(ram) ignorada(s)" if pulados else ""
@@ -515,8 +533,11 @@ def _fetch_comissoes_pagas_historico(_supabase):
     financeiro.py/relatorios.py, para preservar a ordenação e o tratamento de
     erro específicos desta tela. Invalidado via _invalidar_caches_comissoes()
     logo após qualquer escrita em comissoes_pagas/status_comissoes aqui."""
-    return (_supabase.table("comissoes_pagas").select("*")
-            .order("mes_competencia", desc=True).execute().data)
+    # todas as páginas (antes o histórico parava nas 1000 primeiras linhas)
+    from database import ler_tudo
+    rows = ler_tudo(_supabase, "comissoes_pagas")
+    # mesma ordem de antes: mes_competencia decrescente (estável para empates)
+    return sorted(rows, key=lambda r: (r.get("mes_competencia") is None, str(r.get("mes_competencia") or "")), reverse=True)
 
 
 def _mapa_produto_tipo(df_vendas_global):
@@ -526,7 +547,7 @@ def _mapa_produto_tipo(df_vendas_global):
     mapa = {}
     if df_vendas_global is None or df_vendas_global.empty:
         return mapa
-    for _, v in df_vendas_global.iterrows():
+    for v in df_vendas_global.to_dict("records"):
         chave = (_gc(v.get("GRUPO")), _gc(v.get("COTA")))
         mapa[chave] = (v.get("PRODUTO"), v.get("TIPO_PARCELA"))
     return mapa
@@ -580,7 +601,10 @@ def render_historico_comissoes(supabase, df_vendas_global=None, df_admin=None):
             f"**Breno:** {_rs(tot_breno)}  |  "
             f"**Uriel:** {_rs(tot_uriel)}"
         )
-        with st.expander(titulo_exp):
+        # expander sob demanda: o conteúdo (tabela + botões) só é montado quando aberto
+        with st.expander(titulo_exp, key=f"hist_exp_{mes}", on_change="rerun") as _exp:
+            if _exp.open is False:
+                continue
             show = pd.DataFrame({
                 "Grupo/Cota": dfm["grupo"].astype(str) + "/" + dfm["cota"].astype(str),
                 "Parc.": dfm["parcela_fmt"],
@@ -616,15 +640,21 @@ def render_historico_comissoes(supabase, df_vendas_global=None, df_admin=None):
                     rid = int(sel.split(" | ")[0].replace("ID:", ""))
                     linha = dfm[dfm["id"] == rid].iloc[0]
                     try:
-                        supabase.table("comissoes_pagas").delete().eq("id", rid).execute()
+                        # cópia na lixeira ANTES de apagar (pode ser restaurada em Configurações)
+                        from auditoria import apagar_com_lixeira
+                        _n, _aviso = apagar_com_lixeira(supabase, "comissoes_pagas", [rid],
+                                                        f"Histórico: remover lançamento de {titulo}")
                         chave = linha.get("chave_unica")
                         if chave:
                             supabase.table("status_comissoes").update(
                                 {"Status": "Pendente"}).eq("Chave_Unica", chave).execute()
                         _invalidar_caches_comissoes()
-                        st.success("Lançamento removido e parcela revertida para Pendente.")
+                        if _aviso:
+                            st.warning(_aviso)
+                        st.success("Lançamento removido (cópia guardada na lixeira) e parcela revertida para Pendente.")
                         st.rerun()
                     except Exception as e:
+                        _invalidar_caches_comissoes()
                         st.error(f"Erro ao remover: {e}")
 
             # ----- EXCLUIR O MÊS INTEIRO -----
@@ -636,12 +666,19 @@ def render_historico_comissoes(supabase, df_vendas_global=None, df_admin=None):
                              use_container_width=True, disabled=not conf):
                     try:
                         chaves = [c for c in dfm["chave_unica"].dropna().tolist() if c]
-                        supabase.table("comissoes_pagas").delete().eq("mes_competencia", mes).execute()
-                        if chaves:
+                        # apaga pelos IDs mostrados na tela (não por "tudo do mês" às cegas),
+                        # guardando cópia de cada linha na lixeira antes
+                        from auditoria import apagar_com_lixeira
+                        _n, _aviso = apagar_com_lixeira(supabase, "comissoes_pagas", dfm["id"].tolist(),
+                                                        f"Histórico: excluir mês {titulo}")
+                        for _i in range(0, len(chaves), 100):
                             supabase.table("status_comissoes").update(
-                                {"Status": "Pendente"}).in_("Chave_Unica", chaves).execute()
+                                {"Status": "Pendente"}).in_("Chave_Unica", chaves[_i:_i + 100]).execute()
                         _invalidar_caches_comissoes()
-                        st.success(f"Mês {titulo} excluído ({len(dfm)} lançamentos) e baixas revertidas.")
+                        if _aviso:
+                            st.warning(_aviso)
+                        st.success(f"Mês {titulo} excluído ({_n} lançamentos, cópia na lixeira) e baixas revertidas.")
                         st.rerun()
                     except Exception as e:
+                        _invalidar_caches_comissoes()
                         st.error(f"Erro ao excluir o mês: {e}")

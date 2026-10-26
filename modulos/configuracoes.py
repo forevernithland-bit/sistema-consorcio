@@ -98,10 +98,16 @@ def render_configuracoes(supabase, df_admin_cad, df_admin, lista_admin_bd, cfg, 
                         supabase.table("administradoras").update(r_u).eq("id", id_r).execute()
                         carregar_dados_iniciais.clear()
                         st.rerun()
-                    if b2.button("🚨 EXCLUIR"):
-                        supabase.table("administradoras").delete().eq("id", id_r).execute()
-                        carregar_dados_iniciais.clear()
-                        st.rerun()
+                    _conf_regra = b2.checkbox("Confirmo excluir esta regra", key=f"conf_del_regra_{id_r}")
+                    if b2.button("🚨 EXCLUIR", disabled=not _conf_regra):
+                        try:
+                            from auditoria import apagar_com_lixeira
+                            _n, _av = apagar_com_lixeira(supabase, "administradoras", [id_r],
+                                                         f"Configurações: excluir regra {r_at['Administradora']} - {r_at['Produto']}")
+                            carregar_dados_iniciais.clear()
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"❌ A regra NÃO foi excluída: {e}")
 
     with t_reg_int:
         cc1, cc2, cc3 = st.columns(3)
@@ -149,7 +155,7 @@ def render_configuracoes(supabase, df_admin_cad, df_admin, lista_admin_bd, cfg, 
             st.error("Limites inválidos: o valor do bônus 2 precisa ser maior que o do bônus 1, e os dois maiores que zero.")
         _tot = vd_p1 + vd_p2
         st.caption(f"Total ao vendedor: **{_tot:.2f}%** (base) · **{_tot + vd_m1p3:.2f}%** (acima de R$ {vd_m1:,.0f}) · "
-                   f"**{_tot + vd_m1p3 + vd_m2p4:.2f}%** (acima de R$ {vd_m2:,.0f}).".replace(",", "."))
+                   f"**{_tot + vd_m1p3 + vd_m2p4:.2f}%** (acima de R$ {vd_m2:,.0f}).".replace(",", ".").replace("$", "\\$"))   # '$' cru vira LaTeX
 
         st.divider()
         imp_in = st.number_input("Imposto Nota (%)", value=parse_float_safe(cfg.get("Imposto", 7.16)), step=0.01)

@@ -78,6 +78,7 @@ def render_assembleias(supabase, df_ass):
                 sel_del = st.selectbox("Selecione para Apagar:", [""] + opts_del)
                 if st.button("🚨 Apagar Selecionada", use_container_width=True) and sel_del:
                     id_apagar = int(sel_del.split(" | ")[0].replace("ID:", ""))
-                    supabase.table("assembleias").delete().eq("id", id_apagar).execute()
+                    from auditoria import apagar_com_lixeira
+                    apagar_com_lixeira(supabase, "assembleias", [id_apagar], "Assembleias: apagar")
                     carregar_dados_iniciais.clear()
                     st.rerun()
