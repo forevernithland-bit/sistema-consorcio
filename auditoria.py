@@ -118,10 +118,16 @@ def restaurar(supabase, reg: dict):
         ja = supabase.table(tabela).select("id").eq("id", rid).execute().data
         if ja:
             return False, f"Já existe uma linha com ID {rid} em {tabela} — nada foi alterado."
-    supabase.table(tabela).insert(dados).execute()
+    try:
+        supabase.table(tabela).insert(dados).execute()
+    except Exception as e:
+        if "23505" in str(e) or "duplicate" in str(e).lower():
+            return False, f"Essa linha já existe de novo em {tabela} — nada foi alterado."
+        raise
     try:
         supabase.table(TABELA).update({"restaurado_em": datetime.now(timezone.utc).isoformat(),
                                         "restaurado_por": quem()}).eq("id", reg["id"]).execute()
     except Exception:
         pass
-    return True, f"Linha {rid} restaurada em {tabela}."
+    ident = rid if rid is not None else (dados.get("chave_unica") or dados.get("Chave_Unica") or "")
+    return True, f"Linha {ident} restaurada em {tabela}.".replace("Linha  ", "Linha ")

@@ -42,22 +42,44 @@ _PASTA_DIA = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 def _ausente(e) -> bool:
+    """A TABELA não existe (não confundir com coluna inexistente)."""
     t = str(e)
-    return "PGRST205" in t or "42P01" in t or "does not exist" in t or "schema cache" in t
+    return ("PGRST205" in t or "42P01" in t or "Could not find the table" in t
+            or ("relation" in t and "does not exist" in t))
+
+
+def _coluna_inexistente(e) -> bool:
+    t = str(e)
+    return "42703" in t or ("column" in t and "does not exist" in t) or "PGRST204" in t
+
+
+# Ordem da paginação por tabela (chave primária). Várias tabelas NÃO têm `id`
+# (financeiro_datas, resultado_socios_mensal, planos/grupos/assembleias/buscas da
+# Yamaha) — ordenar por id nelas dá erro "column ... id does not exist".
+ORDEM = {
+    "financeiro_datas": ["chave_unica"],
+    "resultado_socios_mensal": ["ano", "mes"],
+    "planos_yamaha": ["codigo", "tipo_bem"],
+    "grupos_yamaha": ["grupo", "tipo_bem"],
+    "yamaha_assembleias": ["grupo", "num_assembleia"],
+    "yamaha_buscas": ["tipo_bem", "plano_codigo", "credito", "prazo_label"],
+}
 
 
 def ler_tabela(sb, tabela: str) -> list:
-    """Todas as linhas, de 1000 em 1000 (ordenado por id para a paginação ser estável)."""
-    linhas, ini, ordem = [], 0, "id"
+    """Todas as linhas, de 1000 em 1000, ordenadas pela chave da tabela para a
+    paginação ser estável. Se a coluna de ordem não existir, lê sem ordenar
+    — essas tabelas são pequenas, cabem numa página só)."""
+    linhas, ini, ordem = [], 0, list(ORDEM.get(tabela, ["id"]))
     while True:
         q = sb.table(tabela).select("*")
-        if ordem:
-            q = q.order(ordem)
+        for col in ordem:
+            q = q.order(col)
         try:
             lote = q.range(ini, ini + PAGINA - 1).execute().data or []
         except Exception as e:
-            if ordem and ini == 0 and ("id" in str(e) and ("column" in str(e) or "42703" in str(e))):
-                ordem = None          # tabela sem coluna id: pagina sem ordenar
+            if ordem and ini == 0 and _coluna_inexistente(e):
+                ordem = []            # sem a coluna de ordem: pagina sem ordenar
                 continue
             raise
         linhas.extend(lote)

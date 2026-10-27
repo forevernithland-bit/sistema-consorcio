@@ -39,6 +39,17 @@ def ler_tudo(supabase: Client, nome_tabela: str, colunas: str = "*", ordem: str 
     checagem de duplicidade). Ordenado por `ordem` para a paginação ser estável.
     `filtros` = lista de (metodo, coluna, valor), ex.: [("eq", "tipo", "BOLETO")].
     Erro de rede/banco SOBE (não vira tabela vazia)."""
+    try:
+        return _ler_paginas(supabase, nome_tabela, colunas, ordem, desc, filtros)
+    except Exception as e:
+        # tabela sem a coluna de ordenação (ex.: financeiro_datas, resultado_socios_mensal não têm `id`):
+        # lê de novo sem ordenar, em vez de derrubar a tela
+        if ordem and ("42703" in str(e) or "does not exist" in str(e)):
+            return _ler_paginas(supabase, nome_tabela, colunas, None, desc, filtros)
+        raise
+
+
+def _ler_paginas(supabase, nome_tabela, colunas, ordem, desc, filtros):
     linhas, ini = [], 0
     while True:
         q = supabase.table(nome_tabela).select(colunas)

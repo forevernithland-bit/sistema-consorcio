@@ -14,28 +14,24 @@ from modulos.importar_comissoes import (
 def render_baixas(supabase, df_vendas_global, df_admin, cfg, status_dict, lista_admin_bd=None):
     from modulos.tema import cabecalho; cabecalho("Baixar Parcelas de Comissão", "💰", "Importe a NF, dê baixa manual, consulte o histórico e pague os vendedores.", eyebrow="Gestão")
 
-    # Abas sob demanda: só a aba aberta é montada (on_change="rerun" + .open).
+    # (Abas normais: o pesado — histórico — já é sob demanda pelos meses em
+    # expander; a aba de pagamento a vendedores é conferida por teste aberta.)
     aba_import, aba_manual, aba_hist, aba_vend = st.tabs(
-        ["📥 Importar Resumo (NF)", "✍️ Baixa Manual", "📚 Histórico", "👥 Pagamento a Vendedores"],
-        key="baixas_abas", on_change="rerun"
+        ["📥 Importar Resumo (NF)", "✍️ Baixa Manual", "📚 Histórico", "👥 Pagamento a Vendedores"]
     )
 
-    if aba_import.open is not False:
-        with aba_import:
-            render_importar_comissoes(supabase, df_vendas_global, cfg, lista_admin_bd or [], df_admin)
+    with aba_import:
+        render_importar_comissoes(supabase, df_vendas_global, cfg, lista_admin_bd or [], df_admin)
 
-    if aba_hist.open is not False:
-        with aba_hist:
-            render_historico_comissoes(supabase, df_vendas_global, df_admin)
+    with aba_hist:
+        render_historico_comissoes(supabase, df_vendas_global, df_admin)
 
-    if aba_manual.open is not False:
-        with aba_manual:
-            _render_baixa_manual(supabase, df_vendas_global, df_admin, cfg, status_dict)
+    with aba_manual:
+        _render_baixa_manual(supabase, df_vendas_global, df_admin, cfg, status_dict)
 
-    if aba_vend.open is not False:
-        with aba_vend:
-            from modulos.pagto_vendedores import render_pagamento_vendedores
-            render_pagamento_vendedores(supabase, df_vendas_global, df_admin, cfg, status_dict)
+    with aba_vend:
+        from modulos.pagto_vendedores import render_pagamento_vendedores
+        render_pagamento_vendedores(supabase, df_vendas_global, df_admin, cfg, status_dict)
 
 
 def _mes_competencia(data_ddmmaaaa):

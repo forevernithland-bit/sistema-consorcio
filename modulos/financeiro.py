@@ -94,7 +94,8 @@ def _carregar_datas_financeiro(_supabase):
     após gravar, para a edição aparecer na hora."""
     # Todas as páginas; erro de leitura SOBE (não fica 60 s no cache como "sem datas").
     from database import ler_tudo
-    rows = ler_tudo(_supabase, "financeiro_datas")
+    # financeiro_datas NÃO tem coluna id: pagina pela chave primária (chave_unica)
+    rows = ler_tudo(_supabase, "financeiro_datas", ordem="chave_unica")
     return {r["chave_unica"]: r.get("data") for r in rows if r.get("data")}
 
 
