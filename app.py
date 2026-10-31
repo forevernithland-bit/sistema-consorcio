@@ -389,8 +389,10 @@ if (menu_selecionado in simuladores_dict) and not is_logado:
 # Aplicando cor de fundo dependendo da área
 if menu_selecionado == "🧮 Simuladores":
     # hub de simuladores: fundo escuro da família teal da marca (mesmo do hub/skin)
-    from modulos.simuladores_hub import FUNDO_PAGINA
-    css += FUNDO_PAGINA
+    # getattr: no Streamlit Cloud o módulo antigo pode continuar em memória logo após
+    # um deploy (sem FUNDO_PAGINA) — sem isso a tela inteira cai com ImportError
+    import modulos.simuladores_hub as _hub
+    css += getattr(_hub, "FUNDO_PAGINA", """ <style>.stApp { background-color: #0f172a !important; }</style> """)
 elif menu_selecionado in simuladores_dict:
     css += """ <style>.stApp { background-color: #0f172a !important; }</style> """
 elif (not is_logado) and menu_selecionado == "🔐 Login (Área Restrita)":
