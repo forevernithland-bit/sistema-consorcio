@@ -5,11 +5,13 @@ Simuladores Consorbens — tela única (hub).
 Junta num lugar só os simuladores das administradoras (Yamaha, Itaú por IA e
 Itaú manual; outras entram em OPCOES quando existirem). O usuário escolhe a
 administradora e o hub:
-  1) mostra o painel de grupos daquela administradora (KPIs, "menores lances
-     com vaga" e a Guia de grupos) — só leitura, a partir dos MESMOS dados que
-     os simuladores já usam (tabelas do robô Yamaha / Guia de Oportunidades Itaú);
-  2) renderiza o simulador original, sem tocar na conta — só injeta a camada
-     de "Apresentar ao cliente" (assets/simulador/hub_apresentacao.js).
+  1) renderiza o simulador original, sem tocar na conta — só injeta a camada
+     visual (assets/simulador/hub_skin.css + hub_apresentacao.js): hero com
+     KPIs, barra de abas, aba "📘 Guia de Grupos" (menores lances com vaga e
+     guia completa, a partir dos MESMOS dados que os simuladores já usam —
+     tabelas do robô Yamaha / Guia de Oportunidades Itaú) e o modo
+     "Apresentar ao cliente".
+  A tela inicial é um iframe animado (assets/simulador/hub_inicio.html).
 
 Os robôs (coleta Yamaha, download da Guia Itaú) não são afetados: este módulo
 só lê o que eles gravam.
@@ -27,11 +29,23 @@ HUB_MENU = "🧮 Simuladores"
 # id, permissão (seguranca.PERMISSOES), rótulo, ícone, descrição
 OPCOES = [
     {"id": "yamaha", "perm": "sim_yamaha", "titulo": "Yamaha", "ico": "🏍️",
-     "sub": "Motos, autos, imóveis e pesados · dados do robô Newcon"},
+     "sub": "Motos, autos, imóveis e pesados · dados do robô Newcon",
+     "adm": "Consórcio Yamaha", "selo": "Robô Newcon", "img": "pesados.jpg", "icone": "moto",
+     "desc": "Motos, autos, imóveis e pesados com grupos, vagas e lances de referência "
+             "coletados pelo robô Newcon.",
+     "tags": ["Motos", "Autos", "Imóveis", "Pesados"]},
     {"id": "itau_ia", "perm": "sim_itau_v2", "titulo": "Itaú · IA", "ico": "🚀",
-     "sub": "A IA monta a proposta direto da Guia de Oportunidades"},
+     "sub": "A IA monta a proposta direto da Guia de Oportunidades",
+     "adm": "Consórcio Itaú", "selo": "IA + Guia de Oportunidades", "img": "auto.jpg", "icone": "ia",
+     "desc": "A IA lê a Guia de Oportunidades da semana e monta a proposta com os grupos "
+             "mais aderentes ao perfil do cliente.",
+     "tags": ["Autos", "Imóveis", "Guia semanal"]},
     {"id": "itau_manual", "perm": "sim_itau", "titulo": "Itaú · Manual", "ico": "🏦",
-     "sub": "Você digita os dados do grupo e do lance"},
+     "sub": "Você digita os dados do grupo e do lance",
+     "adm": "Consórcio Itaú", "selo": "Digitação livre", "img": "casa.jpg", "icone": "manual",
+     "desc": "Você informa os dados do grupo e do lance e gera a simulação completa, "
+             "do seu jeito, para qualquer cenário.",
+     "tags": ["Autos", "Imóveis", "Cenário livre"]},
 ]
 EM_BREVE = ["Porto Seguro", "Embracon", "Bradesco"]
 PERMS_HUB = {o["perm"] for o in OPCOES}
@@ -144,44 +158,49 @@ def _dados_painel(opc, supabase):
 # ------------------------------------------------------------------ #
 # Camada de apresentação injetada no simulador original
 # ------------------------------------------------------------------ #
+_FONTE = ('<link rel="preconnect" href="https://fonts.googleapis.com">'
+          '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
+          '<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800'
+          '&display=swap" rel="stylesheet">')
+# foto da capa do modo apresentação por produto (moto usa arte em SVG da própria camada)
+_FOTOS = {"imovel": "casa.jpg", "auto": "auto.jpg", "caminhao": "pesados.jpg"}
+
+
+@st.cache_data
+def _fotos_uri(pasta):
+    base = os.path.join(pasta, _ASSETS)
+    return {k: _img_data_uri(os.path.join(base, f)) for k, f in _FOTOS.items()}
+
+
 def _camada(pasta, opc, linhas, meta):
+    """Skin + hero/abas/Guia de Grupos + modo apresentação, injetados no simulador.
+    Só aparência e leitura: nenhuma função de cálculo do simulador é tocada."""
     from modulos.yamaha_sim import _logo_data_uri
     ctx = {
         "sim": opc, "adm": meta.get("adm"), "logo": _logo_data_uri(pasta),
         "contato": "(31) 99894-2219 · consorbensmg.com.br",
         "grupos": {l["g"]: l for l in linhas},
+        "meta": {k: meta.get(k) for k in ("adm", "fonte", "atualizado", "erro") if meta.get(k)},
+        "fotos": {k: v for k, v in _fotos_uri(pasta).items() if v},
     }
+    css = _ler(os.path.join(pasta, _ASSETS, "hub_skin.css"))
     js = _ler(os.path.join(pasta, _ASSETS, "hub_apresentacao.js"))
-    return ("<script>window.CBX_CTX=" + json.dumps(ctx, ensure_ascii=False, default=str)
-            + ";</script><script>" + js + "</script>")
-
-
-def _painel(pasta, linhas, meta):
-    html = _ler(os.path.join(pasta, _ASSETS, "hub_painel.html"))
-    payload = json.dumps({"linhas": linhas, "meta": meta}, ensure_ascii=False, default=str)
-    components.html(html.replace('"__HUB_DADOS__"', payload, 1), height=640, scrolling=False)
+    payload = json.dumps(ctx, ensure_ascii=False, default=str).replace("</", "<\\/")
+    return (_FONTE + '<style data-cbx-skin="1">' + css + "</style>"
+            + "<script>window.CBX_CTX=" + payload + ";</script><script>" + js + "</script>")
 
 
 # ------------------------------------------------------------------ #
 # Tela
 # ------------------------------------------------------------------ #
 _CSS = """<style>
-.hub-hero{position:relative;overflow:hidden;border-radius:22px;padding:30px 34px;margin:4px 0 18px;
-  background:radial-gradient(600px 260px at 92% -20%,rgba(45,212,191,.35),transparent 60%),
-  radial-gradient(500px 240px at 0% 120%,rgba(246,147,2,.18),transparent 60%),linear-gradient(135deg,#0b2d28,#123f3e 55%,#17544b);
-  color:#fff;box-shadow:0 30px 60px -30px rgba(0,0,0,.6)}
-.hub-hero small{display:block;font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#7fe9b4}
-.hub-hero h1{font-size:34px;line-height:1.1;margin:8px 0 6px;font-weight:900;letter-spacing:-.02em;color:#fff;padding:0}
-.hub-hero h1 em{font-style:normal;color:#ffb649}
-.hub-hero p{margin:0;color:#cfe6de;font-size:15px}
-.hub-soon{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-.hub-soon span{font-size:12px;font-weight:700;color:#94a3b8;border:1px dashed #475569;border-radius:999px;padding:5px 12px}
-[class*="st-key-hubsel_"] button{min-height:118px;border-radius:18px !important;text-align:left !important;
-  background:linear-gradient(160deg,#16253f,#0f1b30) !important;border:1px solid #2a3a57 !important;color:#e2e8f0 !important;
-  transition:transform .2s,border-color .2s,box-shadow .2s;white-space:pre-line}
-[class*="st-key-hubsel_"] button > div{align-self:flex-start;width:100%}
-[class*="st-key-hubsel_"] button:hover{transform:translateY(-3px);border-color:#2dd4bf !important;box-shadow:0 18px 40px -20px rgba(45,212,191,.6)}
-[class*="st-key-hubsel_"] button p{font-size:15px !important;line-height:1.45}
+.hub-ou{font-size:12.5px;color:#94a3b8;margin:2px 0 4px}
+[class*="st-key-hubsel_"] button{min-height:0 !important;padding:4px 12px !important;border-radius:999px !important;
+  background:transparent !important;border:1px solid #334155 !important;color:#cbd5e1 !important}
+[class*="st-key-hubsel_"] button:hover{border-color:#2dd4bf !important;color:#fff !important}
+[class*="st-key-hubsel_"] button p{font-size:13px !important}
+.st-key-hub_escolha_raw{position:absolute !important;left:-9999px !important;width:1px !important;height:1px !important;
+  overflow:hidden !important;opacity:0 !important}
 .st-key-hub_trocar button{border-radius:999px !important}
 </style>"""
 
@@ -198,21 +217,7 @@ def render_hub(supabase, pasta, perms, is_master):
         escolha = None
 
     if escolha is None:
-        st.markdown(
-            '<div class="hub-hero"><small>Simuladores Consorbens</small>'
-            '<h1>Simule, compare e <em>apresente</em> o consórcio certo.</h1>'
-            '<p>Escolha a administradora. A lógica de cada simulador continua a mesma; '
-            'agora com guia de grupos, menores lances com vaga e modo apresentação para o cliente.</p></div>',
-            unsafe_allow_html=True)
-        cols = st.columns(len(opcoes))
-        for col, o in zip(cols, opcoes):
-            with col:
-                if st.button(f"{o['ico']}  **{o['titulo']}**\n\n{o['sub']}", key=f"hubsel_{o['id']}",
-                             use_container_width=True):
-                    st.session_state["hub_sim"] = o["id"]
-                    st.rerun()
-        st.markdown('<div class="hub-soon">' + "".join(f"<span>🔜 {n} · em breve</span>" for n in EM_BREVE)
-                    + "</div>", unsafe_allow_html=True)
+        _tela_inicial(pasta, opcoes, ids)
         return
 
     # ---- barra de troca ----
@@ -228,10 +233,11 @@ def render_hub(supabase, pasta, perms, is_master):
         if st.button("← Início", key="hub_trocar", use_container_width=True):
             st.session_state.pop("hub_sim", None)
             st.session_state.pop("hub_seg", None)
+            _limpar_ponte()
             st.rerun()
 
+    # o Guia de Grupos agora é uma aba DENTRO do simulador (camada injetada)
     linhas, meta = _dados_painel(escolha, supabase)
-    _painel(pasta, linhas, meta)
     extra = _camada(pasta, escolha, linhas, meta)
 
     if escolha == "yamaha":
@@ -246,7 +252,70 @@ def render_hub(supabase, pasta, perms, is_master):
         except FileNotFoundError:
             st.error("⚠️ itau.html não encontrado no servidor.")
             return
-        components.html(_injetar(html, extra), height=1000, scrolling=True)
+        components.html(_injetar(html, extra), height=1300, scrolling=True)
+
+
+# ------------------------------------------------------------------ #
+# Tela inicial (iframe animado + ponte de escolha)
+# ------------------------------------------------------------------ #
+_LABEL_ESCOLHA = "hub_escolha"          # aria-label do campo oculto (o iframe procura por ele)
+_KEY_ESCOLHA = "hub_escolha_raw"
+_KEY_PROC = "_hub_escolha_proc"
+_CAMPOS_CARD = ("id", "titulo", "sub", "selo", "adm", "img", "icone", "desc", "tags")
+
+
+@st.cache_data
+def _img_data_uri(caminho):
+    import base64
+    ext = os.path.splitext(caminho)[1].lower().lstrip(".")
+    mime = {"jpg": "jpeg", "jpeg": "jpeg", "png": "png", "webp": "webp"}.get(ext, "jpeg")
+    try:
+        with open(caminho, "rb") as f:
+            return f"data:image/{mime};base64," + base64.b64encode(f.read()).decode("ascii")
+    except OSError:
+        return ""
+
+
+@st.cache_data
+def _html_inicio(pasta, ids):
+    """HTML da tela inicial com os dados já injetados. Cacheado por (pasta, ids):
+    o conteúdo fica idêntico entre reruns e o iframe não recarrega."""
+    base = os.path.join(pasta, _ASSETS)
+    opcoes = [{k: o.get(k) for k in _CAMPOS_CARD} for o in OPCOES if o["id"] in ids]
+    imgs = {o["img"]: _img_data_uri(os.path.join(base, o["img"])) for o in opcoes if o.get("img")}
+    hub = {"opcoes": opcoes, "em_breve": EM_BREVE, "imgs": imgs,
+           "logo": _img_data_uri(os.path.join(base, "logo.png"))}
+    payload = json.dumps(hub, ensure_ascii=False).replace("</", "<\\/")
+    html = _ler(os.path.join(base, "hub_inicio.html"))
+    return html.replace('"__HUB_INICIO__"', payload, 1)
+
+
+def _limpar_ponte():
+    st.session_state.pop(_KEY_ESCOLHA, None)
+    st.session_state.pop(_KEY_PROC, None)
+
+
+def _tela_inicial(pasta, opcoes, ids):
+    # ponte: o iframe escreve "id|nonce" neste campo oculto e dá Enter
+    raw = st.text_input(_LABEL_ESCOLHA, key=_KEY_ESCOLHA, label_visibility="collapsed")
+    if raw and raw != st.session_state.get(_KEY_PROC):
+        st.session_state[_KEY_PROC] = raw
+        alvo = raw.split("|", 1)[0].strip()
+        if alvo in ids:
+            st.session_state["hub_sim"] = alvo
+            st.rerun()
+
+    altura = 760 if len(opcoes) > 1 else 700
+    components.html(_html_inicio(pasta, tuple(ids)), height=altura, scrolling=False)
+
+    # fallback acessível (se a ponte do iframe não funcionar)
+    st.markdown('<div class="hub-ou">Ou escolha aqui:</div>', unsafe_allow_html=True)
+    cols = st.columns(len(opcoes) + 2)
+    for col, o in zip(cols, opcoes):
+        with col:
+            if st.button(f"{o['ico']} {o['titulo']}", key=f"hubsel_{o['id']}", use_container_width=True):
+                st.session_state["hub_sim"] = o["id"]
+                st.rerun()
 
 
 def _injetar(html, extra):
