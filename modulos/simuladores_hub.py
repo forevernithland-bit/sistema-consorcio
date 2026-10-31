@@ -30,7 +30,7 @@ HUB_MENU = "🧮 Simuladores"
 OPCOES = [
     {"id": "yamaha", "perm": "sim_yamaha", "titulo": "Yamaha", "ico": "🏍️",
      "sub": "Motos, autos, imóveis e pesados · dados do robô Newcon",
-     "adm": "Consórcio Yamaha", "selo": "Robô Newcon", "img": "pesados.jpg", "icone": "moto",
+     "adm": "Consórcio Yamaha", "selo": "Robô Newcon", "img": "yamaha_moto.jpg", "icone": "moto",
      "desc": "Motos, autos, imóveis e pesados com grupos, vagas e lances de referência "
              "coletados pelo robô Newcon.",
      "tags": ["Motos", "Autos", "Imóveis", "Pesados"]},
@@ -57,10 +57,24 @@ def tem_acesso(perms, is_master):
     return is_master or bool(PERMS_HUB & set(perms or ()))
 
 
+def _mtime(caminho):
+    try:
+        return os.path.getmtime(caminho)
+    except OSError:
+        return 0.0
+
+
 @st.cache_data
-def _ler(caminho):
+def _ler_cache(caminho, mtime):
     with open(caminho, "r", encoding="utf-8") as f:
         return f.read()
+
+
+def _ler(caminho):
+    """Lê um arquivo do projeto com cache. A chave inclui o mtime: num deploy
+    (Streamlit Cloud não reinicia o processo a cada push) o arquivo novo é
+    relido na hora, em vez de servir a versão antiga do cache."""
+    return _ler_cache(caminho, _mtime(caminho))
 
 
 # ------------------------------------------------------------------ #
@@ -91,7 +105,8 @@ def _grupos_yamaha(base):
     agg = {}
     for r in base.get("grupos") or []:
         k = (str(r.get("grupo")), r.get("tipo_bem") or "")
-        a = agg.setdefault(k, {"creds": [], "vagas": None, "prazo": None, "assemb": "", "lm": None})
+        a = agg.setdefault(k, {"creds": [], "vagas": None, "prazo": None, "assemb": "", "lm": None,
+                               "fixo": None, "emb": None})
         c = _f(r.get("credito"))
         if c:
             a["creds"].append(c)
@@ -101,6 +116,12 @@ def _grupos_yamaha(base):
         a["prazo"] = a["prazo"] or r.get("prazo_restante")
         a["assemb"] = a["assemb"] or (r.get("prox_assembleia") or "")
         a["lm"] = a["lm"] or _f(r.get("lance_medio"))
+        # selos reais do grupo (gravados pelo worker a partir da tabela do grupo)
+        fx = r.get("lance_fixo_pct")
+        if fx and not a["fixo"]:
+            fx = fx if isinstance(fx, list) else [fx]
+            a["fixo"] = [x for x in (_f(v) for v in fx) if x] or None
+        a["emb"] = a["emb"] or _f(r.get("embutido_max_pct"))
     linhas = []
     for (g, tipo), a in agg.items():
         rs = resumo.get(g) or {}
@@ -114,6 +135,7 @@ def _grupos_yamaha(base):
             "cont": rs.get("contempl_lance_livre"), "assemb": _data_br(a["assemb"]),
             "obs": (f"{rs.get('assembleias_analisadas')} assembleias analisadas"
                     if rs.get("assembleias_analisadas") else ""),
+            "fixo": a["fixo"], "emb": a["emb"], "red": "reduzida" in tipo.lower(),
         })
     att = (base.get("atualizacao") or {}).get("geral") or ""
     return linhas, {"adm": "Yamaha", "fonte": "Robô Newcon (grupos e assembleias)",
@@ -135,6 +157,7 @@ def _grupos_itau(dados):
             "cont": g.get("contLivre"), "assemb": g.get("assembleia") or "",
             "obs": ("Lance fixo %s%%" % str(g.get("fixoPct")).replace(".", ",") if g.get("fixoOk") else "")
                    + (" · parcela reduzida" if g.get("red") else ""),
+            "fixo": g.get("fixoPct") if g.get("fixoOk") else None, "red": bool(g.get("red")),
         })
     m = dados.get("meta") or {}
     return linhas, {"adm": "Itaú", "fonte": m.get("fonte") or "Guia de Oportunidades",
@@ -162,14 +185,82 @@ _FONTE = ('<link rel="preconnect" href="https://fonts.googleapis.com">'
           '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
           '<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800'
           '&display=swap" rel="stylesheet">')
-# foto da capa do modo apresentação por produto (moto usa arte em SVG da própria camada)
-_FOTOS = {"imovel": "casa.jpg", "auto": "auto.jpg", "caminhao": "pesados.jpg"}
+# foto da capa do modo apresentação por produto
+_FOTOS = {"imovel": "casa.jpg", "auto": "auto.jpg", "caminhao": "pesados.jpg", "moto": "yamaha_moto.jpg"}
+# logo da administradora (hero do simulador, cards da tela inicial e capa da apresentação)
+_LOGO_ADM = {"yamaha": "logo_yamaha_h.png", "itau_ia": "logo_itau.svg", "itau_manual": "logo_itau.svg"}
 
 
-@st.cache_data
 def _fotos_uri(pasta):
     base = os.path.join(pasta, _ASSETS)
     return {k: _img_data_uri(os.path.join(base, f)) for k, f in _FOTOS.items()}
+
+
+_ADM_DIF = {"yamaha": "yamaha", "itau_ia": "itau", "itau_manual": "itau"}
+
+
+def _ler_json(caminho):
+    try:
+        return json.loads(_ler(caminho))
+    except (OSError, ValueError):
+        return None
+
+
+def _txt(d, *chaves):
+    for k in chaves:
+        v = d.get(k) if isinstance(d, dict) else None
+        if v:
+            return str(v).strip()
+    return ""
+
+
+def _itens(bruto, *chaves):
+    """Lista de itens {titulo, texto, produtos, fonte} a partir de formatos tolerantes."""
+    if isinstance(bruto, dict):
+        for k in chaves:
+            if isinstance(bruto.get(k), list):
+                bruto = bruto[k]
+                break
+    out = []
+    for it in bruto if isinstance(bruto, list) else []:
+        if isinstance(it, str):
+            it = {"titulo": it}
+        if not isinstance(it, dict):
+            continue
+        tit = _txt(it, "titulo", "title", "nome", "diferencial")
+        txt = _txt(it, "texto", "descricao", "detalhe", "description", "resumo")
+        if not (tit or txt):
+            continue
+        prods = it.get("produtos") or it.get("produto") or []
+        if isinstance(prods, str):
+            prods = [prods]
+        # `fonte` e `condicoes` ficam só no json (uso interno): nunca vão para a tela do cliente
+        out.append({"id": _txt(it, "id"), "titulo": tit, "texto": txt,
+                    "produtos": [str(x).lower() for x in prods], "icone": _txt(it, "icone", "emoji", "icon")})
+    return out
+
+
+def _diferenciais(pasta, opc):
+    """Diferenciais verificados (assets/simulador/diferenciais.json, mantido pelo
+    time de produtos). Nada é inventado aqui: sem arquivo/dado, os slides somem.
+    Formato esperado (tolerante a variações de nome de chave):
+      {"administradoras": {"yamaha": {"diferenciais": [{"id","titulo","texto","produtos":["auto","imovel",...],"condicoes","fonte"}]},
+                           "itau": {...}},
+       "consorbens": {"pilares": [{"titulo","texto"}]}, "_meta": {"rodape_padrao": "..."}}
+    Para o cliente só vão titulo/texto (filtrados por produto no JS); fonte, condicoes
+    e a_confirmar ficam de fora."""
+    d = _ler_json(os.path.join(pasta, _ASSETS, "diferenciais.json"))
+    if not isinstance(d, dict):
+        return {}
+    chave = _ADM_DIF.get(opc, opc)
+    adms = d.get("administradoras") if isinstance(d.get("administradoras"), dict) else d
+    bloco = adms.get(chave) or adms.get(opc) or {}
+    cb = d.get("consorbens") or {}
+    meta = d.get("_meta") if isinstance(d.get("_meta"), dict) else {}
+    # `a_confirmar` nunca é lido: só sai para a tela o que está em diferenciais/pilares
+    return {"adm": _itens(bloco, "diferenciais", "itens", "vantagens"),
+            "consorbens": _itens(cb, "pilares", "diferenciais", "itens"),
+            "rodape": _txt(meta, "rodape_padrao")}
 
 
 def _camada(pasta, opc, linhas, meta):
@@ -178,10 +269,13 @@ def _camada(pasta, opc, linhas, meta):
     from modulos.yamaha_sim import _logo_data_uri
     ctx = {
         "sim": opc, "adm": meta.get("adm"), "logo": _logo_data_uri(pasta),
-        "contato": "(31) 99894-2219 · consorbensmg.com.br",
+        "contato": "(31) 99894-2219 · consorbens.com.br",
+        "whats": "(31) 99894-2219", "site": "consorbens.com.br",
+        "dif": _diferenciais(pasta, opc),
         "grupos": {l["g"]: l for l in linhas},
         "meta": {k: meta.get(k) for k in ("adm", "fonte", "atualizado", "erro") if meta.get(k)},
         "fotos": {k: v for k, v in _fotos_uri(pasta).items() if v},
+        "logo_adm": _img_data_uri(os.path.join(pasta, _ASSETS, _LOGO_ADM.get(opc, ""))),
     }
     css = _ler(os.path.join(pasta, _ASSETS, "hub_skin.css"))
     js = _ler(os.path.join(pasta, _ASSETS, "hub_apresentacao.js"))
@@ -193,15 +287,40 @@ def _camada(pasta, opc, linhas, meta):
 # ------------------------------------------------------------------ #
 # Tela
 # ------------------------------------------------------------------ #
+# Fundo da página na rota "🧮 Simuladores" (aplicado pelo app.py). É o mesmo
+# sistema de cores da tela inicial, da skin e da camada: os iframes têm fundo
+# transparente, então página e simulador se fundem sem emenda.
+FUNDO_PAGINA = """<style>
+.stApp{background:radial-gradient(1100px 520px at 100% -10%,rgba(45,212,191,.10),transparent 60%),
+  radial-gradient(900px 520px at -10% 110%,rgba(246,147,2,.06),transparent 60%),
+  linear-gradient(180deg,#061a17 0%,#0a231f 100%) !important;background-attachment:fixed !important}
+[data-testid="stHeader"]{background:transparent !important}
+.stApp iframe{background:transparent !important;color-scheme:normal}
+</style>"""
+
 _CSS = """<style>
-.hub-ou{font-size:12.5px;color:#94a3b8;margin:2px 0 4px}
+.hub-ou{font-size:12.5px;color:#8fb0aa;margin:2px 0 4px}
 [class*="st-key-hubsel_"] button{min-height:0 !important;padding:4px 12px !important;border-radius:999px !important;
-  background:transparent !important;border:1px solid #334155 !important;color:#cbd5e1 !important}
+  background:#0c2824 !important;border:1px solid #1f4a43 !important;color:#cfe3df !important}
 [class*="st-key-hubsel_"] button:hover{border-color:#2dd4bf !important;color:#fff !important}
 [class*="st-key-hubsel_"] button p{font-size:13px !important}
 .st-key-hub_escolha_raw{position:absolute !important;left:-9999px !important;width:1px !important;height:1px !important;
   overflow:hidden !important;opacity:0 !important}
-.st-key-hub_trocar button{border-radius:999px !important}
+/* barra de troca de administradora: pílulas no mesmo sistema de cores do hub */
+.st-key-hub_seg [data-testid="stWidgetLabel"]{display:none}
+.st-key-hub_seg [role="radiogroup"]{gap:4px;padding:5px;border-radius:999px;background:#0c2824;border:1px solid #1f4a43;
+  width:max-content;max-width:100%;flex-wrap:wrap}
+.st-key-hub_seg button{border:0 !important;border-radius:999px !important;background:transparent !important;color:#cfe3df !important;
+  min-height:0 !important;padding:7px 16px !important;box-shadow:none !important;transition:background .2s,color .2s}
+.st-key-hub_seg button p{font-size:14px !important;font-weight:700 !important;color:inherit !important}
+.st-key-hub_seg button:hover{background:#153a34 !important;color:#fff !important}
+.st-key-hub_seg button[aria-checked="true"]{background:linear-gradient(135deg,#ffb649,#f69302) !important;color:#2b1700 !important;
+  box-shadow:0 10px 22px -12px rgba(246,147,2,.9) !important}
+[data-testid="stColumn"]:has(.st-key-hub_trocar) [data-testid="stVerticalBlock"]{align-items:flex-end}
+.st-key-hub_trocar button{min-height:0 !important;padding:8px 16px !important;border-radius:999px !important;background:transparent !important;
+  border:1px solid #2a5d55 !important;color:#cfe3df !important;width:auto !important}
+.st-key-hub_trocar button:hover{border-color:#2dd4bf !important;color:#fff !important;background:#0c2824 !important}
+.st-key-hub_trocar button p{font-size:13.5px !important;font-weight:700 !important}
 </style>"""
 
 
@@ -221,7 +340,7 @@ def render_hub(supabase, pasta, perms, is_master):
         return
 
     # ---- barra de troca ----
-    c1, c2 = st.columns([5, 1.2])
+    c1, c2 = st.columns([5, 1.2], vertical_alignment="center")
     with c1:
         nova = st.segmented_control(
             "Simulador", ids, default=escolha, key="hub_seg", label_visibility="collapsed",
@@ -230,7 +349,7 @@ def render_hub(supabase, pasta, perms, is_master):
             st.session_state["hub_sim"] = nova
             st.rerun()
     with c2:
-        if st.button("← Início", key="hub_trocar", use_container_width=True):
+        if st.button("← Início", key="hub_trocar"):
             st.session_state.pop("hub_sim", None)
             st.session_state.pop("hub_seg", None)
             _limpar_ponte()
@@ -265,10 +384,10 @@ _CAMPOS_CARD = ("id", "titulo", "sub", "selo", "adm", "img", "icone", "desc", "t
 
 
 @st.cache_data
-def _img_data_uri(caminho):
+def _img_cache(caminho, mtime):
     import base64
     ext = os.path.splitext(caminho)[1].lower().lstrip(".")
-    mime = {"jpg": "jpeg", "jpeg": "jpeg", "png": "png", "webp": "webp"}.get(ext, "jpeg")
+    mime = {"jpg": "jpeg", "jpeg": "jpeg", "png": "png", "webp": "webp", "svg": "svg+xml"}.get(ext, "jpeg")
     try:
         with open(caminho, "rb") as f:
             return f"data:image/{mime};base64," + base64.b64encode(f.read()).decode("ascii")
@@ -276,13 +395,25 @@ def _img_data_uri(caminho):
         return ""
 
 
-@st.cache_data
+def _img_data_uri(caminho):
+    """Imagem do projeto em data URI (cache com o mtime na chave — ver _ler)."""
+    if not caminho or os.path.isdir(caminho):
+        return ""
+    return _img_cache(caminho, _mtime(caminho))
+
+
 def _html_inicio(pasta, ids):
-    """HTML da tela inicial com os dados já injetados. Cacheado por (pasta, ids):
-    o conteúdo fica idêntico entre reruns e o iframe não recarrega."""
+    """HTML da tela inicial com os dados já injetados. Cada leitura de arquivo é
+    cacheada (com mtime); o resultado é determinístico, então o iframe não
+    recarrega entre reruns."""
     base = os.path.join(pasta, _ASSETS)
     opcoes = [{k: o.get(k) for k in _CAMPOS_CARD} for o in OPCOES if o["id"] in ids]
     imgs = {o["img"]: _img_data_uri(os.path.join(base, o["img"])) for o in opcoes if o.get("img")}
+    for o in opcoes:
+        lg = _LOGO_ADM.get(o["id"])
+        if lg and lg not in imgs:
+            imgs[lg] = _img_data_uri(os.path.join(base, lg))
+        o["logo"] = lg
     hub = {"opcoes": opcoes, "em_breve": EM_BREVE, "imgs": imgs,
            "logo": _img_data_uri(os.path.join(base, "logo.png"))}
     payload = json.dumps(hub, ensure_ascii=False).replace("</", "<\\/")

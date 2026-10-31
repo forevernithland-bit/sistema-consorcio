@@ -8,13 +8,15 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#0f172a; --ink:#f8fafc; --mut:#b6c8c4; --dim:#8aa09c;
+  /* mesmo sistema de cores da skin dos simuladores (teal escuro + laranja só para ação) */
+  --bg:#071d1a; --s1:#0c2824; --s2:#10302b; --ln:#1f4a43; --ink:#eaf6f3; --mut:#a9c9c3; --dim:#8fb0aa;
   --t1:#0b2d28; --t2:#123f3e; --t3:#17544b; --teal:#2dd4bf; --mint:#7fe9b4;
   --or:#f69302; --or2:#ffb649;
   --ease:cubic-bezier(.2,.8,.2,1);
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{background:var(--bg);color:var(--ink);overflow:hidden}
+html,body{background:transparent;color:var(--ink);overflow:hidden}
+html.solo{background:radial-gradient(1100px 520px at 100% -10%,rgba(45,212,191,.10),transparent 60%),radial-gradient(900px 520px at -10% 110%,rgba(246,147,2,.06),transparent 60%),linear-gradient(180deg,#061a17 0%,#0a231f 100%) fixed}
 body{font-family:"Plus Jakarta Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   -webkit-font-smoothing:antialiased;padding:4px 2px 8px}
 .wrap{max-width:1280px;margin:0 auto}
@@ -67,12 +69,12 @@ body{font-family:"Plus Jakarta Sans",ui-sans-serif,system-ui,-apple-system,"Sego
 .sec span{font-size:12.5px;color:var(--dim);font-weight:600}
 .cards{display:grid;grid-template-columns:repeat(var(--n,3),minmax(0,1fr));gap:18px}
 .card{position:relative;display:flex;flex-direction:column;justify-content:flex-end;min-height:330px;border-radius:24px;overflow:hidden;
-  cursor:pointer;text-align:left;color:#fff;border:1px solid rgba(255,255,255,.10);background:#10213a;font:inherit;
+  cursor:pointer;text-align:left;color:#fff;border:1px solid var(--ln);background:var(--s2);font:inherit;
   box-shadow:0 22px 44px -26px rgba(0,0,0,.8);transform:translateZ(0);
   transition:transform .35s var(--ease),box-shadow .35s var(--ease),border-color .35s;
   animation:up .8s var(--ease) both;animation-delay:calc(.12s + var(--i,0) * .12s)}
 @keyframes up{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
-.card .ph{position:absolute;inset:0;background-size:cover;background-position:center;transform:scale(1.02);
+.card .ph{position:absolute;inset:0;background-size:cover;background-position:center 30%;transform:scale(1.02);
   transition:transform .9s var(--ease),filter .6s}
 .card::before{content:"";position:absolute;inset:0;z-index:1;
   background:linear-gradient(180deg,rgba(6,20,18,.05) 0%,rgba(6,20,18,.30) 28%,rgba(7,26,23,.86) 50%,#071a17 72%,#071a17 100%)}
@@ -87,6 +89,12 @@ body{font-family:"Plus Jakarta Sans",ui-sans-serif,system-ui,-apple-system,"Sego
   letter-spacing:.02em;color:#2b1700;background:linear-gradient(135deg,var(--or2),var(--or));border-radius:999px;padding:6px 11px;
   box-shadow:0 10px 22px -10px rgba(246,147,2,.9)}
 .selo svg{width:13px;height:13px}
+.lg{position:absolute;z-index:2;top:12px;right:14px;display:flex;align-items:center;justify-content:center;
+  border-radius:16px;box-shadow:0 14px 28px -14px rgba(0,0,0,.8);animation:bob 4.5s ease-in-out infinite}
+.lg img{display:block}
+.lg.y{padding:10px 14px;background:rgba(4,20,40,.55);border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(8px)}
+.lg.y img{height:24px;width:auto}
+.lg.i img{width:56px;height:56px;border-radius:14px}
 .badge{position:absolute;z-index:2;top:12px;right:14px;width:58px;height:58px;border-radius:18px;display:grid;place-items:center;
   background:rgba(7,26,23,.55);border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(8px);color:#fff;
   animation:bob 4.5s ease-in-out infinite}
@@ -110,12 +118,12 @@ body{font-family:"Plus Jakarta Sans",ui-sans-serif,system-ui,-apple-system,"Sego
 
 /* ---------------- EM BREVE ---------------- */
 .soon{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:18px;padding:14px 18px;border-radius:18px;
-  background:rgba(255,255,255,.03);border:1px dashed rgba(148,163,184,.35);animation:up .8s var(--ease) both;animation-delay:.6s}
-.soon > b{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#94a3b8;margin-right:6px}
-.soon span{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:#a5b4c7;
-  background:rgba(148,163,184,.08);border:1px solid rgba(148,163,184,.22);border-radius:999px;padding:6px 13px}
+  background:rgba(255,255,255,.025);border:1px dashed var(--ln);animation:up .8s var(--ease) both;animation-delay:.6s}
+.soon > b{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-right:6px}
+.soon span{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:var(--mut);
+  background:var(--s1);border:1px solid var(--ln);border-radius:999px;padding:6px 13px}
 .soon svg{width:13px;height:13px;opacity:.75}
-.soon em{margin-left:auto;font-style:normal;font-size:12px;color:#7c8aa0}
+.soon em{margin-left:auto;font-style:normal;font-size:12px;color:var(--dim)}
 
 /* entrada do hero */
 .hero .top,.hero .intro > *{animation:up .9s var(--ease) both}
@@ -194,6 +202,7 @@ body{font-family:"Plus Jakarta Sans",ui-sans-serif,system-ui,-apple-system,"Sego
 <script>
 var HUB = "__HUB_INICIO__";
 (function(){
+  try { if (window.top === window) document.documentElement.classList.add("solo"); } catch (e) {}
   if (typeof HUB !== "object" || !HUB) {
     HUB = {opcoes:[], em_breve:[], logo:"", imgs:{}};
   }
@@ -203,6 +212,7 @@ var HUB = "__HUB_INICIO__";
     manual:'<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="6" width="32" height="36" rx="5"/><path d="M15 14h18"/><path d="M15 22h4M23 22h4M31 22h2M15 29h4M23 29h4M15 36h4M23 36h4"/><path d="M31 29v7"/></svg>'
   };
   var SELO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>';
+  var SPARK = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.2 6.8L21 11l-6.8 2.2L12 20l-2.2-6.8L3 11l6.8-2.2z"/></svg>';
   var CAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
 
   function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
@@ -220,8 +230,10 @@ var HUB = "__HUB_INICIO__";
     var img = (HUB.imgs || {})[o.img] || "";
     return '<button type="button" class="card" data-id="'+esc(o.id)+'" style="--i:'+i+'" aria-label="Abrir simulador '+esc(o.titulo)+'">'
       + '<div class="ph" style="background-image:'+(img ? 'url('+img+')' : 'linear-gradient(135deg,#123f3e,#17544b)')+'"></div>'
-      + '<span class="selo">'+SELO+esc(o.selo)+'</span>'
-      + '<span class="badge" aria-hidden="true">'+(ICO[o.icone]||ICO.manual)+'</span>'
+      + '<span class="selo">'+(o.icone==='ia'?SPARK:SELO)+esc(o.selo)+'</span>'
+      + (o.logo && (HUB.imgs||{})[o.logo]
+          ? '<span class="lg '+(o.id==='yamaha'?'y':'i')+'"><img alt="'+esc(o.adm)+'" src="'+HUB.imgs[o.logo]+'"></span>'
+          : '<span class="badge" aria-hidden="true">'+(ICO[o.icone]||ICO.manual)+'</span>')
       + '<div class="in">'
       +   '<div class="adm">'+esc(o.adm)+'</div>'
       +   '<h3>'+esc(o.titulo)+'</h3>'

@@ -387,7 +387,11 @@ if (menu_selecionado in simuladores_dict) and not is_logado:
     st.session_state['menu_lateral'] = menu_selecionado
 
 # Aplicando cor de fundo dependendo da área
-if menu_selecionado in simuladores_dict:
+if menu_selecionado == "🧮 Simuladores":
+    # hub de simuladores: fundo escuro da família teal da marca (mesmo do hub/skin)
+    from modulos.simuladores_hub import FUNDO_PAGINA
+    css += FUNDO_PAGINA
+elif menu_selecionado in simuladores_dict:
     css += """ <style>.stApp { background-color: #0f172a !important; }</style> """
 elif (not is_logado) and menu_selecionado == "🔐 Login (Área Restrita)":
     # Tela de login: fundo ilustrado com os produtos da Consorbens
