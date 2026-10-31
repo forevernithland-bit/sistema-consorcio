@@ -100,6 +100,7 @@ MENU_PARA_PERMISSAO = {
     "Emissão de Boletos": "boletos",
     "Relatórios": "relatorios",
     "Mídias": "midias",
+    "🧮 Simuladores": "sim_hub",   # derivada: qualquer um de sim_yamaha / sim_itau_v2 / sim_itau
     "🏍️ Simulador Yamaha": "sim_yamaha",
     "🚀 Simulador Itaú V 2.0": "sim_itau_v2",
     "🏦 Simulador Itaú": "sim_itau",
@@ -131,7 +132,12 @@ ROTULO_PERFIL = {PERFIL_ADMIN: "Administrador", PERFIL_VENDEDOR: "Vendedor"}
 def permissoes_efetivas(perfil, permissoes, eh_admin=False):
     """Conjunto de chaves que o usuário pode usar. Administrador = todas."""
     if eh_admin or perfil == PERFIL_ADMIN:
-        return set(PERMISSOES) | {"__admin__"}
+        return set(PERMISSOES) | {"__admin__", "sim_hub"}
     if permissoes is None:
-        return set(PERMISSOES_PADRAO_VENDEDOR)
-    return {p for p in permissoes if p in PERMISSOES}
+        efetivas = set(PERMISSOES_PADRAO_VENDEDOR)
+    else:
+        efetivas = {p for p in permissoes if p in PERMISSOES}
+    # hub de simuladores: abre se a pessoa tem pelo menos um dos simuladores dele
+    if efetivas & {"sim_yamaha", "sim_itau_v2", "sim_itau"}:
+        efetivas.add("sim_hub")
+    return efetivas

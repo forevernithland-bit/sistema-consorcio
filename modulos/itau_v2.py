@@ -173,6 +173,12 @@ def _num(v, d=0):
         return d
 
 
+def _fmt_data(v):
+    if isinstance(v, (datetime.date, datetime.datetime)):
+        return v.strftime("%d/%m/%Y")
+    return str(v or "").strip()
+
+
 def _parse_guia(xls_bytes, nome_arquivo, modified_iso):
     import openpyxl
     wb = openpyxl.load_workbook(io.BytesIO(xls_bytes), data_only=True)
@@ -216,6 +222,8 @@ def _parse_guia(xls_bytes, nome_arquivo, modified_iso):
                 "lances": [_num(ws.cell(r, 18).value), _num(ws.cell(r, 19).value),
                            _num(ws.cell(r, 22).value), _num(ws.cell(r, 23).value)],
                 "contLivre": int(_num(ws.cell(r, 20).value)) + int(_num(ws.cell(r, 24).value)),
+                # coluna L (Data prox assembleia) — só exibição no hub de simuladores
+                "assembleia": _fmt_data(ws.cell(r, 12).value),
             })
 
     dt = _data_do_nome(nome_arquivo)
@@ -279,7 +287,7 @@ def _ler_html_itau_v2(caminho):
 # ------------------------------------------------------------------ #
 # Render
 # ------------------------------------------------------------------ #
-def render_itau_v2(pasta_atual):
+def render_itau_v2(pasta_atual, extra_html=""):
     """Renderiza o Simulador Itaú V 2.0 com os dados vivos da Guia (Google Drive)."""
     col1, col2 = st.columns([6, 1])
     with col2:
@@ -322,6 +330,9 @@ def render_itau_v2(pasta_atual):
         return
 
     html = html.replace("__DADOS__", json.dumps(dados, ensure_ascii=False))
+    if extra_html:  # camada do hub de simuladores (modo apresentação)
+        from modulos.simuladores_hub import _injetar
+        html = _injetar(html, extra_html)
     components.html(html, height=1300, scrolling=True)
 
     with st.expander("ℹ️ Origem dos dados"):

@@ -66,6 +66,7 @@ ICONE_NAV = {
 
 # chave do simulador (valor do roteador) -> (ícone, nome exibido, slug da key do botão)
 SIMULADORES_UI = {
+    "🧮 Simuladores": ("calculator", "Simuladores", "hub"),
     "🏍️ Simulador Yamaha": ("bike", "Simulador Yamaha", "yamaha"),
     "🚀 Simulador Itaú V 2.0": ("zap", "Simulador Itaú V 2.0", "itau_v2"),
     "🏦 Simulador Itaú": ("landmark", "Simulador Itaú", "itau"),

@@ -186,9 +186,8 @@ css = montar_css()   # CSS completo do design system (modulos/tema.py)
 # 5. ROTEADOR DE MENU LATERAL E RENDERIZAÇÃO
 # ==========================================
 simuladores_dict = {
-    "🏍️ Simulador Yamaha": "yamaha.html",
-    "🚀 Simulador Itaú V 2.0": "itau_v2.html",
-    "🏦 Simulador Itaú": "itau.html",
+    # Yamaha, Itaú IA (V 2.0) e Itaú manual agora vivem juntos no hub (modulos/simuladores_hub.py)
+    "🧮 Simuladores": "hub",
     "🎯 Oportunidades Itaú": "guia.html",
     "⚖️ Financiamento x Consórcio": "comparador.html"
 }
@@ -368,6 +367,10 @@ else:
 
 _ph_css_sidebar.markdown(sidebar_ui.css_sidebar(_itens_css, _sims_css, logado=is_logado, online=_online), unsafe_allow_html=True)
 
+_SIM_ANTIGOS = {"🏍️ Simulador Yamaha": "yamaha", "🚀 Simulador Itaú V 2.0": "itau_ia", "🏦 Simulador Itaú": "itau_manual"}
+if st.session_state.get('menu_lateral') in _SIM_ANTIGOS:
+    st.session_state['hub_sim'] = _SIM_ANTIGOS[st.session_state['menu_lateral']]
+    st.session_state['menu_lateral'] = "🧮 Simuladores"
 menu_selecionado = st.session_state['menu_lateral']
 
 if is_logado and not is_master:
@@ -402,12 +405,9 @@ st.markdown("<style>iframe[height='0']{position:absolute;height:0;border:0}div[d
 # 6. DISTRIBUIÇÃO DAS TELAS
 # ==========================================
 if menu_selecionado in simuladores_dict:
-    if menu_selecionado == "🚀 Simulador Itaú V 2.0":
-        from modulos.itau_v2 import render_itau_v2
-        render_itau_v2(PASTA_ATUAL)
-    elif menu_selecionado == "🏍️ Simulador Yamaha":
-        from modulos.yamaha_sim import render_yamaha_sim
-        render_yamaha_sim(supabase, PASTA_ATUAL)
+    if menu_selecionado == "🧮 Simuladores":
+        from modulos.simuladores_hub import render_hub
+        render_hub(supabase, PASTA_ATUAL, _perm_usuario, is_master)
     else:
         carregar_ferramenta(simuladores_dict[menu_selecionado], PASTA_ATUAL)
     st.stop()

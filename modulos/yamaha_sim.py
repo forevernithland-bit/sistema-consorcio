@@ -383,7 +383,7 @@ def _ponte_novo_grupo(supabase):
         {"ok": st.success, "info": st.info, "erro": st.error}.get(tipo, st.info)(texto)
 
 
-def render_yamaha_sim(supabase, pasta_atual):
+def render_yamaha_sim(supabase, pasta_atual, extra_html=""):
     caminho = os.path.join(pasta_atual, "yamaha.html")
     try:
         html_code = _ler_html_yamaha(caminho)
@@ -421,6 +421,10 @@ def render_yamaha_sim(supabase, pasta_atual):
 
     # 1600 cobre a aba Simulador; a aba "Estruturada" (várias linhas + relatório
     # + fluxo) é mais alta — scrolling=True cobre o resto, mas dá um respiro.
+    # camada extra do hub de simuladores (modo apresentação) — só acrescenta, não altera a conta
+    if extra_html:
+        from modulos.simuladores_hub import _injetar
+        html_code = _injetar(html_code, extra_html)
     components.html(html_code, height=1900, scrolling=True)
     _ponte_novo_grupo(supabase)
 
