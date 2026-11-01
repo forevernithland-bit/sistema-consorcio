@@ -16,7 +16,7 @@ html[data-cbx]{
 html[data-cbx],html[data-cbx] body{background:transparent !important}
 html[data-cbx] body{font-family:var(--cb-font) !important;-webkit-font-smoothing:antialiased;margin:0 !important;padding:0 0 40px !important;color:var(--cb-tx)}
 html[data-cbx].cbx-solo{background:radial-gradient(1100px 520px at 100% -10%,rgba(45,212,191,.10),transparent 60%),
-  radial-gradient(900px 520px at -10% 110%,rgba(246,147,2,.06),transparent 60%),linear-gradient(180deg,#061a17 0%,#0a231f 100%) fixed !important}
+  radial-gradient(900px 520px at -10% 110%,rgba(246,147,2,.06),transparent 60%),linear-gradient(180deg,#061a17 0%,#0a231f 100%) fixed #0a231f !important}
 html[data-cbx] button,html[data-cbx] input,html[data-cbx] select,html[data-cbx] textarea{font-family:inherit}
 
 /* ---------------- HERO (criado pela camada) ---------------- */

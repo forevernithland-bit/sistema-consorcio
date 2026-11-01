@@ -436,8 +436,15 @@
     return o;
   }
   var TODOS = ["moto", "auto", "imovel", "caminhao"];
-  function difAdm(prod) {
+  // Diferenciais que só existem em alguns planos/grupos: só aparecem quando os dados
+  // do grupo simulado confirmam; os que não dá para conferir por grupo ficam de fora.
+  var SO_SE_GRUPO = { parcela_reduzida: function (g) { return !!(g && g.red); },
+                      lance_fixo: function (g) { return !!(g && g.fixo); } };
+  var SO_ALGUNS_PLANOS = ["reajuste_teto", "upgrade_imovel", "lance_prime", "reajuste_prefixado"];
+  function difAdm(prod, g) {
     return ((C.dif || {}).adm || []).filter(function (x) {
+      if (SO_ALGUNS_PLANOS.indexOf(x.id) >= 0) return false;
+      if (SO_SE_GRUPO[x.id] && !SO_SE_GRUPO[x.id](g)) return false;
       var ps = (x.produtos || []).map(norm);
       var vale = !ps.length || ps.indexOf("todos") >= 0 || (prod ? (SIN_PROD[prod] || [prod]).some(function (p) { return ps.indexOf(p) >= 0; })
                                                              : TODOS.every(function (p) { return ps.indexOf(p) >= 0; }));
@@ -819,7 +826,7 @@
     var folhas = cards ? [sFolha(B.map(clonar).join(""), 0, 1, true)] : B.map(function (b, i) { return sFolha(clonar(b), i, B.length, false, lado ? X : null); });
     var nomeAdm = esc(C.adm || "administradora"), art = /^ita/i.test(C.adm || "") ? "o" : "a";   // "o Itaú", "a Yamaha"
     var S = [sCapa(X), sComo(), sChances(X),
-             sCards("Por que " + art + " " + nomeAdm, "O que " + art + " <em>" + nomeAdm + "</em> oferece no seu plano", difAdm(X.prod), rodape("Condições conforme o regulamento e as regras vigentes da administradora."), "adm"),
+             sCards("Por que " + art + " " + nomeAdm, "O que " + art + " <em>" + nomeAdm + "</em> oferece no seu plano", difAdm(X.prod, X.g), rodape("Condições conforme o regulamento e as regras vigentes da administradora."), "adm"),
              sCredito(X)].concat(folhas).concat([
              sGrupo(X),
              sCards("Por que a Consorbens", "Quem cuida do seu plano <em>do início ao fim</em>", ((C.dif || {}).consorbens || []).slice(0, 6), "", "cb"),
