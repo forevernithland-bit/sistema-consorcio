@@ -36,7 +36,10 @@ LOG = os.path.join(_AQUI, "logs", "watchdog.log")
 CONSOLE = os.path.join(_AQUI, "logs", "console.log")
 CONFIG = os.path.join(_AQUI, "robo_config.toml")
 LIMITE_SEG = int(os.getenv("WATCHDOG_LIMITE_SEG", "180"))
-PY_ROBO = ["py", "-V:3.14", "worker_consorbens.py"]   # o python padrão (3.15) não tem as libs
+# O python padrão (3.15) não tem as libs do robô. pythonw.exe do 3.14 = sem console: com py.exe/python.exe
+# o Windows Terminal abria uma janela preta visível junto com o robô.
+_PYW = os.path.join(os.path.expanduser("~"), "AppData", "Local", "Python", "pythoncore-3.14-64", "pythonw.exe")
+PY_ROBO = [_PYW if os.path.exists(_PYW) else "pythonw", "worker_consorbens.py"]
 SIMULAR = "--simular" in sys.argv
 
 
@@ -136,10 +139,10 @@ def _subir():
     try:
         os.makedirs(os.path.dirname(CONSOLE), exist_ok=True)
         saida = open(CONSOLE, "ab")
-        flags = 0x08000000 | 0x00000008          # CREATE_NO_WINDOW | DETACHED_PROCESS
+        flags = 0x00000008                       # DETACHED_PROCESS (pythonw não cria console)
         subprocess.Popen(PY_ROBO, cwd=_AQUI, stdout=saida, stderr=subprocess.STDOUT,
                          stdin=subprocess.DEVNULL, creationflags=flags, close_fds=True)
-        log("subi o robô (py -V:3.14 worker_consorbens.py, oculto)")
+        log("subi o robô (pythonw 3.14 worker_consorbens.py, sem janela)")
     except Exception as e:
         log(f"falha ao subir o robô: {e}")
 
