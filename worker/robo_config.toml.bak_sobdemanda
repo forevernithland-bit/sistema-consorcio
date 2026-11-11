@@ -1,0 +1,108 @@
+# ------------------------------------------------------------------------
+# Configuração do robô único (worker_consorbens.py)
+# Editável a quente: o supervisor relê este arquivo a cada ciclo.
+# ------------------------------------------------------------------------
+
+[geral]
+# Começa em simulação — o Newcon NÃO é aberto, LANCE/BOLETO respondem "SIMULAÇÃO".
+# Vire para false só depois de validar o circuito no PC do escritório.
+modo_simulacao    = false
+# false = janela do Chrome minimizada ("segundo plano", não invisível).
+navegador_visivel = false
+# Pausa do loop quando não há nada a fazer.
+intervalo_seg     = 25
+# Teto de tempo por tarefa (minutos) — RESERVADO p/ uso futuro. Hoje a rede de
+# segurança de tarefa pendurada é o watchdog_robo.py (reage ao heartbeat velho).
+[geral.timeout_tarefa_min]
+RELATORIO_COMISSAO = 30
+COLETA_GRUPOS      = 20
+COLETA_ASSEMBLEIAS = 20
+COLETA_TABELAS     = 15
+PLANEJAR_SIMULACAO = 15
+
+# ------------------------------------------------------------------------
+# TIMERS — tarefas de API (sem navegador). O supervisor dispara sozinho.
+# "quando" = uma string OU uma lista de "<dias> HH:MM".
+#   <dias> = 'diario'  ou  dias separados por vírgula: seg ter qua qui sex sab dom
+# Dispara 1x por horário programado; se o robô estava desligado na hora,
+# dispara assim que subir. Estado em robo_cron_estado.json.
+# ------------------------------------------------------------------------
+[timers.gmail_yamaha]
+ativo  = true
+quando = ["seg 12:00", "qua 12:00", "sex 12:00"]
+# Depois de baixar as tabelas Yamaha, enfileira estas tarefas (leem os PDFs novos):
+encadear = ["COLETA_TABELAS"]
+
+[timers.gmail_itau]
+ativo  = true
+quando = ["seg 12:00", "qua 12:00", "sex 12:00"]
+
+[timers.anglo]
+ativo  = true
+quando = ["diario 07:00", "diario 12:00", "diario 15:00", "diario 20:00"]
+
+# Fraga e Bitello — lê a API deles e sincroniza as cartas do fornecedor
+# "Fraga e Bitello" no site (ágio autos 5% / imóveis 4%, já configurado em
+# `fornecedores`). Horários deslocados dos da Anglo pra não sobrepor.
+[timers.fraga_bitello]
+ativo  = true
+quando = ["diario 06:00", "diario 11:00", "diario 16:00", "diario 21:00"]
+
+# BACKUP diário de TODAS as tabelas do ERP (JSON + CSV) no Google Drive local:
+#   G:\Meu Drive\CLODE\BACKUP_ERP\AAAA-MM-DD\
+# Retenção e opções na seção [backup] abaixo. O botão "Pedir backup ao robô"
+# em Configurações -> Backup e Lixeira roda o mesmo backup na hora.
+[timers.backup_erp]
+ativo  = true
+quando = "diario 01:30"
+
+# ------------------------------------------------------------------------
+# COLETA — tarefas que USAM o Newcon. O supervisor enfileira na
+# fila_automacao (prioridade baixa) e roda "cedendo a vez" pra LANCE/BOLETO.
+#
+# grupos_sync roda e, ao terminar, ENCADEIA sozinho a COLETA_ASSEMBLEIAS
+# (pega o resultado das assembleias / lance médio dos grupos com vaga).
+# Ou seja: 1 horário aqui já cobre grupos + assembleias.
+# ------------------------------------------------------------------------
+[coleta.grupos_sync]
+ativo  = true
+quando = "diario 02:00"
+
+[coleta.tabelas]
+ativo  = false          # já encadeado no gmail_yamaha (seg/qua/sex); reforço opcional
+quando = "seg 03:00"
+
+# ------------------------------------------------------------------------
+# Prioridade na fila (menor = mais urgente). LANCE/BOLETO vêm sem esse
+# campo do ERP — o supervisor assume 10 pra eles de qualquer forma.
+# ------------------------------------------------------------------------
+[fila.prioridade]
+LANCE              = 10
+BOLETO             = 10
+PLANEJAR_SIMULACAO = 40
+COLETA_GRUPOS      = 50
+COLETA_ASSEMBLEIAS = 50
+COLETA_TABELAS     = 50
+RELATORIO_COMISSAO = 60
+BACKUP_ERP         = 20
+
+# ------------------------------------------------------------------------
+# Backup do ERP: quantos guardar e o que incluir.
+# ------------------------------------------------------------------------
+[backup]
+diarios = 30              # últimos 30 dias, um por dia
+mensais = 12              # + o 1º backup de cada um dos últimos 12 meses
+midias  = true            # copia também os arquivos enviados em Mídias (só os novos)
+incluir_senhas_sistema = false   # senhas das administradoras (texto) ficam FORA do backup
+
+# ------------------------------------------------------------------------
+# Caminhos (Drive montado). O robô se recusa a subir se estes não existirem.
+# ------------------------------------------------------------------------
+[caminhos]
+tabelas_yamaha  = 'G:\Meu Drive\CONSORBENS\Tabelas\YAMAHA'
+tabelas_itau    = 'G:\Meu Drive\CONSORBENS\Tabelas\ITAU'
+gmail_yamaha_scripts = 'G:\Meu Drive\CLODE\ATUALIZA_YAMAHA_TABELAS\scripts'
+gmail_itau_scripts   = 'G:\Meu Drive\CLODE\GUIA_DE_OPORTUNIDADES_ITAU\scripts'
+anglo_dir            = 'G:\Meu Drive\CLODE\IMPORTA_ANGLO_CONSORCIO'
+fraga_bitello_scripts = 'C:\Users\desta\.claude\skills\cartas-contempladas-consorbens\scripts'
+backup_erp           = 'G:\Meu Drive\CLODE\BACKUP_ERP'

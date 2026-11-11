@@ -232,6 +232,25 @@ def _trava_login_robo(_sb):
     return (True, desde)
 
 
+# ---- Robô sob demanda: avisa que tem gente no CRM ----
+# O watchdog do notebook servidor (worker/watchdog_robo.py) liga o robô enquanto
+# robo_status.crm_ativo_em for recente e desliga ~1h depois que o último usuário parar.
+# Marca no máximo 1x por minuto por sessão; falha em silêncio (ex.: migração 33 ainda não rodou).
+def _marcar_presenca_crm(_sb):
+    if not is_logado:
+        return
+    _agora = datetime.now(timezone.utc).timestamp()
+    if _agora - st.session_state.get("_presenca_crm_ts", 0) < 60:
+        return
+    st.session_state["_presenca_crm_ts"] = _agora
+    try:
+        _sb.table("robo_status").update(
+            {"crm_ativo_em": datetime.now(timezone.utc).isoformat()}).eq("id", 1).execute()
+    except Exception:
+        pass
+
+
+_marcar_presenca_crm(supabase)
 _online = _status_robo(supabase)
 _titulo = "Robô ligado" if _online else "Robô desligado"
 # CSS da sidebar (modulos/sidebar.py): placeholder no topo, preenchido ao final
@@ -290,7 +309,7 @@ with st.sidebar.container(key="sb_brand"):
         # inteira e derrubaria a sessão de login. Vira um "pill" de status via CSS.
         with st.container(key="sb_robo"):
             if st.button("Robô online" if _online else "Robô offline", key="btn_server_robo",
-                         help=f"{_titulo} — abrir Painel do Robô", disabled=not is_master):
+                         help=f"{_titulo} — liga sozinho quando alguém entra no CRM (até ~1 min) e desliga 1h depois que todos saem. Abrir Painel do Robô", disabled=not is_master):
                 st.session_state['menu_lateral'] = "🤖 Robô"
                 st.session_state['last_radio_selection'] = None
                 st.session_state['cliente_visualizado'] = None

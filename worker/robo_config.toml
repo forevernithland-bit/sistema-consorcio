@@ -106,3 +106,14 @@ gmail_itau_scripts   = 'G:\Meu Drive\CLODE\GUIA_DE_OPORTUNIDADES_ITAU\scripts'
 anglo_dir            = 'G:\Meu Drive\CLODE\IMPORTA_ANGLO_CONSORCIO'
 fraga_bitello_scripts = 'C:\Users\desta\.claude\skills\cartas-contempladas-consorbens\scripts'
 backup_erp           = 'G:\Meu Drive\CLODE\BACKUP_ERP'
+
+# ------------------------------------------------------------------------
+# ROBÔ SOB DEMANDA (watchdog_robo.py, a cada 1 min no notebook servidor):
+# liga o robô quando alguém usa o CRM e desliga `minutos_apos_sair` minutos depois
+# do último uso (só com a fila de lance/boleto vazia). Timers perdidos disparam
+# quando o robô sobe. ativo = false volta ao modo "sempre ligado".
+# Precisa da migração 33 (robo_status.crm_ativo_em); sem ela o modo é "sempre ligado".
+# ------------------------------------------------------------------------
+[sob_demanda]
+ativo              = true
+minutos_apos_sair  = 60
