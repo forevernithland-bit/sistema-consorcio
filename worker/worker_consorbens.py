@@ -345,7 +345,9 @@ def preparar_newcon(sb: Client, visivel: bool):
 
     login_newcon, senha_newcon = buscar_credenciais_newcon(sb)
     pw = sync_playwright().start()
-    browser = pw.chromium.launch(headless=not visivel)
+    # Imperva (firewall do Newcon) passou a bloquear Chrome headless ("Access denied, Error 15").
+    # Por isso nunca usamos headless: com "navegador_visivel = false" abre COM janela, mas minimizada.
+    browser = pw.chromium.launch(headless=False, args=([] if visivel else ["--start-minimized"]))
     ctx_kwargs = {"accept_downloads": True,
                   "permissions": ["clipboard-read", "clipboard-write"]}
     try:

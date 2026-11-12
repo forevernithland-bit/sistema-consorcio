@@ -199,8 +199,23 @@ def _texto_pagina(page: Page) -> str:
 
 
 # ------------------------------------------------------------------ login
+class NewconBloqueado(RuntimeError):
+    """O firewall (Imperva) do Newcon barrou o navegador — não é problema de senha/sessão."""
+
+
+def _checar_bloqueio(page: Page) -> None:
+    try:
+        txt = (page.inner_text("body", timeout=3000) or "").lower()
+    except Exception:
+        return
+    if "this request was blocked by our security service" in txt or "access denied" in txt[:200]:
+        raise NewconBloqueado("Newcon bloqueou o acesso (firewall Imperva, 'Access denied / Error 15'). "
+                              "Costuma ser navegador headless ou IP bloqueado.")
+
+
 def esta_logado(page: Page) -> bool:
     """Logado = a tela de login (campo de usuário) NÃO está visível."""
+    _checar_bloqueio(page)   # página de bloqueio não tem campo de login e enganaria o teste abaixo
     try:
         return not page.locator("#edtUsuario").is_visible()
     except Exception:

@@ -107,7 +107,8 @@ def _abrir(sb):
     from playwright.sync_api import sync_playwright
     import newcon
     pw = sync_playwright().start()
-    browser = pw.chromium.launch(headless=not NAVEGADOR_VISIVEL)
+    # Imperva (Newcon) bloqueia headless: sempre com janela, minimizada quando "invisível".
+    browser = pw.chromium.launch(headless=False, args=([] if NAVEGADOR_VISIVEL else ["--start-minimized"]))
     kw = {"accept_downloads": True}
     if os.path.exists(newcon.STORAGE_STATE):
         ctx = browser.new_context(storage_state=newcon.STORAGE_STATE, **kw)

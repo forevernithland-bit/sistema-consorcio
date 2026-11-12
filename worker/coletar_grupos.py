@@ -202,7 +202,9 @@ def _abrir(sb, visivel):
     from playwright.sync_api import sync_playwright
     import newcon
     pw = sync_playwright().start()
-    browser = pw.chromium.launch(headless=not visivel)
+    # Imperva (firewall do Newcon) passou a bloquear Chrome headless ("Access denied, Error 15").
+    # Por isso nunca usamos headless: com "navegador_visivel = false" abre COM janela, mas minimizada.
+    browser = pw.chromium.launch(headless=False, args=([] if visivel else ["--start-minimized"]))
     kw = {"accept_downloads": True}
     ctx = (browser.new_context(storage_state=newcon.STORAGE_STATE, **kw)
            if os.path.exists(newcon.STORAGE_STATE) else browser.new_context(**kw))
