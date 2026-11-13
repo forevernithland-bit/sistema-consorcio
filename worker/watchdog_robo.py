@@ -41,6 +41,8 @@ LIMITE_SEG = int(os.getenv("WATCHDOG_LIMITE_SEG", "180"))
 _PYW = os.path.join(os.path.expanduser("~"), "AppData", "Local", "Python", "pythoncore-3.14-64", "pythonw.exe")
 PY_ROBO = [_PYW if os.path.exists(_PYW) else "pythonw", "worker_consorbens.py"]
 SIMULAR = "--simular" in sys.argv
+# Sem isso, tasklist/taskkill chamados do pythonw abrem uma janela preta que pisca a cada minuto.
+_SEM_JANELA = 0x08000000                         # CREATE_NO_WINDOW
 
 
 def log(msg):
@@ -119,7 +121,8 @@ def _pid_vivo() -> int | None:
         return None
     try:
         out = subprocess.run(["tasklist", "/FI", f"PID eq {pid}", "/NH"],
-                             capture_output=True, text=True, timeout=20)
+                             capture_output=True, text=True, timeout=20,
+                             creationflags=_SEM_JANELA)
         return pid if str(pid) in out.stdout else None
     except Exception:
         return None
@@ -128,7 +131,8 @@ def _pid_vivo() -> int | None:
 def _matar(pid: int):
     try:
         subprocess.run(["taskkill", "/F", "/PID", str(pid), "/T"],
-                       capture_output=True, text=True, timeout=30)
+                       capture_output=True, text=True, timeout=30,
+                       creationflags=_SEM_JANELA)
         log(f"matei o processo {pid}")
     except Exception as e:
         log(f"falha ao matar {pid}: {e}")

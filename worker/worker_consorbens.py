@@ -152,6 +152,11 @@ _PRIO_FIXA = {"LANCE": 10, "BOLETO": 10, "PLANEJAR_SIMULACAO": 40,
 def _prio_pedido(pedido: dict, cfg: dict) -> int:
     tipo = (pedido.get("tipo") or "").upper()
     p = pedido.get("prioridade")
+    # LANCE/BOLETO sempre usam a prioridade do robo_config.toml ([fila.prioridade] = 10): a coluna
+    # `prioridade` da fila passou a vir preenchida com 50 (igual às coletas) e o desempate por
+    # criado_em deixava a coleta de grupos na frente dos lances.
+    if tipo in ("LANCE", "BOLETO"):
+        p = None
     if p is not None:
         try:
             return int(p)
