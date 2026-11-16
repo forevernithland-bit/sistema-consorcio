@@ -599,7 +599,7 @@ recRef.innerText = 'R$ ' + recVal.toLocaleString('pt-BR', {minimumFractionDigits
 
 lanceTotalGlobal = embVal + recVal;
 let lanceTotalPercNum = emb + recPerc;
-lanceTotalPerc.innerText = ((lanceTotalPercNum*100)).toFixed(2)+'%';
+lanceTotalPerc.innerText = ((lanceTotalPercNum*100)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';
 
 let dividaTotal = cred * (1 + tx + fr);
 let parcelaBaseSemSeguro = dividaTotal / prazoC;
@@ -623,17 +623,21 @@ lanceOf.innerText = moeda(lanceTotalGlobal);
 document.getElementById('lanceRecFooter').innerText = moeda(recVal);
 liberado.innerText = moeda(libCalcGlobal);
 
+// Sem crédito/prazo preenchidos as contas dão NaN → mostra "—" (nunca "R$ NaN" na frente do cliente)
+const _okCalc = cred > 0 && prazoC > 1 && isFinite(novaParcSemSeguroGlobal);
+const _m = v => (_okCalc && isFinite(v)) ? moeda(v) : '—';
+if(!_okCalc) parcelaAntes.value = '—';
 // Ajusta exibição do bloco final baseado na escolha
 if(usaSeguroSimples){
     document.getElementById('linhaPosCom').style.display = 'inline';
-    document.getElementById('linhaPosSem').innerHTML = `- Sem Seguro: <span id="parcelaPosSem" style="color: #94a3b8;">${moeda(novaParcSemSeguroGlobal)}</span><br>`;
-    document.getElementById('parcelaPosCom').innerText = moeda(novaParcComSeguroGlobal);
+    document.getElementById('linhaPosSem').innerHTML = `- Sem Seguro: <span id="parcelaPosSem" style="color: #b6c6d6;">${_m(novaParcSemSeguroGlobal)}</span><br>`;
+    document.getElementById('parcelaPosCom').innerText = _m(novaParcComSeguroGlobal);
 } else {
     document.getElementById('linhaPosCom').style.display = 'none';
-    document.getElementById('linhaPosSem').innerHTML = `- Nova Parcela: <span id="parcelaPosSem" style="color: #4ade80;">${moeda(novaParcSemSeguroGlobal)}</span><br>`;
+    document.getElementById('linhaPosSem').innerHTML = `- Nova Parcela: <span id="parcelaPosSem" style="color: #4ade80;">${_m(novaParcSemSeguroGlobal)}</span><br>`;
 }
 
-document.getElementById('reducaoPrazo').innerText = parcReduzidasGlobal;
+document.getElementById('reducaoPrazo').innerText = (_okCalc && isFinite(parcReduzidasGlobal)) ? parcReduzidasGlobal : '—';
 }
 
 function gerarProposta(){

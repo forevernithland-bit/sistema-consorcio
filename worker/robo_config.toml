@@ -66,7 +66,14 @@ quando = "diario 01:30"
 # ------------------------------------------------------------------------
 [coleta.grupos_sync]
 ativo  = true
-quando = "diario 02:00"
+quando = "seg 02:00"     # vagas 1x por semana (Breno 16/11/2026); só busca o que venceu
+                         # (> 6 dias ou < 10 vagas). No simulado: conferir_vagas.py
+
+# Assembleias: confere 2x por semana se saiu resultado novo; pula grupo cuja
+# assembleia atual já está no banco (não refaz o que já temos).
+[coleta.assembleias]
+ativo  = true
+quando = "qua,sex 02:30"
 
 [coleta.tabelas]
 ativo  = false          # já encadeado no gmail_yamaha (seg/qua/sex); reforço opcional

@@ -55,6 +55,23 @@ ERP grava `lances_programados` (N meses ou ilimitado). O worker (a cada 30 min) 
 na fila; se o Newcon recusar, tenta no dia seguinte; conta o mês com SUCESSO/JA_OFERTADO; encerra
 quando completa, quando a cota é contemplada/cancelada ou quando param no ERP.
 
+## 6b. Só atualiza o que precisa (regra do Breno, 16/11/2026)
+- **Vagas: 1x por semana** (`[coleta.grupos_sync] quando = "seg 02:00"`). Pula o plano/grupo visto há ≤ 6 dias;
+  grupo com < 10 vagas sempre re-confere (`coletar_grupos.dias_de_validade`).
+- **Assembleias:** qua e sex 02:30; pula o grupo cuja assembleia atual já está no banco (`_vale_a_pena`).
+- **Regras de lance:** 1x por mês (lida com formulário aberto neste mês = em dia).
+- **Na hora do simulado/cadastro:** `py -V:3.14 conferir_vagas.py <grupos...>` olha a base; se o dado tem
+  > 6 dias, < 10 vagas ou não existe, vai no Newcon SÓ no plano daquele grupo (`--so-ver` só mostra;
+  `--forcar`; `--planos 075,...`). Se o plano não abrir, avisa e vale a base (com a data).
+  Obs.: o código do plano na tela de VENDA (ex.: 075) ≠ o "Plano Venda" da Posição da cota (184/185).
+
+## 6c. Calibração do simulador (16/11/2026, 11 cotas × 7 cenários do "Simular...")
+- Parcela reduzida (PR 30%): base do lance = 70% × crédito × (1+taxa) — bate em centavos (7 cotas).
+- Integral: base = **96,191%** × crédito × (1+taxa) — independe de prazo e pagas (9029, 9542, 9569, 9600/302).
+- Exceções: 9582/333 (super grupo PR: 66,2% de C1) e 9600/454 (96,41%).
+- Parcelas amortizadas (reduzir prazo) erram ±1–2 quando a dif. de grupo é grande (9029: 17,6%).
+- Taxa = a do PLANO de venda da cota (não a "do grupo"). Rodar: `calibrar_simulador.py g/c ...` e `analisar_calibracao.py`.
+
 ## 7. Comandos
 - `robo_yamaha.py --explorar [--limite N] [--so GR/AA]` · `--mapa` — explorador (retoma de onde parou).
 - `robo_yamaha.py --regras-lance [--grupos X,Y] [--salvar] [--forcar] [--so-salvar]`.

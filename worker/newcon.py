@@ -454,6 +454,11 @@ def ofertar_lance(page: Page, pedido: dict, timeout_confirmacao: int):
     avisos.clear()
     if pedido.get("simular"):
         antes = _texto_pagina(page)
+        # lê o % ANTES do clique: depois do "Simular..." o campo some da tela (dava "lance ?%")
+        try:
+            oferta = page.locator("#ctl00_Conteudo_edtOferta").first.input_value(timeout=3000) or "?"
+        except Exception:
+            oferta = "?"
         try:
             page.locator("#ctl00_Conteudo_btnSimula").click(timeout=20000)
             page.wait_for_load_state("networkidle")
@@ -472,8 +477,10 @@ def ofertar_lance(page: Page, pedido: dict, timeout_confirmacao: int):
         depois = _texto_pagina(page)
         novas = [l.strip() for l in depois.splitlines() if l.strip() and l.strip() not in antes][:25]
         cam = _print_tela(page, f"simulado_{valor_radio}_{grupo}_{cota}")
-        oferta = page.locator("#ctl00_Conteudo_edtOferta").input_value() if page.locator(
-            "#ctl00_Conteudo_edtOferta").count() else "?"
+        if oferta == "?":
+            m_pe = re.search(r"%\s*do\s*Lance[:\s]*([\d.,]+)", depois, re.I)
+            if m_pe:
+                oferta = m_pe.group(1)
         # sai sem gravar nada. NÃO clica em "Cancelar" (nessa tela ele pode cancelar
         # uma oferta já registrada) — só volta para a home.
         try:

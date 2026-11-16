@@ -63,7 +63,7 @@ alter table public.fila_automacao add column if not exists tipo_reducao text;
 alter table public.fila_automacao add column if not exists programado_id bigint;
 
 -- 3) TAXA POR PLANO (16/11/2026): no Newcon a taxa de adm. (e a parcela) depende do PLANO
---    de venda (ex.: 9538 tem plano com 16,5% e plano "40% DESC" com 9,9%). A coluna 	axa
+--    de venda (ex.: 9538 tem plano com 16,5% e plano "40% DESC" com 9,9%). A coluna taxa
 --    guardava só o último plano lido. Agora: planos = {"<cod plano>": {nome, taxa, parcela,
 --    prazo_total, prazo_restante, credito, parcela_reduzida, visto_em}, ...}
 alter table public.grupos_yamaha add column if not exists planos jsonb;

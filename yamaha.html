@@ -77,7 +77,7 @@ body{
 .grupo-pick{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px;}
 .depurador{margin-top:14px;border:1.5px dashed #b8d8d6;border-radius:14px;background:#f7fbfb;padding:0 14px}
 .depurador>summary{cursor:pointer;font-weight:800;color:var(--teal-d);padding:12px 0;font-size:13.5px}
-.dep-help{font-size:12px;color:#5c7a73;line-height:1.45;margin:0 0 10px}
+.dep-help{font-size:12px;color:#4a645e;line-height:1.45;margin:0 0 10px}
 .dep-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
 .dep-grid label{font-size:10.5px;font-weight:800;color:#5c7a73;text-transform:uppercase;letter-spacing:.4px;display:block}
 .dep-grid input{width:100%;box-sizing:border-box;padding:8px 9px;border:1.5px solid #d6e4e2;border-radius:9px;font-size:13px;margin-top:3px;background:#fff}
@@ -112,7 +112,7 @@ body{
 /* selo média */
 .media-linha{display:none;align-items:center;gap:9px;flex-wrap:wrap;margin-top:11px;}
 .media-linha.show{display:flex;}
-.media-badge{font-size:12.5px;font-weight:800;padding:6px 13px;border-radius:999px;background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok-line);}
+.media-badge{font-size:12.5px;font-weight:800;padding:6px 13px;border-radius:999px;background:var(--ok-bg);color:#0a6b49;border:1px solid var(--ok-line);}
 .media-badge.none{background:#eef2f7;color:#556070;border-color:#dbe3f0;font-weight:700;}
 .btn-media{font-size:11.5px;font-weight:800;padding:7px 13px;border-radius:999px;border:none;background:linear-gradient(135deg,var(--teal),var(--teal-d));color:#fff;cursor:pointer;}
 .btn-media:hover{filter:brightness(1.06);}
@@ -784,7 +784,7 @@ recRef.innerText = 'Equivale a ' + moeda(rec);
 // Lance Ofertado Total é a soma do Embutido + Recurso Próprio real
 let lanceOfertaTotal = embVal + rec;
 let lanceTotalPercNum = emb + recPerc;
-lanceTotalPerc.innerText = ((lanceTotalPercNum*100)).toFixed(2)+'%';
+lanceTotalPerc.innerText = ((lanceTotalPercNum*100)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';
 
 // Seguro prestamista: o Newcon cobra sobre o SALDO DEVEDOR TOTAL do plano
 // (crédito integral × (1 + taxa adm)), valor fixo em todas as parcelas.
@@ -890,15 +890,18 @@ function _dT(cab,linhas){
 //  * "percentual do lance" é o TOTAL (embutido + recursos próprios), como no Newcon;
 //  * o percentual incide sobre uma BASE:
 //        reduzida → crédito reduzido (70%) × (1 + taxa)                  [caso B: R$ 86.800]
-//        integral → (parcelas a pagar − 2) × parcela pura                [caso A: 81 × R$ 1.375 = R$ 111.375]
+//        integral → 96,191% × crédito × (1 + taxa)   [recalibrado 16/11/2026 com 5 cotas integrais]
 //  * o embutido é % de: reduzida → o mesmo R$ 86.800 · integral → o crédito (R$ 100.000);
 //  * recursos próprios = lance total − embutido; o lance inteiro abate o saldo devedor;
 //  * saldo devedor atual = crédito × (1 + taxa) − parcelas pagas × parcela pura paga (reduzida ou integral);
 //  * reduzir PARCELA: parcela = saldo devedor novo ÷ parcelas a pagar + seguro;
 //  * reduzir PRAZO: parcelas do lance = piso(lance ÷ parcela pura paga).
 // Ignorado: "Dif. Grupo" (~0,03–0,06% do crédito, só o Newcon sabe) e alíquota de seguro por idade.
-// Dúvida em aberto: as duas regras de BASE vêm de 1 caso cada (produtos diferentes).
+// 16/11/2026: conferido com 11 cotas × 7 cenários no "Simular..." do Newcon (calibrar_simulador.py):
+//   reduzida e integral batem em centavos/poucos reais; exceções: 9582 (super grupo PR, base 66,2% de C1)
+//   e 9600/454 (integral 96,41%). A TAXA tem que ser a do PLANO de venda da cota (seletor "Plano de venda").
 // ===================================================================
+const FATOR_BASE_INTEGRAL=0.96191;
 function _calcLanceNewcon(o){
   const n=o.prazoC, k=o.k, nPag=n-k;
   const C1=o.cred*(1+o.tx);
@@ -906,7 +909,11 @@ function _calcLanceNewcon(o){
   const pura=C1/n;                                  // parcela integral (sem seguro)
   const puraPaga=(redCred*(1+o.tx))/n;              // parcela (sem seguro) paga até contemplar
   const sdAtual=C1-k*puraPaga;
-  const B = o.reduzida ? redCred*(1+o.tx) : Math.max(nPag-2,0)*pura;
+  // Base do lance (recalibrada 16/11/2026 com 11 cotas no "Simular..." do Newcon):
+  //   reduzida → crédito reduzido × (1+taxa)  (= 70% de C1; 7 cotas ao centavo/real)
+  //   integral → 96,191% de C1 (9029, 9542, 9569, 9600 — independe de prazo e pagas;
+  //              a regra antiga "(parcelas a pagar − 2) × pura" errava até R$ 4.800)
+  const B = o.reduzida ? redCred*(1+o.tx) : FATOR_BASE_INTEGRAL*C1;
   const embBase = o.reduzida ? redCred*(1+o.tx) : o.cred;
   const embVal=o.emb*embBase;
   const lanceBruto=(o.emb+o.recPerc)*B;
@@ -966,7 +973,7 @@ function renderDepurador(){
     ['Alíquota / seguro mensal',(d.aliq*100).toFixed(4)+'% → '+_dM(d.seguroVal),'saldo devedor inicial × alíquota — '+(d.usarSeguro?'com seguro':'sem seguro')],
     ['Parcela antes da contemplação',_dM(d.parcelaAntesCalc),'parcela pura paga + seguro'],
     ['Saldo devedor atual',_dM(M.sdAtual),'saldo inicial − parcelas pagas × parcela pura paga'],
-    ['Base do percentual do lance',_dM(M.B),red?'crédito reduzido × (1 + taxa)':'(parcelas a pagar − 2) × parcela pura = '+(M.nPag-2)+' × '+_dM(M.pura)],
+    ['Base do percentual do lance',_dM(M.B),red?'crédito reduzido × (1 + taxa)':'96,19% do crédito × (1 + taxa) (regra do Newcon)'],
     ['Embutido ('+_dP(d.emb*100,2)+')',_dM(M.embVal),'% × '+_dM(M.embBase)],
     ['Lance total ('+_dP((d.emb+d.recPerc)*100,2)+' = embutido % + recurso %)',_dM(M.lanceTot),'% total × base (o embutido está incluso, como no Newcon)'],
     ['Recursos próprios',_dM(M.rec),'lance total − embutido'],
@@ -1691,7 +1698,7 @@ function montarInfoGrupo(g,plano,resumo){
   body+=`<div class="info-item"><span class="rotulo">Lance livre médio</span><span class="valor">${mp||'—'}</span></div>`;
   const rg=regrasDoGrupo(g);
   const selo = rg.doGrupo ? ' <span style="font-size:9px;background:#eef6f5;color:#245858;border-radius:999px;padding:1px 6px;font-weight:800">tabela do grupo</span>'
-                          : ' <span style="font-size:9px;color:#94a3b8">regra geral</span>';
+                          : ' <span style="font-size:10.5px;color:#5b6b7f">regra geral</span>';
   body+=`<div class="info-item"><span class="rotulo">Lance embutido permitido</span><span class="valor">até ${rg.embutido}%${selo}</span></div>`;
   body+=`<div class="info-item"><span class="rotulo">Lance fixo</span><span class="valor">${rg.lanceFixo.map(v=>v+'%').join(' ou ')}${rg.embFixo?` (usa até ${rg.embFixo}% de embutido)`:''}</span></div>`;
   const rn=regrasNewcon(g.grupo);
@@ -1702,8 +1709,8 @@ function montarInfoGrupo(g,plano,resumo){
       if(m==='Lance Fidelidade'&&rn.fidelidade_max_pct) return c+' (até '+_pctTxt(rn.fidelidade_max_pct)+')';
       return c;
     });
-    body+=`<div class="info-item"><span class="rotulo">Modalidades liberadas</span><span class="valor">${lib.join(' · ')||'—'} <span style="font-size:9px;color:#94a3b8">${rn.fonte_modalidades||''}</span></span></div>`;
-    const med=_MODS.filter(([m])=>rn.medias&&rn.medias[m]).map(([m,c])=>`${c} ${_pctTxt(rn.medias[m].media)} <span style="font-size:9px;color:#94a3b8">(${rn.medias[m].n})</span>`);
+    body+=`<div class="info-item"><span class="rotulo">Modalidades liberadas</span><span class="valor">${lib.join(' · ')||'—'} <span style="font-size:10.5px;color:#5b6b7f">${rn.fonte_modalidades||''}</span></span></div>`;
+    const med=_MODS.filter(([m])=>rn.medias&&rn.medias[m]).map(([m,c])=>`${c} ${_pctTxt(rn.medias[m].media)} <span style="font-size:10.5px;color:#5b6b7f">(${rn.medias[m].n})</span>`);
     body+=`<div class="info-item"><span class="rotulo">Média de lance por modalidade (últ. ${rn.assembleias_media||0} assembleias)</span><span class="valor">${med.join(' · ')||'sem histórico'}</span></div>`;
   }
   body+='</div>';

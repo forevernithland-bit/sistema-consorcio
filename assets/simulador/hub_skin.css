@@ -9,7 +9,10 @@ html[data-cbx]{
   --cb-bg:#071d1a; --cb-field:#081f1c; --cb-s1:#0c2824; --cb-s2:#10302b; --cb-s3:#153a34; --cb-ln:#1f4a43; --cb-ln2:#2a5d55;
   --cb-tx:#eaf6f3; --cb-tx2:#cfe3df; --cb-tx3:#8fb0aa;
   --cb-t1:#0b2d28; --cb-t2:#123f3e; --cb-t3:#17544b; --cb-teal:#2dd4bf; --cb-mint:#7fe9b4; --cb-tealx:#0f766e;
-  --cb-or:#f69302; --cb-or2:#ffb649; --cb-ink:#0f2a2a; --cb-mut:#64748b; --cb-line:#dbe5e3; --cb-field:#f4f8f7;
+  /* --cb-field-l = campo CLARO (só dentro de card branco). Antes se chamava --cb-field e SOBRESCREVIA
+     o campo escuro acima → busca de grupo (Yamaha), campos do Itaú IA e filtros do Guia ficavam
+     texto claro sobre fundo claro (ilegível). Corrigido 16/11/2026. */
+  --cb-or:#f69302; --cb-or2:#ffb649; --cb-ink:#0f2a2a; --cb-mut:#5b6b7f; --cb-line:#dbe5e3; --cb-field-l:#f4f8f7;
   --cb-ease:cubic-bezier(.2,.8,.2,1);
   --cb-font:"Plus Jakarta Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
 }
@@ -208,9 +211,9 @@ html[data-cbx="itau_manual"] .btnProduto.active{background:linear-gradient(135de
 html[data-cbx="itau_manual"] .btnLembrete{background:rgba(246,147,2,.1);border-color:rgba(246,147,2,.45);color:var(--cb-or2)}
 html[data-cbx="itau_manual"] .card{border-radius:24px;padding:24px;gap:14px 18px;box-shadow:0 30px 60px -34px rgba(0,0,0,.9);border:1px solid #e6eeec}
 html[data-cbx="itau_manual"] .card input,html[data-cbx="itau_manual"] .card select{padding:12px 13px;border-radius:12px;border:1.5px solid var(--cb-line);
-  background:var(--cb-field);font-size:15px;color:var(--cb-ink);outline:none;transition:.15s;font-weight:600}
+  background:var(--cb-field-l);font-size:15px;color:var(--cb-ink);outline:none;transition:.15s;font-weight:600}
 html[data-cbx="itau_manual"] .card input:focus,html[data-cbx="itau_manual"] .card select:focus{border-color:var(--cb-tealx);background:#fff;box-shadow:0 0 0 4px rgba(15,118,110,.14)}
-html[data-cbx="itau_manual"] .card input::placeholder{color:#a3b5b2;font-weight:500}
+html[data-cbx="itau_manual"] .card input::placeholder,html[data-cbx="yamaha"] .card input::placeholder{color:#7a8f8b;font-weight:500}
 html[data-cbx="itau_manual"] .card .gray{background:#eaf3f1 !important;color:var(--cb-t2)}
 html[data-cbx="itau_manual"] .cbx-f{display:flex;flex-direction:column;gap:6px;min-width:0}
 html[data-cbx="itau_manual"] .cbx-lbl{font-size:10.5px;font-weight:800;color:var(--cb-mut);letter-spacing:.08em;text-transform:uppercase}

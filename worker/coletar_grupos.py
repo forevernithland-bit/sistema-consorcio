@@ -106,18 +106,21 @@ def _perto_do_alvo(valor, alvo):
 
 
 # Quanto tempo o dado de um grupo "vale" antes de ter que re-consultar as vagas.
-# Grupo com poucas vagas esgota rápido -> revalida sempre; grupo cheio pode
-# usar cache por dias. (regra do Uriel, 30/08/2026)
+# Regra do Breno (16/11/2026), substitui a escala do Uriel (até 20 dias):
+#   * vaga se confere 1x POR SEMANA (varredura semanal do robô);
+#   * grupo com POUCAS vagas (< POUCAS_VAGAS) sempre re-confere — esgota rápido;
+#   * no simulado/cadastro, `conferir_vagas.py` usa a MESMA regra: base com mais de
+#     uma semana OU poucas vagas → vai no Newcon conferir antes.
+# 6 dias (e não 7) para a varredura da segunda pegar o que foi visto na segunda anterior.
+POUCAS_VAGAS = 10
+VALIDADE_VAGAS_DIAS = 6
+
+
 def dias_de_validade(vagas):
     v = int(vagas or 0)
-    if v < 10:   return 0          # sempre re-consulta
-    if v <= 25:  return 1
-    if v <= 40:  return 2
-    if v <= 50:  return 3          # (faixa 40–50: interpolado)
-    if v <= 80:  return 4
-    if v <= 120: return 7
-    if v <= 170: return 12
-    return 20                      # >170: cache longo
+    if v < POUCAS_VAGAS:
+        return 0                   # sempre re-consulta
+    return VALIDADE_VAGAS_DIAS
 
 
 def precisa_reconsultar(vagas, consultado_em):

@@ -941,7 +941,8 @@ def cron_tick(cfg: dict):
         if not isinstance(cconf, dict) or not cconf.get("ativo"):
             continue
         if _venceu(cconf.get("quando", ""), est.get(f"coleta_{nome}", "")):
-            tipo = {"grupos_sync": "COLETA_GRUPOS", "tabelas": "COLETA_TABELAS"}.get(nome)
+            tipo = {"grupos_sync": "COLETA_GRUPOS", "tabelas": "COLETA_TABELAS",
+                    "assembleias": "COLETA_ASSEMBLEIAS"}.get(nome)
             if tipo:
                 _enfileirar_interno(f"cron:{nome}", tipo)
                 est[f"coleta_{nome}"] = datetime.now().isoformat()
@@ -999,7 +1000,7 @@ def enfileirar_lances_programados(sb, forcar=False):
         return                    # migração 34 ainda não rodada
     hoje = datetime.now()
     mes = hoje.strftime("%Y-%m")
-    ini_mes = hoje.strftime("%Y-%m-01")
+    ini_mes = hoje.strftime("%Y-%m-01T00:00:00-03:00")   # meia-noite de Brasília (criado_em é UTC)
     ins = 0
     for p in progs:
         try:
@@ -1021,8 +1022,16 @@ def enfileirar_lances_programados(sb, forcar=False):
             st = {f.get("status") for f in fila}
             if st & {"PENDENTE", "PROCESSANDO", "SUCESSO", "JA_OFERTADO"}:
                 continue
-            if fila and str(fila[0].get("criado_em", ""))[:10] == hoje.strftime("%Y-%m-%d"):
-                continue          # já tentou hoje (formulário fechado): amanhã de novo
+            if fila:
+                # criado_em vem em UTC; compara no horário LOCAL (senão, entre 21h e 24h o
+                # pedido "de ontem" em UTC voltava pra fila a cada 30 min)
+                try:
+                    _cr = datetime.fromisoformat(str(fila[0].get("criado_em")).replace("Z", "+00:00"))
+                    _dia = (_cr.astimezone() if _cr.tzinfo else _cr).date()
+                except Exception:
+                    _dia = None
+                if _dia == hoje.date():
+                    continue      # já tentou hoje (formulário fechado): amanhã de novo
             sb.table("fila_automacao").insert({
                 "tipo": "LANCE", "venda_id": p.get("venda_id"), "cliente": p.get("cliente"),
                 "vendedor": p.get("vendedor"), "produto": p.get("produto"), "administradora": "Yamaha",

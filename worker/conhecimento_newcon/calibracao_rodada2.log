@@ -1,0 +1,73 @@
+﻿[newcon] navegador único já aberto e logado — só abri uma aba.
+== 9600/454: taxa 15.5 FR 0.0 cont 0.0 pagas 1.0 parcela 1467.4 sd 114125.02 | 000184 SUPER GRUPO PRIME IPCA + (84M)
+   LL|20|0|Reduzir Parcela: lance 22274.38 (20.0%) rec 22212.68 cred novo 100000.0 sd novo 91912.3 pcl 83.0->83.0 parcela 1199.8  
+   LL|50|0|Reduzir Parcela: lance 55680.6 (50.0%) rec 55618.9 cred novo 100000.0 sd novo 58506.07 pcl 83.0->83.0 parcela 797.3  
+   LL|50|15.0|Reduzir Parcela: lance 55680.6 (50.0%) rec 40618.9 cred novo 85000.0 sd novo 58506.09 pcl 83.0->83.0 parcela 797.3  
+   LL|50|0|Reduzir Prazo: lance 55680.6 (50.0%) rec 55618.9 cred novo 100000.0 sd novo 58506.09 pcl 83.0->43.0 parcela None  
+   LL|50|15.0|Reduzir Prazo: lance 55680.6 (50.0%) rec 40618.9 cred novo 85000.0 sd novo 58506.02 pcl 83.0->43.0 parcela None  
+   LF|None|0|Reduzir Parcela: lance 27842.08 (25.0%) rec 27780.38 cred novo 100000.0 sd novo 86344.58 pcl 83.0->83.0 parcela 1132.7  
+   LF|None|15.0|Reduzir Prazo: lance 27842.08 (25.0%) rec 12780.38 cred novo 85000.0 sd novo 86344.58 pcl 83.0->63.0 parcela None  
+== 9029/1093: taxa 20.0 FR 0.0 cont 0.0 pagas 23.0 parcela 439.5 sd 10403.71 | 000116 PLANO CONTEMPLA + MEGA
+   LL|20|0|Reduzir Parcela: lance 3833.87 (20.0%) rec 904.98 cred novo 16607.0 sd novo 9498.73 pcl 25.0->25.0 parcela 403.32  
+   LL|50|0|Reduzir Parcela: lance 9584.68 (50.0%) rec 6655.79 cred novo 16607.0 sd novo 3747.91 pcl 25.0->25.0 parcela 173.28  
+   LL|50|15.0|Reduzir Parcela: lance 9584.68 (50.0%) rec 4164.74 cred novo 14115.95 sd novo 3747.92 pcl 25.0->25.0 parcela 173.28  
+   LL|50|0|Reduzir Prazo: lance 9584.68 (50.0%) rec 6655.79 cred novo 16607.0 sd novo 3747.83 pcl 25.0->9.0 parcela None  
+   LL|50|15.0|Reduzir Prazo: lance 9584.68 (50.0%) rec 4164.74 cred novo 14115.95 sd novo 3747.85 pcl 25.0->9.0 parcela None  
+   LF|None|0|Reduzir Parcela: lance 6709.28 (35.0%) rec 3780.39 cred novo 16607.0 sd novo 6623.3 pcl 25.0->25.0 parcela 288.3  
+   LF|None|15.0|Reduzir Prazo: lance 6709.28 (35.0%) rec 1289.34 cred novo 14115.95 sd novo 6623.27 pcl 25.0->16.0 parcela None  
+== 9542/126: taxa 12.5 FR 0.0 cont 0.0 pagas 9.0 parcela 268.83 sd 14983.92 | 000160 SUPER GRUPO MEGA – 50% DESC
+   LL|20|0|Reduzir Parcela: lance 3314.77 (20.0%) rec 3190.0 cred novo 15317.0 sd novo 11793.92 pcl 60.0->60.0 parcela 215.66  
+   LL|50|0|Reduzir Parcela: lance 8287.35 (50.0%) rec 8162.58 cred novo 15317.0 sd novo 6821.34 pcl 60.0->60.0 parcela 132.77  
+   LL|50|15.0|Reduzir Parcela: lance 8287.35 (50.0%) rec 5865.03 cred novo 13019.45 sd novo 6821.34 pcl 60.0->60.0 parcela 132.77  
+   LL|50|0|Reduzir Prazo: lance 8287.35 (50.0%) rec 8162.58 cred novo 15317.0 sd novo 6821.24 pcl 60.0->28.0 parcela None  
+   LL|50|15.0|Reduzir Prazo: lance 8287.35 (50.0%) rec 5865.03 cred novo 13019.45 sd novo 6821.24 pcl 60.0->28.0 parcela None  
+   LF|None|0|Reduzir Parcela: lance 5801.05 (35.0%) rec 5676.28 cred novo 15317.0 sd novo 9307.64 pcl 60.0->60.0 parcela 174.21  
+   LF|None|15.0|Reduzir Prazo: lance 5801.05 (35.0%) rec 3378.73 cred novo 13019.45 sd novo 9307.59 pcl 60.0->38.0 parcela None  
+== 9021/218: taxa 16.5 FR 0.0 cont 30.0 pagas 17.0 parcela 1188.19 sd 78866.64 | 000120 PARCELA REDUZIDA MASTER IPCA
+   LL|20|0|Reduzir Parcela: lance 13663.29 (20.0%) rec 12556.11 cred novo 83776.0 sd novo 66310.54 pcl 45.0->45.0 parcela 909.13  
+   LL|50|0|Reduzir Parcela: lance 34158.21 (50.0%) rec 33051.03 cred novo 83776.0 sd novo 45815.58 pcl 45.0->45.0 parcela 453.72  
+   LL|50|15.0|Reduzir Parcela: lance 34158.21 (50.0%) rec 22803.13 cred novo 73528.1 sd novo 45815.58 pcl 45.0->45.0 parcela 453.72  
+   LL|50|0|Reduzir Prazo: lance 34158.21 (50.0%) rec 33051.03 cred novo 83776.0 sd novo 45815.77 pcl 45.0->15.0 parcela None  
+   LL|50|15.0|Reduzir Prazo: lance 34158.21 (50.0%) rec 22803.13 cred novo 73528.1 sd novo 45815.83 pcl 45.0->15.0 parcela None  
+   LF|None|0|Reduzir Parcela: lance 23910.74 (35.0%) rec 22803.56 cred novo 83776.0 sd novo 56063.15 pcl 45.0->45.0 parcela 681.51  
+   LF|None|15.0|Reduzir Prazo: lance 23910.74 (35.0%) rec 12555.66 cred novo 73528.1 sd novo 56063.17 pcl 45.0->25.0 parcela None  
+== 9048/332: taxa 15.0 FR 0.0 cont 30.0 pagas 4.0 parcela 878.1 sd 63507.0 | 000175 CONTEMPLA + IPCA PR (60 MESES)
+   LL|20|0|Reduzir Parcela: lance 9337.83 (20.0%) rec 9151.19 cred novo 58000.0 sd novo 54350.64 pcl 53.0->53.0 parcela 705.42  
+   LL|50|0|Reduzir Parcela: lance 23344.59 (50.0%) rec 23157.95 cred novo 58000.0 sd novo 40335.95 pcl 53.0->53.0 parcela 441.12  
+   LL|50|15.0|Reduzir Parcela: lance 23344.59 (50.0%) rec 16154.45 cred novo 50996.5 sd novo 40335.95 pcl 53.0->53.0 parcela 441.12  
+   LL|50|0|Reduzir Prazo: lance 23344.59 (50.0%) rec 23157.95 cred novo 58000.0 sd novo 40349.17 pcl 53.0->25.0 parcela None  
+   LL|50|15.0|Reduzir Prazo: lance 23344.59 (50.0%) rec 16154.45 cred novo 50996.5 sd novo 40349.17 pcl 53.0->25.0 parcela None  
+   LF|None|0|Reduzir Parcela: lance 16341.2 (35.0%) rec 16154.56 cred novo 58000.0 sd novo 47343.28 pcl 53.0->53.0 parcela 573.31  
+   LF|None|15.0|Reduzir Prazo: lance 16341.2 (35.0%) rec 9151.06 cred novo 50996.5 sd novo 47352.53 pcl 53.0->34.0 parcela None  
+== 9569/371: taxa 12.5 FR 0.0 cont 0.0 pagas 4.0 parcela 270.79 sd 16261.2 | 000160 SUPER GRUPO MEGA – 50% DESC
+   LL|20|0|Reduzir Parcela: lance 3314.77 (20.0%) rec 3259.31 cred novo 15317.0 sd novo 13000.38 pcl 65.0->65.0 parcela 220.63  
+   LL|50|0|Reduzir Parcela: lance 8287.35 (50.0%) rec 8231.89 cred novo 15317.0 sd novo 8025.49 pcl 65.0->65.0 parcela 144.14  
+   LL|50|15.0|Reduzir Parcela: lance 8287.35 (50.0%) rec 5934.34 cred novo 13019.45 sd novo 8025.49 pcl 65.0->65.0 parcela 144.14  
+   LL|50|0|Reduzir Prazo: lance 8287.35 (50.0%) rec 8231.89 cred novo 15317.0 sd novo 8029.19 pcl 65.0->32.0 parcela None  
+   LL|50|15.0|Reduzir Prazo: lance 8287.35 (50.0%) rec 5934.34 cred novo 13019.45 sd novo 8029.19 pcl 65.0->32.0 parcela None  
+   LF|None|0|Reduzir Parcela: lance 5801.05 (35.0%) rec 5745.59 cred novo 15317.0 sd novo 10512.94 pcl 65.0->65.0 parcela 182.39  
+   LF|None|15.0|Reduzir Prazo: lance 5801.05 (35.0%) rec 3448.04 cred novo 13019.45 sd novo 10515.55 pcl 65.0->42.0 parcela None  
+== 9582/333: taxa 16.5 FR 0.0 cont 30.0 pagas 2.0 parcela 382.53 sd 34240.87 | 000147 SUPER GRUPO MASTER IPCA PR 72M
+   LL|20|0|Reduzir Parcela: lance 4627.06 (20.0%) rec 4589.05 cred novo 30000.0 sd novo 29651.82 pcl 67.0->67.0 parcela 314.04  
+   LL|50|0|Reduzir Parcela: lance 11566.99 (50.0%) rec 11528.98 cred novo 30000.0 sd novo 22711.86 pcl 67.0->67.0 parcela 210.45  
+   LL|50|15.0|Reduzir Parcela: lance 11566.99 (50.0%) rec 7859.23 cred novo 26330.25 sd novo 22711.9 pcl 67.0->67.0 parcela 210.45  
+   LL|50|0|Reduzir Prazo: lance 11566.99 (50.0%) rec 11528.98 cred novo 30000.0 sd novo 22711.85 pcl 67.0->35.0 parcela None  
+   LL|50|15.0|Reduzir Prazo: lance 11566.99 (50.0%) rec 7859.23 cred novo 26330.25 sd novo 22711.85 pcl 67.0->35.0 parcela None  
+   LF|None|0|Reduzir Parcela: lance 8097.02 (35.0%) rec 8059.01 cred novo 30000.0 sd novo 26181.87 pcl 67.0->67.0 parcela 262.26  
+   LF|None|15.0|Reduzir Prazo: lance 8097.02 (35.0%) rec 4389.26 cred novo 26330.25 sd novo 26181.86 pcl 67.0->45.0 parcela None  
+== 10018/840: taxa 16.8 FR 0.0 cont 30.0 pagas 13.0 parcela 363.22 sd 119798.74 | 000710 PLANO PARCELA REDUZIDA - 70%
+   LL|20|0|Reduzir Parcela: lance 17433.08 (20.0%) rec 17352.59 cred novo 106610.0 sd novo 102446.14 pcl 227.0->227.0 parcela 286.78  
+   LL|50|0|Reduzir Parcela: lance 43582.69 (50.0%) rec 43502.2 cred novo 106610.0 sd novo 76296.53 pcl 227.0->227.0 parcela 171.53  
+   LL|50|25.0|Reduzir Parcela: lance 43582.69 (50.0%) rec 21711.11 cred novo 84818.91 sd novo 76296.64 pcl 227.0->227.0 parcela 171.53  
+   LL|50|0|Reduzir Prazo: lance 43582.69 (50.0%) rec 43502.2 cred novo 106610.0 sd novo 76296.53 pcl 227.0->108.0 parcela None  
+   LL|50|25.0|Reduzir Prazo: lance 43582.69 (50.0%) rec 21711.11 cred novo 84818.91 sd novo 76296.53 pcl 227.0->108.0 parcela None  
+   LF|None|0|Reduzir Parcela: lance 26149.63 (30.0%) rec 26069.14 cred novo 106610.0 sd novo 93729.56 pcl 227.0->227.0 parcela 248.4  
+   LF|None|25.0|Reduzir Prazo: lance 26149.63 (30.0%) rec 4278.05 cred novo 84818.91 sd novo 93729.6 pcl 227.0->156.0 parcela None  
+== 9045/105: taxa 9.0 FR 0.0 cont 0.0 pagas 5.0 parcela 1020.51 sd 50056.71 | 000177 CONTEMPLA+ MASTER 72 (DESC 40)
+   LL|20|0|Reduzir Parcela: lance None (None%) rec None cred novo None sd novo None pcl None->None parcela None modalidade LL indisponível 
+   LL|50|0|Reduzir Parcela: lance None (None%) rec None cred novo None sd novo None pcl None->None parcela None modalidade LL indisponível 
+   LL|50|15.0|Reduzir Parcela: lance None (None%) rec None cred novo None sd novo None pcl None->None parcela None modalidade LL indisponível 
+   LL|50|0|Reduzir Prazo: lance None (None%) rec None cred novo None sd novo None pcl None->None parcela None modalidade LL indisponível 
+   LL|50|15.0|Reduzir Prazo: lance None (None%) rec None cred novo None sd novo None pcl None->None parcela None modalidade LL indisponível 
+   LF|None|0|Reduzir Parcela: lance None (None%) rec None cred novo None sd novo None pcl None->None parcela None modalidade LF indisponível 
+   LF|None|15.0|Reduzir Prazo: lance None (None%) rec None cred novo None sd novo None pcl None->None parcela None modalidade LF indisponível 

@@ -149,8 +149,11 @@ def rodar(page, sb, cotas_por_grupo, salvar=False, forcar=False):
     hoje = datetime.date.today().isoformat()
     aviso_tabela = None
     for g, cotas in cotas_por_grupo.items():
-        if not forcar and dados.get(g, {}).get("lido_em") == hoje and dados[g].get("formulario_aberto"):
-            print(f"  = {g}: já lido hoje"); continue
+        # Só atualiza o que precisa (Breno, 16/11/2026): regra de lance do grupo não muda
+        # dentro do mês → lida com o formulário aberto neste mês = em dia, pula.
+        if (not forcar and dados.get(g, {}).get("formulario_aberto")
+                and str(dados[g].get("lido_em") or "")[:7] == hoje[:7]):
+            print(f"  = {g}: regras já lidas este mês ({dados[g].get('lido_em')}) — em dia"); continue
         melhor = None
         for c in cotas[:3]:                       # tenta até 3 cotas do grupo (1ª com formulário aberto vence)
             try:

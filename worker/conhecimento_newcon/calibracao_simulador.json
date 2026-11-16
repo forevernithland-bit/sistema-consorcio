@@ -890,6 +890,7 @@
     "lblNM_Plano_Venda": "SUPER GRUPO PRIME IPCA + (84M)",
     "lblNM_Bem": "AUTOMÓVEL R$ 100.000,00",
     "avisos": [
+     "O percentual da oferta do lance não foi informado.",
      "O percentual da oferta do lance não foi informado."
     ],
     "em": "2026-11-16"
@@ -919,6 +920,7 @@
     "lblNM_Plano_Venda": "SUPER GRUPO PRIME IPCA + (84M)",
     "lblNM_Bem": "AUTOMÓVEL R$ 100.000,00",
     "avisos": [
+     "O percentual da oferta do lance não foi informado.",
      "O percentual da oferta do lance não foi informado."
     ],
     "em": "2026-11-16"
@@ -948,6 +950,7 @@
     "lblNM_Plano_Venda": "SUPER GRUPO PRIME IPCA + (84M)",
     "lblNM_Bem": "AUTOMÓVEL R$ 100.000,00",
     "avisos": [
+     "O percentual da oferta do lance não foi informado.",
      "O percentual da oferta do lance não foi informado."
     ],
     "em": "2026-11-16"
@@ -977,6 +980,7 @@
     "lblNM_Plano_Venda": "SUPER GRUPO PRIME IPCA + (84M)",
     "lblNM_Bem": "AUTOMÓVEL R$ 100.000,00",
     "avisos": [
+     "O percentual da oferta do lance não foi informado.",
      "O percentual da oferta do lance não foi informado."
     ],
     "em": "2026-11-16"
@@ -1006,6 +1010,7 @@
     "lblNM_Plano_Venda": "SUPER GRUPO PRIME IPCA + (84M)",
     "lblNM_Bem": "AUTOMÓVEL R$ 100.000,00",
     "avisos": [
+     "O percentual da oferta do lance não foi informado.",
      "O percentual da oferta do lance não foi informado."
     ],
     "em": "2026-11-16"
@@ -1035,6 +1040,7 @@
     "lblNM_Plano_Venda": "SUPER GRUPO PRIME IPCA + (84M)",
     "lblNM_Bem": "AUTOMÓVEL R$ 100.000,00",
     "avisos": [
+     "O percentual da oferta do lance não foi informado.",
      "O percentual da oferta do lance não foi informado."
     ],
     "em": "2026-11-16"
@@ -1064,6 +1070,7 @@
     "lblNM_Plano_Venda": "SUPER GRUPO PRIME IPCA + (84M)",
     "lblNM_Bem": "AUTOMÓVEL R$ 100.000,00",
     "avisos": [
+     "O percentual da oferta do lance não foi informado.",
      "O percentual da oferta do lance não foi informado."
     ],
     "em": "2026-11-16"
@@ -1119,6 +1126,7 @@
     "lblNM_Plano_Venda": "PLANO CONTEMPLA + MEGA",
     "lblNM_Bem": "FLUO ABS - 87%",
     "avisos": [
+     "O percentual da oferta do lance não foi informado.",
      "O percentual da oferta do lance não foi informado."
     ],
     "em": "2026-11-16"
@@ -1148,6 +1156,7 @@
     "lblNM_Plano_Venda": "PLANO CONTEMPLA + MEGA",
     "lblNM_Bem": "FLUO ABS - 87%",
     "avisos": [
+     "O percentual da oferta do lance não foi informado.",
      "O percentual da oferta do lance não foi informado."
     ],
     "em": "2026-11-16"
@@ -1177,6 +1186,7 @@
     "lblNM_Plano_Venda": "PLANO CONTEMPLA + MEGA",
     "lblNM_Bem": "FLUO ABS - 87%",
     "avisos": [
+     "O percentual da oferta do lance não foi informado.",
      "O percentual da oferta do lance não foi informado."
     ],
     "em": "2026-11-16"
@@ -1206,6 +1216,7 @@
     "lblNM_Plano_Venda": "PLANO CONTEMPLA + MEGA",
     "lblNM_Bem": "FLUO ABS - 87%",
     "avisos": [
+     "O percentual da oferta do lance não foi informado.",
      "O percentual da oferta do lance não foi informado."
     ],
     "em": "2026-11-16"
@@ -1235,6 +1246,7 @@
     "lblNM_Plano_Venda": "PLANO CONTEMPLA + MEGA",
     "lblNM_Bem": "FLUO ABS - 87%",
     "avisos": [
+     "O percentual da oferta do lance não foi informado.",
      "O percentual da oferta do lance não foi informado."
     ],
     "em": "2026-11-16"
@@ -1264,6 +1276,7 @@
     "lblNM_Plano_Venda": "PLANO CONTEMPLA + MEGA",
     "lblNM_Bem": "FLUO ABS - 87%",
     "avisos": [
+     "O percentual da oferta do lance não foi informado.",
      "O percentual da oferta do lance não foi informado."
     ],
     "em": "2026-11-16"
@@ -1293,6 +1306,7 @@
     "lblNM_Plano_Venda": "PLANO CONTEMPLA + MEGA",
     "lblNM_Bem": "FLUO ABS - 87%",
     "avisos": [
+     "O percentual da oferta do lance não foi informado.",
      "O percentual da oferta do lance não foi informado."
     ],
     "em": "2026-11-16"
@@ -1347,7 +1361,9 @@
     "lblPZ_Comercializacao": 78.0,
     "lblNM_Plano_Venda": "SUPER GRUPO MEGA (72 MESES)",
     "lblNM_Bem": "FLUO ABS HYBRID CONNECTED - 80%",
-    "avisos": [],
+    "avisos": [
+     "O percentual da oferta do lance não foi informado."
+    ],
     "em": "2026-11-16"
    },
    "LL|50|0|Reduzir Parcela": {
@@ -1374,7 +1390,9 @@
     "lblPZ_Comercializacao": 78.0,
     "lblNM_Plano_Venda": "SUPER GRUPO MEGA (72 MESES)",
     "lblNM_Bem": "FLUO ABS HYBRID CONNECTED - 80%",
-    "avisos": [],
+    "avisos": [
+     "O percentual da oferta do lance não foi informado."
+    ],
     "em": "2026-11-16"
    },
    "LL|50|15.0|Reduzir Parcela": {
@@ -1401,7 +1419,9 @@
     "lblPZ_Comercializacao": 78.0,
     "lblNM_Plano_Venda": "SUPER GRUPO MEGA (72 MESES)",
     "lblNM_Bem": "FLUO ABS HYBRID CONNECTED - 80%",
-    "avisos": [],
+    "avisos": [
+     "O percentual da oferta do lance não foi informado."
+    ],
     "em": "2026-11-16"
    },
    "LL|50|0|Reduzir Prazo": {
@@ -1428,7 +1448,9 @@
     "lblPZ_Comercializacao": 78.0,
     "lblNM_Plano_Venda": "SUPER GRUPO MEGA (72 MESES)",
     "lblNM_Bem": "FLUO ABS HYBRID CONNECTED - 80%",
-    "avisos": [],
+    "avisos": [
+     "O percentual da oferta do lance não foi informado."
+    ],
     "em": "2026-11-16"
    },
    "LL|50|15.0|Reduzir Prazo": {
@@ -1455,7 +1477,9 @@
     "lblPZ_Comercializacao": 78.0,
     "lblNM_Plano_Venda": "SUPER GRUPO MEGA (72 MESES)",
     "lblNM_Bem": "FLUO ABS HYBRID CONNECTED - 80%",
-    "avisos": [],
+    "avisos": [
+     "O percentual da oferta do lance não foi informado."
+    ],
     "em": "2026-11-16"
    },
    "LF|None|0|Reduzir Parcela": {
@@ -1482,7 +1506,9 @@
     "lblPZ_Comercializacao": 78.0,
     "lblNM_Plano_Venda": "SUPER GRUPO MEGA (72 MESES)",
     "lblNM_Bem": "FLUO ABS HYBRID CONNECTED - 80%",
-    "avisos": [],
+    "avisos": [
+     "O percentual da oferta do lance não foi informado."
+    ],
     "em": "2026-11-16"
    },
    "LF|None|15.0|Reduzir Prazo": {
@@ -1509,7 +1535,9 @@
     "lblPZ_Comercializacao": 78.0,
     "lblNM_Plano_Venda": "SUPER GRUPO MEGA (72 MESES)",
     "lblNM_Bem": "FLUO ABS HYBRID CONNECTED - 80%",
-    "avisos": [],
+    "avisos": [
+     "O percentual da oferta do lance não foi informado."
+    ],
     "em": "2026-11-16"
    }
   },
@@ -1562,7 +1590,9 @@
     "lblPZ_Comercializacao": 78.0,
     "lblNM_Plano_Venda": "PARCELA REDUZIDA MASTER IPCA",
     "lblNM_Bem": "AUTOMÓVEL R$80 MIL (70% = R$56 MIL)",
-    "avisos": [],
+    "avisos": [
+     "O percentual da oferta do lance não foi informado."
+    ],
     "em": "2026-11-16"
    },
    "LL|50|0|Reduzir Parcela": {
@@ -1589,7 +1619,9 @@
     "lblPZ_Comercializacao": 78.0,
     "lblNM_Plano_Venda": "PARCELA REDUZIDA MASTER IPCA",
     "lblNM_Bem": "AUTOMÓVEL R$80 MIL (70% = R$56 MIL)",
-    "avisos": [],
+    "avisos": [
+     "O percentual da oferta do lance não foi informado."
+    ],
     "em": "2026-11-16"
    },
    "LL|50|15.0|Reduzir Parcela": {
@@ -1616,7 +1648,9 @@
     "lblPZ_Comercializacao": 78.0,
     "lblNM_Plano_Venda": "PARCELA REDUZIDA MASTER IPCA",
     "lblNM_Bem": "AUTOMÓVEL R$80 MIL (70% = R$56 MIL)",
-    "avisos": [],
+    "avisos": [
+     "O percentual da oferta do lance não foi informado."
+    ],
     "em": "2026-11-16"
    },
    "LL|50|0|Reduzir Prazo": {
@@ -1643,7 +1677,9 @@
     "lblPZ_Comercializacao": 78.0,
     "lblNM_Plano_Venda": "PARCELA REDUZIDA MASTER IPCA",
     "lblNM_Bem": "AUTOMÓVEL R$80 MIL (70% = R$56 MIL)",
-    "avisos": [],
+    "avisos": [
+     "O percentual da oferta do lance não foi informado."
+    ],
     "em": "2026-11-16"
    },
    "LL|50|15.0|Reduzir Prazo": {
@@ -1670,7 +1706,9 @@
     "lblPZ_Comercializacao": 78.0,
     "lblNM_Plano_Venda": "PARCELA REDUZIDA MASTER IPCA",
     "lblNM_Bem": "AUTOMÓVEL R$80 MIL (70% = R$56 MIL)",
-    "avisos": [],
+    "avisos": [
+     "O percentual da oferta do lance não foi informado."
+    ],
     "em": "2026-11-16"
    },
    "LF|None|0|Reduzir Parcela": {
@@ -1697,7 +1735,9 @@
     "lblPZ_Comercializacao": 78.0,
     "lblNM_Plano_Venda": "PARCELA REDUZIDA MASTER IPCA",
     "lblNM_Bem": "AUTOMÓVEL R$80 MIL (70% = R$56 MIL)",
-    "avisos": [],
+    "avisos": [
+     "O percentual da oferta do lance não foi informado."
+    ],
     "em": "2026-11-16"
    },
    "LF|None|15.0|Reduzir Prazo": {
@@ -1724,7 +1764,9 @@
     "lblPZ_Comercializacao": 78.0,
     "lblNM_Plano_Venda": "PARCELA REDUZIDA MASTER IPCA",
     "lblNM_Bem": "AUTOMÓVEL R$80 MIL (70% = R$56 MIL)",
-    "avisos": [],
+    "avisos": [
+     "O percentual da oferta do lance não foi informado."
+    ],
     "em": "2026-11-16"
    }
   },
@@ -1777,7 +1819,9 @@
     "lblPZ_Comercializacao": 78.0,
     "lblNM_Plano_Venda": "PARCELA REDUZIDA MASTER IPCA",
     "lblNM_Bem": "AUTOMÓVEL R$58 MIL (70% = R$40.600 MIL)",
-    "avisos": [],
+    "avisos": [
+     "O percentual da oferta do lance não foi informado."
+    ],
     "em": "2026-11-16"
    },
    "LL|50|0|Reduzir Parcela": {
@@ -1804,7 +1848,154 @@
     "lblPZ_Comercializacao": 78.0,
     "lblNM_Plano_Venda": "PARCELA REDUZIDA MASTER IPCA",
     "lblNM_Bem": "AUTOMÓVEL R$58 MIL (70% = R$40.600 MIL)",
-    "avisos": [],
+    "avisos": [
+     "O percentual da oferta do lance não foi informado."
+    ],
+    "em": "2026-11-16"
+   },
+   "LL|50|15.0|Reduzir Parcela": {
+    "lblVL_Lance": 23344.59,
+    "lblPE_Lance": 50.0,
+    "lblPC_Lance": 0.0,
+    "lblVlRecursos": 16154.45,
+    "lblQtFuro": 0.3218,
+    "lblQtProrrogada": 49.6782,
+    "lblVlCredito": 58000.0,
+    "lblSdDevedor": 63507.0,
+    "lblPclPagar": 53.0,
+    "lblVlCreditoNovo": 50996.5,
+    "lblSdDevedorNovo": 40335.95,
+    "lblPclPagarNovo": 53.0,
+    "lblVL_Parcela": 441.12,
+    "lblVA_Lance_Minimo": 1.2821,
+    "lblVL_Lance_Minimo": 855.15,
+    "lblVA_Lance_Maximo": 65.3871,
+    "lblVL_Lance_Maximo": 43612.65,
+    "lblVA_Lance_Fixo": 35.0,
+    "lblVA_Lance_Fixo_2": 25.0,
+    "lblVL_Bem": 58000.0,
+    "lblPZ_Comercializacao": 78.0,
+    "lblNM_Plano_Venda": "PARCELA REDUZIDA MASTER IPCA",
+    "lblNM_Bem": "AUTOMÓVEL R$58 MIL (70% = R$40.600 MIL)",
+    "avisos": [
+     "O percentual da oferta do lance não foi informado."
+    ],
+    "em": "2026-11-16"
+   },
+   "LL|50|0|Reduzir Prazo": {
+    "lblVL_Lance": 23344.59,
+    "lblPE_Lance": 50.0,
+    "lblPC_Lance": 28.0,
+    "lblVlRecursos": 23157.95,
+    "lblQtFuro": 0.3218,
+    "lblQtProrrogada": 49.6782,
+    "lblVlCredito": 58000.0,
+    "lblSdDevedor": 63507.0,
+    "lblPclPagar": 53.0,
+    "lblVlCreditoNovo": 58000.0,
+    "lblSdDevedorNovo": 40349.17,
+    "lblPclPagarNovo": 25.0,
+    "lblVL_Parcela": null,
+    "lblVA_Lance_Minimo": 1.2821,
+    "lblVL_Lance_Minimo": 855.15,
+    "lblVA_Lance_Maximo": 65.3871,
+    "lblVL_Lance_Maximo": 43612.65,
+    "lblVA_Lance_Fixo": 35.0,
+    "lblVA_Lance_Fixo_2": 25.0,
+    "lblVL_Bem": 58000.0,
+    "lblPZ_Comercializacao": 78.0,
+    "lblNM_Plano_Venda": "PARCELA REDUZIDA MASTER IPCA",
+    "lblNM_Bem": "AUTOMÓVEL R$58 MIL (70% = R$40.600 MIL)",
+    "avisos": [
+     "O percentual da oferta do lance não foi informado."
+    ],
+    "em": "2026-11-16"
+   },
+   "LL|50|15.0|Reduzir Prazo": {
+    "lblVL_Lance": 23344.59,
+    "lblPE_Lance": 50.0,
+    "lblPC_Lance": 28.0,
+    "lblVlRecursos": 16154.45,
+    "lblQtFuro": 0.3218,
+    "lblQtProrrogada": 49.6782,
+    "lblVlCredito": 58000.0,
+    "lblSdDevedor": 63507.0,
+    "lblPclPagar": 53.0,
+    "lblVlCreditoNovo": 50996.5,
+    "lblSdDevedorNovo": 40349.17,
+    "lblPclPagarNovo": 25.0,
+    "lblVL_Parcela": null,
+    "lblVA_Lance_Minimo": 1.2821,
+    "lblVL_Lance_Minimo": 855.15,
+    "lblVA_Lance_Maximo": 65.3871,
+    "lblVL_Lance_Maximo": 43612.65,
+    "lblVA_Lance_Fixo": 35.0,
+    "lblVA_Lance_Fixo_2": 25.0,
+    "lblVL_Bem": 58000.0,
+    "lblPZ_Comercializacao": 78.0,
+    "lblNM_Plano_Venda": "PARCELA REDUZIDA MASTER IPCA",
+    "lblNM_Bem": "AUTOMÓVEL R$58 MIL (70% = R$40.600 MIL)",
+    "avisos": [
+     "O percentual da oferta do lance não foi informado."
+    ],
+    "em": "2026-11-16"
+   },
+   "LF|None|0|Reduzir Parcela": {
+    "lblVL_Lance": 16341.2,
+    "lblPE_Lance": 35.0,
+    "lblPC_Lance": 0.0,
+    "lblVlRecursos": 16154.56,
+    "lblQtFuro": 0.3218,
+    "lblQtProrrogada": 34.6782,
+    "lblVlCredito": 58000.0,
+    "lblSdDevedor": 63507.0,
+    "lblPclPagar": 53.0,
+    "lblVlCreditoNovo": 58000.0,
+    "lblSdDevedorNovo": 47343.28,
+    "lblPclPagarNovo": 53.0,
+    "lblVL_Parcela": 573.31,
+    "lblVA_Lance_Minimo": 1.2821,
+    "lblVL_Lance_Minimo": 855.15,
+    "lblVA_Lance_Maximo": 65.3871,
+    "lblVL_Lance_Maximo": 43612.65,
+    "lblVA_Lance_Fixo": 35.0,
+    "lblVA_Lance_Fixo_2": 25.0,
+    "lblVL_Bem": 58000.0,
+    "lblPZ_Comercializacao": 78.0,
+    "lblNM_Plano_Venda": "PARCELA REDUZIDA MASTER IPCA",
+    "lblNM_Bem": "AUTOMÓVEL R$58 MIL (70% = R$40.600 MIL)",
+    "avisos": [
+     "O percentual da oferta do lance não foi informado."
+    ],
+    "em": "2026-11-16"
+   },
+   "LF|None|15.0|Reduzir Prazo": {
+    "lblVL_Lance": 16341.2,
+    "lblPE_Lance": 35.0,
+    "lblPC_Lance": 19.0,
+    "lblVlRecursos": 9151.06,
+    "lblQtFuro": 0.3218,
+    "lblQtProrrogada": 34.6782,
+    "lblVlCredito": 58000.0,
+    "lblSdDevedor": 63507.0,
+    "lblPclPagar": 53.0,
+    "lblVlCreditoNovo": 50996.5,
+    "lblSdDevedorNovo": 47352.53,
+    "lblPclPagarNovo": 34.0,
+    "lblVL_Parcela": null,
+    "lblVA_Lance_Minimo": 1.2821,
+    "lblVL_Lance_Minimo": 855.15,
+    "lblVA_Lance_Maximo": 65.3871,
+    "lblVL_Lance_Maximo": 43612.65,
+    "lblVA_Lance_Fixo": 35.0,
+    "lblVA_Lance_Fixo_2": 25.0,
+    "lblVL_Bem": 58000.0,
+    "lblPZ_Comercializacao": 78.0,
+    "lblNM_Plano_Venda": "PARCELA REDUZIDA MASTER IPCA",
+    "lblNM_Bem": "AUTOMÓVEL R$58 MIL (70% = R$40.600 MIL)",
+    "avisos": [
+     "O percentual da oferta do lance não foi informado."
+    ],
     "em": "2026-11-16"
    }
   },
@@ -1827,6 +2018,721 @@
    "bem": "AUTOMÓVEL R$58 MIL (70% = R$40.600 MIL)",
    "valor_bem": 58000.0,
    "plano_venda": "000175 CONTEMPLA + IPCA PR (60 MESES)",
+   "seguros": "000011"
+  },
+  "posicao_em": "2026-11-16"
+ },
+ "9569/371": {
+  "cenarios": {
+   "LL|20|0|Reduzir Parcela": {
+    "lblVL_Lance": 3314.77,
+    "lblPE_Lance": 20.0,
+    "lblPC_Lance": 0.0,
+    "lblVlRecursos": 3259.31,
+    "lblQtFuro": 0.3621,
+    "lblQtProrrogada": 19.6379,
+    "lblVlCredito": 15317.0,
+    "lblSdDevedor": 16261.2,
+    "lblPclPagar": 65.0,
+    "lblVlCreditoNovo": 15317.0,
+    "lblSdDevedorNovo": 13000.38,
+    "lblPclPagarNovo": 65.0,
+    "lblVL_Parcela": 220.63,
+    "lblVA_Lance_Minimo": 1.5044,
+    "lblVL_Lance_Minimo": 249.05,
+    "lblVA_Lance_Maximo": 80.7723,
+    "lblVL_Lance_Maximo": 13387.95,
+    "lblVA_Lance_Fixo": 35.0,
+    "lblVA_Lance_Fixo_2": 10.0,
+    "lblVL_Bem": 15317.0,
+    "lblPZ_Comercializacao": 78.0,
+    "lblNM_Plano_Venda": "SUPER GRUPO MEGA (72 MESES)",
+    "lblNM_Bem": "FLUO ABS HYBRID CONNECTED - 80%",
+    "avisos": [
+     "O percentual da oferta do lance não foi informado."
+    ],
+    "em": "2026-11-16"
+   },
+   "LL|50|0|Reduzir Parcela": {
+    "lblVL_Lance": 8287.35,
+    "lblPE_Lance": 50.0,
+    "lblPC_Lance": 0.0,
+    "lblVlRecursos": 8231.89,
+    "lblQtFuro": 0.3621,
+    "lblQtProrrogada": 49.6379,
+    "lblVlCredito": 15317.0,
+    "lblSdDevedor": 16261.2,
+    "lblPclPagar": 65.0,
+    "lblVlCreditoNovo": 15317.0,
+    "lblSdDevedorNovo": 8025.49,
+    "lblPclPagarNovo": 65.0,
+    "lblVL_Parcela": 144.14,
+    "lblVA_Lance_Minimo": 1.5044,
+    "lblVL_Lance_Minimo": 249.05,
+    "lblVA_Lance_Maximo": 80.7723,
+    "lblVL_Lance_Maximo": 13387.95,
+    "lblVA_Lance_Fixo": 35.0,
+    "lblVA_Lance_Fixo_2": 10.0,
+    "lblVL_Bem": 15317.0,
+    "lblPZ_Comercializacao": 78.0,
+    "lblNM_Plano_Venda": "SUPER GRUPO MEGA (72 MESES)",
+    "lblNM_Bem": "FLUO ABS HYBRID CONNECTED - 80%",
+    "avisos": [
+     "O percentual da oferta do lance não foi informado."
+    ],
+    "em": "2026-11-16"
+   },
+   "LL|50|15.0|Reduzir Parcela": {
+    "lblVL_Lance": 8287.35,
+    "lblPE_Lance": 50.0,
+    "lblPC_Lance": 0.0,
+    "lblVlRecursos": 5934.34,
+    "lblQtFuro": 0.3621,
+    "lblQtProrrogada": 49.6379,
+    "lblVlCredito": 15317.0,
+    "lblSdDevedor": 16261.2,
+    "lblPclPagar": 65.0,
+    "lblVlCreditoNovo": 13019.45,
+    "lblSdDevedorNovo": 8025.49,
+    "lblPclPagarNovo": 65.0,
+    "lblVL_Parcela": 144.14,
+    "lblVA_Lance_Minimo": 1.5044,
+    "lblVL_Lance_Minimo": 249.05,
+    "lblVA_Lance_Maximo": 80.7723,
+    "lblVL_Lance_Maximo": 13387.95,
+    "lblVA_Lance_Fixo": 35.0,
+    "lblVA_Lance_Fixo_2": 10.0,
+    "lblVL_Bem": 15317.0,
+    "lblPZ_Comercializacao": 78.0,
+    "lblNM_Plano_Venda": "SUPER GRUPO MEGA (72 MESES)",
+    "lblNM_Bem": "FLUO ABS HYBRID CONNECTED - 80%",
+    "avisos": [
+     "O percentual da oferta do lance não foi informado."
+    ],
+    "em": "2026-11-16"
+   },
+   "LL|50|0|Reduzir Prazo": {
+    "lblVL_Lance": 8287.35,
+    "lblPE_Lance": 50.0,
+    "lblPC_Lance": 33.0,
+    "lblVlRecursos": 8231.89,
+    "lblQtFuro": 0.3621,
+    "lblQtProrrogada": 49.6379,
+    "lblVlCredito": 15317.0,
+    "lblSdDevedor": 16261.2,
+    "lblPclPagar": 65.0,
+    "lblVlCreditoNovo": 15317.0,
+    "lblSdDevedorNovo": 8029.19,
+    "lblPclPagarNovo": 32.0,
+    "lblVL_Parcela": null,
+    "lblVA_Lance_Minimo": 1.5044,
+    "lblVL_Lance_Minimo": 249.05,
+    "lblVA_Lance_Maximo": 80.7723,
+    "lblVL_Lance_Maximo": 13387.95,
+    "lblVA_Lance_Fixo": 35.0,
+    "lblVA_Lance_Fixo_2": 10.0,
+    "lblVL_Bem": 15317.0,
+    "lblPZ_Comercializacao": 78.0,
+    "lblNM_Plano_Venda": "SUPER GRUPO MEGA (72 MESES)",
+    "lblNM_Bem": "FLUO ABS HYBRID CONNECTED - 80%",
+    "avisos": [
+     "O percentual da oferta do lance não foi informado."
+    ],
+    "em": "2026-11-16"
+   },
+   "LL|50|15.0|Reduzir Prazo": {
+    "lblVL_Lance": 8287.35,
+    "lblPE_Lance": 50.0,
+    "lblPC_Lance": 33.0,
+    "lblVlRecursos": 5934.34,
+    "lblQtFuro": 0.3621,
+    "lblQtProrrogada": 49.6379,
+    "lblVlCredito": 15317.0,
+    "lblSdDevedor": 16261.2,
+    "lblPclPagar": 65.0,
+    "lblVlCreditoNovo": 13019.45,
+    "lblSdDevedorNovo": 8029.19,
+    "lblPclPagarNovo": 32.0,
+    "lblVL_Parcela": null,
+    "lblVA_Lance_Minimo": 1.5044,
+    "lblVL_Lance_Minimo": 249.05,
+    "lblVA_Lance_Maximo": 80.7723,
+    "lblVL_Lance_Maximo": 13387.95,
+    "lblVA_Lance_Fixo": 35.0,
+    "lblVA_Lance_Fixo_2": 10.0,
+    "lblVL_Bem": 15317.0,
+    "lblPZ_Comercializacao": 78.0,
+    "lblNM_Plano_Venda": "SUPER GRUPO MEGA (72 MESES)",
+    "lblNM_Bem": "FLUO ABS HYBRID CONNECTED - 80%",
+    "avisos": [
+     "O percentual da oferta do lance não foi informado."
+    ],
+    "em": "2026-11-16"
+   },
+   "LF|None|0|Reduzir Parcela": {
+    "lblVL_Lance": 5801.05,
+    "lblPE_Lance": 35.0,
+    "lblPC_Lance": 0.0,
+    "lblVlRecursos": 5745.59,
+    "lblQtFuro": 0.3621,
+    "lblQtProrrogada": 34.6379,
+    "lblVlCredito": 15317.0,
+    "lblSdDevedor": 16261.2,
+    "lblPclPagar": 65.0,
+    "lblVlCreditoNovo": 15317.0,
+    "lblSdDevedorNovo": 10512.94,
+    "lblPclPagarNovo": 65.0,
+    "lblVL_Parcela": 182.39,
+    "lblVA_Lance_Minimo": 1.5044,
+    "lblVL_Lance_Minimo": 249.05,
+    "lblVA_Lance_Maximo": 80.7723,
+    "lblVL_Lance_Maximo": 13387.95,
+    "lblVA_Lance_Fixo": 35.0,
+    "lblVA_Lance_Fixo_2": 10.0,
+    "lblVL_Bem": 15317.0,
+    "lblPZ_Comercializacao": 78.0,
+    "lblNM_Plano_Venda": "SUPER GRUPO MEGA (72 MESES)",
+    "lblNM_Bem": "FLUO ABS HYBRID CONNECTED - 80%",
+    "avisos": [
+     "O percentual da oferta do lance não foi informado."
+    ],
+    "em": "2026-11-16"
+   },
+   "LF|None|15.0|Reduzir Prazo": {
+    "lblVL_Lance": 5801.05,
+    "lblPE_Lance": 35.0,
+    "lblPC_Lance": 23.0,
+    "lblVlRecursos": 3448.04,
+    "lblQtFuro": 0.3621,
+    "lblQtProrrogada": 34.6379,
+    "lblVlCredito": 15317.0,
+    "lblSdDevedor": 16261.2,
+    "lblPclPagar": 65.0,
+    "lblVlCreditoNovo": 13019.45,
+    "lblSdDevedorNovo": 10515.55,
+    "lblPclPagarNovo": 42.0,
+    "lblVL_Parcela": null,
+    "lblVA_Lance_Minimo": 1.5044,
+    "lblVL_Lance_Minimo": 249.05,
+    "lblVA_Lance_Maximo": 80.7723,
+    "lblVL_Lance_Maximo": 13387.95,
+    "lblVA_Lance_Fixo": 35.0,
+    "lblVA_Lance_Fixo_2": 10.0,
+    "lblVL_Bem": 15317.0,
+    "lblPZ_Comercializacao": 78.0,
+    "lblNM_Plano_Venda": "SUPER GRUPO MEGA (72 MESES)",
+    "lblNM_Bem": "FLUO ABS HYBRID CONNECTED - 80%",
+    "avisos": [
+     "O percentual da oferta do lance não foi informado."
+    ],
+    "em": "2026-11-16"
+   }
+  },
+  "posicao": {
+   "txt": "Página Inicial\nVenda\nGrupo\nCobrança\nContemplação\nCrédito\nAtendimento\n \nPosição do Consorciado\nVoltar\n\n\nOperações\n\n Posição do Consorciado\n Cotas do Cliente\n Dados cadastrais\n Emissão de Cobrança\n Histórico de Transfer...\n Imprimir Extrato\n Oferta de Lance\n Outras Cobranças\n Resultado de Assemble...\n Transferir Cota\nEmpresa:\n0101 YAMAHA ADM DE CONSORCIO LTDA\n000001 YAMAHA ADM DE CONSORCIO LTDA\nUnidade:\n\n\nCota:\n009569 0371-00 Eduardo Maciel Diniz de Oliveira\n    \n\nContrato:\n0102045744\nNORMAL\nCNPJ/CPF:\n104.695.039-80\nDt. Nasc.:\n14/03/2007\nTipo de Cota:\nAvisos: 01 *Cobrador\nPlano de Venda\nData Adesão:\n09/06/2026\nData Cadastro:\n09/06/2026\nData de Alocação:\n11/06/2026\nData Venda:\n11/06/2026\n1a. Assembleia:\n010 25/06/2026\nSit. Cobrança:\nSUS - SUSTENTAÇÃO\nPrazo Plano:\n072\nTipo Venda:\nSUPER GRUPO MEGA – 50% DES\nPlano Venda:\n000160 SUPER GRUPO MEGA – 50% DESC\nBem Objeto:\n1499TX\nFLUO ABS HYBRID CONNECTED - 80%\n15.317,00\nFilial Venda:\n000021\nFilial Adm:\n000003\nPonto Venda:\n010852\nPonto Entrega:\nTaxa Adm.:\n12,5000%\nTaxa Adesão:\n0,0000%\nFnd. Reserva:\n0,0000%\n% Cont.:\n0,0000%\nSeguros:\n000008\nContemplação\nContemplação:\n000\nEntrega:\nDesclassificação:\n\n\nSaldo acumulado\nAssemb. Atual:\n015\n26/11/2026\nVencimento:\n23/11/2026\nValores Pagos:\nR$ 1.083,16\n4,7068%\nSaldo Devedor:\nR$ 16.261,20\n95,2932%\nAtraso(s):\n001\nR$ 278,29\n1,1767%\nDif. Parcela:\nR$ 0,00\n0,0000%\nVl. da Parcela:\n006\nR$ 270,79\n1,1767%\nNegociações\n \tPercentual Ideal/Rateado\t11/06/2026\nDif. Grupo:\n0\n0,3621%\nQtd. Pcls. Pagas:\n004\nQtd. Pcls. Furo:\n000\nLance Mín:\n1,5044%\nLance Máx:\n80,7723%\nHistograma\n....5...10...15...20...25...30...35...40...45...50...55...60...65...70...75...80...85...90...95..100..105..110..115..120\nPPPP-----------------------------------------------------------------III\n\n\nPonto de atendimento:\n---\nUsuário:\n---",
+   "taxa_pct": 12.5,
+   "fr_pct": 0.0,
+   "pct_cont": 0.0,
+   "adesao_pct": 0.0,
+   "prazo_plano": 72.0,
+   "pagas": 4.0,
+   "furo": 0.0,
+   "pagos": 1083.16,
+   "pagos_pct": 4.7068,
+   "sd": 16261.2,
+   "sd_pct": 95.2932,
+   "parcela": 270.79,
+   "parcela_pct": 1.1767,
+   "dif_grupo_pct": 0.3621,
+   "bem": "FLUO ABS HYBRID CONNECTED - 80%",
+   "valor_bem": 15317.0,
+   "plano_venda": "000160 SUPER GRUPO MEGA – 50% DESC",
+   "seguros": "000008"
+  },
+  "posicao_em": "2026-11-16"
+ },
+ "9582/333": {
+  "cenarios": {
+   "LL|20|0|Reduzir Parcela": {
+    "lblVL_Lance": 4627.06,
+    "lblPE_Lance": 20.0,
+    "lblPC_Lance": 0.0,
+    "lblVlRecursos": 4589.05,
+    "lblQtFuro": 0.1267,
+    "lblQtProrrogada": 19.8733,
+    "lblVlCredito": 30000.0,
+    "lblSdDevedor": 34240.87,
+    "lblPclPagar": 67.0,
+    "lblVlCreditoNovo": 30000.0,
+    "lblSdDevedorNovo": 29651.82,
+    "lblPclPagarNovo": 67.0,
+    "lblVL_Parcela": 314.04,
+    "lblVA_Lance_Minimo": 1.0524,
+    "lblVL_Lance_Minimo": 354.24,
+    "lblVA_Lance_Maximo": 84.6186,
+    "lblVL_Lance_Maximo": 29231.03,
+    "lblVA_Lance_Fixo": 35.0,
+    "lblVA_Lance_Fixo_2": 10.0,
+    "lblVL_Bem": 30000.0,
+    "lblPZ_Comercializacao": 78.0,
+    "lblNM_Plano_Venda": "SUPER GRUPO MASTER IPCA PR 72M",
+    "lblNM_Bem": "AUTOMÓVEL R$30 MIL (70% = R$21 MIL)",
+    "avisos": [
+     "O percentual da oferta do lance não foi informado."
+    ],
+    "em": "2026-11-16"
+   },
+   "LL|50|0|Reduzir Parcela": {
+    "lblVL_Lance": 11566.99,
+    "lblPE_Lance": 50.0,
+    "lblPC_Lance": 0.0,
+    "lblVlRecursos": 11528.98,
+    "lblQtFuro": 0.1267,
+    "lblQtProrrogada": 49.8733,
+    "lblVlCredito": 30000.0,
+    "lblSdDevedor": 34240.87,
+    "lblPclPagar": 67.0,
+    "lblVlCreditoNovo": 30000.0,
+    "lblSdDevedorNovo": 22711.86,
+    "lblPclPagarNovo": 67.0,
+    "lblVL_Parcela": 210.45,
+    "lblVA_Lance_Minimo": 1.0524,
+    "lblVL_Lance_Minimo": 354.24,
+    "lblVA_Lance_Maximo": 84.6186,
+    "lblVL_Lance_Maximo": 29231.03,
+    "lblVA_Lance_Fixo": 35.0,
+    "lblVA_Lance_Fixo_2": 10.0,
+    "lblVL_Bem": 30000.0,
+    "lblPZ_Comercializacao": 78.0,
+    "lblNM_Plano_Venda": "SUPER GRUPO MASTER IPCA PR 72M",
+    "lblNM_Bem": "AUTOMÓVEL R$30 MIL (70% = R$21 MIL)",
+    "avisos": [],
+    "em": "2026-11-16"
+   },
+   "LL|50|15.0|Reduzir Parcela": {
+    "lblVL_Lance": 11566.99,
+    "lblPE_Lance": 50.0,
+    "lblPC_Lance": 0.0,
+    "lblVlRecursos": 7859.23,
+    "lblQtFuro": 0.1267,
+    "lblQtProrrogada": 49.8733,
+    "lblVlCredito": 30000.0,
+    "lblSdDevedor": 34240.87,
+    "lblPclPagar": 67.0,
+    "lblVlCreditoNovo": 26330.25,
+    "lblSdDevedorNovo": 22711.9,
+    "lblPclPagarNovo": 67.0,
+    "lblVL_Parcela": 210.45,
+    "lblVA_Lance_Minimo": 1.0524,
+    "lblVL_Lance_Minimo": 354.24,
+    "lblVA_Lance_Maximo": 84.6186,
+    "lblVL_Lance_Maximo": 29231.03,
+    "lblVA_Lance_Fixo": 35.0,
+    "lblVA_Lance_Fixo_2": 10.0,
+    "lblVL_Bem": 30000.0,
+    "lblPZ_Comercializacao": 78.0,
+    "lblNM_Plano_Venda": "SUPER GRUPO MASTER IPCA PR 72M",
+    "lblNM_Bem": "AUTOMÓVEL R$30 MIL (70% = R$21 MIL)",
+    "avisos": [],
+    "em": "2026-11-16"
+   },
+   "LL|50|0|Reduzir Prazo": {
+    "lblVL_Lance": 11566.99,
+    "lblPE_Lance": 50.0,
+    "lblPC_Lance": 32.0,
+    "lblVlRecursos": 11528.98,
+    "lblQtFuro": 0.1267,
+    "lblQtProrrogada": 49.8733,
+    "lblVlCredito": 30000.0,
+    "lblSdDevedor": 34240.87,
+    "lblPclPagar": 67.0,
+    "lblVlCreditoNovo": 30000.0,
+    "lblSdDevedorNovo": 22711.85,
+    "lblPclPagarNovo": 35.0,
+    "lblVL_Parcela": null,
+    "lblVA_Lance_Minimo": 1.0524,
+    "lblVL_Lance_Minimo": 354.24,
+    "lblVA_Lance_Maximo": 84.6186,
+    "lblVL_Lance_Maximo": 29231.03,
+    "lblVA_Lance_Fixo": 35.0,
+    "lblVA_Lance_Fixo_2": 10.0,
+    "lblVL_Bem": 30000.0,
+    "lblPZ_Comercializacao": 78.0,
+    "lblNM_Plano_Venda": "SUPER GRUPO MASTER IPCA PR 72M",
+    "lblNM_Bem": "AUTOMÓVEL R$30 MIL (70% = R$21 MIL)",
+    "avisos": [],
+    "em": "2026-11-16"
+   },
+   "LL|50|15.0|Reduzir Prazo": {
+    "lblVL_Lance": 11566.99,
+    "lblPE_Lance": 50.0,
+    "lblPC_Lance": 32.0,
+    "lblVlRecursos": 7859.23,
+    "lblQtFuro": 0.1267,
+    "lblQtProrrogada": 49.8733,
+    "lblVlCredito": 30000.0,
+    "lblSdDevedor": 34240.87,
+    "lblPclPagar": 67.0,
+    "lblVlCreditoNovo": 26330.25,
+    "lblSdDevedorNovo": 22711.85,
+    "lblPclPagarNovo": 35.0,
+    "lblVL_Parcela": null,
+    "lblVA_Lance_Minimo": 1.0524,
+    "lblVL_Lance_Minimo": 354.24,
+    "lblVA_Lance_Maximo": 84.6186,
+    "lblVL_Lance_Maximo": 29231.03,
+    "lblVA_Lance_Fixo": 35.0,
+    "lblVA_Lance_Fixo_2": 10.0,
+    "lblVL_Bem": 30000.0,
+    "lblPZ_Comercializacao": 78.0,
+    "lblNM_Plano_Venda": "SUPER GRUPO MASTER IPCA PR 72M",
+    "lblNM_Bem": "AUTOMÓVEL R$30 MIL (70% = R$21 MIL)",
+    "avisos": [],
+    "em": "2026-11-16"
+   },
+   "LF|None|0|Reduzir Parcela": {
+    "lblVL_Lance": 8097.02,
+    "lblPE_Lance": 35.0,
+    "lblPC_Lance": 0.0,
+    "lblVlRecursos": 8059.01,
+    "lblQtFuro": 0.1267,
+    "lblQtProrrogada": 34.8733,
+    "lblVlCredito": 30000.0,
+    "lblSdDevedor": 34240.87,
+    "lblPclPagar": 67.0,
+    "lblVlCreditoNovo": 30000.0,
+    "lblSdDevedorNovo": 26181.87,
+    "lblPclPagarNovo": 67.0,
+    "lblVL_Parcela": 262.26,
+    "lblVA_Lance_Minimo": 1.0524,
+    "lblVL_Lance_Minimo": 354.24,
+    "lblVA_Lance_Maximo": 84.6186,
+    "lblVL_Lance_Maximo": 29231.03,
+    "lblVA_Lance_Fixo": 35.0,
+    "lblVA_Lance_Fixo_2": 10.0,
+    "lblVL_Bem": 30000.0,
+    "lblPZ_Comercializacao": 78.0,
+    "lblNM_Plano_Venda": "SUPER GRUPO MASTER IPCA PR 72M",
+    "lblNM_Bem": "AUTOMÓVEL R$30 MIL (70% = R$21 MIL)",
+    "avisos": [],
+    "em": "2026-11-16"
+   },
+   "LF|None|15.0|Reduzir Prazo": {
+    "lblVL_Lance": 8097.02,
+    "lblPE_Lance": 35.0,
+    "lblPC_Lance": 22.0,
+    "lblVlRecursos": 4389.26,
+    "lblQtFuro": 0.1267,
+    "lblQtProrrogada": 34.8733,
+    "lblVlCredito": 30000.0,
+    "lblSdDevedor": 34240.87,
+    "lblPclPagar": 67.0,
+    "lblVlCreditoNovo": 26330.25,
+    "lblSdDevedorNovo": 26181.86,
+    "lblPclPagarNovo": 45.0,
+    "lblVL_Parcela": null,
+    "lblVA_Lance_Minimo": 1.0524,
+    "lblVL_Lance_Minimo": 354.24,
+    "lblVA_Lance_Maximo": 84.6186,
+    "lblVL_Lance_Maximo": 29231.03,
+    "lblVA_Lance_Fixo": 35.0,
+    "lblVA_Lance_Fixo_2": 10.0,
+    "lblVL_Bem": 30000.0,
+    "lblPZ_Comercializacao": 78.0,
+    "lblNM_Plano_Venda": "SUPER GRUPO MASTER IPCA PR 72M",
+    "lblNM_Bem": "AUTOMÓVEL R$30 MIL (70% = R$21 MIL)",
+    "avisos": [],
+    "em": "2026-11-16"
+   }
+  },
+  "posicao": {
+   "txt": "Página Inicial\nVenda\nGrupo\nCobrança\nContemplação\nCrédito\nAtendimento\n \nPosição do Consorciado\nVoltar\n\n\nOperações\n\n Posição do Consorciado\n Cotas do Cliente\n Dados cadastrais\n Emissão de Cobrança\n Histórico de Transfer...\n Imprimir Extrato\n Oferta de Lance\n Outras Cobranças\n Resultado de Assemble...\n Transferir Cota\nEmpresa:\n0101 YAMAHA ADM DE CONSORCIO LTDA\n000001 YAMAHA ADM DE CONSORCIO LTDA\nUnidade:\n\n\nCota:\n009582 0333-00 ADRIANA BUENOS AIRES MARQUES\n    \n\nContrato:\n0102055887\nNORMAL\nCNPJ/CPF:\n101.590.996-50\nDt. Nasc.:\n19/04/1992\nTipo de Cota:\nPlano de Venda\nData Adesão:\n31/08/2026\nData Cadastro:\n31/08/2026\nData de Alocação:\n03/09/2026\nData Venda:\n03/09/2026\n1a. Assembleia:\n010 24/09/2026\nSit. Cobrança:\nNORMAL\nPrazo Plano:\n072\nTipo Venda:\nSUPER GRUPO MASTER IPCA PR\nPlano Venda:\n000147 SUPER GRUPO MASTER IPCA PR 72M\nBem Objeto:\n1372TX\nAUTOMÓVEL R$30 MIL (70% = R$21 MIL)\n30.000,00\nFilial Venda:\n000021\nFilial Adm:\n000003\nPonto Venda:\n010852\nPonto Entrega:\nTaxa Adm.:\n16,5000%\nTaxa Adesão:\n0,0000%\nFnd. Reserva:\n0,0000%\n% Cont.:\n30,0000%\nSeguros:\n000011\nContemplação\nContemplação:\n000\nEntrega:\nDesclassificação:\n\n\nSaldo acumulado\nAssemb. Atual:\n012\n26/11/2026\nVencimento:\n23/11/2026\nValores Pagos:\nR$ 765,06\n1,6474%\nSaldo Devedor:\nR$ 34.240,87\n98,3526%\nAtraso(s):\n000\nR$ 0,00\n0,0000%\nDif. Parcela:\nR$ 0,00\n0,0000%\nVl. da Parcela:\n003\nR$ 382,53\n0,8237%\nNegociações\n \tPercentual Cobrar Contemplação\t03/09/2026\n \tPercentual Ideal/Rateado\t03/09/2026\nDif. Grupo:\n0\n0,1267%\nQtd. Pcls. Pagas:\n002\nQtd. Pcls. Furo:\n000\nLance Mín:\n1,0524%\nLance Máx:\n84,6186%\nHistograma\n....5...10...15...20...25...30...35...40...45...50...55...60...65...70...75...80...85...90...95..100..105..110..115..120\nPP-------------------------------------------------------------------III\n\n\nPonto de atendimento:\n---\nUsuário:\n---",
+   "taxa_pct": 16.5,
+   "fr_pct": 0.0,
+   "pct_cont": 30.0,
+   "adesao_pct": 0.0,
+   "prazo_plano": 72.0,
+   "pagas": 2.0,
+   "furo": 0.0,
+   "pagos": 765.06,
+   "pagos_pct": 1.6474,
+   "sd": 34240.87,
+   "sd_pct": 98.3526,
+   "parcela": 382.53,
+   "parcela_pct": 0.8237,
+   "dif_grupo_pct": 0.1267,
+   "bem": "AUTOMÓVEL R$30 MIL (70% = R$21 MIL)",
+   "valor_bem": 30000.0,
+   "plano_venda": "000147 SUPER GRUPO MASTER IPCA PR 72M",
+   "seguros": "000011"
+  },
+  "posicao_em": "2026-11-16"
+ },
+ "10018/840": {
+  "cenarios": {
+   "LL|20|0|Reduzir Parcela": {
+    "lblVL_Lance": 17433.08,
+    "lblPE_Lance": 20.0,
+    "lblPC_Lance": 0.0,
+    "lblVlRecursos": 17352.59,
+    "lblQtFuro": 0.0755,
+    "lblQtProrrogada": 19.9245,
+    "lblVlCredito": 106610.0,
+    "lblSdDevedor": 119798.74,
+    "lblPclPagar": 227.0,
+    "lblVlCreditoNovo": 106610.0,
+    "lblSdDevedorNovo": 102446.14,
+    "lblPclPagarNovo": 227.0,
+    "lblVL_Parcela": 286.78,
+    "lblVA_Lance_Minimo": 0.4065,
+    "lblVL_Lance_Minimo": 506.18,
+    "lblVA_Lance_Maximo": 94.308,
+    "lblVL_Lance_Maximo": 117433.78,
+    "lblVA_Lance_Fixo": 30.0,
+    "lblVA_Lance_Fixo_2": null,
+    "lblVL_Bem": 106610.0,
+    "lblPZ_Comercializacao": 246.0,
+    "lblNM_Plano_Venda": "PLANO PARCELA REDUZIDA - 70%",
+    "lblNM_Bem": "IMÓVEL R$100MIL (70% = R$70.000 MIL)",
+    "avisos": [],
+    "em": "2026-11-16"
+   },
+   "LL|50|0|Reduzir Parcela": {
+    "lblVL_Lance": 43582.69,
+    "lblPE_Lance": 50.0,
+    "lblPC_Lance": 0.0,
+    "lblVlRecursos": 43502.2,
+    "lblQtFuro": 0.0755,
+    "lblQtProrrogada": 49.9245,
+    "lblVlCredito": 106610.0,
+    "lblSdDevedor": 119798.74,
+    "lblPclPagar": 227.0,
+    "lblVlCreditoNovo": 106610.0,
+    "lblSdDevedorNovo": 76296.53,
+    "lblPclPagarNovo": 227.0,
+    "lblVL_Parcela": 171.53,
+    "lblVA_Lance_Minimo": 0.4065,
+    "lblVL_Lance_Minimo": 506.18,
+    "lblVA_Lance_Maximo": 94.308,
+    "lblVL_Lance_Maximo": 117433.78,
+    "lblVA_Lance_Fixo": 30.0,
+    "lblVA_Lance_Fixo_2": null,
+    "lblVL_Bem": 106610.0,
+    "lblPZ_Comercializacao": 246.0,
+    "lblNM_Plano_Venda": "PLANO PARCELA REDUZIDA - 70%",
+    "lblNM_Bem": "IMÓVEL R$100MIL (70% = R$70.000 MIL)",
+    "avisos": [],
+    "em": "2026-11-16"
+   },
+   "LL|50|25.0|Reduzir Parcela": {
+    "lblVL_Lance": 43582.69,
+    "lblPE_Lance": 50.0,
+    "lblPC_Lance": 0.0,
+    "lblVlRecursos": 21711.11,
+    "lblQtFuro": 0.0755,
+    "lblQtProrrogada": 49.9245,
+    "lblVlCredito": 106610.0,
+    "lblSdDevedor": 119798.74,
+    "lblPclPagar": 227.0,
+    "lblVlCreditoNovo": 84818.91,
+    "lblSdDevedorNovo": 76296.64,
+    "lblPclPagarNovo": 227.0,
+    "lblVL_Parcela": 171.53,
+    "lblVA_Lance_Minimo": 0.4065,
+    "lblVL_Lance_Minimo": 506.18,
+    "lblVA_Lance_Maximo": 94.308,
+    "lblVL_Lance_Maximo": 117433.78,
+    "lblVA_Lance_Fixo": 30.0,
+    "lblVA_Lance_Fixo_2": null,
+    "lblVL_Bem": 106610.0,
+    "lblPZ_Comercializacao": 246.0,
+    "lblNM_Plano_Venda": "PLANO PARCELA REDUZIDA - 70%",
+    "lblNM_Bem": "IMÓVEL R$100MIL (70% = R$70.000 MIL)",
+    "avisos": [],
+    "em": "2026-11-16"
+   },
+   "LL|50|0|Reduzir Prazo": {
+    "lblVL_Lance": 43582.69,
+    "lblPE_Lance": 50.0,
+    "lblPC_Lance": 119.0,
+    "lblVlRecursos": 43502.2,
+    "lblQtFuro": 0.0755,
+    "lblQtProrrogada": 49.9245,
+    "lblVlCredito": 106610.0,
+    "lblSdDevedor": 119798.74,
+    "lblPclPagar": 227.0,
+    "lblVlCreditoNovo": 106610.0,
+    "lblSdDevedorNovo": 76296.53,
+    "lblPclPagarNovo": 108.0,
+    "lblVL_Parcela": null,
+    "lblVA_Lance_Minimo": 0.4065,
+    "lblVL_Lance_Minimo": 506.18,
+    "lblVA_Lance_Maximo": 94.308,
+    "lblVL_Lance_Maximo": 117433.78,
+    "lblVA_Lance_Fixo": 30.0,
+    "lblVA_Lance_Fixo_2": null,
+    "lblVL_Bem": 106610.0,
+    "lblPZ_Comercializacao": 246.0,
+    "lblNM_Plano_Venda": "PLANO PARCELA REDUZIDA - 70%",
+    "lblNM_Bem": "IMÓVEL R$100MIL (70% = R$70.000 MIL)",
+    "avisos": [],
+    "em": "2026-11-16"
+   },
+   "LL|50|25.0|Reduzir Prazo": {
+    "lblVL_Lance": 43582.69,
+    "lblPE_Lance": 50.0,
+    "lblPC_Lance": 119.0,
+    "lblVlRecursos": 21711.11,
+    "lblQtFuro": 0.0755,
+    "lblQtProrrogada": 49.9245,
+    "lblVlCredito": 106610.0,
+    "lblSdDevedor": 119798.74,
+    "lblPclPagar": 227.0,
+    "lblVlCreditoNovo": 84818.91,
+    "lblSdDevedorNovo": 76296.53,
+    "lblPclPagarNovo": 108.0,
+    "lblVL_Parcela": null,
+    "lblVA_Lance_Minimo": 0.4065,
+    "lblVL_Lance_Minimo": 506.18,
+    "lblVA_Lance_Maximo": 94.308,
+    "lblVL_Lance_Maximo": 117433.78,
+    "lblVA_Lance_Fixo": 30.0,
+    "lblVA_Lance_Fixo_2": null,
+    "lblVL_Bem": 106610.0,
+    "lblPZ_Comercializacao": 246.0,
+    "lblNM_Plano_Venda": "PLANO PARCELA REDUZIDA - 70%",
+    "lblNM_Bem": "IMÓVEL R$100MIL (70% = R$70.000 MIL)",
+    "avisos": [],
+    "em": "2026-11-16"
+   },
+   "LF|None|0|Reduzir Parcela": {
+    "lblVL_Lance": 26149.63,
+    "lblPE_Lance": 30.0,
+    "lblPC_Lance": 0.0,
+    "lblVlRecursos": 26069.14,
+    "lblQtFuro": 0.0755,
+    "lblQtProrrogada": 29.9245,
+    "lblVlCredito": 106610.0,
+    "lblSdDevedor": 119798.74,
+    "lblPclPagar": 227.0,
+    "lblVlCreditoNovo": 106610.0,
+    "lblSdDevedorNovo": 93729.56,
+    "lblPclPagarNovo": 227.0,
+    "lblVL_Parcela": 248.4,
+    "lblVA_Lance_Minimo": 0.4065,
+    "lblVL_Lance_Minimo": 506.18,
+    "lblVA_Lance_Maximo": 94.308,
+    "lblVL_Lance_Maximo": 117433.78,
+    "lblVA_Lance_Fixo": 30.0,
+    "lblVA_Lance_Fixo_2": null,
+    "lblVL_Bem": 106610.0,
+    "lblPZ_Comercializacao": 246.0,
+    "lblNM_Plano_Venda": "PLANO PARCELA REDUZIDA - 70%",
+    "lblNM_Bem": "IMÓVEL R$100MIL (70% = R$70.000 MIL)",
+    "avisos": [],
+    "em": "2026-11-16"
+   },
+   "LF|None|25.0|Reduzir Prazo": {
+    "lblVL_Lance": 26149.63,
+    "lblPE_Lance": 30.0,
+    "lblPC_Lance": 71.0,
+    "lblVlRecursos": 4278.05,
+    "lblQtFuro": 0.0755,
+    "lblQtProrrogada": 29.9245,
+    "lblVlCredito": 106610.0,
+    "lblSdDevedor": 119798.74,
+    "lblPclPagar": 227.0,
+    "lblVlCreditoNovo": 84818.91,
+    "lblSdDevedorNovo": 93729.6,
+    "lblPclPagarNovo": 156.0,
+    "lblVL_Parcela": null,
+    "lblVA_Lance_Minimo": 0.4065,
+    "lblVL_Lance_Minimo": 506.18,
+    "lblVA_Lance_Maximo": 94.308,
+    "lblVL_Lance_Maximo": 117433.78,
+    "lblVA_Lance_Fixo": 30.0,
+    "lblVA_Lance_Fixo_2": null,
+    "lblVL_Bem": 106610.0,
+    "lblPZ_Comercializacao": 246.0,
+    "lblNM_Plano_Venda": "PLANO PARCELA REDUZIDA - 70%",
+    "lblNM_Bem": "IMÓVEL R$100MIL (70% = R$70.000 MIL)",
+    "avisos": [],
+    "em": "2026-11-16"
+   }
+  },
+  "posicao": {
+   "txt": "Página Inicial\nVenda\nGrupo\nCobrança\nContemplação\nCrédito\nAtendimento\n \nPosição do Consorciado\nVoltar\n\n\nOperações\n\n Posição do Consorciado\n Cotas do Cliente\n Dados cadastrais\n Emissão de Cobrança\n Histórico de Transfer...\n Imprimir Extrato\n Oferta de Lance\n Outras Cobranças\n Resultado de Assemble...\n Transferir Cota\nEmpresa:\n0101 YAMAHA ADM DE CONSORCIO LTDA\n000001 YAMAHA ADM DE CONSORCIO LTDA\nUnidade:\n\n\nCota:\n010018 0840-00 ELEUSA DE ARAUJO SILVA DAVINI\n    \n\nContrato:\n0103005020\nNORMAL\nCNPJ/CPF:\n529.810.456-87\nDt. Nasc.:\n20/05/1964\nTipo de Cota:\nPlano de Venda\nData Adesão:\n13/10/2025\nData Cadastro:\n13/10/2025\nData de Alocação:\n15/10/2025\nData Venda:\n15/10/2025\n1a. Assembleia:\n001 20/10/2025\nSit. Cobrança:\nNORMAL\nPrazo Plano:\n240\nTipo Venda:\nIMÓVEL PARC REDUZIDA TX 16\nPlano Venda:\n000710 PLANO PARCELA REDUZIDA - 70%\nBem Objeto:\n007839\nIMÓVEL R$100MIL (70% = R$70.000 MIL)\n106.610,00\nFilial Venda:\n000021\nFilial Adm:\n000003\nPonto Venda:\n010852\nPonto Entrega:\nTaxa Adm.:\n16,8000%\nTaxa Adesão:\n0,0000%\nFnd. Reserva:\n0,0000%\n% Cont.:\n30,0000%\nSeguros:\nContemplação\nContemplação:\n000\nEntrega:\nDesclassificação:\n\n\nSaldo acumulado\nAssemb. Atual:\n014\n19/11/2026\nVencimento:\n16/11/2026\nValores Pagos:\nR$ 4.429,00\n3,0941%\nSaldo Devedor:\nR$ 119.798,74\n96,9059%\nAtraso(s):\n000\nR$ 0,00\n0,0000%\nDif. Parcela:\nR$ 0,00\n0,0000%\nVl. da Parcela:\n014\nR$ 363,22\n0,2717%\nNegociações\n \tPercentual Cobrar Contemplação\t15/10/2025\nDif. Grupo:\n0\n0,0755%\nQtd. Pcls. Pagas:\n013\nQtd. Pcls. Furo:\n000\nLance Mín:\n0,4065%\nLance Máx:\n94,3080%\nHistograma\n....5...10...15...20...25...30...35...40...45...50...55...60...65...70...75...80...85...90...95..100..105..110..115..120\nPPPPPPPPPPPPP-----------------------------------------------------------------------------------------------------------\n..125..130..135..140..145..150..155..160..165..170..175..180..185..190..195..200..205..210..215..220..225..230..235..240\n------------------------------------------------------------------------------------------------------------------------\n\n\nPonto de atendimento:\n---\nUsuário:\n---",
+   "taxa_pct": 16.8,
+   "fr_pct": 0.0,
+   "pct_cont": 30.0,
+   "adesao_pct": 0.0,
+   "prazo_plano": 240.0,
+   "pagas": 13.0,
+   "furo": 0.0,
+   "pagos": 4429.0,
+   "pagos_pct": 3.0941,
+   "sd": 119798.74,
+   "sd_pct": 96.9059,
+   "parcela": 363.22,
+   "parcela_pct": 0.2717,
+   "dif_grupo_pct": 0.0755,
+   "bem": "IMÓVEL R$100MIL (70% = R$70.000 MIL)",
+   "valor_bem": 106610.0,
+   "plano_venda": "000710 PLANO PARCELA REDUZIDA - 70%",
+   "seguros": "Contemplação"
+  },
+  "posicao_em": "2026-11-16"
+ },
+ "9045/105": {
+  "cenarios": {
+   "LL|20|0|Reduzir Parcela": {
+    "erro": "modalidade LL indisponível",
+    "em": "2026-11-16"
+   },
+   "LL|50|0|Reduzir Parcela": {
+    "erro": "modalidade LL indisponível",
+    "em": "2026-11-16"
+   },
+   "LL|50|15.0|Reduzir Parcela": {
+    "erro": "modalidade LL indisponível",
+    "em": "2026-11-16"
+   },
+   "LL|50|0|Reduzir Prazo": {
+    "erro": "modalidade LL indisponível",
+    "em": "2026-11-16"
+   },
+   "LL|50|15.0|Reduzir Prazo": {
+    "erro": "modalidade LL indisponível",
+    "em": "2026-11-16"
+   },
+   "LF|None|0|Reduzir Parcela": {
+    "erro": "modalidade LF indisponível",
+    "em": "2026-11-16"
+   },
+   "LF|None|15.0|Reduzir Prazo": {
+    "erro": "modalidade LF indisponível",
+    "em": "2026-11-16"
+   }
+  },
+  "posicao": {
+   "txt": "Página Inicial\nVenda\nGrupo\nCobrança\nContemplação\nCrédito\nAtendimento\n \nPosição do Consorciado\nVoltar\n\n\nOperações\n\n Posição do Consorciado\n Cotas do Cliente\n Dados cadastrais\n Emissão de Cobrança\n Histórico de Transfer...\n Imprimir Extrato\n Oferta de Lance\n Outras Cobranças\n Resultado de Assemble...\n Transferir Cota\nEmpresa:\n0101 YAMAHA ADM DE CONSORCIO LTDA\n000001 YAMAHA ADM DE CONSORCIO LTDA\nUnidade:\n\n\nCota:\n009045 0105-00 KEILA CRISTINA VIEIRA\n    \n\nContrato:\n0102044416\nNORMAL\nCNPJ/CPF:\n091.915.236-80\nDt. Nasc.:\n27/07/1989\nTipo de Cota:\nPlano de Venda\nData Adesão:\n29/05/2026\nData Cadastro:\n29/05/2026\nData de Alocação:\n02/06/2026\nData Venda:\n02/06/2026\n1a. Assembleia:\n022 25/06/2026\nSit. Cobrança:\nNORMAL\nPrazo Plano:\n072\nTipo Venda:\nCONTEMPLA+ MASTER 72 (DESC\nPlano Venda:\n000177 CONTEMPLA+ MASTER 72 (DESC 40)\nBem Objeto:\n1292TX\n50% - FIORINO ENDURANCE EVO 1.4 FLEX 8V 2P\n60.070,00\nFilial Venda:\n000021\nFilial Adm:\n000003\nPonto Venda:\n010852\nPonto Entrega:\nTaxa Adm.:\n9,0000%\nTaxa Adesão:\n0,0000%\nFnd. Reserva:\n0,0000%\n% Cont.:\n0,0000%\nSeguros:\n000011\nContemplação\nContemplação:\n26/10/2026\n026\nLM 62.0000 %.\nEntrega:\nDesclassificação:\n\n\nSaldo acumulado\nAssemb. Atual:\n027\n26/11/2026\nVencimento:\n23/11/2026\nValores Pagos:\nR$ 15.709,04\n22,4584%\nSaldo Devedor:\nR$ 50.056,71\n77,5416%\nAtraso(s):\n000\nR$ 0,00\n0,0000%\nDif. Parcela:\nR$ 0,00\n0,0000%\nVl. da Parcela:\n006\nR$ 1.020,51\n1,2519%\nNegociações\n \tLance diluído/Rateado\t29/10/2026\n \tPercentual Ideal/Rateado\t02/06/2026\nDif. Grupo:\n2\n1,7276%\nQtd. Pcls. Pagas:\n005\nQtd. Pcls. Furo:\n000\nLance Mín:\nLance Máx:\nHistograma\n....5...10...15...20...25...30...35...40...45...50...55...60...65...70...75...80...85...90...95..100..105..110..115..120\nPPPPP----------------------------------------------------IIIIIIIIIIIIIII\n\n\nPonto de atendimento:\n---\nUsuário:\n---",
+   "taxa_pct": 9.0,
+   "fr_pct": 0.0,
+   "pct_cont": 0.0,
+   "adesao_pct": 0.0,
+   "prazo_plano": 72.0,
+   "pagas": 5.0,
+   "furo": 0.0,
+   "pagos": 15709.04,
+   "pagos_pct": 22.4584,
+   "sd": 50056.71,
+   "sd_pct": 77.5416,
+   "parcela": 1020.51,
+   "parcela_pct": 1.2519,
+   "dif_grupo_pct": 1.7276,
+   "bem": "50% - FIORINO ENDURANCE EVO 1.4 FLEX 8V 2P",
+   "valor_bem": 60070.0,
+   "plano_venda": "000177 CONTEMPLA+ MASTER 72 (DESC 40)",
    "seguros": "000011"
   },
   "posicao_em": "2026-11-16"

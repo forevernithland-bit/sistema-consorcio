@@ -190,10 +190,20 @@ def _voltar_resultado(sx, reabrir):
 
 
 def fase_grupos(sx, sb, prog, produtos, incluir_antigos, prazo_pref,
-                salvar, limite_planos, forcar, reabrir, ceder_cb=None):
+                salvar, limite_planos, forcar, reabrir, ceder_cb=None, so_planos=None):
+    """so_planos = {prod_in: {cod_plano,...}} → busca SÓ esses planos, mesmo em dia
+    (usado pelo conferir_vagas.py na hora do simulado)."""
     for prod_in in produtos:
+        alvo = None
+        if so_planos is not None:
+            alvo = {_cod(c) for c in (so_planos.get(prod_in) or ())}
+            if not alvo:
+                continue
         prod_nome, prod_pal, planos = _planos_do_produto(
-            sx["page"], prod_in, incluir_antigos, limite_planos)
+            sx["page"], prod_in, incluir_antigos or alvo is not None, limite_planos)
+        if alvo is not None:
+            planos = [(v, t) for v, t in planos if _cod(t) in alvo]
+            forcar = True
 
         # >>> LÊ O QUE JÁ TEMOS antes de sair varrendo <<<
         catalogo = _carregar_catalogo(sb, prod_nome)

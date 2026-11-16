@@ -32,8 +32,12 @@ def modelo(cred, tx, n, k, red, p, e, dif_pct, mod_fixo=None):
             "delta_parcela": A / nPag}
 
 
+FATOR_INTEGRAL = 0.96191   # 16/11/2026: base do lance integral = 96,191% de C1 (9029, 9542, 9569, 9600/302;
+                           # 9600/454 deu 0,96410) — independe de n e de pagas
+
+
 def BASE_INTEGRAL(cred, tx, n, k):
-    return max(n - k - 2, 0) * cred * (1 + tx) / n      # regra antiga (1 caso) — a calibrar
+    return FATOR_INTEGRAL * cred * (1 + tx)
 
 
 def main():
