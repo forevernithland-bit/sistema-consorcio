@@ -1,0 +1,42 @@
+{
+ "caminho": "Cobrança > Manutenção de Cobrança > Manutenção de Cobrança",
+ "submenu": "CO/MC",
+ "lido_em": "16/11/2026 16:56:59",
+ "url": "https://newkey.cny.com.br/Intranet/frmMainMenu.aspx",
+ "abriu_tela_nova": true,
+ "leitura": {
+  "url": "https://newkey.cny.com.br/Intranet/frmMainMenu.aspx",
+  "frames": [
+   {
+    "titulo": "Intranet Newcon",
+    "cabecalhos": [],
+    "campos": [],
+    "botoes": [],
+    "abas": [],
+    "tabelas": [],
+    "links": [],
+    "texto": "Página Inicial Venda Grupo Cobrança Contemplação Crédito Atendimento Tela de Navegação 40.111.279 BRENO LEONARDO MARQUES SOUZA L (CCY108521 ) (Logout) Empresa 0101 YAMAHA ADM DE CONSORCIO LTDA Escolha da empresa Avisos Agenda Você não tem novos assuntos na Agenda! Informações sobre a conexão Último acesso : 16/11/2026 16:56:01 Acesso Atual: 16/11/2026 16:56:30 Senha expira em: 24/11/2026 Manutenção de Cobrança",
+    "frame": "principal"
+   }
+  ]
+ },
+ "avisos_ao_abrir": [],
+ "campos_entendidos": [],
+ "consulta": null,
+ "notas": {
+  "grupos_por_produto": 1,
+  "vagas": 0,
+  "creditos": 1,
+  "taxa": 0,
+  "seguro": 0,
+  "lance": 1
+ },
+ "provas": {
+  "grupos_por_produto": [],
+  "vagas": [],
+  "creditos": [],
+  "taxa": [],
+  "seguro": [],
+  "lance": []
+ }
+}

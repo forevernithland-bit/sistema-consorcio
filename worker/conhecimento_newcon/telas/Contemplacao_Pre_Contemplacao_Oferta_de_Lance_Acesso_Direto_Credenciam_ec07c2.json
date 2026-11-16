@@ -1,0 +1,96 @@
+{
+ "caminho": "Contemplação > Pré-Contemplação > Oferta de Lance (Acesso Direto) > Credenciamento",
+ "submenu": "CP/PC",
+ "lido_em": "16/11/2026 16:57:18",
+ "url": "https://newkey.cny.com.br/Intranet/CONCP/frmConCpCadCredenciamentoLance_Filtro.aspx",
+ "abriu_tela_nova": true,
+ "leitura": {
+  "url": "https://newkey.cny.com.br/Intranet/CONCP/frmConCpCadCredenciamentoLance_Filtro.aspx",
+  "frames": [
+   {
+    "titulo": "Intranet Newcon",
+    "cabecalhos": [],
+    "campos": [
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtGrupo",
+      "rotulo": "Consorciado:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCota",
+      "rotulo": "Consorciado:",
+      "vis": true,
+      "valor": "0000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtVersao",
+      "rotulo": "",
+      "vis": true,
+      "valor": "00",
+      "postback": false
+     }
+    ],
+    "botoes": [
+     {
+      "id": "ctl00_Conteudo_btnBuscaAvancada",
+      "txt": "Busca avançada...",
+      "vis": true,
+      "tipo": "submit"
+     },
+     {
+      "id": "ctl00_Conteudo_btnLocalizar",
+      "txt": "Localizar",
+      "vis": true,
+      "tipo": "submit"
+     },
+     {
+      "id": "ctl00_Conteudo_btnCancela",
+      "txt": "Cancelar",
+      "vis": true,
+      "tipo": "submit"
+     }
+    ],
+    "abas": [],
+    "tabelas": [],
+    "links": [
+     {
+      "id": "ctl00_Conteudo_hlkVoltar",
+      "txt": "Voltar",
+      "vis": true
+     }
+    ],
+    "texto": "Página Inicial Venda Grupo Cobrança Contemplação Crédito Atendimento Credenciamento de Lance Voltar Identificação do Consorciado Grupo Cota Consorciado:",
+    "frame": "principal"
+   }
+  ]
+ },
+ "avisos_ao_abrir": [],
+ "consulta": null,
+ "notas": {
+  "grupos_por_produto": 1,
+  "vagas": 0,
+  "creditos": 1,
+  "taxa": 0,
+  "seguro": 0,
+  "lance": 3
+ },
+ "provas": {
+  "grupos_por_produto": [],
+  "vagas": [],
+  "creditos": [],
+  "taxa": [],
+  "seguro": [],
+  "lance": [
+   "nome da tela: Contemplação > Pré-Contemplação > Oferta de Lance "
+  ]
+ }
+}

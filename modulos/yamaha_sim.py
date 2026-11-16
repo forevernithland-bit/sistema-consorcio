@@ -80,6 +80,11 @@ def carregar_base_yamaha(_supabase):
     grupos = _rows(supabase, "grupos_yamaha", ordem="grupo")
     assembleias = _rows(supabase, "yamaha_assembleias", ordem="data_assembleia", desc=True)
     resumo = _rows(supabase, "yamaha_grupo_lance_resumo", ordem="grupo")
+    try:   # 16/11/2026: modalidades liberadas, embutido permitido e média por modalidade
+        from modulos.regras_lance_yamaha import carregar_regras
+        regras = carregar_regras(supabase)
+    except Exception:
+        regras = {}
 
     att = {
         "planos": _max_ts(planos, "consultado_em"),
@@ -95,6 +100,7 @@ def carregar_base_yamaha(_supabase):
         "grupos": grupos,
         "assembleias": assembleias,
         "resumo": resumo,
+        "regras": regras,
         "atualizacao": att,
         "gerado_em": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "contagem": {

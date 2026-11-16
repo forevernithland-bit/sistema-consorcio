@@ -1,0 +1,27 @@
+>>> ROBÔ YAMAHA — REGRAS DE LANCE de 24 grupo(s) (só leitura, navegador único)
+[newcon] navegador único já aberto e logado — só abri uma aba.
+  = 10010: já lido hoje
+  + 10015: Livre, Fixo | fixo 30.0 | 2ºfixo None | limit None-None | fidel None | emb usado None | hist []
+  + 10016: Livre, Fixo | fixo 30.0 | 2ºfixo None | limit None-None | fidel None | emb usado None | hist []
+  + 10018: Livre, Fixo | fixo 30.0 | 2ºfixo None | limit None-None | fidel None | emb usado None | hist []
+  + 10019: Livre, Fixo | fixo 30.0 | 2ºfixo None | limit None-None | fidel None | emb usado None | hist []
+  + 10021: Livre, Fixo | fixo 30.0 | 2ºfixo None | limit None-None | fidel None | emb usado None | hist []
+  + 10022: Livre, Fixo | fixo 30.0 | 2ºfixo None | limit None-None | fidel None | emb usado None | hist []
+  + 20487: (formulário fechado agora) | fixo None | 2ºfixo None | limit None-None | fidel None | emb usado None | hist []
+  + 9009: (formulário fechado agora) | fixo None | 2ºfixo None | limit None-None | fidel None | emb usado None | hist ['2º Lance Fixo', 'Lance Fixo']
+  + 9021: Livre, Fixo, 2º Fixo, Limitado | fixo 35.0 | 2ºfixo 25.0 | limit None-100.0 | fidel None | emb usado None | hist []
+  + 9029: Livre, Fixo, 2º Fixo, Limitado | fixo 35.0 | 2ºfixo 25.0 | limit None-100.0 | fidel None | emb usado None | hist []
+  + 9030: (formulário fechado agora) | fixo None | 2ºfixo None | limit None-None | fidel None | emb usado 15.0 | hist ['Lance Fixo', 'Lance Limitado', 'Lance Livre']
+  + 9036: (formulário fechado agora) | fixo None | 2ºfixo None | limit None-None | fidel None | emb usado 15.0 | hist ['Lance Livre']
+  + 9045: (formulário fechado agora) | fixo None | 2ºfixo None | limit None-None | fidel None | emb usado 15.0 | hist ['2º Lance Fixo', 'Lance Fixo', 'Lance Limitado', 'Lance Livre']
+  + 9047: Livre, Fixo, 2º Fixo, Limitado | fixo 35.0 | 2ºfixo 25.0 | limit None-100.0 | fidel None | emb usado None | hist []
+  + 9048: Livre, Fixo, 2º Fixo, Limitado | fixo 35.0 | 2ºfixo 25.0 | limit None-100.0 | fidel None | emb usado None | hist []
+  + 9508: (formulário fechado agora) | fixo None | 2ºfixo None | limit None-None | fidel None | emb usado None | hist ['Lance Limitado']
+  = 9538: já lido hoje
+  + 9542: Livre, Fixo, 2º Fixo, Limitado, Fidelidade | fixo 35.0 | 2ºfixo 10.0 | limit None-100.0 | fidel 100.0 | emb usado None | hist []
+  + 9551: Livre, Fixo, 2º Fixo, Limitado, Fidelidade | fixo 35.0 | 2ºfixo 10.0 | limit None-100.0 | fidel 0.0 | emb usado None | hist []
+  + 9569: Livre, Fixo, 2º Fixo, Limitado, Fidelidade | fixo 35.0 | 2ºfixo 10.0 | limit None-100.0 | fidel 100.0 | emb usado None | hist []
+  + 9572: (formulário fechado agora) | fixo None | 2ºfixo None | limit None-None | fidel None | emb usado 15.0 | hist ['Lance Livre']
+  + 9582: Livre, Fixo, 2º Fixo, Limitado, Fidelidade | fixo 35.0 | 2ºfixo 10.0 | limit None-100.0 | fidel 100.0 | emb usado None | hist []
+  + 9600: Livre, Fixo, Limitado, Fidelidade | fixo 25.0 | 2ºfixo 0.0 | limit None-100.0 | fidel 100.0 | emb usado None | hist []
+  (tabela yamaha_regras_lance ainda não existe — rode a migração 34. Detalhe: {'message': "Could not find the table 'public.yamaha_regras_lance' in the schema)

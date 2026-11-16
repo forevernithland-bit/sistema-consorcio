@@ -238,12 +238,81 @@ def fazer_login(page: Page, context: BrowserContext, login: str, senha: str) -> 
         )
 
 
+HOME_URL = "https://newkey.cny.com.br/Intranet/frmMain.aspx"
+
+
+def garantir_sessao(page: Page, context: BrowserContext, login: str = None, senha: str = None) -> str:
+    """Reaproveita a JANELA que já está aberta: volta pra home e, se a sessão
+    caiu, loga de novo ALI MESMO (sem fechar/abrir navegador).
+    Retorna 'ok' (já estava logado) | 'relogado' | levanta exceção se o navegador morreu
+    ou se o login falhou (quem chama decide se trava)."""
+    try:
+        page.keyboard.press("Escape")
+    except Exception:
+        pass
+    # fecha abas/popups que sobraram de tarefas anteriores (relatórios, boletos)
+    for p in list(context.pages):
+        if p is not page:
+            try:
+                p.close()
+            except Exception:
+                pass
+    page.goto(HOME_URL, wait_until="domcontentloaded")
+    try:
+        page.wait_for_load_state("networkidle", timeout=15000)
+    except Exception:
+        pass
+    if esta_logado(page):
+        return "ok"
+    if not page.locator("#edtUsuario").count():
+        page.goto(os.getenv("NEWCON_URL", HOME_URL), wait_until="domcontentloaded")
+        if esta_logado(page):
+            return "ok"
+    if not (login and senha):
+        raise RuntimeError("sessão do Newcon caiu e não tenho credencial para relogar")
+    fazer_login(page, context, login, senha)
+    try:
+        context.storage_state(path=STORAGE_STATE)
+    except Exception:
+        pass
+    return "relogado"
+
+
 # ------------------------------------------------------------------ oferta
+# Modalidades da tela "Oferta de Lance" (radios ctl00_Conteudo_rgLance_N, value = sigla).
+MODALIDADE_RADIO = {"Lance Livre": "LL", "Lance Fixo": "LF", "2º Lance Fixo": "LS",
+                    "Lance Limitado": "LM", "Lance Fidelidade": "LI"}
+MODALIDADE_ROTULO = {"Lance Livre": "Livre", "Lance Fixo": "Fixo", "2º Lance Fixo": "2º Fixo",
+                     "Lance Limitado": "Limitado", "Lance Fidelidade": "Fidelidade"}
+
+
+def _modalidade_canonica(t) -> str:
+    s = unicodedata.normalize("NFKD", str(t or "")).encode("ascii", "ignore").decode().lower()
+    if "2" in s and "fix" in s:
+        return "2º Lance Fixo"
+    if "fix" in s or not s.strip():
+        return "Lance Fixo"          # padrão histórico do robô
+    if "livre" in s:
+        return "Lance Livre"
+    if "limit" in s:
+        return "Lance Limitado"
+    if "fidel" in s:
+        return "Lance Fidelidade"
+    raise ValueError(f"modalidade de lance desconhecida: {t!r}")
+
+
+def _pct_br(v) -> str:
+    return f"{float(v):.4f}".replace(".", ",")
+
+
 def ofertar_lance(page: Page, pedido: dict, timeout_confirmacao: int):
     """Retorna (status, mensagem, protocolo), onde status é:
        'OK'          -> lance ofertado agora com sucesso
        'JA_OFERTADO' -> a cota já tinha lance; não ofertamos de novo (traz protocolo/data)
-       'FALHA'       -> falha de negócio (nome não confere, sem opção de lance, etc.)"""
+       'FALHA'       -> falha de negócio (nome não confere, sem opção de lance, etc.)
+       'SIMULADO'    -> pedido['simular'] = True: preencheu e clicou em "Simular...", NADA enviado
+       pedido: grupo, cota, cliente, tipo_lance (Livre/Fixo/2º Fixo/Limitado/Fidelidade),
+               pct_lance (Livre/Limitado/Fidelidade), pct_embutido, tipo_reducao, simular"""
     grupo = str(pedido.get("grupo", "")).strip()
     cota = str(pedido.get("cota", "")).strip()
     cliente = str(pedido.get("cliente", "")).strip()
@@ -281,20 +350,138 @@ def ofertar_lance(page: Page, pedido: dict, timeout_confirmacao: int):
     #      (da primeira linha do Histórico) e registramos como "Já estava ofertado".
     txt_oferta = _texto_pagina(page)
     m_data = re.search(r"lance ofertado em[:\s]*(\d{2}/\d{2}/\d{4})", txt_oferta, re.I)
-    if m_data:
+    if m_data and not pedido.get("simular"):   # no teste (simular) segue para preencher
         data_lance = m_data.group(1)
         cam = _print_tela(page, f"ja_ofertado_{grupo}_{cota}")
         return "JA_OFERTADO", (f"Já estava ofertado em {data_lance}. "
                                f"Print: {os.path.basename(cam)}"), None
 
-    # 5) Fixo + Reduzir Parcela + Embutido
-    page.get_by_role("radio", name="Fixo", exact=True).check()
-    page.wait_for_load_state("networkidle")
-    page.get_by_role("radio", name="Reduzir Parcela").check()
+    # 5) Modalidade + forma de redução + % do lance + embutido (16/11/2026: todas as modalidades)
+    #    Se a tela NÃO tem a modalidade pedida (formulário fechado — fora do prazo, cota
+    #    já com lance ativo — ou o grupo não permite), é FALHA DE NEGÓCIO: não repete sozinho.
+    tipo = _modalidade_canonica(pedido.get("tipo_lance"))
+    valor_radio = MODALIDADE_RADIO[tipo]
+    nome_curto = MODALIDADE_ROTULO[tipo]
+    sel_radio = f"input[type=radio][id^='ctl00_Conteudo_rgLance'][value='{valor_radio}']"
+    radio = page.locator(sel_radio)
+    try:
+        radio.first.wait_for(state="attached", timeout=12000)
+        desligado = radio.first.is_disabled()
+    except PWTimeout:
+        desligado = None
+    if desligado is None or desligado:
+        try:
+            opcoes = page.evaluate("""() => [...document.querySelectorAll('input[type=radio]')]
+                .filter(r => (r.id||'').includes('rgLance'))
+                .map(r => { const l = r.id && document.querySelector('label[for="'+r.id+'"]');
+                            return (l ? l.innerText : r.value).trim() + (r.disabled ? ' (bloqueado)' : ''); })""")
+        except Exception:
+            opcoes = []
+        aviso = ""
+        m_av = re.search(r"([^\n]{0,80}(n[ãa]o (é )?permitid|n[ãa]o (est[áa] )?apt|encerrad|fora do per[íi]odo|"
+                         r"inadimpl|n[ãa]o h[áa] assembleia|bloquead)[^\n]{0,80})", txt_oferta, re.I)
+        if m_av:
+            aviso = f" Aviso na tela: \"{m_av.group(1).strip()[:150]}\"."
+        motivo = ("o grupo não libera essa modalidade" if desligado else
+                  "o formulário de oferta está fechado (fora do prazo ou a cota já tem lance ativo)")
+        cam = _print_tela(page, f"sem_opcao_{valor_radio}_{grupo}_{cota}")
+        return "FALHA", (f"Sem a opção '{nome_curto}' na Oferta de Lance de {grupo}/{cota}: {motivo} "
+                         f"(opções na tela: {', '.join(opcoes) or 'nenhuma'}).{aviso} "
+                         f"Não repito sozinho — conferir a cota. Print: {os.path.basename(cam)}"), None
+    radio.first.check()
     page.wait_for_load_state("networkidle")
 
-    emb_txt = f"{pct_embutido:.4f}".replace(".", ",")  # ex: 15.0 -> "15,0000"
-    page.locator("#ctl00_Conteudo_edtEmbutido").fill(emb_txt)
+    reducao = str(pedido.get("tipo_reducao") or "Reduzir Parcela")
+    nome_red = "Reduzir Prazo" if "prazo" in reducao.lower() else "Reduzir Parcela"
+    try:
+        page.get_by_role("radio", name=nome_red).check()
+    except Exception:   # fallback pelo id (0 = Prazo, 1 = Parcela)
+        page.locator("#ctl00_Conteudo_rblFormasLance_" + ("0" if nome_red == "Reduzir Prazo" else "1")).check()
+    page.wait_for_load_state("networkidle")
+
+    # % do lance: no Fixo/2º Fixo o Newcon preenche sozinho; nas outras a gente digita.
+    pct_lance = pedido.get("pct_lance")
+    if valor_radio in ("LL", "LM", "LI"):
+        if not pct_lance:
+            return "FALHA", f"Pedido de {nome_curto} sem % de lance ({grupo}/{cota}).", None
+        try:
+            page.locator("#ctl00_Conteudo_rblTipoOferta").select_option(label="Percentual")
+        except Exception:
+            pass
+        campo = page.locator("#ctl00_Conteudo_edtOferta")
+        if not campo.is_enabled():
+            cam = _print_tela(page, f"oferta_bloqueada_{valor_radio}_{grupo}_{cota}")
+            return "FALHA", (f"No {nome_curto} de {grupo}/{cota} o campo do % do lance está bloqueado no "
+                             f"Newcon. Print: {os.path.basename(cam)}"), None
+        campo.fill(_pct_br(pct_lance))
+        try:
+            campo.press("Tab")
+            page.wait_for_load_state("networkidle")
+        except Exception:
+            pass
+
+    emb_txt = _pct_br(pct_embutido)  # ex: 15.0 -> "15,0000"
+    try:
+        page.locator("#ctl00_Conteudo_cbxLanceEmbutido").select_option(label="Percentual")
+    except Exception:
+        pass
+    campo_emb = page.locator("#ctl00_Conteudo_edtEmbutido")
+    if campo_emb.count() and not campo_emb.is_enabled():
+        # nessa modalidade o grupo NÃO aceita embutido (campo travado no Newcon)
+        if pct_embutido > 0:
+            cam = _print_tela(page, f"sem_embutido_{valor_radio}_{grupo}_{cota}")
+            return "FALHA", (f"No {nome_curto} do grupo {grupo} o Newcon não aceita lance embutido "
+                             f"(campo travado). Refaça com embutido 0% (tudo com recursos próprios). "
+                             f"Print: {os.path.basename(cam)}"), None
+    else:
+        campo_emb.fill(emb_txt)
+        try:
+            campo_emb.press("Tab")
+            page.wait_for_load_state("networkidle")
+        except Exception:
+            pass
+
+    # 5.1) MODO SIMULAR (teste / conferência): clica em "Simular..." e PARA. Nunca confirma.
+    # anota os alertas do Newcon (quem aceita/recusa é outro handler). Um ouvinte só por página.
+    avisos = getattr(page, "_avisos_newcon", None)
+    if avisos is None:
+        avisos = []
+        page.on("dialog", lambda d: avisos.append(d.message))
+        try:
+            page._avisos_newcon = avisos
+        except Exception:
+            pass
+    avisos.clear()
+    if pedido.get("simular"):
+        antes = _texto_pagina(page)
+        try:
+            page.locator("#ctl00_Conteudo_btnSimula").click(timeout=20000)
+            page.wait_for_load_state("networkidle")
+            page.wait_for_timeout(1500)
+            if avisos:
+                cam = _print_tela(page, f"simulado_aviso_{valor_radio}_{grupo}_{cota}")
+                try:
+                    page.goto(HOME_URL, wait_until="domcontentloaded")
+                except Exception:
+                    pass
+                return "FALHA", (f"SIMULAÇÃO recusada pelo Newcon ({nome_curto} {grupo}/{cota}): "
+                                 f"\"{' / '.join(avisos)[:300]}\". Print: {os.path.basename(cam)}"), None
+        except Exception as e:
+            cam = _print_tela(page, f"simular_erro_{grupo}_{cota}")
+            return "FALHA", f"Simular não respondeu: {str(e)[:120]}. Print: {os.path.basename(cam)}", None
+        depois = _texto_pagina(page)
+        novas = [l.strip() for l in depois.splitlines() if l.strip() and l.strip() not in antes][:25]
+        cam = _print_tela(page, f"simulado_{valor_radio}_{grupo}_{cota}")
+        oferta = page.locator("#ctl00_Conteudo_edtOferta").input_value() if page.locator(
+            "#ctl00_Conteudo_edtOferta").count() else "?"
+        # sai sem gravar nada. NÃO clica em "Cancelar" (nessa tela ele pode cancelar
+        # uma oferta já registrada) — só volta para a home.
+        try:
+            page.goto(HOME_URL, wait_until="domcontentloaded")
+        except Exception:
+            pass
+        return "SIMULADO", (f"SIMULAÇÃO (nada enviado): {nome_curto}, lance {oferta}%, embutido {emb_txt}%, "
+                            f"{nome_red}. Tela: {' | '.join(novas)[:600]}. Print: {os.path.basename(cam)}"), None
 
     # 6) Comprovante ANTES de confirmar + pausa opcional de conferência
     _print_tela(page, f"antes_confirmar_{grupo}_{cota}")
@@ -316,9 +503,12 @@ def ofertar_lance(page: Page, pedido: dict, timeout_confirmacao: int):
     if sucesso:
         prot_log = protocolo or "conferir-print"
         prot_txt = protocolo if protocolo else "(ver comprovante no print)"
-        return "OK", (f"Lance Fixo ofertado (embutido {emb_txt}%). Protocolo {prot_txt}. "
+        return "OK", (f"{tipo} ofertado ({nome_red}, embutido {emb_txt}%). Protocolo {prot_txt}. "
                       f"Comprovante: {os.path.basename(cam)}"), prot_log
 
+    if avisos:   # o Newcon recusou com um alerta (ex.: "Cota não está apta para ... fidelidade")
+        return "FALHA", (f"O Newcon recusou o {nome_curto} de {grupo}/{cota}: \"{' / '.join(avisos)[:300]}\". "
+                         f"Confira no Newcon. Print: {os.path.basename(cam)}"), None
     # ZONA SENSÍVEL: não vimos o comprovante — o lance PODE ter ido. Não repetir sozinho.
     return "FALHA", (f"Cliquei em Confirmar, mas não confirmei o comprovante em {timeout_confirmacao}s. "
                      f"CONFIRA MANUALMENTE no Newcon antes de repetir — o lance pode ter sido "

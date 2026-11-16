@@ -4,6 +4,12 @@ import pandas as pd
 from datetime import datetime
 from escopo import filtrar_por_vendedor, filtrar_fila, preencher_cliente
 from utils import formatar_brl_puro, normalizar_string, normalizar_produto, dt_br
+from modulos import regras_lance_yamaha as RL
+
+# 16/11/2026: todas as modalidades que o grupo liberar + repetir nos próximos meses.
+MODS_CURTOS = ["Fixo", "2º Fixo", "Livre", "Limitado", "Fidelidade"]
+REPETIR_OPCOES = ["Só este mês", "2 meses", "3 meses", "4 meses", "6 meses", "12 meses", "Ilimitado"]
+REDUZIR_OPCOES = ["Parcela", "Prazo"]
 
 # Administradoras que já têm automação de lance configurada no Worker.
 # Por enquanto só a Yamaha (site newkey.cny.com.br).
@@ -73,7 +79,13 @@ def _mapa_ultimo_lance(supabase, venda_ids):
     mapa = {}
     for r in (res.data or []):
         vid = r.get("venda_id")
-        if vid is not None and vid not in mapa:  # como veio ordenado desc, o 1º é o mais recente
+        if vid is None:
+            continue
+        # como veio ordenado desc, o 1º é o mais recente. Uma SIMULAÇÃO (teste) não
+        # esconde um pedido de verdade do mês.
+        ant = mapa.get(vid)
+        if ant is None or ((ant.get("status") or "").upper() == "SIMULADO"
+                           and (r.get("status") or "").upper() != "SIMULADO"):
             mapa[vid] = r
     return mapa
 
@@ -99,6 +111,8 @@ def _rotulo_situacao(pedido):
     if status == "JA_OFERTADO":
         m = re.search(r"(\d{2}/\d{2}/\d{4})", pedido.get("mensagem") or "")
         return f"☑️ Já ofertado em {m.group(1)}" if m else "☑️ Já estava ofertado"
+    if status == "SIMULADO":
+        return "🧪 Simulado (teste)"
     return status or "—"
 
 
@@ -108,7 +122,7 @@ def render_ofertar_lance(supabase, df_vendas_global):
 
     mes_atual = datetime.today().strftime("%m/%Y")
     from modulos.tema import cabecalho; cabecalho("Ofertar Lance (Yamaha)", "🎯", "Marque as cotas e o robô do escritório oferta no Newcon, uma a uma.",
-              chips=[(f"Referência {mes_atual}", "plain"), ("Lance Fixo", "brand")], eyebrow="Robô Yamaha")
+              chips=[(f"Referência {mes_atual}", "plain"), ("Todas as modalidades", "brand")], eyebrow="Robô Yamaha")
     st.caption(
         f"Marque as cotas e clique em **Ofertar Lance**. O robô do escritório oferta cota a cota "
         f"no Newcon, aguardando a confirmação de cada uma. **Canceladas e contempladas não aparecem** "
@@ -168,19 +182,21 @@ def render_ofertar_lance(supabase, df_vendas_global):
     _resumo_situacoes(venda_ids, mapa_ultimo)
 
     # ------------------------------------------------------------------
-    # 3. Monta a tabela editável
+    # 3. Regras do grupo (modalidades liberadas, % fixo, embutido) + médias
     # ------------------------------------------------------------------
+    regras = RL.carregar_regras(supabase)
+
     linhas = []
     for _, r in df.iterrows():
         vid = int(r['id'])
         pedido = mapa_ultimo.get(vid)
         status_atual = (pedido.get("status") or "").upper() if pedido else ""
         # "Já tratado no mês": na fila, em processamento, ofertado ou já-ofertado.
-        # (ERRO fica de fora, pois precisa de atenção / pode ser reofertado.)
+        # (ERRO e SIMULADO ficam de fora: podem ser (re)ofertados.)
         na_fila = status_atual in ("PENDENTE", "PROCESSANDO", "SUCESSO", "JA_OFERTADO")
-        regra = _regra_lance(r.get('PRODUTO', ''))
-        lance = regra["lance"]
-        embutido = regra["embutido"]
+        rg = RL.regra_do_grupo(regras, r.get('GRUPO', ''), r.get('PRODUTO', ''))
+        lance = float(rg["fixo_pct"] or _regra_lance(r.get('PRODUTO', ''))["lance"] or 0)
+        embutido = min(float(rg["embutido_max_pct"] or 0), lance)
         linhas.append({
             "venda_id": vid,
             "Selecionar": False,
@@ -190,10 +206,16 @@ def render_ofertar_lance(supabase, df_vendas_global):
             "Produto": r.get('PRODUTO', ''),
             "Vendedor": r.get('VENDEDOR', ''),
             "Valor": formatar_brl_puro(r.get('Valor_Numerico', 0)),
-            "Lance Fixo (%)": lance,
+            "Modalidade": "Fixo",
+            "Lance (%)": lance,
             "Embutido (%)": embutido,
             "Próprios (%)": max(0.0, lance - embutido),
+            "Reduzir": "Parcela",
+            "Repetir": "Só este mês",
+            "Regras do grupo": RL.resumo_txt(rg),
+            "Média de lance (últ. assembleias)": RL.medias_txt(rg),
             "_na_fila": na_fila,
+            "_grupo": str(r.get('GRUPO', '')).strip(),
         })
     df_edit = pd.DataFrame(linhas)
 
@@ -202,9 +224,11 @@ def render_ofertar_lance(supabase, df_vendas_global):
         marcar_todos = st.checkbox("Marcar todos", value=False, key="lance_marcar_todos")
     with c_top2:
         st.caption(
-            "💡 Só **Lance Fixo** por enquanto. Os percentuais já vêm pré-preenchidos por produto; "
-            "você pode ajustar **Lance Fixo (%)** e **Embutido (%)** por linha se o grupo exigir. "
-            "**Próprios (%) = Lance Fixo − Embutido** (recalcula ao atualizar a tela)."
+            "💡 Escolha a **Modalidade** que o grupo libera (coluna *Regras do grupo*). "
+            "**Fixo / 2º Fixo**: o % do lance é o do grupo (o Newcon preenche sozinho). "
+            "**Livre / Limitado / Fidelidade**: digite o **Lance (%)** total; o **Embutido (%)** sai do "
+            "crédito (até o permitido no grupo) e o resto são **recursos próprios**. "
+            "**Repetir**: deixa o mesmo lance programado para os próximos meses."
         )
 
     if marcar_todos:
@@ -214,6 +238,7 @@ def render_ofertar_lance(supabase, df_vendas_global):
     col_config = {
         "venda_id": None,
         "_na_fila": None,
+        "_grupo": None,
         "Selecionar": st.column_config.CheckboxColumn("✔️", help="Marque para ofertar o lance"),
         "Cliente": st.column_config.TextColumn("Cliente", disabled=True, width="small"),
         "Situação": st.column_config.TextColumn("Situação", disabled=True, width="medium"),
@@ -221,9 +246,19 @@ def render_ofertar_lance(supabase, df_vendas_global):
         "Produto": st.column_config.TextColumn("Produto", disabled=True, width="small"),
         "Vendedor": st.column_config.TextColumn("Vendedor", disabled=True, width="small"),
         "Valor": st.column_config.TextColumn("Valor da Carta", disabled=True, width="small"),
-        "Lance Fixo (%)": st.column_config.NumberColumn("Lance Fixo (%)", min_value=0.0, max_value=100.0, step=0.5, format="%.2f%%", help="% total do lance fixo"),
-        "Embutido (%)": st.column_config.NumberColumn("Embutido (%)", min_value=0.0, max_value=100.0, step=0.5, format="%.2f%%", help="% que sai do próprio crédito"),
-        "Próprios (%)": st.column_config.NumberColumn("Próprios (%)", format="%.2f%%", help="Recursos próprios = Lance Fixo − Embutido (calculado)"),
+        "Modalidade": st.column_config.SelectboxColumn("Modalidade", options=MODS_CURTOS, required=True,
+                                                       help="Só vale a que o grupo libera (ver Regras do grupo)"),
+        "Lance (%)": st.column_config.NumberColumn("Lance (%)", min_value=0.0, max_value=100.0, step=0.5, format="%.2f%%",
+                                                   help="% TOTAL do lance (embutido + próprios). No Fixo/2º Fixo vale o % do grupo."),
+        "Embutido (%)": st.column_config.NumberColumn("Embutido (%)", min_value=0.0, max_value=100.0, step=0.5, format="%.2f%%",
+                                                      help="% que sai do próprio crédito — até o permitido no grupo"),
+        "Próprios (%)": st.column_config.NumberColumn("Próprios (%)", format="%.2f%%", help="Lance − Embutido (recalcula no resumo abaixo)"),
+        "Reduzir": st.column_config.SelectboxColumn("Reduzir", options=REDUZIR_OPCOES, required=True,
+                                                    help="Depois de contemplar: reduzir o valor da parcela ou o prazo"),
+        "Repetir": st.column_config.SelectboxColumn("Repetir", options=REPETIR_OPCOES, required=True,
+                                                    help="Oferta o mesmo lance nos próximos meses (até contemplar)"),
+        "Regras do grupo": st.column_config.TextColumn("Regras do grupo", disabled=True, width="medium"),
+        "Média de lance (últ. assembleias)": st.column_config.TextColumn("Média de lance (últ. assembleias)", disabled=True, width="medium"),
     }
 
     # A key muda junto com "marcar todos" para o editor refletir a marcação em massa
@@ -231,7 +266,8 @@ def render_ofertar_lance(supabase, df_vendas_global):
     df_result = st.data_editor(
         df_edit,
         column_config=col_config,
-        disabled=["Cliente", "Vendedor", "Produto", "Grupo/Cota", "Valor", "Próprios (%)", "Situação"],
+        disabled=["Cliente", "Vendedor", "Produto", "Grupo/Cota", "Valor", "Próprios (%)", "Situação",
+                  "Regras do grupo", "Média de lance (últ. assembleias)"],
         hide_index=True,
         use_container_width=True,
         key=editor_key,
@@ -240,22 +276,100 @@ def render_ofertar_lance(supabase, df_vendas_global):
     selecionados = df_result[df_result['Selecionar'] == True]  # noqa: E712
     qtd = len(selecionados)
 
+    # Resumo + conferência de cada linha contra as regras do grupo
+    pedidos, problemas = [], []
+    for _, r in selecionados.iterrows():
+        rg = RL.regra_do_grupo(regras, r["_grupo"], r.get("Produto"))
+        ok, msg, ped = _validar_linha(r, rg)
+        (pedidos if ok else problemas).append((r, msg, ped))
+    if qtd:
+        from modulos.tema import secao
+        secao("Conferência antes de enviar", "🔎", "Como cada lance vai para o robô, já conferido com as regras do grupo.")
+        conf = []
+        for r, msg, ped in pedidos + problemas:
+            conf.append({
+                "Cliente": r["Cliente"], "Grupo/Cota": r["Grupo/Cota"],
+                "Modalidade": ped["tipo_lance"] if ped else r["Modalidade"],
+                "Lance": RL.pct_txt(ped["pct_lance"]) if ped else "—",
+                "Embutido": RL.pct_txt(ped["pct_embutido"]) if ped else "—",
+                "Próprios": RL.pct_txt(ped["pct_proprio"]) if ped else "—",
+                "Reduzir": r["Reduzir"], "Repetir": r["Repetir"],
+                "Conferência": ("✅ " + msg) if ped else ("⛔ " + msg),
+            })
+        st.dataframe(pd.DataFrame(conf), hide_index=True, use_container_width=True)
+
     st.write("")
-    c_bt1, c_bt2 = st.columns([1, 3])
+    c_bt1, c_bt2, c_bt3 = st.columns([1, 1.2, 2])
     with c_bt1:
         ofertar = st.button(
-            f"🚀 Ofertar Lance ({qtd})" if qtd else "🚀 Ofertar Lance",
-            type="primary", use_container_width=True, disabled=(qtd == 0),
+            f"🚀 Ofertar Lance ({len(pedidos)})" if pedidos else "🚀 Ofertar Lance",
+            type="primary", use_container_width=True, disabled=(len(pedidos) == 0),
         )
     with c_bt2:
+        simular = False
+        if is_master:
+            simular = st.checkbox("🧪 Só simular no Newcon", value=False, key="lance_so_simular",
+                                  help="Teste: o robô preenche a oferta e clica em 'Simular...', "
+                                       "SEM confirmar. Nada é enviado à Yamaha.")
+    with c_bt3:
         if qtd:
-            st.caption(f"{qtd} cota(s) selecionada(s) serão enviadas para a fila do robô.")
+            st.caption(f"{len(pedidos)} de {qtd} cota(s) prontas para a fila do robô"
+                       + (f" · {len(problemas)} com problema (não vão)" if problemas else "") + ".")
 
-    if ofertar and qtd:
-        _enfileirar(supabase, selecionados, mapa_ultimo)
+    if ofertar and pedidos:
+        _enfileirar(supabase, pedidos, mapa_ultimo, simular=simular)
 
+    _painel_regras(regras, df)
+    _painel_programados(supabase, is_master, df_vendas_global)
     st.divider()
     _painel_status(supabase, is_master, df_vendas_global)
+
+
+def _validar_linha(r, rg):
+    """Confere a linha com as regras do grupo. Devolve (ok, mensagem, pedido|None)."""
+    mod = RL.DO_CURTO.get(r.get("Modalidade") or "Fixo", "Lance Fixo")
+    if not rg["liberadas"].get(mod):
+        lib = ", ".join(RL.CURTO[m] for m in RL.MODALIDADES if rg["liberadas"].get(m))
+        return False, f"o grupo {rg['grupo']} não libera {RL.CURTO[mod]} (libera: {lib})", None
+    emb = float(r.get("Embutido (%)") or 0)
+    if mod == "Lance Fixo":
+        lance = float(rg["fixo_pct"] or r.get("Lance (%)") or 0)
+    elif mod == "2º Lance Fixo":
+        lance = float(rg["fixo2_pct"] or 0)
+        if not lance:
+            return False, f"não sei o % do 2º fixo do grupo {rg['grupo']} — o robô ainda não leu", None
+    else:
+        lance = float(r.get("Lance (%)") or 0)
+        if lance <= 0:
+            return False, "digite o Lance (%)", None
+        # (Lance Mínimo/Máximo da tela são DA COTA lida — dependem do saldo —, não do grupo;
+        #  por isso não travam aqui. Limitado/Fidelidade máximos são do grupo.)
+        lim_max = {"Lance Limitado": rg.get("limitado_max_pct"),
+                   "Lance Fidelidade": rg.get("fidelidade_max_pct")}.get(mod)
+        lim_min = {"Lance Limitado": rg.get("limitado_min_pct")}.get(mod)
+        if lim_max and lance > lim_max:
+            return False, f"{RL.CURTO[mod]} do grupo vai até {RL.pct_txt(lim_max)}", None
+        if lim_min and lance < lim_min:
+            return False, f"{RL.CURTO[mod]} do grupo começa em {RL.pct_txt(lim_min)}", None
+    emb_max = float(rg["embutido_max_pct"] or 0)
+    if mod in ("Lance Fixo", "2º Lance Fixo"):
+        emb = min(emb, emb_max, lance)     # fixo: % do grupo; embutido cabe nele
+    if mod == "Lance Limitado" and emb > 0:
+        # testado no Newcon em 16/11/2026 (9047, 9538): no Limitado o campo de embutido fica travado
+        return False, "o Limitado não aceita embutido no Newcon — use Embutido 0% (tudo recursos próprios)", None
+    if emb > emb_max + 1e-9:
+        return False, f"embutido acima do permitido no grupo ({RL.pct_txt(emb_max)}, {rg['embutido_fonte']})", None
+    if emb > lance + 1e-9:
+        return False, "embutido maior que o lance", None
+    rep = r.get("Repetir") or "Só este mês"
+    meses = None if rep == "Ilimitado" else int(rep.split()[0]) if rep[0].isdigit() else 1
+    ped = {"tipo_lance": mod, "pct_lance": round(lance, 4), "pct_embutido": round(emb, 4),
+           "pct_proprio": round(max(0.0, lance - emb), 4),
+           "tipo_reducao": "Reduzir Prazo" if r.get("Reduzir") == "Prazo" else "Reduzir Parcela",
+           "meses": meses}
+    media = (rg["medias"].get(mod) or {}).get("media")
+    extra = f" · média do grupo {RL.pct_txt(media)}" if media else ""
+    return True, f"ok{extra}", ped
 
 
 def _resumo_situacoes(venda_ids, mapa_ultimo):
@@ -273,30 +387,46 @@ def _resumo_situacoes(venda_ids, mapa_ultimo):
     linha_chips(chips)
 
 
-def _enfileirar(supabase, selecionados, mapa_ultimo):
-    """Grava os pedidos selecionados na fila_automacao (status PENDENTE)."""
+def _enfileirar(supabase, pedidos, mapa_ultimo, simular=False):
+    """Grava os pedidos conferidos na fila_automacao (status PENDENTE).
+    Se 'Repetir' > 1 mês (ou Ilimitado), cria também a programação em
+    lances_programados — o robô põe o pedido dos meses seguintes sozinho."""
     usuario = st.session_state.get('usuario_logado', 'desconhecido')
-    inseridos, pulados, erros = 0, 0, 0
+    inseridos, pulados, programados = 0, 0, 0
 
-    for _, r in selecionados.iterrows():
+    for r, _msg, ped in pedidos:
         vid = int(r['venda_id'])
 
         # Evita duplicar no mês: se a cota já está na fila, em processamento,
         # ofertada ou já-ofertada NESTE mês, pula (a conferência é mensal).
         pedido_ant = mapa_ultimo.get(vid)
-        if pedido_ant and (pedido_ant.get("status") or "").upper() in (
+        if not simular and pedido_ant and (pedido_ant.get("status") or "").upper() in (
                 "PENDENTE", "PROCESSANDO", "SUCESSO", "JA_OFERTADO"):
             pulados += 1
             continue
-
-        pct_lance = float(r['Lance Fixo (%)'])
-        pct_embutido = float(r['Embutido (%)'])
-        pct_proprio = max(0.0, pct_lance - pct_embutido)
 
         grupo, cota = "", ""
         gc = str(r.get('Grupo/Cota', ''))
         if "/" in gc:
             grupo, cota = gc.split("/", 1)
+        grupo, cota = grupo.strip(), cota.strip()
+
+        prog_id = None
+        if not simular and ped["meses"] != 1:
+            try:
+                res = supabase.table("lances_programados").insert({
+                    "venda_id": vid, "cliente": r.get('Cliente'), "vendedor": r.get('Vendedor'),
+                    "produto": r.get('Produto'), "grupo": grupo, "cota": cota,
+                    "tipo_lance": ped["tipo_lance"], "pct_lance": ped["pct_lance"],
+                    "pct_embutido": ped["pct_embutido"], "pct_proprio": ped["pct_proprio"],
+                    "tipo_reducao": ped["tipo_reducao"], "meses_total": ped["meses"],
+                    "criado_por": usuario,
+                }).execute()
+                prog_id = (res.data or [{}])[0].get("id")
+                programados += 1
+            except Exception as e:
+                st.error(f"Não consegui programar a repetição de {r.get('Cliente')} ({gc}): {e}. "
+                         f"O lance deste mês vai assim mesmo.")
 
         payload = {
             "tipo": "LANCE",
@@ -305,28 +435,112 @@ def _enfileirar(supabase, selecionados, mapa_ultimo):
             "vendedor": r.get('Vendedor'),
             "produto": r.get('Produto'),
             "administradora": "Yamaha",
-            "grupo": grupo.strip(),
-            "cota": cota.strip(),
-            "tipo_lance": "Lance Fixo",
-            "pct_lance": pct_lance,
-            "pct_embutido": pct_embutido,
-            "pct_proprio": pct_proprio,
+            "grupo": grupo,
+            "cota": cota,
+            "tipo_lance": ped["tipo_lance"],
+            "pct_lance": ped["pct_lance"],
+            "pct_embutido": ped["pct_embutido"],
+            "pct_proprio": ped["pct_proprio"],
+            "tipo_reducao": ped["tipo_reducao"],
             "status": "PENDENTE",
-            "solicitado_por": usuario,
+            "solicitado_por": usuario + (" (teste)" if simular else ""),
         }
+        if prog_id:
+            payload["programado_id"] = prog_id
+        if simular:
+            payload["payload"] = {"simular": True}
         try:
             supabase.table("fila_automacao").insert(payload).execute()
             inseridos += 1
         except Exception as e:
-            erros += 1
+            # banco sem a migração 34 (colunas novas): só aceita o Fixo com Reduzir Parcela
+            if ("tipo_reducao" in str(e) or "programado_id" in str(e)) and \
+                    ped["tipo_reducao"] == "Reduzir Parcela" and not prog_id:
+                payload.pop("tipo_reducao", None)
+                try:
+                    supabase.table("fila_automacao").insert(payload).execute()
+                    inseridos += 1
+                    continue
+                except Exception as e2:
+                    e = e2
             st.error(f"Erro ao enfileirar {r.get('Cliente')} ({gc}): {e}")
 
     if inseridos:
-        st.success(f"✅ {inseridos} lance(s) enviados para a fila! O robô vai processar em seguida.")
+        st.success(f"✅ {inseridos} lance(s) enviados para a fila"
+                   + (" em MODO TESTE (só simular)" if simular else "")
+                   + (f" · {programados} programado(s) para os próximos meses" if programados else "")
+                   + ". O robô vai processar em seguida.")
     if pulados:
         st.warning(f"⚠️ {pulados} cota(s) já tratada(s) neste mês (na fila ou ofertada) foram ignoradas.")
     if inseridos:
         st.rerun()
+
+
+def _painel_regras(regras, df):
+    """Tabela com as regras e as médias de lance dos grupos da lista."""
+    grupos = sorted({str(g).strip() for g in df['GRUPO'].tolist() if str(g).strip()},
+                    key=lambda x: (len(x), x))
+    prod_por_grupo = {str(a).strip(): b for a, b in zip(df['GRUPO'], df['PRODUTO'])}
+    with st.expander(f"📊 Regras e médias de lance dos grupos ({len(grupos)})", expanded=False):
+        linhas = []
+        for g in grupos:
+            rg = RL.regra_do_grupo(regras, g, prod_por_grupo.get(g))
+            md = rg["medias"]
+            linhas.append({
+                "Grupo": g, "Produto": rg["produto"].title(),
+                "Modalidades liberadas": ", ".join(RL.CURTO[m] for m in RL.MODALIDADES if rg["liberadas"].get(m)),
+                "Fixo": RL.pct_txt(rg["fixo_pct"]),
+                "2º Fixo": RL.pct_txt(rg["fixo2_pct"]) if rg["liberadas"].get("2º Lance Fixo") else "—",
+                "Limitado até": RL.pct_txt(rg["limitado_max_pct"]) if rg["liberadas"].get("Lance Limitado") else "—",
+                "Fidelidade até": RL.pct_txt(rg["fidelidade_max_pct"]) if rg["liberadas"].get("Lance Fidelidade") else "—",
+                "Embutido permitido": f"{RL.pct_txt(rg['embutido_max_pct'])} ({rg['embutido_fonte']})",
+                **{f"Média {RL.CURTO[m]}": (f"{RL.pct_txt(md[m]['media'])} ({md[m]['n']})" if m in md else "—")
+                   for m in RL.MODALIDADES},
+                "Fonte": rg["fonte_modalidades"],
+            })
+        st.dataframe(pd.DataFrame(linhas), hide_index=True, use_container_width=True)
+        st.caption(f"Médias = % de lance dos contemplados nas últimas {RL.N_ASSEMBLEIAS_MEDIA} assembleias de cada "
+                   "grupo (entre parênteses, quantos contemplados). Modalidades e limites: lidos pelo robô na tela "
+                   "'Oferta de Lance' do Newcon; sem leitura, vale o que já apareceu nas contemplações do grupo + "
+                   "regra geral. Embutido: tabela do grupo > regra geral do produto.")
+
+
+def _painel_programados(supabase, is_master, df_vendas_global=None):
+    """Lances que se repetem nos próximos meses (com botão de parar)."""
+    try:
+        progs = (supabase.table("lances_programados").select("*").eq("ativo", True)
+                 .order("criado_em", desc=True).execute().data or [])
+    except Exception:
+        return   # migração 34 ainda não rodada
+    if not progs:
+        return
+    dfp = pd.DataFrame(progs)
+    dfp = preencher_cliente(dfp, df_vendas_global) if df_vendas_global is not None else dfp
+    dfp = filtrar_fila(dfp, df_vendas_global, eh_adm=is_master)
+    if dfp is None or dfp.empty:
+        return
+    with st.expander(f"📆 Lances programados para os próximos meses ({len(dfp)})", expanded=False):
+        dfp["Cliente"] = dfp["cliente"].apply(_nome_curto)
+        dfp["Grupo/Cota"] = dfp["grupo"].astype(str) + "/" + dfp["cota"].astype(str)
+        dfp["Lance"] = dfp.apply(lambda x: f"{RL.pct_txt(x.get('pct_lance'))} (emb {RL.pct_txt(x.get('pct_embutido'))})", axis=1)
+        dfp["Meses"] = dfp.apply(lambda x: f"{int(x.get('meses_feitos') or 0)}/"
+                                 + (str(int(x['meses_total'])) if pd.notna(x.get('meses_total')) else "∞"), axis=1)
+        dfp["Parar"] = False
+        res = st.data_editor(
+            dfp[["id", "Parar", "Cliente", "Grupo/Cota", "tipo_lance", "Lance", "tipo_reducao", "Meses", "ultimo_mes"]]
+            .rename(columns={"tipo_lance": "Modalidade", "tipo_reducao": "Reduzir", "ultimo_mes": "Último mês"}),
+            column_config={"id": None, "Parar": st.column_config.CheckboxColumn("⏹️", help="Marque para parar de repetir")},
+            disabled=["Cliente", "Grupo/Cota", "Modalidade", "Lance", "Reduzir", "Meses", "Último mês"],
+            hide_index=True, use_container_width=True, key="editor_programados")
+        parar = res[res["Parar"] == True]  # noqa: E712
+        if len(parar) and st.button(f"⏹️ Parar {len(parar)} programação(ões)", key="bt_parar_prog"):
+            for pid in parar["id"].tolist():
+                supabase.table("lances_programados").update({"ativo": False}).eq("id", int(pid)).execute()
+            st.success("Programação parada. Os lances já enviados não mudam.")
+            st.rerun()
+        st.caption("O robô põe o lance de cada mês na fila sozinho (se o Newcon recusar porque a oferta "
+                   "ainda não abriu, tenta de novo no dia seguinte). Para quando completa os meses, "
+                   "quando você para aqui, ou quando a cota é contemplada/cancelada.")
 
 
 def _painel_status(supabase, is_master, df_vendas_global=None):

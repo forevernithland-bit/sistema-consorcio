@@ -1,0 +1,101 @@
+{
+ "caminho": "Crédito > Concessão de Crédito > Concessão de Crédito > Simulador de Documentos",
+ "submenu": "CR/CR",
+ "lido_em": "16/11/2026 16:59:29",
+ "url": "https://newkey.cny.com.br/Intranet/CONCR/frmConCrPrcSimuladorDocto.aspx",
+ "abriu_tela_nova": true,
+ "leitura": {
+  "url": "https://newkey.cny.com.br/Intranet/CONCR/frmConCrPrcSimuladorDocto.aspx",
+  "frames": [
+   {
+    "titulo": "Intranet Newcon",
+    "cabecalhos": [],
+    "campos": [
+     {
+      "tag": "input",
+      "tipo": "radio",
+      "id": "ctl00_Conteudo_rblProduto_0",
+      "rotulo": "Bem Móvel",
+      "vis": true,
+      "valor": "M",
+      "postback": true,
+      "marcado": false
+     },
+     {
+      "tag": "input",
+      "tipo": "radio",
+      "id": "ctl00_Conteudo_rblProduto_1",
+      "rotulo": "Bem Imóvel",
+      "vis": true,
+      "valor": "I",
+      "postback": true,
+      "marcado": false
+     },
+     {
+      "tag": "input",
+      "tipo": "radio",
+      "id": "ctl00_Conteudo_rblProduto_2",
+      "rotulo": "Serviços",
+      "vis": true,
+      "valor": "S",
+      "postback": true,
+      "marcado": false
+     },
+     {
+      "tag": "input",
+      "tipo": "radio",
+      "id": "ctl00_Conteudo_rblProduto_3",
+      "rotulo": "Outros",
+      "vis": true,
+      "valor": "O",
+      "postback": true,
+      "marcado": false
+     }
+    ],
+    "botoes": [],
+    "abas": [
+     "Selecionar a Aquisição"
+    ],
+    "tabelas": [],
+    "links": [
+     {
+      "id": "ctl00_Conteudo_lkbVoltar",
+      "txt": "Voltar",
+      "vis": true
+     },
+     {
+      "id": "ctl00_Conteudo_Tab_Aquisicao",
+      "txt": "Selecionar a Aquisição",
+      "vis": true
+     }
+    ],
+    "texto": "Página Inicial Venda Grupo Cobrança Contemplação Crédito Atendimento Processo de Contemplação - Simulador de Documentos (Check-List) Voltar Selecionar a Aquisição Selecionar o tipo de bem a ser adquirido: Bem MóvelBem ImóvelServiçosOutros",
+    "frame": "principal"
+   }
+  ]
+ },
+ "avisos_ao_abrir": [],
+ "consulta": null,
+ "notas": {
+  "grupos_por_produto": 4,
+  "vagas": 0,
+  "creditos": 9,
+  "taxa": 0,
+  "seguro": 0,
+  "lance": 1
+ },
+ "provas": {
+  "grupos_por_produto": [
+   "campo: Bem Imóvel"
+  ],
+  "vagas": [],
+  "creditos": [
+   "campo: Bem Imóvel",
+   "campo: Bem Móvel",
+   "nome da tela: Crédito > Concessão de Crédito > Concessão de Créd"
+  ],
+  "taxa": [],
+  "seguro": [],
+  "lance": []
+ }
+}

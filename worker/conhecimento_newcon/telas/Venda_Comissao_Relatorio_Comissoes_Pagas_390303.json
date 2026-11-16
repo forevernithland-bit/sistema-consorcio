@@ -1,0 +1,416 @@
+{
+ "caminho": "Venda > Comissão > Relatório > Comissões Pagas",
+ "submenu": "VE/CM",
+ "lido_em": "16/11/2026 16:59:53",
+ "url": "https://newkey.cny.com.br/Intranet/CONVE/frmConVeRelComissaoPaga.aspx",
+ "abriu_tela_nova": true,
+ "leitura": {
+  "url": "https://newkey.cny.com.br/Intranet/CONVE/frmConVeRelComissaoPaga.aspx",
+  "frames": [
+   {
+    "titulo": "Intranet Newcon",
+    "cabecalhos": [],
+    "campos": [
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_grdSelecaoUnidade_ctl02_chkSelecionado",
+      "rotulo": "",
+      "vis": true,
+      "valor": "on",
+      "postback": true,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_chkMarcarTodos",
+      "rotulo": "Marcar Todos",
+      "vis": true,
+      "valor": "on",
+      "postback": true,
+      "marcado": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtPeriodoInicial",
+      "rotulo": "Período:",
+      "vis": true,
+      "valor": "000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtPeriodoFinal",
+      "rotulo": "Período:",
+      "vis": true,
+      "valor": "ZZZ",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtEncerramentoInicial",
+      "rotulo": "Encerramento:",
+      "vis": true,
+      "valor": "01/11/2026",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtEncerramentoFinal",
+      "rotulo": "Encerramento:",
+      "vis": true,
+      "valor": "30/11/2026",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtFilialInicial",
+      "rotulo": "Filial Adm:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtFilialFinal",
+      "rotulo": "Filial Adm:",
+      "vis": true,
+      "valor": "ZZZZZZ",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDTVenda_Inicial",
+      "rotulo": "Data Venda",
+      "vis": true,
+      "valor": "01/01/1900",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDTVenda_Final",
+      "rotulo": "Data Venda",
+      "vis": true,
+      "valor": "01/01/3000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtRegraInicial",
+      "rotulo": "Regra Comissão:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtRegraFinal",
+      "rotulo": "Regra Comissão:",
+      "vis": true,
+      "valor": "ZZZZZZ",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtNivelSupInicial",
+      "rotulo": "Nível Supervisão:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtNivelSupFinal",
+      "rotulo": "Nível Supervisão:",
+      "vis": true,
+      "valor": "ZZZZZZ",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCategoriaInicial",
+      "rotulo": "Categoria:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCategoriaFinal",
+      "rotulo": "Categoria:",
+      "vis": true,
+      "valor": "ZZZZZZ",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtGrupoInicial",
+      "rotulo": "Grupo:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtGrupoFinal",
+      "rotulo": "Grupo:",
+      "vis": true,
+      "valor": "ZZZZZZ",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCotaInicial",
+      "rotulo": "Cota:",
+      "vis": true,
+      "valor": "0000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCotaFinal",
+      "rotulo": "Cota:",
+      "vis": true,
+      "valor": "9999",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtVersaoInicial",
+      "rotulo": "Versão:",
+      "vis": true,
+      "valor": "00",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtVersaoFinal",
+      "rotulo": "Versão:",
+      "vis": true,
+      "valor": "49",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtParcelaInicial",
+      "rotulo": "Parcela:",
+      "vis": true,
+      "valor": "000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtParcelaFinal",
+      "rotulo": "Parcela:",
+      "vis": true,
+      "valor": "999",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDocto_Interface_Inicial",
+      "rotulo": "Doc. Interface:",
+      "vis": true,
+      "valor": "",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDocto_Interface_Final",
+      "rotulo": "Doc. Interface:",
+      "vis": true,
+      "valor": "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDT_Interface_Inicial",
+      "rotulo": "Dt. Interface:",
+      "vis": true,
+      "valor": "01/01/1900",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDT_Interface_Final",
+      "rotulo": "Dt. Interface:",
+      "vis": true,
+      "valor": "16/11/2026",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDataAlocacaoInicial",
+      "rotulo": "Data Alocação:",
+      "vis": true,
+      "valor": "01/11/2026",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDataAlocacaoFinal",
+      "rotulo": "Data Alocação:",
+      "vis": true,
+      "valor": "30/11/2026",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "radio",
+      "id": "ctl00_Conteudo_rblST_Nota_Fiscal_0",
+      "rotulo": "Todas",
+      "vis": true,
+      "valor": "T",
+      "postback": false,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "radio",
+      "id": "ctl00_Conteudo_rblST_Nota_Fiscal_1",
+      "rotulo": "Emitidas",
+      "vis": true,
+      "valor": "E",
+      "postback": true,
+      "marcado": false
+     },
+     {
+      "tag": "input",
+      "tipo": "radio",
+      "id": "ctl00_Conteudo_rblST_Nota_Fiscal_2",
+      "rotulo": "Não emitidas",
+      "vis": true,
+      "valor": "N",
+      "postback": true,
+      "marcado": false
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_grdAlocacaoComissionado_ctl02_chkSelecionado",
+      "rotulo": "",
+      "vis": true,
+      "valor": "on",
+      "postback": true,
+      "marcado": false
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_chkMarcarTodosAlocacao",
+      "rotulo": "Marcar Todos",
+      "vis": true,
+      "valor": "on",
+      "postback": true,
+      "marcado": false
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_chkSituacaoComissionado_0",
+      "rotulo": "Vigente",
+      "vis": true,
+      "valor": "A",
+      "postback": false,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_chkSituacaoComissionado_1",
+      "rotulo": "Não Vigente",
+      "vis": true,
+      "valor": "I",
+      "postback": false,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_chkSegundoPlano_0",
+      "rotulo": "Processar em segundo plano",
+      "vis": true,
+      "valor": "Processar em segundo plano",
+      "postback": false,
+      "marcado": false
+     }
+    ],
+    "botoes": [
+     {
+      "id": "ctl00_Conteudo_btnProcessar",
+      "txt": "Processar",
+      "vis": true,
+      "tipo": "submit"
+     },
+     {
+      "id": "ctl00_Conteudo_btnCancelar",
+      "txt": "Cancela",
+      "vis": true,
+      "tipo": "submit"
+     }
+    ],
+    "abas": [],
+    "tabelas": [],
+    "links": [
+     {
+      "id": "ctl00_Conteudo_lnkVoltar",
+      "txt": "Voltar",
+      "vis": true
+     }
+    ],
+    "texto": "Página Inicial Venda Grupo Cobrança Contemplação Crédito Atendimento Comissões Pagas Voltar Unidade de Negócio: # Código Nome 000001 YAMAHA ADM DE CONSORCIO LTDA Marcar Todos Intervalo: Inicial Final Período: Encerramento: Filial Adm: Data Venda Regra Comissão: Nível Supervisão: Categoria: Grupo: Cota: Versão: Parcela: Doc. Interface: Dt. Interface: Data Alocação: Nota Fiscal: Todas Emitidas Não emitidas Filtro por Comissionado: # Comissionado Ponto Venda Equipe Venda 010852 - ECOCLIM SUSTENTAVEL 010852 - ECOCLIM SUSTENTAVEL 010852 - ECOCLIM SUSTENTAVEL Marcar Todos Situação do Comissionado: Vigente Não Vigente Processar em segundo plano",
+    "frame": "principal"
+   }
+  ]
+ },
+ "avisos_ao_abrir": [],
+ "campos_entendidos": [],
+ "consulta": null,
+ "notas": {
+  "grupos_por_produto": 7,
+  "vagas": 0,
+  "creditos": 1,
+  "taxa": 0,
+  "seguro": 0,
+  "lance": 1
+ },
+ "provas": {
+  "grupos_por_produto": [
+   "campo: Grupo:"
+  ],
+  "vagas": [],
+  "creditos": [],
+  "taxa": [],
+  "seguro": [],
+  "lance": []
+ }
+}

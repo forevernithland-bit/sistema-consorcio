@@ -1,0 +1,30 @@
+{
+ "caminho": "Crédito > Concessão de Crédito > Concessão de Crédito > Liberação de Crédito",
+ "submenu": "CR/CR",
+ "lido_em": "16/11/2026 16:57:41",
+ "url": "https://newkey.cny.com.br/Intranet/frmMainMenu.aspx",
+ "abriu_tela_nova": false,
+ "leitura": {
+  "url": "https://newkey.cny.com.br/Intranet/frmMainMenu.aspx",
+  "frames": []
+ },
+ "avisos_ao_abrir": [],
+ "notas": {
+  "grupos_por_produto": 0,
+  "vagas": 0,
+  "creditos": 2,
+  "taxa": 0,
+  "seguro": 0,
+  "lance": 0
+ },
+ "provas": {
+  "grupos_por_produto": [],
+  "vagas": [],
+  "creditos": [
+   "nome da tela: Crédito > Concessão de Crédito > Concessão de Créd"
+  ],
+  "taxa": [],
+  "seguro": [],
+  "lance": []
+ }
+}

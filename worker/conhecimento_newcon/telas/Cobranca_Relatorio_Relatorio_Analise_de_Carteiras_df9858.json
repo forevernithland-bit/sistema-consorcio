@@ -1,0 +1,61 @@
+{
+ "caminho": "Cobrança > Relatório > Relatório > Análise de Carteiras",
+ "submenu": "CO/RE",
+ "lido_em": "16/11/2026 16:57:09",
+ "url": "https://newkey.cny.com.br/Intranet/CONCM/frmConCmReport.aspx",
+ "abriu_tela_nova": true,
+ "leitura": {
+  "url": "https://newkey.cny.com.br/Intranet/CONCM/frmConCmReport.aspx",
+  "frames": [
+   {
+    "titulo": "Intranet Newcon",
+    "cabecalhos": [],
+    "campos": [],
+    "botoes": [],
+    "abas": [],
+    "tabelas": [],
+    "links": [
+     {
+      "id": "ctl00_Conteudo_lkbVoltar",
+      "txt": "Voltar",
+      "vis": true
+     }
+    ],
+    "texto": "Página Inicial Venda Grupo Cobrança Contemplação Crédito Atendimento Análise de Carteira Voltar",
+    "frame": "principal"
+   },
+   {
+    "titulo": "bymdpdb008",
+    "cabecalhos": [
+     "bymdpdb008 está bloqueado"
+    ],
+    "campos": [],
+    "botoes": [],
+    "abas": [],
+    "tabelas": [],
+    "links": [],
+    "texto": "Este conteúdo está bloqueado. Entre em contato com o proprietário do site para corrigir o problema.",
+    "frame": "chrome-error://chromewebdata/"
+   }
+  ]
+ },
+ "avisos_ao_abrir": [],
+ "campos_entendidos": [],
+ "consulta": null,
+ "notas": {
+  "grupos_por_produto": 1,
+  "vagas": 0,
+  "creditos": 1,
+  "taxa": 0,
+  "seguro": 0,
+  "lance": 1
+ },
+ "provas": {
+  "grupos_por_produto": [],
+  "vagas": [],
+  "creditos": [],
+  "taxa": [],
+  "seguro": [],
+  "lance": []
+ }
+}

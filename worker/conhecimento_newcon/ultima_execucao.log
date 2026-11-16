@@ -1,0 +1,61 @@
+>>> ROBÔ YAMAHA — EXPLORAR O NEWCON (só leitura, aprende as telas)
+[newcon] login efetuado.
+  O que eu fiz por último:
+    [16/11/2026 16:56:03] === exploração NOVA iniciada ===
+    [16/11/2026 16:56:04] menu lido: 14 submenus -> Venda>Representante, Venda>Comissão, Venda>Venda de Proposta, Grupo>Assembleia, Cobrança>Manutenção de Cobrança, Cobrança>Emissão de Cobrança, Cobrança>Retenção / Recuperação, Cobrança>Relatório, Contemplação>Pré-Contemplação, Contemplação>Contemplação, Crédito>Concessão de Crédito, Crédito>Relatório, Atendimento>Atendimento a Clientes, Atendimento>Fale Conosco
+    [16/11/2026 16:56:06] submenu Grupo > Assembleia: 2 itens na árvore, 2 telas na fila
+    [16/11/2026 16:56:10] tela OK: Grupo > Assembleia > Assembleia | frmMainMenu.aspx | 0 campos, 0 tabelas | interessa p/ grupos_por_produto(3), lance(1), creditos(1)
+    [16/11/2026 16:56:12] tela OK: Grupo > Assembleia > Assembleia > Calendário | CONAA/frmConAaRelCalendarioAssembleia.aspx | 20 campos, 0 tabelas | interessa p/ grupos_por_produto(24), lance(1), creditos(1)
+    [16/11/2026 16:56:12] nada mais na fila para os submenus pedidos (--so)
+  [16/11/2026 16:56:31] === retomando: 13 item(ns) na fila, 3 já feitos ===
+  [16/11/2026 16:56:34] submenu Cobrança > Manutenção de Cobrança: 1 itens na árvore, 1 telas na fila
+  [16/11/2026 16:56:36] submenu Cobrança > Emissão de Cobrança: 3 itens na árvore, 1 telas na fila
+  [16/11/2026 16:56:38] submenu Cobrança > Retenção / Recuperação: 2 itens na árvore, 1 telas na fila
+  [16/11/2026 16:56:40] submenu Cobrança > Relatório: 3 itens na árvore, 3 telas na fila
+  [16/11/2026 16:56:41] submenu Contemplação > Pré-Contemplação: 4 itens na árvore, 3 telas na fila
+  [16/11/2026 16:56:44] submenu Contemplação > Contemplação: 2 itens na árvore, 2 telas na fila
+  [16/11/2026 16:56:45] submenu Crédito > Concessão de Crédito: 5 itens na árvore, 4 telas na fila
+  [16/11/2026 16:56:47] submenu Crédito > Relatório: 1 itens na árvore, 1 telas na fila
+  [16/11/2026 16:56:49] submenu Atendimento > Atendimento a Clientes: 2 itens na árvore, 2 telas na fila
+  [16/11/2026 16:56:51] submenu Atendimento > Fale Conosco: 2 itens na árvore, 2 telas na fila
+  [16/11/2026 16:56:53] submenu Venda > Representante: 1 itens na árvore, 1 telas na fila
+  [16/11/2026 16:56:55] submenu Venda > Comissão: 3 itens na árvore, 3 telas na fila
+  [16/11/2026 16:56:56] submenu Venda > Venda de Proposta: 10 itens na árvore, 10 telas na fila
+  [16/11/2026 16:56:59] tela OK: Cobrança > Manutenção de Cobrança > Manutenção de Cobrança | frmMainMenu.aspx | 0 campos, 0 tabelas | interessa p/ lance(1), grupos_por_produto(1), creditos(1)
+  [16/11/2026 16:57:01] tela OK: Cobrança > Emissão de Cobrança > Emissão de Cobrança > Recursos CNP3 Web | frmMainMenu.aspx | 0 campos, 0 tabelas | interessa p/ lance(1), grupos_por_produto(1), creditos(1)
+  [16/11/2026 16:57:04] tela OK: Cobrança > Retenção / Recuperação > Retenção / Recuperação | frmMainMenu.aspx | 0 campos, 0 tabelas | interessa p/ lance(1), grupos_por_produto(1), creditos(1)
+  [16/11/2026 16:57:06] tela OK: Cobrança > Relatório > Relatório | frmMainMenu.aspx | 0 campos, 0 tabelas | interessa p/ lance(1), grupos_por_produto(1), creditos(1)
+  [16/11/2026 16:57:09] tela OK: Cobrança > Relatório > Relatório > Análise de Carteiras | CONCM/frmConCmReport.aspx | 0 campos, 0 tabelas | interessa p/ lance(1), grupos_por_produto(1), creditos(1)
+  [16/11/2026 16:57:12] tela OK: Cobrança > Relatório > Recursos CNP3 Web | frmMainMenu.aspx | 0 campos, 0 tabelas | interessa p/ lance(1), grupos_por_produto(1), creditos(1)
+  [16/11/2026 16:57:14] tela OK: Contemplação > Pré-Contemplação > Pré-Contemplação | frmMainMenu.aspx | 0 campos, 0 tabelas | interessa p/ lance(3), grupos_por_produto(1), creditos(1)
+  [16/11/2026 16:57:16] tela OK: Contemplação > Pré-Contemplação > Pré-Contemplação > Recursos CNP3 Web | frmMainMenu.aspx | 0 campos, 0 tabelas | interessa p/ lance(3), grupos_por_produto(1), creditos(1)
+  [16/11/2026 16:57:18] tela OK: Contemplação > Pré-Contemplação > Oferta de Lance (Acesso Direto) > Credenciamento | CONCP/frmConCpCadCredenciamentoLance_Filtro.aspx | 3 campos, 0 tabelas | interessa p/ lance(3), grupos_por_produto(1), creditos(1)
+  [16/11/2026 16:57:21] tela OK: Contemplação > Contemplação > Contemplação | frmMainMenu.aspx | 0 campos, 0 tabelas | interessa p/ lance(3), grupos_por_produto(1), creditos(1)
+  [16/11/2026 16:57:33] tela OK: Contemplação > Contemplação > Contemplação > Resultado de Assembleia | CONCP/frmConCpPrcResultadoAssembleia_Filtro.aspx | 13 campos, 0 tabelas | consulta: Buscar | interessa p/ grupos_por_produto(11), lance(9), creditos(1)
+  [16/11/2026 16:59:16] tela OK: Crédito > Concessão de Crédito > Concessão de Crédito > Liberação de Crédito | frmMainMenu.aspx | 0 campos, 0 tabelas | interessa p/ creditos(2)
+  [16/11/2026 16:59:19] tela OK: Crédito > Concessão de Crédito > Liberação de Crédito > Processo de Contemplação | CONCR/frmConCrCnsProcessoContemplacao.aspx | 19 campos, 0 tabelas | interessa p/ lance(10), grupos_por_produto(10), creditos(3)
+  [16/11/2026 16:59:26] tela OK: Crédito > Concessão de Crédito > Liberação de Crédito > Fila Ocorrências / Processos | frmMainMenu.aspx | 0 campos, 0 tabelas | interessa p/ creditos(3), lance(1), grupos_por_produto(1)
+  [16/11/2026 16:59:29] tela OK: Crédito > Concessão de Crédito > Concessão de Crédito > Simulador de Documentos | CONCR/frmConCrPrcSimuladorDocto.aspx | 4 campos, 0 tabelas | interessa p/ creditos(9), grupos_por_produto(4), lance(1)
+  [16/11/2026 16:59:32] tela OK: Crédito > Relatório > Relatório | frmMainMenu.aspx | 0 campos, 0 tabelas | interessa p/ creditos(3), lance(1), grupos_por_produto(1)
+  [16/11/2026 16:59:34] tela OK: Atendimento > Atendimento a Clientes > Atendimento | frmMainMenu.aspx | 0 campos, 0 tabelas | interessa p/ lance(1), grupos_por_produto(1), creditos(1)
+  [16/11/2026 16:59:38] tela OK: Atendimento > Atendimento a Clientes > Atendimento > Posição do Consorciado | CONAT/frmConAtSrcConsorciado.aspx | 3 campos, 0 tabelas | consulta: Localizar | interessa p/ lance(2), grupos_por_produto(2), creditos(2)
+  [16/11/2026 16:59:41] tela OK: Atendimento > Fale Conosco > Fale Conosco | frmMainMenu.aspx | 0 campos, 0 tabelas | interessa p/ lance(1), grupos_por_produto(1), creditos(1)
+  [16/11/2026 16:59:43] tela OK: Atendimento > Fale Conosco > Fale Conosco > Cadastro de Apoio | frmMainMenu.aspx | 0 campos, 0 tabelas | interessa p/ lance(1), grupos_por_produto(1), creditos(1)
+  [16/11/2026 16:59:45] tela OK: Venda > Representante > Representante | frmMainMenu.aspx | 0 campos, 0 tabelas | interessa p/ lance(1), grupos_por_produto(1), creditos(1)
+  [16/11/2026 16:59:48] tela OK: Venda > Comissão > Comissão | frmMainMenu.aspx | 0 campos, 0 tabelas | interessa p/ lance(1), grupos_por_produto(1), creditos(1)
+  [16/11/2026 16:59:50] tela OK: Venda > Comissão > Comissão > Relatório | frmMainMenu.aspx | 0 campos, 0 tabelas | interessa p/ lance(1), grupos_por_produto(1), creditos(1)
+  [16/11/2026 16:59:53] tela OK: Venda > Comissão > Relatório > Comissões Pagas | CONVE/frmConVeRelComissaoPaga.aspx | 38 campos, 0 tabelas | interessa p/ grupos_por_produto(7), lance(1), creditos(1)
+  [16/11/2026 16:59:55] tela OK: Venda > Venda de Proposta > Venda de Proposta | frmMainMenu.aspx | 0 campos, 0 tabelas | interessa p/ lance(1), grupos_por_produto(1), creditos(1)
+  [16/11/2026 16:59:58] tela OK: Venda > Venda de Proposta > Venda de Proposta > Proposta | frmMainMenu.aspx | 0 campos, 0 tabelas | interessa p/ lance(1), grupos_por_produto(1), creditos(1)
+  [16/11/2026 17:00:09] tela OK: Venda > Venda de Proposta > Proposta > Venda de Propostas | CONPV/frmConPvCadProposta.aspx | 30 campos, 0 tabelas | interessa p/ creditos(7), grupos_por_produto(6), lance(1)
+  [16/11/2026 17:00:12] tela OK: Venda > Venda de Proposta > Proposta > Consulta de Propostas | CONPV/FrmConPvRelAnaliseCadastral.aspx | 83 campos, 2 tabelas | interessa p/ grupos_por_produto(25), creditos(7), lance(1)
+  [16/11/2026 17:00:17] tela OK: Venda > Venda de Proposta > Proposta > Reimpressão de Contrato | CONPV/frmConPvRelContrato.aspx | 6 campos, 0 tabelas | consulta: Localizar | interessa p/ grupos_por_produto(8), lance(2), creditos(2)
+  [16/11/2026 17:00:19] tela OK: Venda > Venda de Proposta > Proposta > Acomp. de Propostas com Assinatura Digital | CONPV/frmConPvRelPropostasAssinaturaDigital.aspx | 17 campos, 1 tabelas | interessa p/ lance(1), grupos_por_produto(1), creditos(1)
+  [16/11/2026 17:00:21] tela OK: Venda > Venda de Proposta > Venda de Proposta > Recursos CNP3 Web | frmMainMenu.aspx | 0 campos, 0 tabelas | interessa p/ lance(1), grupos_por_produto(1), creditos(1)
+  [16/11/2026 17:00:24] tela OK: Venda > Venda de Proposta > Recursos CNP3 Web > Monitor de Vendas | CONVE/frmConVeRelMonitor.aspx | 10 campos, 0 tabelas | interessa p/ grupos_por_produto(7), lance(1), creditos(1)
+  [16/11/2026 17:00:28] tela OK: Venda > Venda de Proposta > Recursos CNP3 Web > Cadastro de Usuários Mobile | CONMB/frmConMbCadUsuarioMobile.aspx | 1 campos, 1 tabelas | consulta: Buscar | interessa p/ lance(2), grupos_por_produto(2), creditos(2)
+  [16/11/2026 17:00:31] tela OK: Venda > Venda de Proposta > Recursos CNP3 Web > Recibo | CONVE/frmConVePrcRecibo.aspx | 2 campos, 0 tabelas | interessa p/ lance(1), grupos_por_produto(1), creditos(1)
+  [16/11/2026 17:00:31] === exploração TERMINADA ===
+  mapa: G:\Meu Drive\CLODE\ERP_CONSORBENS\worker\conhecimento_newcon\MAPA_NEWCON.md
+  onde achar: G:\Meu Drive\CLODE\ERP_CONSORBENS\worker\conhecimento_newcon\ONDE_ACHAR.md
+[OK] exploração terminada.

@@ -1,0 +1,1053 @@
+{
+ "caminho": "Venda > Venda de Proposta > Proposta > Consulta de Propostas",
+ "submenu": "VE/VP",
+ "lido_em": "16/11/2026 17:00:12",
+ "url": "https://newkey.cny.com.br/Intranet/CONPV/FrmConPvRelAnaliseCadastral.aspx",
+ "abriu_tela_nova": true,
+ "leitura": {
+  "url": "https://newkey.cny.com.br/Intranet/CONPV/FrmConPvRelAnaliseCadastral.aspx",
+  "frames": [
+   {
+    "titulo": "Intranet Newcon",
+    "cabecalhos": [],
+    "campos": [
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDocumentoInicial",
+      "rotulo": "Proposta:",
+      "vis": true,
+      "valor": "0000000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDocumentoFinal",
+      "rotulo": "Proposta:",
+      "vis": true,
+      "valor": "2147483599",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtComissionadoInicial",
+      "rotulo": "Comissionado:",
+      "vis": true,
+      "valor": "010852",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtComissionadoFinal",
+      "rotulo": "Comissionado:",
+      "vis": true,
+      "valor": "010852",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtUnidadeInicial",
+      "rotulo": "Unid. Negócio:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtUnidadeFinal",
+      "rotulo": "Unid. Negócio:",
+      "vis": true,
+      "valor": "ZZZZZZ",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCDFilialInicial",
+      "rotulo": "Filial:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCDFilialFinal",
+      "rotulo": "Filial:",
+      "vis": true,
+      "valor": "ZZZZZZ",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtComercialInicial",
+      "rotulo": "Estrut. Comercial:",
+      "vis": true,
+      "valor": "000000000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtComercialFinal",
+      "rotulo": "Estrut. Comercial:",
+      "vis": true,
+      "valor": "999999999999",
+      "postback": false
+     },
+     {
+      "tag": "select",
+      "tipo": "select-one",
+      "id": "ctl00_Conteudo_cbxST_Usuario",
+      "rotulo": "",
+      "vis": true,
+      "valor": "U",
+      "postback": false,
+      "n_opcoes": 2,
+      "opcoes": [
+       [
+        "U",
+        "Usuário"
+       ],
+       [
+        "E",
+        "Externo"
+       ]
+      ],
+      "selecionado": "Usuário"
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCDUsuarioInicial",
+      "rotulo": "Usuário Usuário Externo",
+      "vis": true,
+      "valor": "",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCDUsuarioFinal",
+      "rotulo": "Usuário Usuário Externo",
+      "vis": true,
+      "valor": "ZZZZZZZZZZ",
+      "postback": false
+     },
+     {
+      "tag": "select",
+      "tipo": "select-one",
+      "id": "ctl00_Conteudo_lkpFormaAcesso",
+      "rotulo": "",
+      "vis": true,
+      "valor": "",
+      "postback": false,
+      "n_opcoes": 18,
+      "opcoes": [
+       [
+        "",
+        "Todas"
+       ],
+       [
+        "AC",
+        "Auto Compra"
+       ],
+       [
+        "AG",
+        "Agenda"
+       ],
+       [
+        "AR",
+        "Aarin"
+       ],
+       [
+        "BC",
+        "Registrato BACEN"
+       ],
+       [
+        "EC",
+        "Ecommerce"
+       ],
+       [
+        "FV",
+        "Força de Venda"
+       ],
+       [
+        "IB",
+        "Internet Banking"
+       ],
+       [
+        "IN",
+        "Intranet"
+       ],
+       [
+        "IT",
+        "Interface"
+       ],
+       [
+        "MB",
+        "Mobile"
+       ],
+       [
+        "NC",
+        "Não Correntista"
+       ],
+       [
+        "NE",
+        "NetEmpresa - Aceite"
+       ],
+       [
+        "NW",
+        "Newcon"
+       ],
+       [
+        "SR",
+        "Site relacionamento"
+       ],
+       [
+        "UR",
+        "URA"
+       ],
+       [
+        "WS",
+        "WebService"
+       ],
+       [
+        "WW",
+        "Web"
+       ]
+      ],
+      "selecionado": "Todas"
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCDEquipeInicial",
+      "rotulo": "Equipe:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCDEquipeFinal",
+      "rotulo": "Equipe:",
+      "vis": true,
+      "valor": "ZZZZZZ",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtGrupoInicial",
+      "rotulo": "Grupo:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtGrupoFinal",
+      "rotulo": "Grupo:",
+      "vis": true,
+      "valor": "ZZZZZZ",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCotaInicial",
+      "rotulo": "Cota:",
+      "vis": true,
+      "valor": "0000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCotaFinal",
+      "rotulo": "Cota:",
+      "vis": true,
+      "valor": "9999",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtVersaoInicial",
+      "rotulo": "Versão:",
+      "vis": true,
+      "valor": "00",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtVersaoFinal",
+      "rotulo": "Versão:",
+      "vis": true,
+      "valor": "49",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtProdutoInicial",
+      "rotulo": "Produto:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtProdutoFinal",
+      "rotulo": "Produto:",
+      "vis": true,
+      "valor": "ZZZZZZ",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtSubProdutoInicial",
+      "rotulo": "SubProduto:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtSubProdutoFinal",
+      "rotulo": "SubProduto:",
+      "vis": true,
+      "valor": "ZZZZZZ",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtTipoVendaGrupoInicial",
+      "rotulo": "Tipo de Venda:",
+      "vis": true,
+      "valor": "000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtTipoVendaGrupoFinal",
+      "rotulo": "Tipo de Venda:",
+      "vis": true,
+      "valor": "ZZZ",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtPrazoInicial",
+      "rotulo": "Prazo:",
+      "vis": true,
+      "valor": "000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtPrazoFinal",
+      "rotulo": "Prazo:",
+      "vis": true,
+      "valor": "999",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_grdPontosVenda_ctl02_chkSelecionado",
+      "rotulo": "#",
+      "vis": false,
+      "valor": "on",
+      "postback": false,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_chkPontosVenda",
+      "rotulo": "Selecionar todos",
+      "vis": false,
+      "valor": "on",
+      "postback": false,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtBemInicial",
+      "rotulo": "Bem:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtBemFinal",
+      "rotulo": "Bem:",
+      "vis": true,
+      "valor": "ZZZZZZ",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDtCadastroInicial",
+      "rotulo": "Cadastro:",
+      "vis": true,
+      "valor": "01/01/2008",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDtCadastroFinal",
+      "rotulo": "Cadastro:",
+      "vis": true,
+      "valor": "16/11/2026",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDtAdesaoInicial",
+      "rotulo": "Adesão:",
+      "vis": true,
+      "valor": "01/01/2008",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDtAdesaoFinal",
+      "rotulo": "Adesão:",
+      "vis": true,
+      "valor": "16/11/2026",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDtAlocacaoInicial",
+      "rotulo": "Alocação:",
+      "vis": true,
+      "valor": "01/01/2008",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDtAlocacaoFinal",
+      "rotulo": "Alocação:",
+      "vis": true,
+      "valor": "16/11/2026",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDtCancelamentoInicial",
+      "rotulo": "Cancelamento:",
+      "vis": true,
+      "valor": "01/01/2008",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDtCancelamentoFinal",
+      "rotulo": "Cancelamento:",
+      "vis": true,
+      "valor": "16/11/2026",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDtVendaInicial",
+      "rotulo": "Venda:",
+      "vis": true,
+      "valor": "01/01/2008",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDtVendaFinal",
+      "rotulo": "Venda:",
+      "vis": true,
+      "valor": "16/11/2026",
+      "postback": false
+     },
+     {
+      "tag": "select",
+      "tipo": "select-one",
+      "id": "ctl00_Conteudo_cbxPrimeiraParcela",
+      "rotulo": "",
+      "vis": true,
+      "valor": "T",
+      "postback": false,
+      "n_opcoes": 3,
+      "opcoes": [
+       [
+        "T",
+        "Todas"
+       ],
+       [
+        "S",
+        "Pagas"
+       ],
+       [
+        "N",
+        "Não Pagas"
+       ]
+      ],
+      "selecionado": "Todas"
+     },
+     {
+      "tag": "select",
+      "tipo": "select-one",
+      "id": "ctl00_Conteudo_cbxTipoPessoa",
+      "rotulo": "",
+      "vis": true,
+      "valor": "N",
+      "postback": false,
+      "n_opcoes": 3,
+      "opcoes": [
+       [
+        "N",
+        "Não Trata"
+       ],
+       [
+        "F",
+        "Física"
+       ],
+       [
+        "J",
+        "Jurídica"
+       ]
+      ],
+      "selecionado": "Não Trata"
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_grdSelecaoEstados_ctl02_chkSelecionado",
+      "rotulo": "#",
+      "vis": false,
+      "valor": "on",
+      "postback": true,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_grdSelecaoEstados_ctl03_chkSelecionado",
+      "rotulo": "",
+      "vis": false,
+      "valor": "on",
+      "postback": true,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_grdSelecaoEstados_ctl04_chkSelecionado",
+      "rotulo": "",
+      "vis": false,
+      "valor": "on",
+      "postback": true,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_grdSelecaoEstados_ctl05_chkSelecionado",
+      "rotulo": "",
+      "vis": false,
+      "valor": "on",
+      "postback": true,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_grdSelecaoEstados_ctl06_chkSelecionado",
+      "rotulo": "",
+      "vis": false,
+      "valor": "on",
+      "postback": true,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_grdSelecaoEstados_ctl07_chkSelecionado",
+      "rotulo": "",
+      "vis": false,
+      "valor": "on",
+      "postback": true,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_grdSelecaoEstados_ctl08_chkSelecionado",
+      "rotulo": "",
+      "vis": false,
+      "valor": "on",
+      "postback": true,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_grdSelecaoEstados_ctl09_chkSelecionado",
+      "rotulo": "",
+      "vis": false,
+      "valor": "on",
+      "postback": true,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_grdSelecaoEstados_ctl10_chkSelecionado",
+      "rotulo": "",
+      "vis": false,
+      "valor": "on",
+      "postback": true,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_grdSelecaoEstados_ctl11_chkSelecionado",
+      "rotulo": "",
+      "vis": false,
+      "valor": "on",
+      "postback": true,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_grdSelecaoEstados_ctl12_chkSelecionado",
+      "rotulo": "",
+      "vis": false,
+      "valor": "on",
+      "postback": true,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_grdSelecaoEstados_ctl13_chkSelecionado",
+      "rotulo": "",
+      "vis": false,
+      "valor": "on",
+      "postback": true,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_grdSelecaoEstados_ctl14_chkSelecionado",
+      "rotulo": "",
+      "vis": false,
+      "valor": "on",
+      "postback": true,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_grdSelecaoEstados_ctl15_chkSelecionado",
+      "rotulo": "",
+      "vis": false,
+      "valor": "on",
+      "postback": true,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_grdSelecaoEstados_ctl16_chkSelecionado",
+      "rotulo": "",
+      "vis": false,
+      "valor": "on",
+      "postback": true,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_grdSelecaoEstados_ctl17_chkSelecionado",
+      "rotulo": "",
+      "vis": false,
+      "valor": "on",
+      "postback": true,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_grdSelecaoEstados_ctl18_chkSelecionado",
+      "rotulo": "",
+      "vis": false,
+      "valor": "on",
+      "postback": true,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_grdSelecaoEstados_ctl19_chkSelecionado",
+      "rotulo": "",
+      "vis": false,
+      "valor": "on",
+      "postback": true,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_grdSelecaoEstados_ctl20_chkSelecionado",
+      "rotulo": "",
+      "vis": false,
+      "valor": "on",
+      "postback": true,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_grdSelecaoEstados_ctl21_chkSelecionado",
+      "rotulo": "",
+      "vis": false,
+      "valor": "on",
+      "postback": true,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_grdSelecaoEstados_ctl22_chkSelecionado",
+      "rotulo": "",
+      "vis": false,
+      "valor": "on",
+      "postback": true,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_grdSelecaoEstados_ctl23_chkSelecionado",
+      "rotulo": "",
+      "vis": false,
+      "valor": "on",
+      "postback": true,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_grdSelecaoEstados_ctl24_chkSelecionado",
+      "rotulo": "",
+      "vis": false,
+      "valor": "on",
+      "postback": true,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_grdSelecaoEstados_ctl25_chkSelecionado",
+      "rotulo": "",
+      "vis": false,
+      "valor": "on",
+      "postback": true,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_grdSelecaoEstados_ctl26_chkSelecionado",
+      "rotulo": "",
+      "vis": false,
+      "valor": "on",
+      "postback": true,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_grdSelecaoEstados_ctl27_chkSelecionado",
+      "rotulo": "",
+      "vis": false,
+      "valor": "on",
+      "postback": true,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_grdSelecaoEstados_ctl28_chkSelecionado",
+      "rotulo": "",
+      "vis": false,
+      "valor": "on",
+      "postback": true,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_chkSelecionarTodos",
+      "rotulo": "Selecionar todos",
+      "vis": false,
+      "valor": "on",
+      "postback": true,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_cbxTodas",
+      "rotulo": "Todas as Propostas",
+      "vis": true,
+      "valor": "on",
+      "postback": true,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_cbxAlocada",
+      "rotulo": "Propostas Aloc.",
+      "vis": true,
+      "valor": "on",
+      "postback": true,
+      "marcado": false
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_cbxRecebimento",
+      "rotulo": "Propostas c/ Docum. Pendente",
+      "vis": true,
+      "valor": "on",
+      "postback": true,
+      "marcado": false
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_cbxGrupoNovo",
+      "rotulo": "Propostas vendidas para grupo novo",
+      "vis": true,
+      "valor": "on",
+      "postback": true,
+      "marcado": false
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_cbxNAlocada",
+      "rotulo": "Propostas Não Aloc.",
+      "vis": true,
+      "valor": "on",
+      "postback": true,
+      "marcado": false
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_cbxCancelada",
+      "rotulo": "Propostas Canceladas",
+      "vis": true,
+      "valor": "on",
+      "postback": true,
+      "marcado": false
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_cbxGrupoemAndamento",
+      "rotulo": "Propostas vendidas para grupo em andamento",
+      "vis": true,
+      "valor": "on",
+      "postback": true,
+      "marcado": false
+     },
+     {
+      "tag": "input",
+      "tipo": "radio",
+      "id": "ctl00_Conteudo_rblImpressao_0",
+      "rotulo": "PDF",
+      "vis": true,
+      "valor": "P",
+      "postback": false,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "radio",
+      "id": "ctl00_Conteudo_rblImpressao_1",
+      "rotulo": "XLS",
+      "vis": true,
+      "valor": "E",
+      "postback": false,
+      "marcado": false
+     }
+    ],
+    "botoes": [
+     {
+      "id": "ctl00_Conteudo_btnSelecionar",
+      "txt": "Selecionar",
+      "vis": true,
+      "tipo": "submit"
+     },
+     {
+      "id": "ctl00_Conteudo_btnImprimir",
+      "txt": "Imprimir",
+      "vis": true,
+      "tipo": "submit"
+     }
+    ],
+    "abas": [],
+    "tabelas": [
+     {
+      "id": "ctl00_Conteudo_grdPontosVenda",
+      "vis": false,
+      "n_linhas": 2,
+      "cabecalho": [
+       "#",
+       "Código",
+       "Nome"
+      ],
+      "amostra": [
+       [
+        "",
+        "010852",
+        "ECOCLIM SUSTENTA..."
+       ]
+      ]
+     },
+     {
+      "id": "ctl00_Conteudo_grdSelecaoEstados",
+      "vis": false,
+      "n_linhas": 28,
+      "cabecalho": [
+       "#",
+       "Estado"
+      ],
+      "amostra": [
+       [
+        "",
+        "ACRE"
+       ],
+       [
+        "",
+        "ALAGOAS"
+       ],
+       [
+        "",
+        "AMAZONAS"
+       ],
+       [
+        "",
+        "AMAPA"
+       ],
+       [
+        "",
+        "BAHIA"
+       ],
+       [
+        "",
+        "CEARA"
+       ],
+       [
+        "",
+        "DISTRITO FEDERAL"
+       ],
+       [
+        "",
+        "ESPIRITO SANTO"
+       ],
+       [
+        "",
+        "GOIAS"
+       ],
+       [
+        "",
+        "MARANHAO"
+       ],
+       [
+        "",
+        "MINAS GERAIS"
+       ],
+       [
+        "",
+        "MATO GROSSO DO SUL"
+       ]
+      ]
+     }
+    ],
+    "links": [
+     {
+      "id": "ctl00_Conteudo_lnkVoltar",
+      "txt": "Voltar",
+      "vis": true
+     }
+    ],
+    "texto": "Página Inicial Venda Grupo Cobrança Contemplação Crédito Atendimento Consulta de Propostas Voltar Filtro Pontos de Venda Filtro Selecione os Estados Inicial Final Proposta: Comissionado: Unid. Negócio: Filial: Estrut. Comercial: Usuário Usuário Externo Forma Acesso: Todas Todas Auto Compra Agenda Aarin Registrato BACEN Ecommerce Força de Venda Internet Banking Intranet Interface Mobile Não Correntista NetEmpresa - Aceite Newcon Site relacionamento URA WebService Web Inicial Final Equipe: Grupo: Cota: Versão: Produto: SubProduto: Tipo de Venda: Prazo: Inicial Final Bem: Cadastro: Adesão: Alocação: Cancelamento: Venda: Primeira Parcela: Todas Todas Pagas Não Pagas Tipo de Pessoa: Não Trata Não Trata Física Jurídica Todas as Propostas Propostas Aloc. Propostas c/ Docum. Pendente Propostas vendidas para grupo novo Propostas Não Aloc. Propostas Canceladas Propostas vendidas para grupo em andamento PDFXLS",
+    "frame": "principal"
+   }
+  ]
+ },
+ "avisos_ao_abrir": [],
+ "campos_entendidos": [],
+ "consulta": null,
+ "notas": {
+  "grupos_por_produto": 25,
+  "vagas": 0,
+  "creditos": 7,
+  "taxa": 0,
+  "seguro": 0,
+  "lance": 1
+ },
+ "provas": {
+  "grupos_por_produto": [
+   "campo: Grupo:",
+   "campo: Produto:",
+   "campo: Propostas vendidas para grupo em andamento",
+   "campo: Propostas vendidas para grupo novo",
+   "campo: SubProduto:"
+  ],
+  "vagas": [],
+  "creditos": [
+   "campo: Bem:"
+  ],
+  "taxa": [],
+  "seguro": [],
+  "lance": []
+ }
+}

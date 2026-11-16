@@ -1,0 +1,293 @@
+{
+ "caminho": "Crédito > Concessão de Crédito > Liberação de Crédito > Processo de Contemplação",
+ "submenu": "CR/CR",
+ "lido_em": "16/11/2026 16:59:19",
+ "url": "https://newkey.cny.com.br/Intranet/CONCR/frmConCrCnsProcessoContemplacao.aspx",
+ "abriu_tela_nova": true,
+ "leitura": {
+  "url": "https://newkey.cny.com.br/Intranet/CONCR/frmConCrCnsProcessoContemplacao.aspx",
+  "frames": [
+   {
+    "titulo": "Intranet Newcon",
+    "cabecalhos": [],
+    "campos": [
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtGrupoInicial",
+      "rotulo": "Grupo:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtGrupoFinal",
+      "rotulo": "Grupo:",
+      "vis": true,
+      "valor": "ZZZZZZ",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDT_Contemplacao_Inicial",
+      "rotulo": "Contemplação:",
+      "vis": true,
+      "valor": "01/11/2026",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDT_Contemplacao_Final",
+      "rotulo": "Contemplação:",
+      "vis": true,
+      "valor": "30/11/2026",
+      "postback": false
+     },
+     {
+      "tag": "select",
+      "tipo": "select-one",
+      "id": "ctl00_Conteudo_cbxSN_Bem_Entregue",
+      "rotulo": "Entregue:",
+      "vis": true,
+      "valor": "N",
+      "postback": false,
+      "n_opcoes": 3,
+      "opcoes": [
+       [
+        "N",
+        "Não"
+       ],
+       [
+        "S",
+        "Sim"
+       ],
+       [
+        "T",
+        "Todos"
+       ]
+      ],
+      "selecionado": "Não"
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCotaInicial",
+      "rotulo": "Cota:",
+      "vis": true,
+      "valor": "0000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCotaFinal",
+      "rotulo": "Cota:",
+      "vis": true,
+      "valor": "9999",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCD_Pto_Venda_Inicial",
+      "rotulo": "Ponto Venda:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCD_Pto_Venda_Final",
+      "rotulo": "Ponto Venda:",
+      "vis": true,
+      "valor": "ZZZZZZ",
+      "postback": false
+     },
+     {
+      "tag": "select",
+      "tipo": "select-one",
+      "id": "ctl00_Conteudo_cbxProcesso",
+      "rotulo": "Processo:",
+      "vis": true,
+      "valor": "C",
+      "postback": false,
+      "n_opcoes": 3,
+      "opcoes": [
+       [
+        "C",
+        "Contemplação"
+       ],
+       [
+        "T",
+        "Transferência"
+       ],
+       [
+        "S",
+        "Substituição"
+       ]
+      ],
+      "selecionado": "Contemplação"
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_chkCotaPontoVenda",
+      "rotulo": "Cotas alocadas para o Ponto de Venda",
+      "vis": true,
+      "valor": "on",
+      "postback": false,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_chkCotaAdministradora",
+      "rotulo": "Cotas Alocadas para a Administradora",
+      "vis": true,
+      "valor": "on",
+      "postback": false,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_chkPontoVenda",
+      "rotulo": "",
+      "vis": true,
+      "valor": "on",
+      "postback": false,
+      "marcado": false
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_lbxPontoVenda_0",
+      "rotulo": "010852 - ECOCLIM SUSTENTAVEL",
+      "vis": false,
+      "valor": "2772331",
+      "postback": false,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_chkTodos",
+      "rotulo": "Selecionar Todos",
+      "vis": false,
+      "valor": "on",
+      "postback": false,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "radio",
+      "id": "ctl00_Conteudo_rdlAcessoCota_0",
+      "rotulo": "Grupo / Cota / CPF/CNPJ",
+      "vis": false,
+      "valor": "GI",
+      "postback": false,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtAcessoGrupo",
+      "rotulo": "",
+      "vis": false,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtAcessoCota",
+      "rotulo": "",
+      "vis": false,
+      "valor": "0000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCPF",
+      "rotulo": "",
+      "vis": false,
+      "valor": "",
+      "postback": false
+     }
+    ],
+    "botoes": [
+     {
+      "id": "ctl00_Conteudo_Button1",
+      "txt": "Selecionar",
+      "vis": true,
+      "tipo": "submit"
+     },
+     {
+      "id": "ctl00_Conteudo_Button2",
+      "txt": "Busca avançada...",
+      "vis": true,
+      "tipo": "submit"
+     },
+     {
+      "id": "ctl00_Conteudo_btnAcessoCota",
+      "txt": "Selecionar",
+      "vis": false,
+      "tipo": "submit"
+     }
+    ],
+    "abas": [
+     "Processo de Contemplação",
+     "Acesso por Cota"
+    ],
+    "tabelas": [],
+    "links": [
+     {
+      "id": "ctl00_Conteudo_tab_Contemplacao",
+      "txt": "Processo de Contemplação",
+      "vis": true
+     },
+     {
+      "id": "ctl00_Conteudo_tab_AcessoCota",
+      "txt": "Acesso por Cota",
+      "vis": true
+     }
+    ],
+    "texto": "Página Inicial Venda Grupo Cobrança Contemplação Crédito Atendimento Processo de Crédito Processo de Contemplação Acesso por Cota Grupo: Contemplação: Entregue: Não Sim Todos Cota: Ponto Venda: Processo: Contemplação Transferência Substituição Cotas alocadas para o Ponto de Venda Cotas Alocadas para a Administradora Selecionar Ponto de Venda",
+    "frame": "principal"
+   }
+  ]
+ },
+ "avisos_ao_abrir": [],
+ "consulta": null,
+ "notas": {
+  "grupos_por_produto": 10,
+  "vagas": 0,
+  "creditos": 3,
+  "taxa": 0,
+  "seguro": 0,
+  "lance": 10
+ },
+ "provas": {
+  "grupos_por_produto": [
+   "campo: Grupo / Cota / CPF/CNPJ",
+   "campo: Grupo:"
+  ],
+  "vagas": [],
+  "creditos": [
+   "nome da tela: Crédito > Concessão de Crédito > Liberação de Créd"
+  ],
+  "taxa": [],
+  "seguro": [],
+  "lance": [
+   "campo: Contemplação:",
+   "nome da tela: Crédito > Concessão de Crédito > Liberação de Créd",
+   "opção: Contemplação"
+  ]
+ }
+}

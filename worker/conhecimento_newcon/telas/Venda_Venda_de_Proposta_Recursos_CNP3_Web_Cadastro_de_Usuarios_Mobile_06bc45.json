@@ -1,0 +1,181 @@
+{
+ "caminho": "Venda > Venda de Proposta > Recursos CNP3 Web > Cadastro de Usuários Mobile",
+ "submenu": "VE/VP",
+ "lido_em": "16/11/2026 17:00:26",
+ "url": "https://newkey.cny.com.br/Intranet/CONMB/frmConMbCadUsuarioMobile.aspx",
+ "abriu_tela_nova": true,
+ "leitura": {
+  "url": "https://newkey.cny.com.br/Intranet/CONMB/frmConMbCadUsuarioMobile.aspx",
+  "frames": [
+   {
+    "titulo": "Intranet Newcon",
+    "cabecalhos": [],
+    "campos": [
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtFiltroNM_Pessoa",
+      "rotulo": "Buscar:",
+      "vis": true,
+      "valor": "",
+      "postback": false
+     }
+    ],
+    "botoes": [
+     {
+      "id": "ctl00_Conteudo_btnFiltrar",
+      "txt": "Buscar",
+      "vis": true,
+      "tipo": "submit"
+     },
+     {
+      "id": "ctl00_Conteudo_grdUsuarios_ctl01_imgNovo",
+      "txt": "Novo",
+      "vis": true,
+      "tipo": "image"
+     },
+     {
+      "id": "ctl00_Conteudo_grdUsuarios_ctl02_imgEditar",
+      "txt": "Editar",
+      "vis": true,
+      "tipo": "image"
+     },
+     {
+      "id": "ctl00_Conteudo_btnImprimir",
+      "txt": "Imprimir",
+      "vis": true,
+      "tipo": "submit"
+     }
+    ],
+    "abas": [],
+    "tabelas": [
+     {
+      "id": "ctl00_Conteudo_grdUsuarios",
+      "vis": true,
+      "n_linhas": 2,
+      "cabecalho": [
+       "Nome",
+       "Login",
+       "Login Externo",
+       ""
+      ],
+      "amostra": [
+       [
+        "BRENO LEONARDO MAEQUES SOUZA LIMA",
+        "APP2226116",
+        "APP2226116",
+        ""
+       ]
+      ]
+     }
+    ],
+    "links": [
+     {
+      "id": "ctl00_Conteudo_linkVoltar",
+      "txt": "Voltar",
+      "vis": true
+     }
+    ],
+    "texto": "Página Inicial Venda Grupo Cobrança Contemplação Crédito Atendimento Gestão de Usuários Mobile Voltar Buscar: Nome Login Login Externo BRENO LEONARDO MAEQUES SOUZA LIMA APP2226116 APP2226116",
+    "frame": "principal"
+   }
+  ]
+ },
+ "avisos_ao_abrir": [],
+ "campos_entendidos": [],
+ "consulta": {
+  "botao": "Buscar",
+  "url_depois": "https://newkey.cny.com.br/Intranet/CONMB/frmConMbCadUsuarioMobile.aspx",
+  "avisos": [],
+  "frames": [
+   {
+    "titulo": "Intranet Newcon",
+    "cabecalhos": [],
+    "campos": [
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtFiltroNM_Pessoa",
+      "rotulo": "Buscar:",
+      "vis": true,
+      "valor": "",
+      "postback": false
+     }
+    ],
+    "botoes": [
+     {
+      "id": "ctl00_Conteudo_btnFiltrar",
+      "txt": "Buscar",
+      "vis": true,
+      "tipo": "submit"
+     },
+     {
+      "id": "ctl00_Conteudo_grdUsuarios_ctl01_imgNovo",
+      "txt": "Novo",
+      "vis": true,
+      "tipo": "image"
+     },
+     {
+      "id": "ctl00_Conteudo_grdUsuarios_ctl02_imgEditar",
+      "txt": "Editar",
+      "vis": true,
+      "tipo": "image"
+     },
+     {
+      "id": "ctl00_Conteudo_btnImprimir",
+      "txt": "Imprimir",
+      "vis": true,
+      "tipo": "submit"
+     }
+    ],
+    "abas": [],
+    "tabelas": [
+     {
+      "id": "ctl00_Conteudo_grdUsuarios",
+      "vis": true,
+      "n_linhas": 2,
+      "cabecalho": [
+       "Nome",
+       "Login",
+       "Login Externo",
+       ""
+      ],
+      "amostra": [
+       [
+        "BRENO LEONARDO MAEQUES SOUZA LIMA",
+        "APP2226116",
+        "APP2226116",
+        ""
+       ]
+      ]
+     }
+    ],
+    "links": [
+     {
+      "id": "ctl00_Conteudo_linkVoltar",
+      "txt": "Voltar",
+      "vis": true
+     }
+    ],
+    "texto": "Página Inicial Venda Grupo Cobrança Contemplação Crédito Atendimento Gestão de Usuários Mobile Voltar Buscar: Nome Login Login Externo BRENO LEONARDO MAEQUES SOUZA LIMA APP2226116 APP2226116",
+    "frame": "principal"
+   }
+  ]
+ },
+ "notas": {
+  "grupos_por_produto": 2,
+  "vagas": 0,
+  "creditos": 2,
+  "taxa": 0,
+  "seguro": 0,
+  "lance": 2
+ },
+ "provas": {
+  "grupos_por_produto": [],
+  "vagas": [],
+  "creditos": [],
+  "taxa": [],
+  "seguro": [],
+  "lance": []
+ }
+}

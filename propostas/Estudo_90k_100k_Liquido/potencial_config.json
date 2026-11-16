@@ -1,0 +1,10 @@
+[
+ {"adm": "Itaú", "grupo": 20601, "bem": "Automóvel", "credito": 128779, "cotas_txt": "2 cotas", "liquido": 90145.30, "proprio": 45000, "embutido": 38633.70, "lance_pct": 64.94, "prox": "24/11/2026",
+  "saida": "G:/Meu Drive/CLODE/ERP_CONSORBENS/propostas/Estudo_90k_100k_Liquido/Potencial-Itau-20601-A-lance45k.png"},
+ {"adm": "Itaú", "grupo": 20533, "bem": "Automóvel", "credito": 143694, "cotas_txt": "2 cotas", "liquido": 100585.80, "proprio": 50000, "embutido": 43108.20, "lance_pct": 64.80, "prox": "24/11/2026",
+  "saida": "G:/Meu Drive/CLODE/ERP_CONSORBENS/propostas/Estudo_90k_100k_Liquido/Potencial-Itau-20533-B-lance50k.png"},
+ {"adm": "Yamaha", "grupo": 9049, "bem": "Automóvel", "credito": 112000, "cotas_txt": "2 cotas de R$ 56 mil", "liquido": 95200, "proprio": 45000, "embutido": 16800, "lance_pct": 50.92, "prox": "17/11/2026",
+  "saida": "G:/Meu Drive/CLODE/ERP_CONSORBENS/propostas/Estudo_90k_100k_Liquido/Potencial-Yamaha-9049-A-lance45k.png"},
+ {"adm": "Yamaha", "grupo": 9049, "bem": "Automóvel", "credito": 122000, "cotas_txt": "2 cotas de R$ 61 mil", "liquido": 103700, "proprio": 50000, "embutido": 18300, "lance_pct": 51.66, "prox": "17/11/2026",
+  "saida": "G:/Meu Drive/CLODE/ERP_CONSORBENS/propostas/Estudo_90k_100k_Liquido/Potencial-Yamaha-9049-B-lance50k.png"}
+]

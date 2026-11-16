@@ -1,0 +1,76 @@
+{
+ "caminho": "Venda > Venda de Proposta > Recursos CNP3 Web > Recibo",
+ "submenu": "VE/VP",
+ "lido_em": "16/11/2026 17:00:31",
+ "url": "https://newkey.cny.com.br/Intranet/CONVE/frmConVePrcRecibo.aspx",
+ "abriu_tela_nova": true,
+ "leitura": {
+  "url": "https://newkey.cny.com.br/Intranet/CONVE/frmConVePrcRecibo.aspx",
+  "frames": [
+   {
+    "titulo": "Intranet Newcon",
+    "cabecalhos": [],
+    "campos": [
+     {
+      "tag": "input",
+      "tipo": "radio",
+      "id": "ctl00_Conteudo_rbtAcaoRecibo_0",
+      "rotulo": "Gerar Recibo",
+      "vis": true,
+      "valor": "rbtGerarRecibo",
+      "postback": false,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "radio",
+      "id": "ctl00_Conteudo_rbtAcaoRecibo_1",
+      "rotulo": "Consulta Recibo",
+      "vis": true,
+      "valor": "rbtConsultaRecibo",
+      "postback": false,
+      "marcado": false
+     }
+    ],
+    "botoes": [
+     {
+      "id": "ctl00_Conteudo_btnExecuta",
+      "txt": "Executar Ação",
+      "vis": true,
+      "tipo": "submit"
+     }
+    ],
+    "abas": [],
+    "tabelas": [],
+    "links": [
+     {
+      "id": "ctl00_Conteudo_HyperLink1",
+      "txt": "Voltar",
+      "vis": true
+     }
+    ],
+    "texto": "Página Inicial Venda Grupo Cobrança Contemplação Crédito Atendimento Recibo Voltar Entre com uma das ações relacionadas abaixo: Gerar Recibo Consulta Recibo",
+    "frame": "principal"
+   }
+  ]
+ },
+ "avisos_ao_abrir": [],
+ "campos_entendidos": [],
+ "consulta": null,
+ "notas": {
+  "grupos_por_produto": 1,
+  "vagas": 0,
+  "creditos": 1,
+  "taxa": 0,
+  "seguro": 0,
+  "lance": 1
+ },
+ "provas": {
+  "grupos_por_produto": [],
+  "vagas": [],
+  "creditos": [],
+  "taxa": [],
+  "seguro": [],
+  "lance": []
+ }
+}

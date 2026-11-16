@@ -1,0 +1,544 @@
+{
+ "caminho": "Venda > Venda de Proposta > Proposta > Venda de Propostas",
+ "submenu": "VE/VP",
+ "lido_em": "16/11/2026 17:00:01",
+ "url": "https://newkey.cny.com.br/Intranet/CONPV/frmConPvCadProposta.aspx",
+ "abriu_tela_nova": true,
+ "leitura": {
+  "url": "https://newkey.cny.com.br/Intranet/CONPV/frmConPvCadProposta.aspx",
+  "frames": [
+   {
+    "titulo": "Intranet Newcon",
+    "cabecalhos": [
+     "Cadastro de Proposta",
+     "Cadastro de Proposta"
+    ],
+    "campos": [
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDT_Adesao",
+      "rotulo": "Data da Adesão:",
+      "vis": true,
+      "valor": "16/11/2026",
+      "postback": true
+     },
+     {
+      "tag": "input",
+      "tipo": "radio",
+      "id": "ctl00_Conteudo_rblTipoPessoaComissionado_0",
+      "rotulo": "Física",
+      "vis": true,
+      "valor": "F",
+      "postback": true,
+      "marcado": false
+     },
+     {
+      "tag": "input",
+      "tipo": "radio",
+      "id": "ctl00_Conteudo_rblTipoPessoaComissionado_1",
+      "rotulo": "Jurídica",
+      "vis": true,
+      "valor": "J",
+      "postback": false,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtInscricaoNacionalComissionado",
+      "rotulo": "Comissionado:",
+      "vis": true,
+      "valor": "40.111.279/0001-03",
+      "postback": true
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtComissionado",
+      "rotulo": "Comissionado:",
+      "vis": true,
+      "valor": "010852",
+      "postback": true
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtNM_Comissionado",
+      "rotulo": "",
+      "vis": true,
+      "valor": "40.111.279 BRENO LEONARDO MARQUES SOUZA LIMA",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCPFVendedor",
+      "rotulo": "CPF Vendedor:",
+      "vis": true,
+      "valor": "",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "radio",
+      "id": "ctl00_Conteudo_rblTipoPessoa_0",
+      "rotulo": "Física",
+      "vis": true,
+      "valor": "F",
+      "postback": false,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "radio",
+      "id": "ctl00_Conteudo_rblTipoPessoa_1",
+      "rotulo": "Jurídica",
+      "vis": true,
+      "valor": "J",
+      "postback": true,
+      "marcado": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCD_Inscricao_Nacional",
+      "rotulo": "CPF/CNPJ:",
+      "vis": true,
+      "valor": "",
+      "postback": true
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtContrato",
+      "rotulo": "Contrato:",
+      "vis": true,
+      "valor": "",
+      "postback": true
+     },
+     {
+      "tag": "select",
+      "tipo": "select-one",
+      "id": "ctl00_Conteudo_cbxProduto",
+      "rotulo": "",
+      "vis": true,
+      "valor": "0",
+      "postback": true,
+      "n_opcoes": 6,
+      "opcoes": [
+       [
+        "0",
+        "--Selecione--"
+       ],
+       [
+        "1",
+        "000001 - MOTOCICLETAS"
+       ],
+       [
+        "2",
+        "000002 - MOTOR DE POPA"
+       ],
+       [
+        "4",
+        "000004 - AUTOMÓVEIS"
+       ],
+       [
+        "102",
+        "000007 - IMÓVEIS"
+       ],
+       [
+        "105",
+        "000010 - CAMINHÃO"
+       ]
+      ],
+      "selecionado": "--Selecione--"
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtBusca_Produto",
+      "rotulo": "*",
+      "vis": true,
+      "valor": "",
+      "postback": false
+     },
+     {
+      "tag": "select",
+      "tipo": "select-one",
+      "id": "ctl00_Conteudo_cbxSubProduto",
+      "rotulo": "",
+      "vis": true,
+      "valor": "0",
+      "postback": true,
+      "n_opcoes": 1,
+      "opcoes": [
+       [
+        "0",
+        "--Selecione--"
+       ]
+      ],
+      "selecionado": "--Selecione--"
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtBusca_SubProduto",
+      "rotulo": "*",
+      "vis": true,
+      "valor": "",
+      "postback": false
+     },
+     {
+      "tag": "select",
+      "tipo": "select-one",
+      "id": "ctl00_Conteudo_cbxTp_Venda",
+      "rotulo": "",
+      "vis": true,
+      "valor": "0",
+      "postback": true,
+      "n_opcoes": 1,
+      "opcoes": [
+       [
+        "0",
+        "--Selecione--"
+       ]
+      ],
+      "selecionado": "--Selecione--"
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtBusca_TipoVenda",
+      "rotulo": "*",
+      "vis": true,
+      "valor": "",
+      "postback": false
+     },
+     {
+      "tag": "select",
+      "tipo": "select-one",
+      "id": "ctl00_Conteudo_cbxPl_Prazo",
+      "rotulo": "",
+      "vis": true,
+      "valor": "0",
+      "postback": true,
+      "n_opcoes": 1,
+      "opcoes": [
+       [
+        "0",
+        "--Selecione--"
+       ]
+      ],
+      "selecionado": "--Selecione--"
+     },
+     {
+      "tag": "select",
+      "tipo": "select-one",
+      "id": "ctl00_Conteudo_cbxTipoNegociacao",
+      "rotulo": "",
+      "vis": true,
+      "valor": "0",
+      "postback": false,
+      "n_opcoes": 1,
+      "opcoes": [
+       [
+        "0",
+        "--Selecione--"
+       ]
+      ],
+      "selecionado": "--Selecione--"
+     },
+     {
+      "tag": "select",
+      "tipo": "select-one",
+      "id": "ctl00_Conteudo_ddlVendaAutomatica",
+      "rotulo": "",
+      "vis": true,
+      "valor": "N",
+      "postback": false,
+      "n_opcoes": 2,
+      "opcoes": [
+       [
+        "N",
+        "Não"
+       ],
+       [
+        "S",
+        "Sim"
+       ]
+      ],
+      "selecionado": "Não"
+     },
+     {
+      "tag": "input",
+      "tipo": "radio",
+      "id": "ctl00_Conteudo_rblTipoPesquisa_0",
+      "rotulo": "Bem:",
+      "vis": true,
+      "valor": "B",
+      "postback": false,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "radio",
+      "id": "ctl00_Conteudo_rblTipoPesquisa_1",
+      "rotulo": "Valor Do Crédito:",
+      "vis": true,
+      "valor": "C",
+      "postback": true,
+      "marcado": false
+     },
+     {
+      "tag": "input",
+      "tipo": "radio",
+      "id": "ctl00_Conteudo_rblTipoPesquisa_2",
+      "rotulo": "Valor da Parcela:",
+      "vis": true,
+      "valor": "P",
+      "postback": true,
+      "marcado": false
+     },
+     {
+      "tag": "select",
+      "tipo": "select-one",
+      "id": "ctl00_Conteudo_cbxBem_Objeto",
+      "rotulo": "",
+      "vis": true,
+      "valor": "0",
+      "postback": true,
+      "n_opcoes": 1,
+      "opcoes": [
+       [
+        "0",
+        "--Selecione--"
+       ]
+      ],
+      "selecionado": "--Selecione--"
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtVl_Credito_Inicial",
+      "rotulo": "--Selecione-- --Selecione--",
+      "vis": true,
+      "valor": "",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtVl_Credito_Final",
+      "rotulo": "--Selecione-- --Selecione--",
+      "vis": true,
+      "valor": "",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtVl_Prestacao_Inicial",
+      "rotulo": "",
+      "vis": true,
+      "valor": "",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtVl_Prestacao_Final",
+      "rotulo": "",
+      "vis": true,
+      "valor": "",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtBusca_Bem",
+      "rotulo": "Inserir valores sem a vírgula.",
+      "vis": true,
+      "valor": "",
+      "postback": false
+     },
+     {
+      "tag": "select",
+      "tipo": "select-one",
+      "id": "ctl00_Conteudo_cbxFormaRecebimento_1_Parc",
+      "rotulo": "",
+      "vis": true,
+      "valor": "0",
+      "postback": false,
+      "n_opcoes": 1,
+      "opcoes": [
+       [
+        "0",
+        "--Selecione--"
+       ]
+      ],
+      "selecionado": "--Selecione--"
+     }
+    ],
+    "botoes": [
+     {
+      "id": "ctl00_Conteudo_btnImpressaoPac",
+      "txt": "Impressão de PAC",
+      "vis": true,
+      "tipo": "submit"
+     },
+     {
+      "id": "ctl00_Conteudo_btnComissionado",
+      "txt": "...",
+      "vis": true,
+      "tipo": "button"
+     },
+     {
+      "id": "ctl00_Conteudo_btnAvancar",
+      "txt": "Avançar »",
+      "vis": true,
+      "tipo": "button"
+     }
+    ],
+    "abas": [],
+    "tabelas": [],
+    "links": [
+     {
+      "id": "ctl00_Conteudo_HyperLink1",
+      "txt": "Voltar",
+      "vis": true
+     }
+    ],
+    "texto": "Página Inicial Venda Grupo Cobrança Contemplação Crédito Atendimento Impressão de Documentos Voltar Cadastro de Proposta Data da Adesão: * Tipo de Pessoa: FísicaJurídica Comissionado: CPF Vendedor: * Tipo de Pessoa: FísicaJurídica CPF/CNPJ: * Contrato: Somente informar este campo para contratos pré-impressos. Produto: --Selecione-- --Selecione-- 000001 - MOTOCICLETAS 000002 - MOTOR DE POPA 000004 - AUTOMÓVEIS 000007 - IMÓVEIS 000010 - CAMINHÃO * Subproduto: --Selecione-- --Selecione-- * Tipo de Venda: --Selecione-- --Selecione-- * Prazo: --Selecione-- --Selecione-- Meses * Tipo de Negociação: --Selecione-- --Selecione-- Modelo de proposta: SELECIONE UM PRODUTO PARA O MODELO DE PROPOSTA SER APRESENTADO Venda Automatica: Não Não Sim Bem: Valor Do Crédito: Valor da Parcela: --Selecione-- --Selecione-- Inserir valores sem a vírgula. Forma de Pagamento Primeira Parcela: --Selecione-- --Selecione-- * Campos obrigatórios.",
+    "frame": "principal"
+   }
+  ]
+ },
+ "avisos_ao_abrir": [],
+ "campos_entendidos": [
+  {
+   "campo": "ctl00_Conteudo_cbxProduto",
+   "id": "ctl00_Conteudo_cbxProduto",
+   "escolhi": "000001 - MOTOCICLETAS",
+   "n_opcoes": 5,
+   "liberou": [
+    {
+     "campo": "ctl00_Conteudo_cbxTp_Venda",
+     "id": "ctl00_Conteudo_cbxTp_Venda",
+     "n_opcoes": 12,
+     "exemplos": [
+      "--Selecione--",
+      "020 - MAX MEGA",
+      "021 - MAX MASTER",
+      "023 - MAX SUPER PRIME",
+      "028 - MAX SUPER PRIME 2.0",
+      "030 - CONTEMPLA + MEGA",
+      "031 - CONTEMPLA + MASTER",
+      "035 - CONTEMPLA + SUPER PRIME",
+      "037 - SUPER GRUPO MEGA",
+      "038 - SUPER GRUPO MASTER",
+      "065 - CONTEMPLA + MEGA ANDAMENTO",
+      "066 - CONTEMPLA + MASTER ANDAMENTO"
+     ]
+    },
+    {
+     "campo": "ctl00_Conteudo_cbxConvenio",
+     "id": "ctl00_Conteudo_cbxConvenio",
+     "n_opcoes": 2,
+     "exemplos": [
+      "--Selecione--",
+      "00000000008000 - PARCEIROS COMERCIAIS"
+     ]
+    },
+    {
+     "campo": "ctl00_Conteudo_cbxTipoNegociacao",
+     "id": "ctl00_Conteudo_cbxTipoNegociacao",
+     "n_opcoes": 2,
+     "exemplos": [
+      "Pagamento diluído (Prazo reduzido)",
+      "Furo para pagamento na contemplação"
+     ]
+    },
+    {
+     "campo": "ctl00_Conteudo_cbxFormaRecebimento_1_Parc",
+     "id": "ctl00_Conteudo_cbxFormaRecebimento_1_Parc",
+     "n_opcoes": 1,
+     "exemplos": [
+      "BB - BOLETO BANCÁRIO"
+     ]
+    }
+   ]
+  },
+  {
+   "campo": "ctl00_Conteudo_cbxTp_Venda",
+   "id": "ctl00_Conteudo_cbxTp_Venda",
+   "escolhi": "020 - MAX MEGA",
+   "n_opcoes": 11,
+   "liberou": []
+  },
+  {
+   "campo": "ctl00_Conteudo_cbxPl_Prazo",
+   "id": "ctl00_Conteudo_cbxPl_Prazo",
+   "escolhi": "36",
+   "n_opcoes": 4,
+   "liberou": [
+    {
+     "campo": "ctl00_Conteudo_cbxBem_Objeto",
+     "id": "ctl00_Conteudo_cbxBem_Objeto",
+     "n_opcoes": 9,
+     "exemplos": [
+      "--Selecione--",
+      "928TX - CROSSER 150 S ABS CONNECTED - R$ 26.073,00",
+      "1034TX - CROSSER 150 Z ABS CONNECTED - R$ 26.286,00",
+      "922TX - FACTOR 150 ED - R$ 21.351,00",
+      "1501TX - FLUO ABS HYBRID CONNECTED - R$ 19.001,00",
+      "1278TX - FZ15 FAZER ABS - R$ 24.319,00",
+      "1283TX - NMAX CONNECTED 160 ABS - R$ 26.368,00",
+      "919TX - TTR 230 - R$ 23.362,00",
+      "1320TX - YZF R15 ABS - R$ 26.177,00"
+     ]
+    }
+   ]
+  },
+  {
+   "campo": "ctl00_Conteudo_cbxConvenio",
+   "id": "ctl00_Conteudo_cbxConvenio",
+   "escolhi": "00000000008000 - PARCEIROS COMERCIAIS",
+   "n_opcoes": 1,
+   "liberou": []
+  },
+  {
+   "campo": "ctl00_Conteudo_cbxBem_Objeto",
+   "id": "ctl00_Conteudo_cbxBem_Objeto",
+   "escolhi": "928TX - CROSSER 150 S ABS CONNECTED - R$ 26.073,00",
+   "n_opcoes": 8,
+   "liberou": []
+  }
+ ],
+ "consulta": null,
+ "notas": {
+  "grupos_por_produto": 6,
+  "vagas": 0,
+  "creditos": 7,
+  "taxa": 0,
+  "seguro": 0,
+  "lance": 1
+ },
+ "provas": {
+  "grupos_por_produto": [
+   "opção: 000001 - MOTOCICLETAS",
+   "opção: 000002 - MOTOR DE POPA",
+   "opção: 000004 - AUTOMÓVEIS",
+   "opção: 000007 - IMÓVEIS",
+   "opção: 000010 - CAMINHÃO"
+  ],
+  "vagas": [],
+  "creditos": [
+   "campo: Bem:",
+   "campo: Valor Do Crédito:"
+  ],
+  "taxa": [],
+  "seguro": [],
+  "lance": []
+ }
+}

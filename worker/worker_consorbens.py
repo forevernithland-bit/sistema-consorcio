@@ -146,7 +146,15 @@ def marcar(sb: Client, pid, **campos):
 # fallback fixo — vale mesmo se o robo_config.toml não parsear.
 _PRIO_FIXA = {"LANCE": 10, "BOLETO": 10, "PLANEJAR_SIMULACAO": 40,
               "COLETA_GRUPOS": 50, "COLETA_ASSEMBLEIAS": 50,
-              "COLETA_TABELAS": 50, "RELATORIO_COMISSAO": 60}
+              "COLETA_TABELAS": 50, "RELATORIO_COMISSAO": 60, "EXPLORAR_NEWCON": 70}
+# Erro técnico volta pra fila sozinho quando o robô liga — mas no máximo até aqui.
+# (antes não tinha teto: 5 lances com a mesma falha voltavam a CADA início do robô,
+#  cada um abrindo/fechando o Newcon — 12 tentativas em 4 dias.)
+MAX_REENFILEIRAR = int(os.getenv("MAX_REENFILEIRAR", "6"))
+# Sessão Newcon: confere a MESMA janela se ficou parada mais que isso antes de uma tarefa,
+# e dá um "ping" na home quando ociosa, pra a sessão não expirar.
+NEWCON_CHECAR_APOS_SEG = int(os.getenv("NEWCON_CHECAR_APOS_SEG", "300"))
+NEWCON_PING_SEG = int(os.getenv("NEWCON_PING_SEG", "600"))
 
 
 def _prio_pedido(pedido: dict, cfg: dict) -> int:
@@ -211,11 +219,13 @@ def reenfileirar_interrompidos(sb: Client):
     try:
         proc = (sb.table("fila_automacao").select("id,cliente,grupo,cota,tipo")
                 .in_("tipo", list(HANDLERS.keys())).eq("status", "PROCESSANDO").execute())
-        err = (sb.table("fila_automacao").select("id,cliente,grupo,cota,mensagem,tipo")
+        err = (sb.table("fila_automacao").select("id,cliente,grupo,cota,mensagem,tipo,tentativas")
                .in_("tipo", ["LANCE", "BOLETO"]).eq("status", "ERRO").execute())
         alvos = list(proc.data or [])
         for r in (err.data or []):
             if _deve_reofertar(r.get("mensagem")):
+                if (r.get("tentativas") or 0) >= MAX_REENFILEIRAR:
+                    continue          # já tentou demais: fica em ERRO para alguém conferir
                 alvos.append(r)
         for r in alvos:
             marcar(sb, r["id"], status="PENDENTE", mensagem=None,
@@ -349,6 +359,25 @@ def preparar_newcon(sb: Client, visivel: bool):
             "Corrija a senha e rode: python worker_consorbens.py --destravar-login")
 
     login_newcon, senha_newcon = buscar_credenciais_newcon(sb)
+
+    # 16/11/2026: NAVEGADOR ÚNICO do Newcon (sempre aberto e logado). O robô só
+    # abre uma ABA nele; fechar = fechar a aba. Nada de abrir/fechar Chromium.
+    if os.getenv("NEWCON_NAVEGADOR_UNICO", "1") != "0":
+        import newcon_navegador
+        try:
+            pw, aba, context, page = newcon_navegador.abrir_aba(
+                sb, visivel=visivel, dialogo="recusar", login=login_newcon, senha=senha_newcon,
+                timeout_ms=TIMEOUT_ELEMENTO * 1000)
+        except RuntimeError as e:
+            if "Não consegui completar o login" in str(e):
+                _trava_gravar(sb, login_newcon, "senha errada/expirada no login do Newcon", e)
+                raise LoginTravado(str(e)) from e
+            raise
+        _trava_limpar(sb)
+        log("Newcon: usando o navegador único (aba própria do robô). 👍")
+        return {"pw": pw, "browser": aba, "context": context, "page": page,
+                "ultimo_uso": time.time()}
+
     pw = sync_playwright().start()
     # Imperva (firewall do Newcon) passou a bloquear Chrome headless ("Access denied, Error 15").
     # Por isso nunca usamos headless: com "navegador_visivel = false" abre COM janela, mas minimizada.
@@ -371,7 +400,8 @@ def preparar_newcon(sb: Client, visivel: bool):
             logado = False
         if logado:
             log("Newcon: sessão salva reutilizada. 👍")
-            return {"pw": pw, "browser": browser, "context": context, "page": page}
+            return {"pw": pw, "browser": browser, "context": context, "page": page,
+                    "ultimo_uso": time.time()}
 
         log("Newcon: sessão inválida — logando (1 tentativa só)…")
         try:
@@ -383,13 +413,76 @@ def preparar_newcon(sb: Client, visivel: bool):
             raise LoginTravado(str(e)) from e
         context.storage_state(path=newcon.STORAGE_STATE)
         _trava_limpar(sb)   # logou -> se havia trava antiga, some
-        return {"pw": pw, "browser": browser, "context": context, "page": page}
+        return {"pw": pw, "browser": browser, "context": context, "page": page,
+                "ultimo_uso": time.time()}
     except LoginTravado:
         _fechar_navegador({"browser": browser, "pw": pw})
         raise
     except Exception:
         _fechar_navegador({"browser": browser, "pw": pw})
         raise
+
+
+def _recuperar_newcon(sb: Client, c) -> bool:
+    """Deixa a MESMA janela do Newcon pronta pra próxima tarefa (16/11/2026).
+    Volta pra home; se a sessão caiu, loga de novo ali mesmo. True = deu certo
+    (não precisa fechar/abrir navegador). False = o navegador morreu -> reabrir.
+    Senha errada no relogin -> trava (LoginTravado), igual ao preparar_newcon."""
+    import newcon
+    if not c:
+        return False
+    login = senha = None
+    try:
+        login, senha = buscar_credenciais_newcon(sb)
+    except Exception:
+        pass
+    try:
+        r = newcon.garantir_sessao(c["page"], c["context"], login, senha)
+    except Exception as e:
+        txt = str(e)
+        if "Não consegui completar o login" in txt:
+            _trava_gravar(sb, login, "senha errada/expirada no login do Newcon", e)
+            raise LoginTravado(txt) from e
+        log(f"Newcon: a janela aberta não respondeu ({type(e).__name__}: {txt[:90]}) — vou reabrir.")
+        return False
+    c["ultimo_uso"] = time.time()
+    if r == "relogado":
+        _trava_limpar(sb)
+        log("Newcon: sessão tinha caído — loguei de novo NA MESMA JANELA. 👍")
+    return True
+
+
+def _recuperar_ou_fechar(sb: Client):
+    """Tenta recuperar a janela atual; só fecha se não tiver jeito."""
+    c = _newcon_ref["c"]
+    if c is None:
+        return
+    try:
+        if _recuperar_newcon(sb, c):
+            return
+    except LoginTravado as e:
+        log(f"🔒 {e}")
+    _fechar_navegador(c)
+    _newcon_ref["c"] = None
+
+
+def _ping_ocioso(sb: Client):
+    """Robô parado com o Newcon aberto: a cada NEWCON_PING_SEG abre a home pra
+    sessão não expirar. Não reloga aqui (relogar só quando chegar tarefa)."""
+    c = _newcon_ref["c"]
+    if c is None:
+        return
+    ult = max(c.get("ultimo_uso", 0), c.get("ultimo_ping", 0))
+    if time.time() - ult < NEWCON_PING_SEG:
+        return
+    try:
+        import newcon
+        c["page"].goto(newcon.HOME_URL, wait_until="domcontentloaded", timeout=30000)
+        c["ultimo_ping"] = time.time()
+    except Exception as e:
+        log(f"Newcon: ping falhou ({type(e).__name__}) — fecho e reabro só quando chegar tarefa.")
+        _fechar_navegador(c)
+        _newcon_ref["c"] = None
 
 
 def _fechar_navegador(ctx):
@@ -431,7 +524,11 @@ def h_lance_boleto(sb, pedido, ctx, cfg):
                 status, mensagem, extras = gerar_boleto(page, pedido, TIMEOUT_CONFIRMACAO)
             else:
                 from newcon import ofertar_lance
-                status, mensagem, protocolo = ofertar_lance(page, pedido, TIMEOUT_CONFIRMACAO)
+                ped = dict(pedido)
+                pl = pedido.get("payload") or {}
+                if isinstance(pl, dict) and pl.get("simular"):
+                    ped["simular"] = True          # teste: preenche e clica "Simular...", nunca Confirmar
+                status, mensagem, protocolo = ofertar_lance(page, ped, TIMEOUT_CONFIRMACAO)
 
         if status == "OK":
             campos = {"status": "SUCESSO", "mensagem": mensagem,
@@ -439,12 +536,16 @@ def h_lance_boleto(sb, pedido, ctx, cfg):
             campos.update(extras)
             marcar(sb, pid, **campos)
             log(f"   ✅ #{pid} OK: {mensagem}")
+            if tipo == "LANCE":
+                _programado_contar(sb, pedido)
             return {"ok": True}
-        if status in ("JA_PAGO", "SEM_BOLETO", "JA_OFERTADO"):
+        if status in ("JA_PAGO", "SEM_BOLETO", "JA_OFERTADO", "SIMULADO"):
             campos = {"status": status, "mensagem": mensagem, "concluido_em": agora_iso()}
             campos.update(extras)
             marcar(sb, pid, **campos)
             log(f"   ℹ️ #{pid} {status}: {mensagem}")
+            if tipo == "LANCE" and status == "JA_OFERTADO":
+                _programado_contar(sb, pedido)
             return {"ok": True}
         marcar(sb, pid, status="ERRO", mensagem=mensagem, concluido_em=agora_iso())
         log(f"   ❌ #{pid} ERRO (conferir): {mensagem}")
@@ -464,22 +565,35 @@ def h_lance_boleto(sb, pedido, ctx, cfg):
 
 def h_relatorio_comissao(sb, pedido, ctx, cfg):
     """RELATORIO_COMISSAO — baixa PDF(s) de comissão pagos (Newcon).
-    `baixar_comissoes` abre o SEU PRÓPRIO navegador — então fechamos o do
-    supervisor antes, pra não haver 2 sessões Newcon ao mesmo tempo."""
+    Desde 16/11/2026 usa a MESMA janela do supervisor (antes fechava a dele e
+    abria outra — mais um abre/fecha do Newcon)."""
     import importlib
     pid = pedido["id"]
     payload = pedido.get("payload") or {}
     mes = payload.get("mes")            # "AAAA-MM" ou None = mês atual
-    if _newcon_ref["c"] is not None:
-        _fechar_navegador(_newcon_ref["c"])
-        _newcon_ref["c"] = None
     marcar(sb, pid, status="PROCESSANDO", iniciado_em=agora_iso())
     argv0 = list(sys.argv)
+    page = (ctx or {}).get("page")
     try:
         sys.argv = ["baixar_comissoes.py"] + (["--mes", mes] if mes else ["--mes-atual"])
         mod = importlib.import_module("baixar_comissoes")
         importlib.reload(mod)
-        mod.main()
+        if page is not None:
+            # o relatório foi feito com diálogos ACEITOS; devolve o padrão (recusar) no fim
+            try:
+                page.remove_all_listeners("dialog")
+            except Exception:
+                pass
+            page.on("dialog", lambda d: d.accept())
+        try:
+            mod.main(page_externo=page)
+        finally:
+            if page is not None:
+                try:
+                    page.remove_all_listeners("dialog")
+                except Exception:
+                    pass
+                page.on("dialog", lambda d: d.dismiss())
         marcar(sb, pid, status="SUCESSO",
                mensagem=f"Relatório de comissão baixado ({mes or 'mês atual'})",
                concluido_em=agora_iso())
@@ -623,6 +737,41 @@ def h_backup_erp(sb, pedido, ctx, cfg):
         return {"ok": False, "negocio": True}
 
 
+def h_explorar_newcon(sb, pedido, ctx, cfg):
+    """EXPLORAR_NEWCON — o robô aprende as telas do Newcon (só leitura), na MESMA
+    janela/sessão do supervisor. Retoma de onde parou (conhecimento_newcon/).
+    payload opcional: {"limite": 10, "so": ["GR/AA"], "refazer": false}"""
+    import explorar_newcon as EX
+    pid = pedido["id"]
+    prio = _prio_pedido(pedido, cfg)
+    payload = pedido.get("payload") or {}
+    marcar(sb, pid, status="PROCESSANDO", iniciado_em=agora_iso())
+    sx, reabrir = handlers_coleta._sx_do_ctx(ctx, _reabrir_holder["fn"])
+    opts = {"limite": payload.get("limite"),
+            "so": set(x.upper() for x in payload["so"]) if payload.get("so") else None,
+            "refazer": bool(payload.get("refazer")), "consulta": payload.get("consulta", True),
+            "campos": payload.get("campos", True), "ceder_cb": _ceder_cb_factory(sb, cfg, prio)}
+    try:
+        r = EX.explorar(sx, reabrir, sb, opts)
+    finally:
+        try:
+            sx["page"].remove_all_listeners("dialog")
+            sx["page"].on("dialog", lambda d: d.dismiss())
+        except Exception:
+            pass
+        try:
+            EX.gerar_mapa()
+        except Exception:
+            pass
+    if r == "CEDEU":
+        return _fechar_fila(sb, pid, {"ok": True, "ceder": True,
+                                      "mensagem": "exploração pausada (cede a vez) — retoma depois"})
+    if r == "LIMITE":
+        return _fechar_fila(sb, pid, {"ok": True, "mensagem": "exploração parcial (limite) — progresso salvo"})
+    return _fechar_fila(sb, pid, {"ok": bool(r), "mensagem": "exploração do Newcon concluída — mapa atualizado"
+                                  if r else "exploração interrompida — progresso salvo, peça de novo"})
+
+
 def _fechar_fila(sb, pid, r: dict):
     """Traduz o retorno de um handler de coleta para o estado da fila."""
     if r.get("ceder"):
@@ -653,10 +802,12 @@ HANDLERS = {
     "IMPORTA_FRAGA_BITELLO": h_importar_fraga_bitello,
     "PLANEJAR_SIMULACAO": h_stub,
     "BACKUP_ERP": h_backup_erp,
+    "EXPLORAR_NEWCON": h_explorar_newcon,
 }
 # handlers que o supervisor abre a sessão Newcon ANTES de chamar.
 # RELATORIO_COMISSAO fica de fora: ele abre e fecha o SEU próprio navegador.
-PRECISA_NEWCON = {"LANCE", "BOLETO", "COLETA_GRUPOS", "COLETA_ASSEMBLEIAS"}
+PRECISA_NEWCON = {"LANCE", "BOLETO", "COLETA_GRUPOS", "COLETA_ASSEMBLEIAS",
+                  "RELATORIO_COMISSAO", "EXPLORAR_NEWCON"}   # todos na MESMA janela
 
 _reabrir_holder = {"fn": None}   # o loop principal injeta a função de reabrir o Newcon
 _newcon_ref = {"c": None}        # referência viva ao contexto Newcon (o loop mantém)
@@ -807,6 +958,85 @@ def _tem_boleto_no_mes(sb, venda_id) -> bool:
         return bool(res.data)
     except Exception:
         return True
+
+
+# ------------------------------------------------ lances PROGRAMADOS (16/11/2026)
+# O ERP grava em `lances_programados` um lance que se repete por N meses (ou
+# ilimitado). A cada ~30 min o robô confere: se a programação ainda não tem lance
+# no mês, põe um LANCE na fila. Se o Newcon recusar (formulário fechado), tenta de
+# novo no dia seguinte. Conta o mês só quando sai SUCESSO ou JA_OFERTADO.
+_ULT_PROG = [0.0]
+
+
+def _programado_contar(sb, pedido):
+    pid = pedido.get("programado_id")
+    if not pid:
+        return
+    try:
+        r = (sb.table("lances_programados").select("*").eq("id", pid).execute().data or [None])[0]
+        if not r:
+            return
+        mes = datetime.now().strftime("%Y-%m")
+        if r.get("ultimo_mes") == mes:
+            return
+        feitos = int(r.get("meses_feitos") or 0) + 1
+        upd = {"meses_feitos": feitos, "ultimo_mes": mes, "atualizado_em": agora_iso()}
+        if r.get("meses_total") and feitos >= int(r["meses_total"]):
+            upd["ativo"] = False
+        sb.table("lances_programados").update(upd).eq("id", pid).execute()
+        log(f"   📆 programação #{pid}: {feitos}/{r.get('meses_total') or '∞'} mês(es)")
+    except Exception as e:
+        log(f"⚠️ programação #{pid}: {e}")
+
+
+def enfileirar_lances_programados(sb, forcar=False):
+    if not forcar and time.time() - _ULT_PROG[0] < 1800:
+        return
+    _ULT_PROG[0] = time.time()
+    try:
+        progs = sb.table("lances_programados").select("*").eq("ativo", True).execute().data or []
+    except Exception:
+        return                    # migração 34 ainda não rodada
+    hoje = datetime.now()
+    mes = hoje.strftime("%Y-%m")
+    ini_mes = hoje.strftime("%Y-%m-01")
+    ins = 0
+    for p in progs:
+        try:
+            if p.get("meses_total") and int(p.get("meses_feitos") or 0) >= int(p["meses_total"]):
+                sb.table("lances_programados").update({"ativo": False}).eq("id", p["id"]).execute()
+                continue
+            if p.get("ultimo_mes") == mes:
+                continue
+            if p.get("venda_id"):
+                v = (sb.table("vendas").select("STATUS").eq("id", p["venda_id"]).execute().data or [{}])[0]
+                if _norm(v.get("STATUS")) in ("CONTEMPLADA", "CANCELADA"):
+                    sb.table("lances_programados").update({"ativo": False, "atualizado_em": agora_iso()}) \
+                        .eq("id", p["id"]).execute()
+                    log(f"📆 programação #{p['id']} encerrada: cota {v.get('STATUS')}")
+                    continue
+            fila = (sb.table("fila_automacao").select("id,status,criado_em")
+                    .eq("programado_id", p["id"]).gte("criado_em", ini_mes)
+                    .order("criado_em", desc=True).execute().data or [])
+            st = {f.get("status") for f in fila}
+            if st & {"PENDENTE", "PROCESSANDO", "SUCESSO", "JA_OFERTADO"}:
+                continue
+            if fila and str(fila[0].get("criado_em", ""))[:10] == hoje.strftime("%Y-%m-%d"):
+                continue          # já tentou hoje (formulário fechado): amanhã de novo
+            sb.table("fila_automacao").insert({
+                "tipo": "LANCE", "venda_id": p.get("venda_id"), "cliente": p.get("cliente"),
+                "vendedor": p.get("vendedor"), "produto": p.get("produto"), "administradora": "Yamaha",
+                "grupo": str(p["grupo"]).strip(), "cota": str(p["cota"]).strip(),
+                "tipo_lance": p.get("tipo_lance"), "pct_lance": p.get("pct_lance"),
+                "pct_embutido": p.get("pct_embutido") or 0, "pct_proprio": p.get("pct_proprio") or 0,
+                "tipo_reducao": p.get("tipo_reducao") or "Reduzir Parcela",
+                "programado_id": p["id"], "status": "PENDENTE", "solicitado_por": "PROGRAMADO",
+            }).execute()
+            ins += 1
+        except Exception as e:
+            log(f"⚠️ programação #{p.get('id')}: {e}")
+    if ins:
+        log(f"📆 lances programados: {ins} pedido(s) de {mes} na fila.")
 
 
 def enfileirar_mensais_do_mes(sb):
@@ -966,6 +1196,11 @@ def main():
     n_reab = [0]
 
     def reabrir_newcon():
+        # 1º tenta consertar NA MESMA JANELA (home + relogin ali se precisar)
+        c = _newcon_ref["c"]
+        if c is not None and _recuperar_newcon(sb, c):
+            log("🔁 Newcon recuperado na mesma janela (sem fechar o navegador).")
+            return c["page"]
         n_reab[0] += 1
         log(f"🔄 reabrindo o Newcon (reabertura {n_reab[0]})…")
         _fechar_navegador(_newcon_ref["c"])
@@ -982,6 +1217,7 @@ def main():
             _sincronizar_trava(sb)      # ERP clicou "liberar o robô"? apaga a trava local
             try:
                 enfileirar_mensais_do_mes(sb)
+                enfileirar_lances_programados(sb)
                 cron_tick(cfg)
             except Exception as e:
                 log(f"⚠️ cron/mensais: {e}")
@@ -994,6 +1230,10 @@ def main():
                 continue
 
             if not pedido:
+                try:
+                    _ping_ocioso(sb)       # mantém a sessão do Newcon viva enquanto espera
+                except Exception:
+                    pass
                 time.sleep(intervalo)
                 continue
 
@@ -1010,9 +1250,16 @@ def main():
             # Abrir o Newcon e rodar o handler NÃO podem derrubar o supervisor
             # (senão o watchdog vira crash-loop). Falha aqui = marca a linha e segue.
             try:
+                # janela já aberta mas parada há um tempo? confere/reloga NELA mesma
+                c0 = _newcon_ref["c"]
+                if precisa and c0 is not None and \
+                        time.time() - c0.get("ultimo_uso", 0) > NEWCON_CHECAR_APOS_SEG:
+                    _recuperar_ou_fechar(sb)
                 if precisa and _newcon_ref["c"] is None:
                     _newcon_ref["c"] = preparar_newcon(sb, visivel)
                 r = handler(sb, pedido, _newcon_ref["c"], cfg) or {}
+                if _newcon_ref["c"] is not None:
+                    _newcon_ref["c"]["ultimo_uso"] = time.time()
             except LoginTravado as e:
                 # login do Newcon travado: a tarefa NÃO é culpada — fica PENDENTE.
                 if time.time() - _MARCA_TRAVA_LOG[0] > 900:   # avisa no máx. a cada 15 min
@@ -1029,16 +1276,15 @@ def main():
                            mensagem=f"exceção no handler: {erro}", concluido_em=agora_iso())
                 except Exception:
                     pass
-                # Newcon pode ter ficado ruim — fecha pra reabrir limpo no próximo
+                # Newcon pode ter ficado ruim — tenta consertar na MESMA janela;
+                # só fecha se não tiver jeito (16/11/2026: antes fechava sempre).
                 if not sim:
-                    _fechar_navegador(_newcon_ref["c"])
-                    _newcon_ref["c"] = None
+                    _recuperar_ou_fechar(sb)
                 time.sleep(min(intervalo, 15))
                 continue
 
             if r.get("reiniciar") and not sim:
-                _fechar_navegador(_newcon_ref["c"])
-                _newcon_ref["c"] = None
+                _recuperar_ou_fechar(sb)
             # segue imediatamente pro próximo pendente
 
     except KeyboardInterrupt:

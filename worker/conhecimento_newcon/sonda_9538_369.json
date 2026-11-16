@@ -1,0 +1,883 @@
+{
+ "posicao_txt": "Página Inicial\nVenda\nGrupo\nCobrança\nContemplação\nCrédito\nAtendimento\n \nPosição do Consorciado\nVoltar\n\n\nOperações\n\n Posição do Consorciado\n Cotas do Cliente\n Dados cadastrais\n Emissão de Cobrança\n Histórico de Transfer...\n Imprimir Extrato\n Oferta de Lance\n Outras Cobranças\n Resultado de Assemble...\n Transferir Cota\nEmpresa:\n0101 YAMAHA ADM DE CONSORCIO LTDA\n000001 YAMAHA ADM DE CONSORCIO LTDA\nUnidade:\n\n\nCota:\n009538 0369-00 ELAINE SOARES DA SILVA\n    \n\nContrato:\n0102047083\nNORMAL\nCNPJ/CPF:\n043.058.906-90\nDt. Nasc.:\n07/11/1978\nTipo de Cota:\nPlano de Venda\nData Adesão:\n22/06/2026\nData Cadastro:\n22/06/2026\nData de Alocação:\n23/06/2026\nData Venda:\n23/06/2026\n1a. Assembleia:\n013 25/06/2026\nSit. Cobrança:\nNORMAL\nPrazo Plano:\n072\nTipo Venda:\nS G MASTER IPCA PR – 40%\nPlano Venda:\n000163 S G MASTER IPCA PR – 40% DESC\nBem Objeto:\n1372TX\nAUTOMÓVEL R$30 MIL (70% = R$21 MIL)\n30.000,00\nFilial Venda:\n000021\nFilial Adm:\n000003\nPonto Venda:\n010852\nPonto Entrega:\nTaxa Adm.:\n9,9000%\nTaxa Adesão:\n0,0000%\nFnd. Reserva:\n0,0000%\n% Cont.:\n30,0000%\nSeguros:\n000011\nContemplação\nContemplação:\n000\nEntrega:\nDesclassificação:\n\n\nSaldo acumulado\nAssemb. Atual:\n018\n26/11/2026\nVencimento:\n23/11/2026\nValores Pagos:\nR$ 2.272,98\n5,6832%\nSaldo Devedor:\nR$ 30.871,93\n94,3168%\nAtraso(s):\n000\nR$ 0,00\n0,0000%\nDif. Parcela:\nR$ 0,00\n0,0000%\nVl. da Parcela:\n006\nR$ 378,83\n0,9472%\nNegociações\n \tPercentual Cobrar Contemplação\t23/06/2026\n \tPercentual Ideal/Rateado\t23/06/2026\nDif. Grupo:\n0\n0,4372%\nQtd. Pcls. Pagas:\n006\nQtd. Pcls. Furo:\n000\nLance Mín:\n1,0862%\nLance Máx:\n76,9260%\nHistograma\n....5...10...15...20...25...30...35...40...45...50...55...60...65...70...75...80...85...90...95..100..105..110..115..120\nPPPPPP------------------------------------------------------------IIIIII\n\n\nPonto de atendimento:\n---\nUsuário:\n---",
+ "posicao_campos": [
+  {
+   "id": "__VSTATE",
+   "v": "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"
+  },
+  {
+   "id": "__VSIG",
+   "v": "zJqVfo1cQpBPRh3JLFa7sPjSueWPzagcFPu6QFE0VUk="
+  },
+  {
+   "id": "VE",
+   "v": "Venda"
+  },
+  {
+   "id": "GR",
+   "v": "Grupo"
+  },
+  {
+   "id": "CO",
+   "v": "Cobrança"
+  },
+  {
+   "id": "CP",
+   "v": "Contemplação"
+  },
+  {
+   "id": "CR",
+   "v": "Crédito"
+  },
+  {
+   "id": "AT",
+   "v": "Atendimento"
+  },
+  {
+   "id": "ctl00_Conteudo_Label99",
+   "v": "Empresa:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblEmpresa",
+   "v": "0101 YAMAHA ADM DE CONSORCIO LTDA"
+  },
+  {
+   "id": "ctl00_Conteudo_lblUnidade_Negocio",
+   "v": "000001 YAMAHA ADM DE CONSORCIO LTDA"
+  },
+  {
+   "id": "ctl00_Conteudo_lblDescUnidade",
+   "v": "Unidade:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblDescCota",
+   "v": "Cota:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblCD_Cota",
+   "v": "009538 0369-00 ELAINE SOARES DA SILVA"
+  },
+  {
+   "id": "ctl00_Conteudo_lblDescContrato",
+   "v": "Contrato:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblID_Documento",
+   "v": "0102047083"
+  },
+  {
+   "id": "ctl00_Conteudo_lblNM_Tipo_Cota",
+   "v": "NORMAL"
+  },
+  {
+   "id": "ctl00_Conteudo_lblDescCNPJ_CPF",
+   "v": "CNPJ/CPF:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblCNPJ_CPF",
+   "v": "043.058.906-90"
+  },
+  {
+   "id": "ctl00_Conteudo_lblDescNascimento",
+   "v": "Dt. Nasc.:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblDT_Nascimento",
+   "v": "07/11/1978"
+  },
+  {
+   "id": "ctl00_Conteudo_Label41",
+   "v": "Tipo de Cota:"
+  },
+  {
+   "id": "ctl00_Conteudo_Label7",
+   "v": "Plano de Venda"
+  },
+  {
+   "id": "ctl00_Conteudo_Label12",
+   "v": "Data Adesão:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblDT_Adesao",
+   "v": "22/06/2026"
+  },
+  {
+   "id": "ctl00_Conteudo_lblDT_Cad_Transf",
+   "v": "Data Cadastro:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblDT_Cadastro",
+   "v": "22/06/2026"
+  },
+  {
+   "id": "ctl00_Conteudo_Label25",
+   "v": "Data de Alocação:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblDT_Alocacao",
+   "v": "23/06/2026"
+  },
+  {
+   "id": "ctl00_Conteudo_Label134",
+   "v": "Data Venda:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblDt_Venda",
+   "v": "23/06/2026"
+  },
+  {
+   "id": "ctl00_Conteudo_Label13",
+   "v": "1a. Assembleia:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblAssembleia_Emissao",
+   "v": "013 25/06/2026"
+  },
+  {
+   "id": "ctl00_Conteudo_Label38",
+   "v": "Sit. Cobrança:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblNMSituacaoCobranca",
+   "v": "NORMAL"
+  },
+  {
+   "id": "ctl00_Conteudo_Label14",
+   "v": "Prazo Plano:"
+  },
+  {
+   "id": "ctl00_Conteudo_btnPrazoPlano",
+   "v": "..."
+  },
+  {
+   "id": "ctl00_Conteudo_lblPZ_Cota",
+   "v": "072"
+  },
+  {
+   "id": "ctl00_Conteudo_Label78",
+   "v": "Tipo Venda:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblNM_TP_Venda_Grupo",
+   "v": "S G MASTER IPCA PR – 40%"
+  },
+  {
+   "id": "ctl00_Conteudo_Label36",
+   "v": "Plano Venda:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblPlano_Venda",
+   "v": "000163 S G MASTER IPCA PR – 40% DESC"
+  },
+  {
+   "id": "ctl00_Conteudo_Label15",
+   "v": "Bem Objeto:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblBem",
+   "v": "1372TX"
+  },
+  {
+   "id": "ctl00_Conteudo_lblPlnVendaNM_Bem",
+   "v": "AUTOMÓVEL R$30 MIL (70% = R$21 MIL)"
+  },
+  {
+   "id": "ctl00_Conteudo_lblVL_Bem",
+   "v": "30.000,00"
+  },
+  {
+   "id": "ctl00_Conteudo_btnBem",
+   "v": "..."
+  },
+  {
+   "id": "ctl00_Conteudo_Label16",
+   "v": "Filial Venda:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblCD_Filial_Venda",
+   "v": "000021"
+  },
+  {
+   "id": "ctl00_Conteudo_Label29",
+   "v": "Filial Adm:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblCD_Filial_Adm",
+   "v": "000003"
+  },
+  {
+   "id": "ctl00_Conteudo_Label101",
+   "v": "Ponto Venda:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblCD_PtoVenda",
+   "v": "010852"
+  },
+  {
+   "id": "ctl00_Conteudo_Label32",
+   "v": "Ponto Entrega:"
+  },
+  {
+   "id": "ctl00_Conteudo_btnFilial",
+   "v": "..."
+  },
+  {
+   "id": "ctl00_Conteudo_Label17",
+   "v": "Taxa Adm.:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblPE_TA_Ideal",
+   "v": "9,9000%"
+  },
+  {
+   "id": "ctl00_Conteudo_Label28",
+   "v": "Taxa Adesão:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblPE_AD_Ideal",
+   "v": "0,0000%"
+  },
+  {
+   "id": "ctl00_Conteudo_Label98",
+   "v": "Fnd. Reserva:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblPE_FR_Ideal",
+   "v": "0,0000%"
+  },
+  {
+   "id": "ctl00_Conteudo_Label118",
+   "v": "% Cont.:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblPE_Cobrar_Contemplacao",
+   "v": "30,0000%"
+  },
+  {
+   "id": "ctl00_Conteudo_btnOpcaoCredito",
+   "v": "..."
+  },
+  {
+   "id": "ctl00_Conteudo_Label33",
+   "v": "Seguros:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblCD_Plano_Seguro",
+   "v": "000011"
+  },
+  {
+   "id": "ctl00_Conteudo_Label8",
+   "v": "Contemplação"
+  },
+  {
+   "id": "ctl00_Conteudo_lblContemplacao",
+   "v": "Contemplação:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblNO_Assembleia",
+   "v": "000"
+  },
+  {
+   "id": "ctl00_Conteudo_lblDT_Entrega",
+   "v": "Entrega:"
+  },
+  {
+   "id": "ctl00_Conteudo_Label42",
+   "v": "Desclassificação:"
+  },
+  {
+   "id": "ctl00_Conteudo_btnContemplacao",
+   "v": "..."
+  },
+  {
+   "id": "ctl00_Conteudo_Label9",
+   "v": "Saldo acumulado"
+  },
+  {
+   "id": "ctl00_Conteudo_Label46",
+   "v": "Assemb. Atual:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblAssembleia",
+   "v": "018"
+  },
+  {
+   "id": "ctl00_Conteudo_lblDT_Assembleia",
+   "v": "26/11/2026"
+  },
+  {
+   "id": "ctl00_Conteudo_Label53",
+   "v": "Vencimento:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblDT_Vencimento",
+   "v": "23/11/2026"
+  },
+  {
+   "id": "ctl00_Conteudo_Label47",
+   "v": "Valores Pagos:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblVL_Amortizado",
+   "v": "R$ 2.272,98"
+  },
+  {
+   "id": "ctl00_Conteudo_lblPE_FC_Amortizado",
+   "v": "5,6832%"
+  },
+  {
+   "id": "ctl00_Conteudo_btnValores",
+   "v": "..."
+  },
+  {
+   "id": "ctl00_Conteudo_Label48",
+   "v": "Saldo Devedor:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblVL_SD_Devedor",
+   "v": "R$ 30.871,93"
+  },
+  {
+   "id": "ctl00_Conteudo_lblPE_SD_Devedor",
+   "v": "94,3168%"
+  },
+  {
+   "id": "ctl00_Conteudo_btnSaldo",
+   "v": "..."
+  },
+  {
+   "id": "ctl00_Conteudo_Label49",
+   "v": "Atraso(s):"
+  },
+  {
+   "id": "ctl00_Conteudo_lblNO_PC_EM_Atraso",
+   "v": "000"
+  },
+  {
+   "id": "ctl00_Conteudo_lblVL_PC_Em_Atraso",
+   "v": "R$ 0,00"
+  },
+  {
+   "id": "ctl00_Conteudo_lblPE_PC_Em_Atraso",
+   "v": "0,0000%"
+  },
+  {
+   "id": "ctl00_Conteudo_btnAtraso",
+   "v": "..."
+  },
+  {
+   "id": "ctl00_Conteudo_Label50",
+   "v": "Dif. Parcela:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblVL_Diferenca",
+   "v": "R$ 0,00"
+  },
+  {
+   "id": "ctl00_Conteudo_lblPE_FC_Diferenca",
+   "v": "0,0000%"
+  },
+  {
+   "id": "ctl00_Conteudo_btnDiferenca",
+   "v": "..."
+  },
+  {
+   "id": "ctl00_Conteudo_Label51",
+   "v": "Vl. da Parcela:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblNO_Parcela",
+   "v": "006"
+  },
+  {
+   "id": "ctl00_Conteudo_lblVL_Contribuicao",
+   "v": "R$ 378,83"
+  },
+  {
+   "id": "ctl00_Conteudo_lblPE_FC_Mensal",
+   "v": "0,9472%"
+  },
+  {
+   "id": "ctl00_Conteudo_btnParcela",
+   "v": "..."
+  },
+  {
+   "id": "ctl00_Conteudo_Label10",
+   "v": "Negociações"
+  },
+  {
+   "id": "ctl00_Conteudo_Label68",
+   "v": "Dif. Grupo:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblQT_PC_DF_Grupo",
+   "v": "0"
+  },
+  {
+   "id": "ctl00_Conteudo_lblPE_DF_Grupo",
+   "v": "0,4372%"
+  },
+  {
+   "id": "ctl00_Conteudo_Label62",
+   "v": "Qtd. Pcls. Pagas:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblQT_Pcls_Paga",
+   "v": "006"
+  },
+  {
+   "id": "ctl00_Conteudo_Label69",
+   "v": "Qtd. Pcls. Furo:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblQT_Furo",
+   "v": "000"
+  },
+  {
+   "id": "ctl00_Conteudo_Label70",
+   "v": "Lance Mín:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblVA_Lance_Minimo_Apuracao",
+   "v": "1,0862%"
+  },
+  {
+   "id": "ctl00_Conteudo_Label71",
+   "v": "Lance Máx:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblVA_Lance_Maximo_Apuracao",
+   "v": "76,9260%"
+  },
+  {
+   "id": "ctl00_Conteudo_lblHistograma",
+   "v": "....5...10...15...20...25...30...35...40...45...50...55...60...65...70...75...80...85...90...95..100..105..110..115..120\nPPPPPP------------------------------------------------------------IIIIII"
+  },
+  {
+   "id": "ctl00_Conteudo_btnLegenda",
+   "v": "Legenda"
+  },
+  {
+   "id": "ctl00_Conteudo_lblPontoAtendimento",
+   "v": "Ponto de atendimento:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblNomePontoAtendimento",
+   "v": "---"
+  },
+  {
+   "id": "ctl00_Conteudo_lblUsuarioAtendimento",
+   "v": "Usuário:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblNomeUsuarioAtendimento",
+   "v": "---"
+  },
+  {
+   "id": "ctl00_Conteudo_AbaSelecionada",
+   "v": "0"
+  },
+  {
+   "id": "__SCROLLPOSITIONX",
+   "v": "0"
+  },
+  {
+   "id": "__SCROLLPOSITIONY",
+   "v": "0"
+  }
+ ],
+ "sim_campos": [
+  {
+   "id": "__VSTATE",
+   "v": "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"
+  },
+  {
+   "id": "__VSIG",
+   "v": "vn9/TWCwjPuu1iYWtmv3lSMexcpnUVgoJlym1zTRJ7s="
+  },
+  {
+   "id": "VE",
+   "v": "Venda"
+  },
+  {
+   "id": "GR",
+   "v": "Grupo"
+  },
+  {
+   "id": "CO",
+   "v": "Cobrança"
+  },
+  {
+   "id": "CP",
+   "v": "Contemplação"
+  },
+  {
+   "id": "CR",
+   "v": "Crédito"
+  },
+  {
+   "id": "AT",
+   "v": "Atendimento"
+  },
+  {
+   "id": "ctl00_Conteudo_Cabecalho_dados_cota_Label1",
+   "v": "Empresa:"
+  },
+  {
+   "id": "ctl00_Conteudo_Cabecalho_dados_cota_lblEmpresa",
+   "v": "0101 YAMAHA ADM DE CONSORCIO LTDA"
+  },
+  {
+   "id": "ctl00_Conteudo_Cabecalho_dados_cota_lblUnidade_Negocio",
+   "v": "000001 YAMAHA ADM DE CONSORCIO LTDA"
+  },
+  {
+   "id": "ctl00_Conteudo_Cabecalho_dados_cota_lblDescUnidade",
+   "v": "Unidade:"
+  },
+  {
+   "id": "ctl00_Conteudo_Cabecalho_dados_cota_lblDescCota",
+   "v": "Cota:"
+  },
+  {
+   "id": "ctl00_Conteudo_Cabecalho_dados_cota_lblCD_Grupo",
+   "v": "009538 0369-00 ELAINE SOARES DA SILVA"
+  },
+  {
+   "id": "ctl00_Conteudo_Cabecalho_dados_cota_lblDescContrato",
+   "v": "Contrato:"
+  },
+  {
+   "id": "ctl00_Conteudo_Cabecalho_dados_cota_lblID_Documento",
+   "v": "0102047083"
+  },
+  {
+   "id": "ctl00_Conteudo_Cabecalho_dados_cota_lblNM_Tipo_Cota",
+   "v": "NORMAL"
+  },
+  {
+   "id": "ctl00_Conteudo_Cabecalho_dados_cota_lblDescCNPJ_CPF",
+   "v": "CNPJ/CPF:"
+  },
+  {
+   "id": "ctl00_Conteudo_Cabecalho_dados_cota_lblCNPJ_CPF",
+   "v": "043.058.906-90"
+  },
+  {
+   "id": "ctl00_Conteudo_Cabecalho_dados_cota_lblDescNascimento",
+   "v": "Dt. Nasc.:"
+  },
+  {
+   "id": "ctl00_Conteudo_Cabecalho_dados_cota_lblDT_Nascimento",
+   "v": "07/11/1978"
+  },
+  {
+   "id": "ctl00_Conteudo_Cabecalho_dados_cota_Label2",
+   "v": "Tipo de Cota:"
+  },
+  {
+   "id": "ctl00_Conteudo_Label2",
+   "v": "Assembleia:"
+  },
+  {
+   "id": "ctl00_Conteudo_edtDT_Assembleia",
+   "v": "26/11/2026"
+  },
+  {
+   "id": "ctl00_Conteudo_lblNO_Assembleia",
+   "v": "018"
+  },
+  {
+   "id": "ctl00_Conteudo_Label11",
+   "v": "Dados do Consorciado:"
+  },
+  {
+   "id": "ctl00_Conteudo_Label7",
+   "v": "Bem:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblCD_Bem",
+   "v": "1372TX"
+  },
+  {
+   "id": "ctl00_Conteudo_lblNM_Bem",
+   "v": "AUTOMÓVEL R$30 MIL (70% = R$21 MIL)"
+  },
+  {
+   "id": "ctl00_Conteudo_lblVL_Bem",
+   "v": "30.000,00"
+  },
+  {
+   "id": "ctl00_Conteudo_Label4",
+   "v": "Plano do Grupo:"
+  },
+  {
+   "id": "ctl00_Conteudo_Label8",
+   "v": "Tipo de Venda:"
+  },
+  {
+   "id": "ctl00_Conteudo_Label9",
+   "v": "Prazo do Plano:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblCD_Plano_Venda",
+   "v": "000147"
+  },
+  {
+   "id": "ctl00_Conteudo_lblNM_Plano_Venda",
+   "v": "SUPER GRUPO MASTER IPCA PR 72M"
+  },
+  {
+   "id": "ctl00_Conteudo_lblCD_Tipo_Venda_Grupo",
+   "v": "042"
+  },
+  {
+   "id": "ctl00_Conteudo_lblNM_Tipo_Venda_Grupo",
+   "v": "SUPER GRUPO MASTER IPCA PR"
+  },
+  {
+   "id": "ctl00_Conteudo_lblPZ_Comercializacao",
+   "v": "78"
+  },
+  {
+   "id": "ctl00_Conteudo_Label21",
+   "v": "Dados do Lance:"
+  },
+  {
+   "id": "ctl00_Conteudo_Label12",
+   "v": "Lance Mínimo:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblVA_Lance_Minimo",
+   "v": "1,0862%"
+  },
+  {
+   "id": "ctl00_Conteudo_lblVL_Lance_Minimo",
+   "v": "349,80"
+  },
+  {
+   "id": "ctl00_Conteudo_Label13",
+   "v": "Lance Máximo:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblVA_Lance_Maximo",
+   "v": "76,9260%"
+  },
+  {
+   "id": "ctl00_Conteudo_lblVL_Lance_Maximo",
+   "v": "25.362,00"
+  },
+  {
+   "id": "ctl00_Conteudo_Label10",
+   "v": "Lance Fixo:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblVA_Lance_Fixo",
+   "v": "35.0000"
+  },
+  {
+   "id": "ctl00_Conteudo_Label19",
+   "v": "2º Lance Fixo:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblVA_Lance_Fixo_2",
+   "v": "10.0000"
+  },
+  {
+   "id": "ctl00_Conteudo_Label14",
+   "v": "Lance Limitado Mínimo:"
+  },
+  {
+   "id": "ctl00_Conteudo_Label23",
+   "v": "Lance Limitado Máximo:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblVA_Lance_Limitado",
+   "v": "100,0000%"
+  },
+  {
+   "id": "ctl00_Conteudo_Label30",
+   "v": "Lance Fidelidade Máximo:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblVA_Lance_Fidelidade_Maximo",
+   "v": "100,0000%"
+  },
+  {
+   "id": "ctl00_Conteudo_hdnSN_Inibe_Modalidade_Oferta",
+   "v": "N"
+  },
+  {
+   "id": "ctl00_Conteudo_Label16",
+   "v": "Valor do Lance:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblVL_Lance",
+   "v": "11.539,17"
+  },
+  {
+   "id": "ctl00_Conteudo_Label22",
+   "v": "Percentual do Lance:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblPE_Lance",
+   "v": "50,0000%"
+  },
+  {
+   "id": "ctl00_Conteudo_Label18",
+   "v": "Parcelas do Lance:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblPC_Lance",
+   "v": "0"
+  },
+  {
+   "id": "ctl00_Conteudo_lblDescOferta",
+   "v": "Lance Ofertado:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblOferta",
+   "v": "Livre"
+  },
+  {
+   "id": "ctl00_Conteudo_lblRecursos",
+   "v": "Recursos Próprios:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblVlRecursos",
+   "v": "11.408,01"
+  },
+  {
+   "id": "ctl00_Conteudo_lblTituloQtFuro",
+   "v": "Dif. Grupo:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblQtFuro",
+   "v": "0,4372"
+  },
+  {
+   "id": "ctl00_Conteudo_lblTituloQtProrrogada",
+   "v": "Pagar:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblQtProrrogada",
+   "v": "49,5628"
+  },
+  {
+   "id": "ctl00_Conteudo_Label32",
+   "v": "Valor do Crédito:"
+  },
+  {
+   "id": "ctl00_Conteudo_Label33",
+   "v": "Saldo Devedor:"
+  },
+  {
+   "id": "ctl00_Conteudo_Label34",
+   "v": "Parcelas a Pagar:"
+  },
+  {
+   "id": "ctl00_Conteudo_Label31",
+   "v": "Valor do Crédito Novo:"
+  },
+  {
+   "id": "ctl00_Conteudo_Label35",
+   "v": "Saldo Devedor Novo:"
+  },
+  {
+   "id": "ctl00_Conteudo_Label36",
+   "v": "Parcelas a Pagar Novo:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblVlCredito",
+   "v": "30.000,00"
+  },
+  {
+   "id": "ctl00_Conteudo_lblSdDevedor",
+   "v": "30.871,93"
+  },
+  {
+   "id": "ctl00_Conteudo_lblPclPagar",
+   "v": "060"
+  },
+  {
+   "id": "ctl00_Conteudo_lblVlCreditoNovo",
+   "v": "30.000,00"
+  },
+  {
+   "id": "ctl00_Conteudo_lblSdDevedorNovo",
+   "v": "19.463,91"
+  },
+  {
+   "id": "ctl00_Conteudo_lblPclPagarNovo",
+   "v": "060"
+  },
+  {
+   "id": "ctl00_Conteudo_lblDescVL_Parcela",
+   "v": "Valor da Parcela após o Pagamento do Lance:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblVL_Parcela",
+   "v": "188,69"
+  },
+  {
+   "id": "ctl00_Conteudo_btnPlanoCob",
+   "v": "..."
+  },
+  {
+   "id": "ctl00_Conteudo_Label28",
+   "v": "Histograma:"
+  },
+  {
+   "id": "ctl00_Conteudo_lblHistograma",
+   "v": "....5...10...15...20...25...30...35...40...45...50...55...60...65...70...75...80...85...90...95..100..105..110..115..120\nPPPPPP------------------------------------------------------------IIIIII"
+  },
+  {
+   "id": "ctl00_Conteudo_lblHintHistograma",
+   "v": "*(L) Parcela(s) amortizadas pelo lance."
+  },
+  {
+   "id": "ctl00_Conteudo_lblHintInfo",
+   "v": "* O Valor e a qtde de Parcelas demonstrados poderão sofrer alterações caso haja reajuste do Preço do Bem"
+  },
+  {
+   "id": "ctl00_Conteudo_lblNM_Ocorrencia",
+   "v": "Último lance ofertado em: 12/11/2026 às 21:23:46, através da(o) Web"
+  },
+  {
+   "id": "ctl00_Conteudo_btnHistorico",
+   "v": "Histórico"
+  },
+  {
+   "id": "ctl00_Conteudo_btnSimula",
+   "v": "Simular..."
+  },
+  {
+   "id": "ctl00_Conteudo_btnConfirma",
+   "v": "Confirmar"
+  },
+  {
+   "id": "ctl00_Conteudo_btnCancela",
+   "v": "Cancelar"
+  },
+  {
+   "id": "ctl00_Conteudo_hdnSN_Valor_Quitacao",
+   "v": "N"
+  },
+  {
+   "id": "ctl00_Conteudo_hdnSN_Cota_Parcela_Atraso",
+   "v": "N"
+  },
+  {
+   "id": "ctl00_Conteudo_hdnMensagem_Lance_Ja_Credenciado",
+   "v": "Consorciado já credenciado nesta assembleia na modalidade lance fixo. Deseja continuar?"
+  },
+  {
+   "id": "__SCROLLPOSITIONX",
+   "v": "0"
+  },
+  {
+   "id": "__SCROLLPOSITIONY",
+   "v": "422"
+  }
+ ]
+}

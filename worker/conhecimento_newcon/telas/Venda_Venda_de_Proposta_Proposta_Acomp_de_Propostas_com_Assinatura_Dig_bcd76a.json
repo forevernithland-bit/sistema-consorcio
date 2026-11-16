@@ -1,0 +1,328 @@
+{
+ "caminho": "Venda > Venda de Proposta > Proposta > Acomp. de Propostas com Assinatura Digital",
+ "submenu": "VE/VP",
+ "lido_em": "16/11/2026 17:00:19",
+ "url": "https://newkey.cny.com.br/Intranet/CONPV/frmConPvRelPropostasAssinaturaDigital.aspx",
+ "abriu_tela_nova": true,
+ "leitura": {
+  "url": "https://newkey.cny.com.br/Intranet/CONPV/frmConPvRelPropostasAssinaturaDigital.aspx",
+  "frames": [
+   {
+    "titulo": "Intranet Newcon",
+    "cabecalhos": [
+     "Intervalo:"
+    ],
+    "campos": [
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDT_Venda_Inicial",
+      "rotulo": "Data Venda:",
+      "vis": true,
+      "valor": "16/10/2026",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDT_Venda_Final",
+      "rotulo": "Data Venda:",
+      "vis": true,
+      "valor": "16/11/2026",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtID_Documento_Inicial",
+      "rotulo": "Número da Proposta:",
+      "vis": true,
+      "valor": "0000000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtID_Documento_Final",
+      "rotulo": "Número da Proposta:",
+      "vis": true,
+      "valor": "2147483599",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtNO_Projeto_Inicial",
+      "rotulo": "Número do Projeto:",
+      "vis": true,
+      "valor": "0000000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtNO_Projeto_Final",
+      "rotulo": "Número do Projeto:",
+      "vis": true,
+      "valor": "2147483647",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtUnidade_Negocio_Inicial",
+      "rotulo": "Unidade de Negócio:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtUnidade_Negocio_Final",
+      "rotulo": "Unidade de Negócio:",
+      "vis": true,
+      "valor": "ZZZZZZ",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtComissionado_Inicial",
+      "rotulo": "Comissionado:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtComissionado_Final",
+      "rotulo": "Comissionado:",
+      "vis": true,
+      "valor": "ZZZZZZ",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_txtCD_Inscricao_Nacional",
+      "rotulo": "CPF/CNPJ:",
+      "vis": true,
+      "valor": "",
+      "postback": false
+     },
+     {
+      "tag": "select",
+      "tipo": "select-one",
+      "id": "ctl00_Conteudo_ddlFormaAcesso",
+      "rotulo": "",
+      "vis": true,
+      "valor": "",
+      "postback": false,
+      "n_opcoes": 18,
+      "opcoes": [
+       [
+        "",
+        "Todas"
+       ],
+       [
+        "AC",
+        "Auto Compra"
+       ],
+       [
+        "AG",
+        "Agenda"
+       ],
+       [
+        "AR",
+        "Aarin"
+       ],
+       [
+        "BC",
+        "Registrato BACEN"
+       ],
+       [
+        "EC",
+        "Ecommerce"
+       ],
+       [
+        "FV",
+        "Força de Venda"
+       ],
+       [
+        "IB",
+        "Internet Banking"
+       ],
+       [
+        "IN",
+        "Intranet"
+       ],
+       [
+        "IT",
+        "Interface"
+       ],
+       [
+        "MB",
+        "Mobile"
+       ],
+       [
+        "NC",
+        "Não Correntista"
+       ],
+       [
+        "NE",
+        "NetEmpresa - Aceite"
+       ],
+       [
+        "NW",
+        "Newcon"
+       ],
+       [
+        "SR",
+        "Site relacionamento"
+       ],
+       [
+        "UR",
+        "URA"
+       ],
+       [
+        "WS",
+        "WebService"
+       ],
+       [
+        "WW",
+        "Web"
+       ]
+      ],
+      "selecionado": "Todas"
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_chkMarcarTodos",
+      "rotulo": "Selecionar Todos",
+      "vis": true,
+      "valor": "on",
+      "postback": true,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_chkPropostasAssinadas",
+      "rotulo": "",
+      "vis": true,
+      "valor": "on",
+      "postback": false,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_chkPropostasNaoAssinadas",
+      "rotulo": "",
+      "vis": true,
+      "valor": "on",
+      "postback": false,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_chkPropostasRecusada",
+      "rotulo": "",
+      "vis": true,
+      "valor": "on",
+      "postback": false,
+      "marcado": false
+     },
+     {
+      "tag": "input",
+      "tipo": "checkbox",
+      "id": "ctl00_Conteudo_chkPropostasExpiradas",
+      "rotulo": "",
+      "vis": true,
+      "valor": "on",
+      "postback": false,
+      "marcado": false
+     }
+    ],
+    "botoes": [
+     {
+      "id": "ctl00_Conteudo_grdPontoVenda_ctl02_imgPto_Venda",
+      "txt": "",
+      "vis": true,
+      "tipo": "image"
+     },
+     {
+      "id": "ctl00_Conteudo_btnSelecionar",
+      "txt": "Selecionar",
+      "vis": true,
+      "tipo": "submit"
+     },
+     {
+      "id": "",
+      "txt": "×",
+      "vis": false,
+      "tipo": "button"
+     },
+     {
+      "id": "ctl00_Conteudo_wucModal_botao",
+      "txt": "OK",
+      "vis": false,
+      "tipo": "button"
+     }
+    ],
+    "abas": [],
+    "tabelas": [
+     {
+      "id": "ctl00_Conteudo_grdPontoVenda",
+      "vis": true,
+      "n_linhas": 2,
+      "cabecalho": [
+       "#",
+       "Ponto Venda",
+       "Equipe Venda"
+      ],
+      "amostra": [
+       [
+        "",
+        "010852 - ECOCLIM SUSTENTAVEL",
+        "010852 - ECOCLIM SUSTENTAVEL"
+       ]
+      ]
+     }
+    ],
+    "links": [
+     {
+      "id": "ctl00_Conteudo_lnkVoltar",
+      "txt": "Voltar",
+      "vis": true
+     }
+    ],
+    "texto": "Página Inicial Venda Grupo Cobrança Contemplação Crédito Atendimento Acompanhamento de Propostas com Assinatura Digital Voltar Intervalo: Inicial Final Data Venda: Número da Proposta: Número do Projeto: Unidade de Negócio: Comissionado: CPF/CNPJ: Forma de Acesso: Todas Todas Auto Compra Agenda Aarin Registrato BACEN Ecommerce Força de Venda Internet Banking Intranet Interface Mobile Não Correntista NetEmpresa - Aceite Newcon Site relacionamento URA WebService Web Filtro por Ponto de Venda: # Ponto Venda Equipe Venda 010852 - ECOCLIM SUSTENTAVEL 010852 - ECOCLIM SUSTENTAVEL Selecionar Todos Propostas: Confirmadas Pendentes Recusadas Expiradas",
+    "frame": "principal"
+   }
+  ]
+ },
+ "avisos_ao_abrir": [],
+ "campos_entendidos": [],
+ "consulta": null,
+ "notas": {
+  "grupos_por_produto": 1,
+  "vagas": 0,
+  "creditos": 1,
+  "taxa": 0,
+  "seguro": 0,
+  "lance": 1
+ },
+ "provas": {
+  "grupos_por_produto": [],
+  "vagas": [],
+  "creditos": [],
+  "taxa": [],
+  "seguro": [],
+  "lance": []
+ }
+}

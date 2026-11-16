@@ -67,6 +67,20 @@ MOD_COL = {
 }
 
 
+def _col_mod(modalidade):
+    """coluna do contador para o rótulo do Newcon. O Newcon escreve '2o Lance Fixo'
+    (com 'o'), que não batia com o MOD_COL -> n_2lance_fixo ficava sempre 0 e o
+    2º fixo entrava na média do fixo. 16/11/2026."""
+    m = (modalidade or "").upper().strip()
+    if re.match(r"^2\s*[Oºª°]?\s*LANCE FIXO", m):
+        return "n_2lance_fixo"
+    return MOD_COL.get(m)
+
+
+def _eh_2fixo(modalidade):
+    return _col_mod(modalidade) == "n_2lance_fixo"
+
+
 def _pct(s):
     """% do lance. Essa tela usa ponto como DECIMAL ('67.0299' = 67,0299).
     Também aceita formato BR ('67,0299')."""
@@ -282,7 +296,8 @@ def _resumo_assembleia(cab, linhas):
     livres = [x["pct_lance"] for x in lance
               if "LIVRE" in (x["modalidade"] or "").upper() and x["pct_lance"]]
     fixos = [x["pct_lance"] for x in lance
-             if "FIXO" in (x["modalidade"] or "").upper() and x["pct_lance"]]
+             if "FIXO" in (x["modalidade"] or "").upper() and not _eh_2fixo(x["modalidade"])
+             and x["pct_lance"]]
     todos = [x["pct_lance"] for x in lance if x["pct_lance"]]
 
     r = {
@@ -309,7 +324,7 @@ def _resumo_assembleia(cab, linhas):
     for x in linhas:
         if x["situacao"] != "ativo":
             continue
-        col = MOD_COL.get((x["modalidade"] or "").upper())
+        col = _col_mod(x["modalidade"])
         if col:
             r[col] = r.get(col, 0) + 1
     return r
@@ -497,7 +512,7 @@ def _coletar_um(page, sb, grupo, n_ass, tipo_bem, forcar):
             break
         r = _resumo_assembleia(cab, linhas)
         resumos.append(r); contempls += linhas
-        mods = ", ".join(f"{m}:{r.get(MOD_COL.get(m.upper(), ''), 0)}"
+        mods = ", ".join(f"{m}:{r.get(_col_mod(m) or '', 0)}"
                          for m in r["modalidades_vistas"]) or "—"
         print(f"  [{i+1}] Assembleia {r['num_assembleia']} ({r['data_assembleia']}): "
               f"{r['n_total']} contempl. | livre méd {r['lance_livre_medio']} "

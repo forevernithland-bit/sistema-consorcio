@@ -1,0 +1,235 @@
+{
+ "caminho": "Contemplação > Contemplação > Contemplação > Resultado de Assembleia",
+ "submenu": "CP/CP",
+ "lido_em": "16/11/2026 16:57:23",
+ "url": "https://newkey.cny.com.br/Intranet/CONCP/frmConCpPrcResultadoAssembleia_Filtro.aspx",
+ "abriu_tela_nova": true,
+ "leitura": {
+  "url": "https://newkey.cny.com.br/Intranet/CONCP/frmConCpPrcResultadoAssembleia_Filtro.aspx",
+  "frames": [
+   {
+    "titulo": "Intranet Newcon",
+    "cabecalhos": [],
+    "campos": [
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCD_Grupo",
+      "rotulo": "Grupo:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtFilialInicial",
+      "rotulo": "Filial:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtFilialFinal",
+      "rotulo": "Filial:",
+      "vis": true,
+      "valor": "ZZZZZZ",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtEquipeInicial",
+      "rotulo": "Equipe de Venda:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtEquipeFinal",
+      "rotulo": "Equipe de Venda:",
+      "vis": true,
+      "valor": "ZZZZZZ",
+      "postback": false
+     },
+     {
+      "tag": "select",
+      "tipo": "select-one",
+      "id": "ctl00_Conteudo_cbx_PontoVenda",
+      "rotulo": "",
+      "vis": true,
+      "valor": "0",
+      "postback": true,
+      "n_opcoes": 2,
+      "opcoes": [
+       [
+        "0",
+        "--Selecione--"
+       ],
+       [
+        "010852",
+        "010852 - ECOCLIM SUSTENTAVEL"
+       ]
+      ],
+      "selecionado": "--Selecione--"
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtComissionadoInicial",
+      "rotulo": "Comissionado:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtComissionadoFinal",
+      "rotulo": "Comissionado:",
+      "vis": true,
+      "valor": "ZZZZZZ",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtGrupoIncial",
+      "rotulo": "Grupo:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtGrupoFinal",
+      "rotulo": "Grupo:",
+      "vis": true,
+      "valor": "ZZZZZZ",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDT_Contemplacao_Inicial",
+      "rotulo": "Data Contemplação:",
+      "vis": true,
+      "valor": "01/01/1900",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDT_Contemplacao_Final",
+      "rotulo": "Data Contemplação:",
+      "vis": true,
+      "valor": "01/01/2050",
+      "postback": false
+     },
+     {
+      "tag": "select",
+      "tipo": "select-one",
+      "id": "ctl00_Conteudo_cbxST_Situacao",
+      "rotulo": "",
+      "vis": true,
+      "valor": "C",
+      "postback": true,
+      "n_opcoes": 4,
+      "opcoes": [
+       [
+        "C",
+        "Lista Cota"
+       ],
+       [
+        "G",
+        "Lista Grupo"
+       ],
+       [
+        "P",
+        "Lista Ponto Venda"
+       ],
+       [
+        "O",
+        "Lista Comissionado"
+       ]
+      ],
+      "selecionado": "Lista Cota"
+     }
+    ],
+    "botoes": [
+     {
+      "id": "ctl00_Conteudo_btnOK",
+      "txt": "Confirmar",
+      "vis": true,
+      "tipo": "submit"
+     },
+     {
+      "id": "ctl00_Conteudo_btnBuscarGrupos",
+      "txt": "Buscar",
+      "vis": true,
+      "tipo": "submit"
+     }
+    ],
+    "abas": [],
+    "tabelas": [],
+    "links": [
+     {
+      "id": "ctl00_Conteudo_HyperLink1",
+      "txt": "Voltar",
+      "vis": true
+     }
+    ],
+    "texto": "Página Inicial Venda Grupo Cobrança Contemplação Crédito Atendimento Resultado de Assembleia Voltar Identifique o Grupo: Grupo: Informe o filtro para a pesquisa: Inicial Final Inicial Final Filial: Equipe de Venda: Ponto de Venda: --Selecione-- --Selecione-- 010852 - ECOCLIM SUSTENTAVEL Comissionado: Grupo: Data Contemplação: Modelo: Lista Cota Lista Cota Lista Grupo Lista Ponto Venda Lista Comissionado",
+    "frame": "principal"
+   }
+  ]
+ },
+ "avisos_ao_abrir": [],
+ "campos_entendidos": [
+  {
+   "campo": "ctl00_Conteudo_cbx_PontoVenda",
+   "id": "ctl00_Conteudo_cbx_PontoVenda",
+   "escolhi": "010852 - ECOCLIM SUSTENTAVEL",
+   "n_opcoes": 1,
+   "liberou": []
+  },
+  {
+   "campo": "ctl00_Conteudo_cbxST_Situacao",
+   "id": "ctl00_Conteudo_cbxST_Situacao",
+   "escolhi": "Lista Cota",
+   "n_opcoes": 4,
+   "liberou": []
+  }
+ ],
+ "consulta": {
+  "botao": "Buscar",
+  "erro": "Locator.click: Timeout 8000ms exceeded.\nCall log:\n  - waiting for locator(\"#ctl00_Conteudo_btnBuscarGrupos\")\n    - locat"
+ },
+ "notas": {
+  "grupos_por_produto": 11,
+  "vagas": 0,
+  "creditos": 1,
+  "taxa": 0,
+  "seguro": 0,
+  "lance": 9
+ },
+ "provas": {
+  "grupos_por_produto": [
+   "campo: Grupo:",
+   "opção: Lista Grupo"
+  ],
+  "vagas": [],
+  "creditos": [],
+  "taxa": [],
+  "seguro": [],
+  "lance": [
+   "campo: Data Contemplação:",
+   "nome da tela: Contemplação > Contemplação > Contemplação > Resul"
+  ]
+ }
+}

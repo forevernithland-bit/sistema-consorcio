@@ -1,0 +1,46 @@
+[
+ {
+  "adm": "Itaú",
+  "grupo": 50119,
+  "bem": "Automóvel",
+  "credito": 119052.0,
+  "cotas_txt": "2 cotas de R$ 59.526",
+  "liquido": 83336.4,
+  "proprio": 45000,
+  "embutido": 35715.6,
+  "lance_pct": 67.8,
+  "prox": "dezembro/2026",
+  "extra": [
+   {
+    "d": "2026-11-10",
+    "mn": 61.07,
+    "mx": 77.67,
+    "ll": 0
+   }
+  ],
+  "extra_fonte": "assembleia de 10/11/2026",
+  "saida": "G:\\Meu Drive\\CLODE\\ERP_CONSORBENS\\propostas\\Estudo_90k_100k_Liquido\\Grupos_do_cliente\\Potencial-Itau-50119-A-lance45k.png"
+ },
+ {
+  "adm": "Itaú",
+  "grupo": 50117,
+  "bem": "Automóvel",
+  "credito": 125616.0,
+  "cotas_txt": "1 cota de R$ 125.616",
+  "liquido": 87931.2,
+  "proprio": 50000,
+  "embutido": 37684.8,
+  "lance_pct": 69.8,
+  "prox": "dezembro/2026",
+  "extra": [
+   {
+    "d": "2026-11-10",
+    "mn": 67.83,
+    "mx": 79.59,
+    "ll": 0
+   }
+  ],
+  "extra_fonte": "assembleia de 10/11/2026",
+  "saida": "G:\\Meu Drive\\CLODE\\ERP_CONSORBENS\\propostas\\Estudo_90k_100k_Liquido\\Grupos_do_cliente\\Potencial-Itau-50117-B-lance50k.png"
+ }
+]

@@ -1,0 +1,250 @@
+{
+ "caminho": "Grupo > Assembleia > Assembleia > Calendário",
+ "submenu": "GR/AA",
+ "lido_em": "16/11/2026 16:56:12",
+ "url": "https://newkey.cny.com.br/Intranet/CONAA/frmConAaRelCalendarioAssembleia.aspx",
+ "abriu_tela_nova": true,
+ "leitura": {
+  "url": "https://newkey.cny.com.br/Intranet/CONAA/frmConAaRelCalendarioAssembleia.aspx",
+  "frames": [
+   {
+    "titulo": "Intranet Newcon",
+    "cabecalhos": [],
+    "campos": [
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDtAssenbleiaInicial",
+      "rotulo": "Data Assembleia:",
+      "vis": true,
+      "valor": "01/01/1900",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDtAssembleiaFinal",
+      "rotulo": "Data Assembleia:",
+      "vis": true,
+      "valor": "31/12/3000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDtVencimentoInicial",
+      "rotulo": "Data Vencimento:",
+      "vis": true,
+      "valor": "01/01/1900",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDtVencimentoFinal",
+      "rotulo": "Data Vencimento:",
+      "vis": true,
+      "valor": "31/12/3000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDtMontagemInicial",
+      "rotulo": "Data Montagem:",
+      "vis": true,
+      "valor": "01/01/1900",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtDtMontagemFinal",
+      "rotulo": "Data Montagem:",
+      "vis": true,
+      "valor": "31/12/3000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtAgrupamento_Inicial",
+      "rotulo": "Agrupamento:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtAgrupamento_Final",
+      "rotulo": "Agrupamento:",
+      "vis": true,
+      "valor": "ZZZZZZ",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtConjuntoGrupos_Inicial",
+      "rotulo": "Conjunto de Grupos:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtConjuntoGrupos_Final",
+      "rotulo": "Conjunto de Grupos:",
+      "vis": true,
+      "valor": "ZZZZZZ",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtGrupoInicial",
+      "rotulo": "Grupo:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtGrupoFinal",
+      "rotulo": "Grupo:",
+      "vis": true,
+      "valor": "ZZZZZZ",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtLocal_Inicial",
+      "rotulo": "Local Assembleia:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtLocal_Final",
+      "rotulo": "Local Assembleia:",
+      "vis": true,
+      "valor": "ZZZZZZ",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtNO_Assembleia_Inicial",
+      "rotulo": "Número:",
+      "vis": true,
+      "valor": "001",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtNO_Assembleia_Final",
+      "rotulo": "Número:",
+      "vis": true,
+      "valor": "999",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtST_Inicial",
+      "rotulo": "Situação Grupo:",
+      "vis": true,
+      "valor": "A",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtST_Final",
+      "rotulo": "Situação Grupo:",
+      "vis": true,
+      "valor": "Z",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "radio",
+      "id": "ctl00_Conteudo_rblOrdem_0",
+      "rotulo": "Por data / hora",
+      "vis": true,
+      "valor": "H",
+      "postback": false,
+      "marcado": false
+     },
+     {
+      "tag": "input",
+      "tipo": "radio",
+      "id": "ctl00_Conteudo_rblOrdem_1",
+      "rotulo": "Por grupo / número",
+      "vis": true,
+      "valor": "N",
+      "postback": false,
+      "marcado": true
+     }
+    ],
+    "botoes": [
+     {
+      "id": "ctl00_Conteudo_btnSelecionar",
+      "txt": "Selecionar",
+      "vis": true,
+      "tipo": "submit"
+     },
+     {
+      "id": "ctl00_Conteudo_btnImprimir",
+      "txt": "Imprimir",
+      "vis": true,
+      "tipo": "submit"
+     }
+    ],
+    "abas": [],
+    "tabelas": [],
+    "links": [
+     {
+      "id": "ctl00_Conteudo_HyperLink1",
+      "txt": "Voltar",
+      "vis": true
+     }
+    ],
+    "texto": "Página Inicial Venda Grupo Cobrança Contemplação Crédito Atendimento Calendário de Assembleia Voltar Inicial Final Data Assembleia: Data Vencimento: Data Montagem: Agrupamento: Conjunto de Grupos: Inicial Final Grupo: Local Assembleia: Número: Situação Grupo: Ordem Por data / hora Por grupo / número",
+    "frame": "principal"
+   }
+  ]
+ },
+ "avisos_ao_abrir": [],
+ "campos_entendidos": [],
+ "consulta": null,
+ "notas": {
+  "grupos_por_produto": 24,
+  "vagas": 0,
+  "creditos": 1,
+  "taxa": 0,
+  "seguro": 0,
+  "lance": 1
+ },
+ "provas": {
+  "grupos_por_produto": [
+   "campo: Conjunto de Grupos:",
+   "campo: Grupo:",
+   "campo: Por grupo / número",
+   "campo: Situação Grupo:",
+   "nome da tela: Grupo > Assembleia > Assembleia > Calendário"
+  ],
+  "vagas": [],
+  "creditos": [],
+  "taxa": [],
+  "seguro": [],
+  "lance": []
+ }
+}

@@ -1,0 +1,154 @@
+{
+ "caminho": "Venda > Venda de Proposta > Recursos CNP3 Web > Monitor de Vendas",
+ "submenu": "VE/VP",
+ "lido_em": "16/11/2026 17:00:24",
+ "url": "https://newkey.cny.com.br/Intranet/CONVE/frmConVeRelMonitor.aspx",
+ "abriu_tela_nova": true,
+ "leitura": {
+  "url": "https://newkey.cny.com.br/Intranet/CONVE/frmConVeRelMonitor.aspx",
+  "frames": [
+   {
+    "titulo": "Intranet Newcon",
+    "cabecalhos": [],
+    "campos": [
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCD_PtoVendaInicial",
+      "rotulo": "Ponto de Venda:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCD_PtoVendaFinal",
+      "rotulo": "Ponto de Venda:",
+      "vis": true,
+      "valor": "ZZZZZZ",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCD_GrupoInicial",
+      "rotulo": "Grupo:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCD_GrupoFinal",
+      "rotulo": "Grupo:",
+      "vis": true,
+      "valor": "ZZZZZZ",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCD_VersaoInicial",
+      "rotulo": "Versão:",
+      "vis": true,
+      "valor": "00",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCD_VersaoFinal",
+      "rotulo": "Versão:",
+      "vis": true,
+      "valor": "99",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCD_EquipeVendaInicial",
+      "rotulo": "Equipe de Venda:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCD_EquipeVendaFinal",
+      "rotulo": "Equipe de Venda:",
+      "vis": true,
+      "valor": "ZZZZZZ",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCD_FilialVendaInicial",
+      "rotulo": "Filial de Venda:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCD_FilialVendaFinal",
+      "rotulo": "Filial de Venda:",
+      "vis": true,
+      "valor": "ZZZZZZ",
+      "postback": false
+     }
+    ],
+    "botoes": [
+     {
+      "id": "ctl00_Conteudo_btnConfirma",
+      "txt": "Confirma",
+      "vis": true,
+      "tipo": "submit"
+     },
+     {
+      "id": "ctl00_Conteudo_btnCancela",
+      "txt": "Cancela",
+      "vis": true,
+      "tipo": "submit"
+     }
+    ],
+    "abas": [],
+    "tabelas": [],
+    "links": [
+     {
+      "id": "ctl00_Conteudo_HyperLink1",
+      "txt": "Voltar",
+      "vis": true
+     }
+    ],
+    "texto": "Página Inicial Venda Grupo Cobrança Contemplação Crédito Atendimento Monitor de Vendas Voltar Inicial Final Ponto de Venda: Grupo: Versão: Inicial Final Equipe de Venda: Filial de Venda:",
+    "frame": "principal"
+   }
+  ]
+ },
+ "avisos_ao_abrir": [],
+ "campos_entendidos": [],
+ "consulta": null,
+ "notas": {
+  "grupos_por_produto": 7,
+  "vagas": 0,
+  "creditos": 1,
+  "taxa": 0,
+  "seguro": 0,
+  "lance": 1
+ },
+ "provas": {
+  "grupos_por_produto": [
+   "campo: Grupo:"
+  ],
+  "vagas": [],
+  "creditos": [],
+  "taxa": [],
+  "seguro": [],
+  "lance": []
+ }
+}

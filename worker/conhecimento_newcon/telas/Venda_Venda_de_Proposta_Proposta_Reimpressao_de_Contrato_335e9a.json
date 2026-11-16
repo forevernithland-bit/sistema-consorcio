@@ -1,0 +1,287 @@
+{
+ "caminho": "Venda > Venda de Proposta > Proposta > Reimpressão de Contrato",
+ "submenu": "VE/VP",
+ "lido_em": "16/11/2026 17:00:15",
+ "url": "https://newkey.cny.com.br/Intranet/CONPV/frmConPvRelContrato.aspx",
+ "abriu_tela_nova": true,
+ "leitura": {
+  "url": "https://newkey.cny.com.br/Intranet/CONPV/frmConPvRelContrato.aspx",
+  "frames": [
+   {
+    "titulo": "Intranet Newcon",
+    "cabecalhos": [],
+    "campos": [
+     {
+      "tag": "input",
+      "tipo": "radio",
+      "id": "ctl00_Conteudo_rblTipoPesquisa_0",
+      "rotulo": "Grupo e Cota",
+      "vis": true,
+      "valor": "Grupo_Cota",
+      "postback": false,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "radio",
+      "id": "ctl00_Conteudo_rblTipoPesquisa_1",
+      "rotulo": "Número Contrato",
+      "vis": true,
+      "valor": "NO_Contrato",
+      "postback": true,
+      "marcado": false
+     },
+     {
+      "tag": "select",
+      "tipo": "select-one",
+      "id": "ctl00_Conteudo_cbxTipoImpresso",
+      "rotulo": "Tipo de Impresso:",
+      "vis": true,
+      "valor": "P",
+      "postback": false,
+      "n_opcoes": 2,
+      "opcoes": [
+       [
+        "P",
+        "Contrato"
+       ],
+       [
+        "Q",
+        "Quadro Resumo"
+       ]
+      ],
+      "selecionado": "Contrato"
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtGrupo",
+      "rotulo": "Consorciado:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCota",
+      "rotulo": "Consorciado:",
+      "vis": true,
+      "valor": "0000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtVersao",
+      "rotulo": "",
+      "vis": true,
+      "valor": "00",
+      "postback": false
+     }
+    ],
+    "botoes": [
+     {
+      "id": "ctl00_Conteudo_btnBuscaAvancada",
+      "txt": "Busca avançada...",
+      "vis": true,
+      "tipo": "submit"
+     },
+     {
+      "id": "ctl00_Conteudo_btnLocalizar",
+      "txt": "Localizar",
+      "vis": true,
+      "tipo": "submit"
+     },
+     {
+      "id": "ctl00_Conteudo_btnCancelar",
+      "txt": "Cancelar",
+      "vis": true,
+      "tipo": "submit"
+     },
+     {
+      "id": "ctl00_Conteudo_btnAbrirModal",
+      "txt": "",
+      "vis": false,
+      "tipo": "submit"
+     },
+     {
+      "id": "",
+      "txt": "×",
+      "vis": false,
+      "tipo": "button"
+     },
+     {
+      "id": "ctl00_Conteudo_wucModal_botao",
+      "txt": "OK",
+      "vis": false,
+      "tipo": "button"
+     }
+    ],
+    "abas": [],
+    "tabelas": [],
+    "links": [
+     {
+      "id": "ctl00_Conteudo_lnkVoltar",
+      "txt": "Voltar",
+      "vis": true
+     }
+    ],
+    "texto": "Página Inicial Venda Grupo Cobrança Contemplação Crédito Atendimento Reimpressão de Contrato Voltar Grupo e Cota Número Contrato Tipo de Impresso: Contrato Quadro Resumo Grupo Cota Consorciado:",
+    "frame": "principal"
+   }
+  ]
+ },
+ "avisos_ao_abrir": [],
+ "campos_entendidos": [],
+ "consulta": {
+  "botao": "Localizar",
+  "url_depois": "https://newkey.cny.com.br/Intranet/CONPV/frmConPvRelContrato.aspx",
+  "avisos": [
+   "alert: Cota Inválida"
+  ],
+  "frames": [
+   {
+    "titulo": "Intranet Newcon",
+    "cabecalhos": [],
+    "campos": [
+     {
+      "tag": "input",
+      "tipo": "radio",
+      "id": "ctl00_Conteudo_rblTipoPesquisa_0",
+      "rotulo": "Grupo e Cota",
+      "vis": true,
+      "valor": "Grupo_Cota",
+      "postback": false,
+      "marcado": true
+     },
+     {
+      "tag": "input",
+      "tipo": "radio",
+      "id": "ctl00_Conteudo_rblTipoPesquisa_1",
+      "rotulo": "Número Contrato",
+      "vis": true,
+      "valor": "NO_Contrato",
+      "postback": true,
+      "marcado": false
+     },
+     {
+      "tag": "select",
+      "tipo": "select-one",
+      "id": "ctl00_Conteudo_cbxTipoImpresso",
+      "rotulo": "Tipo de Impresso:",
+      "vis": true,
+      "valor": "P",
+      "postback": false,
+      "n_opcoes": 2,
+      "opcoes": [
+       [
+        "P",
+        "Contrato"
+       ],
+       [
+        "Q",
+        "Quadro Resumo"
+       ]
+      ],
+      "selecionado": "Contrato"
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtGrupo",
+      "rotulo": "Consorciado:",
+      "vis": true,
+      "valor": "000000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtCota",
+      "rotulo": "Consorciado:",
+      "vis": true,
+      "valor": "0000",
+      "postback": false
+     },
+     {
+      "tag": "input",
+      "tipo": "text",
+      "id": "ctl00_Conteudo_edtVersao",
+      "rotulo": "",
+      "vis": true,
+      "valor": "00",
+      "postback": false
+     }
+    ],
+    "botoes": [
+     {
+      "id": "ctl00_Conteudo_btnBuscaAvancada",
+      "txt": "Busca avançada...",
+      "vis": true,
+      "tipo": "submit"
+     },
+     {
+      "id": "ctl00_Conteudo_btnLocalizar",
+      "txt": "Localizar",
+      "vis": true,
+      "tipo": "submit"
+     },
+     {
+      "id": "ctl00_Conteudo_btnCancelar",
+      "txt": "Cancelar",
+      "vis": true,
+      "tipo": "submit"
+     },
+     {
+      "id": "ctl00_Conteudo_btnAbrirModal",
+      "txt": "",
+      "vis": false,
+      "tipo": "submit"
+     },
+     {
+      "id": "",
+      "txt": "×",
+      "vis": false,
+      "tipo": "button"
+     },
+     {
+      "id": "ctl00_Conteudo_wucModal_botao",
+      "txt": "OK",
+      "vis": false,
+      "tipo": "button"
+     }
+    ],
+    "abas": [],
+    "tabelas": [],
+    "links": [
+     {
+      "id": "ctl00_Conteudo_lnkVoltar",
+      "txt": "Voltar",
+      "vis": true
+     }
+    ],
+    "texto": "Página Inicial Venda Grupo Cobrança Contemplação Crédito Atendimento Reimpressão de Contrato Voltar Grupo e Cota Número Contrato Tipo de Impresso: Contrato Quadro Resumo Grupo Cota Consorciado:",
+    "frame": "principal"
+   }
+  ]
+ },
+ "notas": {
+  "grupos_por_produto": 8,
+  "vagas": 0,
+  "creditos": 2,
+  "taxa": 0,
+  "seguro": 0,
+  "lance": 2
+ },
+ "provas": {
+  "grupos_por_produto": [
+   "campo: Grupo e Cota"
+  ],
+  "vagas": [],
+  "creditos": [],
+  "taxa": [],
+  "seguro": [],
+  "lance": []
+ }
+}

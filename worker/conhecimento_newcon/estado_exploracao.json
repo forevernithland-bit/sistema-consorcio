@@ -1,0 +1,569 @@
+{
+ "inicio": "16/11/2026 16:56:03",
+ "fase": "fim",
+ "fila": [],
+ "feitas": {
+  "submenu:GR/AA": {
+   "em": "16/11/2026 16:56:06"
+  },
+  "GR/AA||Assembleia": {
+   "em": "16/11/2026 16:56:10",
+   "arquivo": "Grupo_Assembleia_Assembleia_a01a26.json"
+  },
+  "GR/AA|Assembleia|Calendário": {
+   "em": "16/11/2026 16:56:12",
+   "arquivo": "Grupo_Assembleia_Assembleia_Calendario_be2932.json"
+  },
+  "submenu:CO/MC": {
+   "em": "16/11/2026 16:56:34"
+  },
+  "submenu:CO/MA": {
+   "em": "16/11/2026 16:56:36"
+  },
+  "submenu:CO/RA": {
+   "em": "16/11/2026 16:56:38"
+  },
+  "submenu:CO/RE": {
+   "em": "16/11/2026 16:56:40"
+  },
+  "submenu:CP/PC": {
+   "em": "16/11/2026 16:56:41"
+  },
+  "submenu:CP/CP": {
+   "em": "16/11/2026 16:56:44"
+  },
+  "submenu:CR/CR": {
+   "em": "16/11/2026 16:56:45"
+  },
+  "submenu:CR/RE": {
+   "em": "16/11/2026 16:56:47"
+  },
+  "submenu:AT/AT": {
+   "em": "16/11/2026 16:56:49"
+  },
+  "submenu:AT/FC": {
+   "em": "16/11/2026 16:56:51"
+  },
+  "submenu:VE/RE": {
+   "em": "16/11/2026 16:56:53"
+  },
+  "submenu:VE/CM": {
+   "em": "16/11/2026 16:56:55"
+  },
+  "submenu:VE/VP": {
+   "em": "16/11/2026 16:56:56"
+  },
+  "CO/MC||Manutenção de Cobrança": {
+   "em": "16/11/2026 16:56:59",
+   "arquivo": "Cobranca_Manutencao_de_Cobranca_Manutencao_de_Cobranca_0cc522.json"
+  },
+  "CO/MA|Emissão de Cobrança|Recursos CNP3 Web": {
+   "em": "16/11/2026 16:57:01",
+   "arquivo": "Cobranca_Emissao_de_Cobranca_Emissao_de_Cobranca_Recursos_CNP3_Web_5655c0.json"
+  },
+  "CO/RA||Retenção / Recuperação": {
+   "em": "16/11/2026 16:57:04",
+   "arquivo": "Cobranca_Retencao_Recuperacao_Retencao_Recuperacao_1ad90a.json"
+  },
+  "CO/RE||Relatório": {
+   "em": "16/11/2026 16:57:06",
+   "arquivo": "Cobranca_Relatorio_Relatorio_767623.json"
+  },
+  "CO/RE|Relatório|Análise de Carteiras": {
+   "em": "16/11/2026 16:57:09",
+   "arquivo": "Cobranca_Relatorio_Relatorio_Analise_de_Carteiras_df9858.json"
+  },
+  "CO/RE||Recursos CNP3 Web": {
+   "em": "16/11/2026 16:57:12",
+   "arquivo": "Cobranca_Relatorio_Recursos_CNP3_Web_cfe5ac.json"
+  },
+  "CP/PC||Pré-Contemplação": {
+   "em": "16/11/2026 16:57:14",
+   "arquivo": "Contemplacao_Pre_Contemplacao_Pre_Contemplacao_1da87b.json"
+  },
+  "CP/PC|Pré-Contemplação|Recursos CNP3 Web": {
+   "em": "16/11/2026 16:57:16",
+   "arquivo": "Contemplacao_Pre_Contemplacao_Pre_Contemplacao_Recursos_CNP3_Web_4f661f.json"
+  },
+  "CP/PC|Oferta de Lance (Acesso Direto)|Credenciamento": {
+   "em": "16/11/2026 16:57:18",
+   "arquivo": "Contemplacao_Pre_Contemplacao_Oferta_de_Lance_Acesso_Direto_Credenciam_ec07c2.json"
+  },
+  "CP/CP||Contemplação": {
+   "em": "16/11/2026 16:57:21",
+   "arquivo": "Contemplacao_Contemplacao_Contemplacao_5b9efe.json"
+  },
+  "CP/CP|Contemplação|Resultado de Assembleia": {
+   "em": "16/11/2026 16:57:33",
+   "arquivo": "Contemplacao_Contemplacao_Contemplacao_Resultado_de_Assembleia_d3ff3d.json"
+  },
+  "CR/CR|Concessão de Crédito|Liberação de Crédito": {
+   "em": "16/11/2026 16:59:16",
+   "arquivo": "Credito_Concessao_de_Credito_Concessao_de_Credito_Liberacao_de_Credito_f5b46a.json"
+  },
+  "CR/CR|Liberação de Crédito|Processo de Contemplação": {
+   "em": "16/11/2026 16:59:19",
+   "arquivo": "Credito_Concessao_de_Credito_Liberacao_de_Credito_Processo_de_Contempl_fec195.json"
+  },
+  "CR/CR|Liberação de Crédito|Fila Ocorrências / Processos": {
+   "em": "16/11/2026 16:59:26",
+   "arquivo": "Credito_Concessao_de_Credito_Liberacao_de_Credito_Fila_Ocorrencias_Pro_66eb0a.json"
+  },
+  "CR/CR|Concessão de Crédito|Simulador de Documentos": {
+   "em": "16/11/2026 16:59:29",
+   "arquivo": "Credito_Concessao_de_Credito_Concessao_de_Credito_Simulador_de_Documen_764f0c.json"
+  },
+  "CR/RE||Relatório": {
+   "em": "16/11/2026 16:59:32",
+   "arquivo": "Credito_Relatorio_Relatorio_bca4bf.json"
+  },
+  "AT/AT||Atendimento": {
+   "em": "16/11/2026 16:59:34",
+   "arquivo": "Atendimento_Atendimento_a_Clientes_Atendimento_a5c0a0.json"
+  },
+  "AT/AT|Atendimento|Posição do Consorciado": {
+   "em": "16/11/2026 16:59:38",
+   "arquivo": "Atendimento_Atendimento_a_Clientes_Atendimento_Posicao_do_Consorciado_983776.json"
+  },
+  "AT/FC||Fale Conosco": {
+   "em": "16/11/2026 16:59:41",
+   "arquivo": "Atendimento_Fale_Conosco_Fale_Conosco_8618b4.json"
+  },
+  "AT/FC|Fale Conosco|Cadastro de Apoio": {
+   "em": "16/11/2026 16:59:43",
+   "arquivo": "Atendimento_Fale_Conosco_Fale_Conosco_Cadastro_de_Apoio_4fedc7.json"
+  },
+  "VE/RE||Representante": {
+   "em": "16/11/2026 16:59:45",
+   "arquivo": "Venda_Representante_Representante_d5a346.json"
+  },
+  "VE/CM||Comissão": {
+   "em": "16/11/2026 16:59:48",
+   "arquivo": "Venda_Comissao_Comissao_1c2174.json"
+  },
+  "VE/CM|Comissão|Relatório": {
+   "em": "16/11/2026 16:59:50",
+   "arquivo": "Venda_Comissao_Comissao_Relatorio_2dbf4c.json"
+  },
+  "VE/CM|Relatório|Comissões Pagas": {
+   "em": "16/11/2026 16:59:53",
+   "arquivo": "Venda_Comissao_Relatorio_Comissoes_Pagas_390303.json"
+  },
+  "VE/VP||Venda de Proposta": {
+   "em": "16/11/2026 16:59:55",
+   "arquivo": "Venda_Venda_de_Proposta_Venda_de_Proposta_abb579.json"
+  },
+  "VE/VP|Venda de Proposta|Proposta": {
+   "em": "16/11/2026 16:59:58",
+   "arquivo": "Venda_Venda_de_Proposta_Venda_de_Proposta_Proposta_bc976a.json"
+  },
+  "VE/VP|Proposta|Venda de Propostas": {
+   "em": "16/11/2026 17:00:09",
+   "arquivo": "Venda_Venda_de_Proposta_Proposta_Venda_de_Propostas_c3b276.json"
+  },
+  "VE/VP|Proposta|Consulta de Propostas": {
+   "em": "16/11/2026 17:00:12",
+   "arquivo": "Venda_Venda_de_Proposta_Proposta_Consulta_de_Propostas_0b6db2.json"
+  },
+  "VE/VP|Proposta|Reimpressão de Contrato": {
+   "em": "16/11/2026 17:00:17",
+   "arquivo": "Venda_Venda_de_Proposta_Proposta_Reimpressao_de_Contrato_335e9a.json"
+  },
+  "VE/VP|Proposta|Acomp. de Propostas com Assinatura Digital": {
+   "em": "16/11/2026 17:00:19",
+   "arquivo": "Venda_Venda_de_Proposta_Proposta_Acomp_de_Propostas_com_Assinatura_Dig_bcd76a.json"
+  },
+  "VE/VP|Venda de Proposta|Recursos CNP3 Web": {
+   "em": "16/11/2026 17:00:21",
+   "arquivo": "Venda_Venda_de_Proposta_Venda_de_Proposta_Recursos_CNP3_Web_dc97e4.json"
+  },
+  "VE/VP|Recursos CNP3 Web|Monitor de Vendas": {
+   "em": "16/11/2026 17:00:24",
+   "arquivo": "Venda_Venda_de_Proposta_Recursos_CNP3_Web_Monitor_de_Vendas_115758.json"
+  },
+  "VE/VP|Recursos CNP3 Web|Cadastro de Usuários Mobile": {
+   "em": "16/11/2026 17:00:28",
+   "arquivo": "Venda_Venda_de_Proposta_Recursos_CNP3_Web_Cadastro_de_Usuarios_Mobile_06bc45.json"
+  },
+  "VE/VP|Recursos CNP3 Web|Recibo": {
+   "em": "16/11/2026 17:00:31",
+   "arquivo": "Venda_Venda_de_Proposta_Recursos_CNP3_Web_Recibo_9db3e3.json"
+  }
+ },
+ "falhas": {},
+ "bloqueadas": {
+  "CO/MA||Emissão de Cobrança": {
+   "caminho": "Cobrança > Emissão de Cobrança > Emissão de Cobrança",
+   "motivo": "nome sensível (só listada)",
+   "alvo": ""
+  },
+  "CO/MA|Recursos CNP3 Web|Emissão de Cobrança": {
+   "caminho": "Cobrança > Emissão de Cobrança > Recursos CNP3 Web > Emissão de Cobrança",
+   "motivo": "nome sensível (só listada)",
+   "alvo": ""
+  },
+  "CO/RA|Retenção / Recuperação|Transferência de Cota": {
+   "caminho": "Cobrança > Retenção / Recuperação > Retenção / Recuperação > Transferência de Cota",
+   "motivo": "nome sensível (só listada)",
+   "alvo": ""
+  },
+  "CP/PC|Recursos CNP3 Web|Oferta de Lance (Acesso Direto)": {
+   "caminho": "Contemplação > Pré-Contemplação > Recursos CNP3 Web > Oferta de Lance (Acesso Direto)",
+   "motivo": "nome sensível (só listada)",
+   "alvo": ""
+  },
+  "CR/CR||Concessão de Crédito": {
+   "caminho": "Crédito > Concessão de Crédito > Concessão de Crédito",
+   "motivo": "nome sensível (só listada)",
+   "alvo": ""
+  }
+ },
+ "em_andamento": null,
+ "submenus": {
+  "VE/RE": {
+   "modulo": "Venda",
+   "nome": "Representante",
+   "url": "https://newkey.cny.com.br/Intranet/frmMainMenu.aspx?ID_Modulo=VE&ID_SubGrupo=RE&ID_Empresa=1",
+   "telas": [
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut0",
+     "txt": "Representante",
+     "pai": "",
+     "alvo": ""
+    }
+   ]
+  },
+  "VE/CM": {
+   "modulo": "Venda",
+   "nome": "Comissão",
+   "url": "https://newkey.cny.com.br/Intranet/frmMainMenu.aspx?ID_Modulo=VE&ID_SubGrupo=CM&ID_Empresa=1",
+   "telas": [
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut0",
+     "txt": "Comissão",
+     "pai": "",
+     "alvo": ""
+    },
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut1",
+     "txt": "Relatório",
+     "pai": "Comissão",
+     "alvo": ""
+    },
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut2",
+     "txt": "Comissões Pagas",
+     "pai": "Relatório",
+     "alvo": ""
+    }
+   ]
+  },
+  "VE/VP": {
+   "modulo": "Venda",
+   "nome": "Venda de Proposta",
+   "url": "https://newkey.cny.com.br/Intranet/frmMainMenu.aspx?ID_Modulo=VE&ID_SubGrupo=VP&ID_Empresa=1",
+   "telas": [
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut0",
+     "txt": "Venda de Proposta",
+     "pai": "",
+     "alvo": ""
+    },
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut1",
+     "txt": "Proposta",
+     "pai": "Venda de Proposta",
+     "alvo": ""
+    },
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut2",
+     "txt": "Venda de Propostas",
+     "pai": "Proposta",
+     "alvo": ""
+    },
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut3",
+     "txt": "Consulta de Propostas",
+     "pai": "Proposta",
+     "alvo": ""
+    },
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut4",
+     "txt": "Reimpressão de Contrato",
+     "pai": "Proposta",
+     "alvo": ""
+    },
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut5",
+     "txt": "Acomp. de Propostas com Assinatura Digital",
+     "pai": "Proposta",
+     "alvo": ""
+    },
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut6",
+     "txt": "Recursos CNP3 Web",
+     "pai": "Venda de Proposta",
+     "alvo": ""
+    },
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut7",
+     "txt": "Monitor de Vendas",
+     "pai": "Recursos CNP3 Web",
+     "alvo": ""
+    },
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut8",
+     "txt": "Cadastro de Usuários Mobile",
+     "pai": "Recursos CNP3 Web",
+     "alvo": ""
+    },
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut9",
+     "txt": "Recibo",
+     "pai": "Recursos CNP3 Web",
+     "alvo": ""
+    }
+   ]
+  },
+  "GR/AA": {
+   "modulo": "Grupo",
+   "nome": "Assembleia",
+   "url": "https://newkey.cny.com.br/Intranet/frmMainMenu.aspx?ID_Modulo=GR&ID_SubGrupo=AA&ID_Empresa=1",
+   "telas": [
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut0",
+     "txt": "Assembleia",
+     "pai": "",
+     "alvo": ""
+    },
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut1",
+     "txt": "Calendário",
+     "pai": "Assembleia",
+     "alvo": ""
+    }
+   ]
+  },
+  "CO/MC": {
+   "modulo": "Cobrança",
+   "nome": "Manutenção de Cobrança",
+   "url": "https://newkey.cny.com.br/Intranet/frmMainMenu.aspx?ID_Modulo=CO&ID_SubGrupo=MC&ID_Empresa=1",
+   "telas": [
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut0",
+     "txt": "Manutenção de Cobrança",
+     "pai": "",
+     "alvo": ""
+    }
+   ]
+  },
+  "CO/MA": {
+   "modulo": "Cobrança",
+   "nome": "Emissão de Cobrança",
+   "url": "https://newkey.cny.com.br/Intranet/frmMainMenu.aspx?ID_Modulo=CO&ID_SubGrupo=MA&ID_Empresa=1",
+   "telas": [
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut0",
+     "txt": "Emissão de Cobrança",
+     "pai": "",
+     "alvo": ""
+    },
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut1",
+     "txt": "Recursos CNP3 Web",
+     "pai": "Emissão de Cobrança",
+     "alvo": ""
+    },
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut2",
+     "txt": "Emissão de Cobrança",
+     "pai": "Recursos CNP3 Web",
+     "alvo": ""
+    }
+   ]
+  },
+  "CO/RA": {
+   "modulo": "Cobrança",
+   "nome": "Retenção / Recuperação",
+   "url": "https://newkey.cny.com.br/Intranet/frmMainMenu.aspx?ID_Modulo=CO&ID_SubGrupo=RA&ID_Empresa=1",
+   "telas": [
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut0",
+     "txt": "Retenção / Recuperação",
+     "pai": "",
+     "alvo": ""
+    },
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut1",
+     "txt": "Transferência de Cota",
+     "pai": "Retenção / Recuperação",
+     "alvo": ""
+    }
+   ]
+  },
+  "CO/RE": {
+   "modulo": "Cobrança",
+   "nome": "Relatório",
+   "url": "https://newkey.cny.com.br/Intranet/frmMainMenu.aspx?ID_Modulo=CO&ID_SubGrupo=RE&ID_Empresa=1",
+   "telas": [
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut0",
+     "txt": "Relatório",
+     "pai": "",
+     "alvo": ""
+    },
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut1",
+     "txt": "Análise de Carteiras",
+     "pai": "Relatório",
+     "alvo": ""
+    },
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut2",
+     "txt": "Recursos CNP3 Web",
+     "pai": "",
+     "alvo": ""
+    }
+   ]
+  },
+  "CP/PC": {
+   "modulo": "Contemplação",
+   "nome": "Pré-Contemplação",
+   "url": "https://newkey.cny.com.br/Intranet/frmMainMenu.aspx?ID_Modulo=CP&ID_SubGrupo=PC&ID_Empresa=1",
+   "telas": [
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut0",
+     "txt": "Pré-Contemplação",
+     "pai": "",
+     "alvo": ""
+    },
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut1",
+     "txt": "Recursos CNP3 Web",
+     "pai": "Pré-Contemplação",
+     "alvo": ""
+    },
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut2",
+     "txt": "Oferta de Lance (Acesso Direto)",
+     "pai": "Recursos CNP3 Web",
+     "alvo": ""
+    },
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut3",
+     "txt": "Credenciamento",
+     "pai": "Oferta de Lance (Acesso Direto)",
+     "alvo": ""
+    }
+   ]
+  },
+  "CP/CP": {
+   "modulo": "Contemplação",
+   "nome": "Contemplação",
+   "url": "https://newkey.cny.com.br/Intranet/frmMainMenu.aspx?ID_Modulo=CP&ID_SubGrupo=CP&ID_Empresa=1",
+   "telas": [
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut0",
+     "txt": "Contemplação",
+     "pai": "",
+     "alvo": ""
+    },
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut1",
+     "txt": "Resultado de Assembleia",
+     "pai": "Contemplação",
+     "alvo": ""
+    }
+   ]
+  },
+  "CR/CR": {
+   "modulo": "Crédito",
+   "nome": "Concessão de Crédito",
+   "url": "https://newkey.cny.com.br/Intranet/frmMainMenu.aspx?ID_Modulo=CR&ID_SubGrupo=CR&ID_Empresa=1",
+   "telas": [
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut0",
+     "txt": "Concessão de Crédito",
+     "pai": "",
+     "alvo": ""
+    },
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut1",
+     "txt": "Liberação de Crédito",
+     "pai": "Concessão de Crédito",
+     "alvo": ""
+    },
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut2",
+     "txt": "Processo de Contemplação",
+     "pai": "Liberação de Crédito",
+     "alvo": ""
+    },
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut3",
+     "txt": "Fila Ocorrências / Processos",
+     "pai": "Liberação de Crédito",
+     "alvo": ""
+    },
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut4",
+     "txt": "Simulador de Documentos",
+     "pai": "Concessão de Crédito",
+     "alvo": ""
+    }
+   ]
+  },
+  "CR/RE": {
+   "modulo": "Crédito",
+   "nome": "Relatório",
+   "url": "https://newkey.cny.com.br/Intranet/frmMainMenu.aspx?ID_Modulo=CR&ID_SubGrupo=RE&ID_Empresa=1",
+   "telas": [
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut0",
+     "txt": "Relatório",
+     "pai": "",
+     "alvo": ""
+    }
+   ]
+  },
+  "AT/AT": {
+   "modulo": "Atendimento",
+   "nome": "Atendimento a Clientes",
+   "url": "https://newkey.cny.com.br/Intranet/frmMainMenu.aspx?ID_Modulo=AT&ID_SubGrupo=AT&ID_Empresa=1",
+   "telas": [
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut0",
+     "txt": "Atendimento",
+     "pai": "",
+     "alvo": ""
+    },
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut1",
+     "txt": "Posição do Consorciado",
+     "pai": "Atendimento",
+     "alvo": ""
+    }
+   ]
+  },
+  "AT/FC": {
+   "modulo": "Atendimento",
+   "nome": "Fale Conosco",
+   "url": "https://newkey.cny.com.br/Intranet/frmMainMenu.aspx?ID_Modulo=AT&ID_SubGrupo=FC&ID_Empresa=1",
+   "telas": [
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut0",
+     "txt": "Fale Conosco",
+     "pai": "",
+     "alvo": ""
+    },
+    {
+     "id": "ctl00_Conteudo_ctl00_tvwMenut1",
+     "txt": "Cadastro de Apoio",
+     "pai": "Fale Conosco",
+     "alvo": ""
+    }
+   ]
+  }
+ },
+ "atualizado_em": "16/11/2026 17:00:31"
+}

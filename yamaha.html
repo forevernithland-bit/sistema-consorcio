@@ -687,6 +687,10 @@ const REGRAS_LANCE={
 }
 // Devolve as regras de lance do grupo: usa o que veio da tabela do grupo
 // (base de dados) e cai na regra geral do produto no que faltar.
+// 16/11/2026: regras lidas pelo robô no Newcon (modalidades, fixo, 2º fixo, limitado,
+// fidelidade, embutido permitido) + média de cada modalidade. Vem em BASE_DADOS.regras.
+function regrasNewcon(gr){ return (BASE_DADOS.regras||{})[String(gr)] || null; }
+const _MODS=[['Lance Livre','Livre'],['Lance Fixo','Fixo'],['2º Lance Fixo','2º Fixo'],['Lance Limitado','Limitado'],['Lance Fidelidade','Fidelidade']];
 function regrasDoGrupo(g){
   const geral=REGRAS_LANCE[produto]||REGRAS_LANCE.auto;
   let lf=null;
@@ -923,7 +927,10 @@ function _calcLanceNewcon(o){
   const trancheMes = nPag>0 ? trancheRest/nPag : 0;                                      // quanto entra em cada parcela
   const parcelaSemTranche = parcelaPos-trancheMes;
   const fracRed = R>0 ? lanceTot/R : 0;                                           // fração do saldo reduzido amortizada
-  const parcLance=Math.floor(lanceTot/puraPaga+0.1);   // +0,1 ≈ efeito da Dif. Grupo
+  // Reduzir PRAZO (conferido no Newcon em 16/11/2026, 4 cotas): parcelas amortizadas =
+  // piso((lance − dif. grupo) ÷ parcela pura paga). Sem dif. grupo (cota nova) = piso(lance ÷ parcela pura).
+  //   (a dif. grupo, em %, conta sobre a mesma base do lance: 9047/718 deu 34 e não 33)
+  const parcLance=Math.floor(Math.max(lanceTot-(o.difPct||0)*B,0)/puraPaga+1e-9);
   const nNovo=Math.max(nPag-parcLance,0);
   return {n,k,nPag,C1,redCred,pura,puraPaga,sdAtual,B,embBase,embVal,lanceBruto,rec,lanceTot,sdNovo,parcelaPos,parcLance,nNovo,R,tranche,fracRed,trancheRest,trancheMes,parcelaSemTranche,
           creditoLiberado:o.cred-embVal};
@@ -1556,6 +1563,8 @@ function onGrupoSel(){
   if(g.taxa!=null) document.getElementById('taxa').value=_fmtPctIn((+g.taxa).toFixed(2).replace(/\.?0+$/,''));
   if(g.prazo_total!=null) document.getElementById('prazoGrupo').value=g.prazo_total;
   document.getElementById('prazo').value = (g.prazo_restante!=null?g.prazo_restante:(g.prazo_total!=null?g.prazo_total:''));
+  // 16/11/2026: no Newcon a TAXA depende do PLANO de venda (ex.: 9538 tem 16,5% e o "40% DESC" 9,9%).
+  _montarPlanoSel(g);
 
   // ---- lance embutido permitido do grupo ----
   // preenche se estiver vazio OU se o valor atual veio de um grupo anterior
@@ -1610,6 +1619,38 @@ function onGrupoSel(){
   calcular();
 }
 
+// ---- PLANO DE VENDA do grupo (taxa/parcela/prazo de cada plano, gravados pelo robô em grupos_yamaha.planos) ----
+function _montarPlanoSel(g){
+  const cs=document.getElementById('creditoSel'); if(!cs) return;
+  let sel=document.getElementById('planoVendaSel');
+  if(!sel){ sel=document.createElement('select'); sel.id='planoVendaSel'; sel.className=cs.className;
+            sel.setAttribute('style', cs.getAttribute('style')||''); sel.style.marginBottom='6px';
+            sel.onchange=function(){ onPlanoVendaSel(false); }; cs.parentNode.insertBefore(sel,cs); }
+  const pl=(g&&g.planos)||{}; const ks=Object.keys(pl);
+  if(ks.length<1){ sel.style.display='none'; sel.innerHTML=''; return; }
+  const tx=v=>v==null?'—':(+v).toFixed(3).replace(/\.?0+$/,'').replace('.',',')+'%';
+  sel.innerHTML=ks.map(k=>`<option value="${k}">Plano ${(pl[k].nome||k)} · taxa ${tx(pl[k].taxa)}${pl[k].parcela_reduzida?' · parcela reduzida':''}</option>`).join('');
+  sel.style.display='';
+  sel.value = ks.includes(String(g.plano_codigo)) ? String(g.plano_codigo) : ks[0];
+  onPlanoVendaSel(true);
+}
+function planoVendaAtual(){
+  const g=GRUPO_ATUAL, s=document.getElementById('planoVendaSel');
+  return (g && g.planos && s && s.style.display!=='none') ? (g.planos[s.value]||null) : null;
+}
+function onPlanoVendaSel(semCalc){
+  const p=planoVendaAtual(); if(!p) return;
+  if(p.taxa!=null) document.getElementById('taxa').value=_fmtPctIn((+p.taxa).toFixed(3).replace(/\.?0+$/,''));
+  document.getElementById('tipoPlano').value = p.parcela_reduzida ? 'reduzida' : 'integral';
+  if(p.prazo_total!=null) document.getElementById('prazoGrupo').value=p.prazo_total;
+  if(p.prazo_restante!=null){
+    document.getElementById('prazo').value=p.prazo_restante;
+    const ps=document.getElementById('prazoSel');
+    if(ps && [...ps.options].some(o=>o.value===String(p.prazo_restante))) ps.value=String(p.prazo_restante);
+  }
+  if(semCalc!==true) calcular();
+}
+
 function onCreditoSel(){
   const sel=document.getElementById('creditoSel'), v=sel.value;
   if(v==='__manual__'){ document.getElementById('credito').value=''; document.getElementById('credito').focus(); calcular(); return; }
@@ -1653,6 +1694,18 @@ function montarInfoGrupo(g,plano,resumo){
                           : ' <span style="font-size:9px;color:#94a3b8">regra geral</span>';
   body+=`<div class="info-item"><span class="rotulo">Lance embutido permitido</span><span class="valor">até ${rg.embutido}%${selo}</span></div>`;
   body+=`<div class="info-item"><span class="rotulo">Lance fixo</span><span class="valor">${rg.lanceFixo.map(v=>v+'%').join(' ou ')}${rg.embFixo?` (usa até ${rg.embFixo}% de embutido)`:''}</span></div>`;
+  const rn=regrasNewcon(g.grupo);
+  if(rn){
+    const lib=_MODS.filter(([m])=>rn.liberadas&&rn.liberadas[m]).map(([m,c])=>{
+      if(m==='2º Lance Fixo'&&rn.fixo2_pct) return c+' '+_pctTxt(rn.fixo2_pct);
+      if(m==='Lance Limitado') return c+' (sem embutido'+(rn.limitado_max_pct?', até '+_pctTxt(rn.limitado_max_pct):'')+')';
+      if(m==='Lance Fidelidade'&&rn.fidelidade_max_pct) return c+' (até '+_pctTxt(rn.fidelidade_max_pct)+')';
+      return c;
+    });
+    body+=`<div class="info-item"><span class="rotulo">Modalidades liberadas</span><span class="valor">${lib.join(' · ')||'—'} <span style="font-size:9px;color:#94a3b8">${rn.fonte_modalidades||''}</span></span></div>`;
+    const med=_MODS.filter(([m])=>rn.medias&&rn.medias[m]).map(([m,c])=>`${c} ${_pctTxt(rn.medias[m].media)} <span style="font-size:9px;color:#94a3b8">(${rn.medias[m].n})</span>`);
+    body+=`<div class="info-item"><span class="rotulo">Média de lance por modalidade (últ. ${rn.assembleias_media||0} assembleias)</span><span class="valor">${med.join(' · ')||'sem histórico'}</span></div>`;
+  }
   body+='</div>';
   if(resumo && (resumo.de||resumo.ate)){
     body+=`<div class="ig-foot">Assembleias analisadas: ${resumo.assembleias_analisadas||0} · período ${resumo.de||'—'} → ${resumo.ate||'—'}</div>`;

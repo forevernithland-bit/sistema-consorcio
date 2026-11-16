@@ -1,0 +1,846 @@
+{
+ "10010": {
+  "grupo": "10010",
+  "cota_lida": "463",
+  "lido_em": "2026-11-16",
+  "formulario_aberto": true,
+  "modalidades": {
+   "Livre": true,
+   "Fixo": true,
+   "2º Fixo": false,
+   "Limitado": false,
+   "Fidelidade": false
+  },
+  "lance_min_pct": 0.463,
+  "lance_max_pct": 82.877,
+  "lance_fixo_pct": 30.0,
+  "lance_2fixo_pct": null,
+  "limitado_min_pct": null,
+  "limitado_max_pct": null,
+  "fidelidade_max_pct": null,
+  "plano": "Prazo do Plano:",
+  "bem": "007790",
+  "assembleia_oferta": null,
+  "historico": [],
+  "embutido_usado_max_pct": null,
+  "modalidades_no_historico": []
+ },
+ "9045": {
+  "grupo": "9045",
+  "cota_lida": "105",
+  "lido_em": "2026-11-16",
+  "formulario_aberto": false,
+  "modalidades": {},
+  "lance_min_pct": null,
+  "lance_max_pct": null,
+  "lance_fixo_pct": null,
+  "lance_2fixo_pct": null,
+  "limitado_min_pct": null,
+  "limitado_max_pct": null,
+  "fidelidade_max_pct": null,
+  "plano": null,
+  "bem": null,
+  "assembleia_oferta": null,
+  "historico": [
+   {
+    "assembleia": "26/10/2026",
+    "modalidade": "Lance Limitado",
+    "pct_lance": 62.0,
+    "pct_embutido": 0.0,
+    "status": "Ativo"
+   },
+   {
+    "assembleia": "26/10/2026",
+    "modalidade": "Lance Limitado",
+    "pct_lance": 62.0,
+    "pct_embutido": 0.0,
+    "status": "Cancelado"
+   },
+   {
+    "assembleia": "26/10/2026",
+    "modalidade": "Lance Limitado",
+    "pct_lance": 62.0,
+    "pct_embutido": 0.0,
+    "status": "Cancelado"
+   },
+   {
+    "assembleia": "24/09/2026",
+    "modalidade": "Lance Livre",
+    "pct_lance": 62.0,
+    "pct_embutido": 15.0,
+    "status": "Ativo"
+   },
+   {
+    "assembleia": "24/09/2026",
+    "modalidade": "Lance Limitado",
+    "pct_lance": 62.0,
+    "pct_embutido": 0.0,
+    "status": "Cancelado"
+   },
+   {
+    "assembleia": "25/08/2026",
+    "modalidade": "Lance Livre",
+    "pct_lance": 62.0,
+    "pct_embutido": 15.0,
+    "status": "Ativo"
+   },
+   {
+    "assembleia": "23/07/2026",
+    "modalidade": "2º Lance Fixo",
+    "pct_lance": 25.0,
+    "pct_embutido": 0.0,
+    "status": "Ativo"
+   },
+   {
+    "assembleia": "23/07/2026",
+    "modalidade": "2º Lance Fixo",
+    "pct_lance": 25.0,
+    "pct_embutido": 0.0,
+    "status": "Cancelado"
+   },
+   {
+    "assembleia": "25/06/2026",
+    "modalidade": "Lance Fixo",
+    "pct_lance": 35.0,
+    "pct_embutido": 15.0,
+    "status": "Ativo"
+   }
+  ],
+  "embutido_usado_max_pct": 15.0,
+  "modalidades_no_historico": [
+   "2º Lance Fixo",
+   "Lance Fixo",
+   "Lance Limitado",
+   "Lance Livre"
+  ]
+ },
+ "9538": {
+  "grupo": "9538",
+  "cota_lida": "369",
+  "lido_em": "2026-11-16",
+  "formulario_aberto": true,
+  "modalidades": {
+   "Livre": true,
+   "Fixo": true,
+   "2º Fixo": true,
+   "Limitado": true,
+   "Fidelidade": true
+  },
+  "lance_min_pct": 1.0862,
+  "lance_max_pct": 76.926,
+  "lance_fixo_pct": 35.0,
+  "lance_2fixo_pct": 10.0,
+  "limitado_min_pct": null,
+  "limitado_max_pct": 100.0,
+  "fidelidade_max_pct": 100.0,
+  "plano": "Prazo do Plano:",
+  "bem": "1372TX",
+  "assembleia_oferta": null,
+  "historico": [],
+  "embutido_usado_max_pct": null,
+  "modalidades_no_historico": []
+ },
+ "10015": {
+  "grupo": "10015",
+  "cota_lida": "156",
+  "lido_em": "2026-11-16",
+  "formulario_aberto": true,
+  "modalidades": {
+   "Livre": true,
+   "Fixo": true,
+   "2º Fixo": false,
+   "Limitado": false,
+   "Fidelidade": false
+  },
+  "lance_min_pct": 0.4065,
+  "lance_max_pct": 92.682,
+  "lance_fixo_pct": 30.0,
+  "lance_2fixo_pct": null,
+  "limitado_min_pct": null,
+  "limitado_max_pct": null,
+  "fidelidade_max_pct": null,
+  "plano": "Prazo do Plano:",
+  "bem": "007841",
+  "assembleia_oferta": null,
+  "historico": [],
+  "embutido_usado_max_pct": null,
+  "modalidades_no_historico": []
+ },
+ "10016": {
+  "grupo": "10016",
+  "cota_lida": "322",
+  "lido_em": "2026-11-16",
+  "formulario_aberto": true,
+  "modalidades": {
+   "Livre": true,
+   "Fixo": true,
+   "2º Fixo": false,
+   "Limitado": false,
+   "Fidelidade": false
+  },
+  "lance_min_pct": 0.4065,
+  "lance_max_pct": 93.0885,
+  "lance_fixo_pct": 30.0,
+  "lance_2fixo_pct": null,
+  "limitado_min_pct": null,
+  "limitado_max_pct": null,
+  "fidelidade_max_pct": null,
+  "plano": "Prazo do Plano:",
+  "bem": "007841",
+  "assembleia_oferta": null,
+  "historico": [],
+  "embutido_usado_max_pct": null,
+  "modalidades_no_historico": []
+ },
+ "10018": {
+  "grupo": "10018",
+  "cota_lida": "840",
+  "lido_em": "2026-11-16",
+  "formulario_aberto": true,
+  "modalidades": {
+   "Livre": true,
+   "Fixo": true,
+   "2º Fixo": false,
+   "Limitado": false,
+   "Fidelidade": false
+  },
+  "lance_min_pct": 0.4065,
+  "lance_max_pct": 94.308,
+  "lance_fixo_pct": 30.0,
+  "lance_2fixo_pct": null,
+  "limitado_min_pct": null,
+  "limitado_max_pct": null,
+  "fidelidade_max_pct": null,
+  "plano": "Prazo do Plano:",
+  "bem": "007839",
+  "assembleia_oferta": null,
+  "historico": [],
+  "embutido_usado_max_pct": null,
+  "modalidades_no_historico": []
+ },
+ "10019": {
+  "grupo": "10019",
+  "cota_lida": "795",
+  "lido_em": "2026-11-16",
+  "formulario_aberto": true,
+  "modalidades": {
+   "Livre": true,
+   "Fixo": true,
+   "2º Fixo": false,
+   "Limitado": false,
+   "Fidelidade": false
+  },
+  "lance_min_pct": 0.4065,
+  "lance_max_pct": 95.121,
+  "lance_fixo_pct": 30.0,
+  "lance_2fixo_pct": null,
+  "limitado_min_pct": null,
+  "limitado_max_pct": null,
+  "fidelidade_max_pct": null,
+  "plano": "Prazo do Plano:",
+  "bem": "007839",
+  "assembleia_oferta": null,
+  "historico": [],
+  "embutido_usado_max_pct": null,
+  "modalidades_no_historico": []
+ },
+ "10021": {
+  "grupo": "10021",
+  "cota_lida": "740",
+  "lido_em": "2026-11-16",
+  "formulario_aberto": true,
+  "modalidades": {
+   "Livre": true,
+   "Fixo": true,
+   "2º Fixo": false,
+   "Limitado": false,
+   "Fidelidade": false
+  },
+  "lance_min_pct": 0.4065,
+  "lance_max_pct": 97.56,
+  "lance_fixo_pct": 30.0,
+  "lance_2fixo_pct": null,
+  "limitado_min_pct": null,
+  "limitado_max_pct": null,
+  "fidelidade_max_pct": null,
+  "plano": "Prazo do Plano:",
+  "bem": "007839",
+  "assembleia_oferta": null,
+  "historico": [],
+  "embutido_usado_max_pct": null,
+  "modalidades_no_historico": []
+ },
+ "10022": {
+  "grupo": "10022",
+  "cota_lida": "1122",
+  "lido_em": "2026-11-16",
+  "formulario_aberto": true,
+  "modalidades": {
+   "Livre": true,
+   "Fixo": true,
+   "2º Fixo": false,
+   "Limitado": false,
+   "Fidelidade": false
+  },
+  "lance_min_pct": 0.4065,
+  "lance_max_pct": 98.7795,
+  "lance_fixo_pct": 30.0,
+  "lance_2fixo_pct": null,
+  "limitado_min_pct": null,
+  "limitado_max_pct": null,
+  "fidelidade_max_pct": null,
+  "plano": "Prazo do Plano:",
+  "bem": "007839",
+  "assembleia_oferta": null,
+  "historico": [],
+  "embutido_usado_max_pct": null,
+  "modalidades_no_historico": []
+ },
+ "20487": {
+  "grupo": "20487",
+  "cota_lida": "514",
+  "lido_em": "2026-11-16",
+  "formulario_aberto": false,
+  "modalidades": {},
+  "lance_min_pct": null,
+  "lance_max_pct": null,
+  "lance_fixo_pct": null,
+  "lance_2fixo_pct": null,
+  "limitado_min_pct": null,
+  "limitado_max_pct": null,
+  "fidelidade_max_pct": null,
+  "plano": null,
+  "bem": null,
+  "assembleia_oferta": null,
+  "historico": [],
+  "embutido_usado_max_pct": null,
+  "modalidades_no_historico": []
+ },
+ "9009": {
+  "grupo": "9009",
+  "cota_lida": "328",
+  "lido_em": "2026-11-16",
+  "formulario_aberto": false,
+  "modalidades": {},
+  "lance_min_pct": null,
+  "lance_max_pct": null,
+  "lance_fixo_pct": null,
+  "lance_2fixo_pct": null,
+  "limitado_min_pct": null,
+  "limitado_max_pct": null,
+  "fidelidade_max_pct": null,
+  "plano": null,
+  "bem": null,
+  "assembleia_oferta": null,
+  "historico": [
+   {
+    "assembleia": "17/02/2025",
+    "modalidade": "2º Lance Fixo",
+    "pct_lance": 25.0,
+    "pct_embutido": 0.0,
+    "status": "Ativo"
+   },
+   {
+    "assembleia": "17/02/2025",
+    "modalidade": "Lance Fixo",
+    "pct_lance": 35.0,
+    "pct_embutido": 0.0,
+    "status": "Cancelado"
+   },
+   {
+    "assembleia": "16/01/2025",
+    "modalidade": "Lance Fixo",
+    "pct_lance": 35.0,
+    "pct_embutido": 0.0,
+    "status": "Ativo"
+   },
+   {
+    "assembleia": "16/01/2025",
+    "modalidade": "2º Lance Fixo",
+    "pct_lance": 25.0,
+    "pct_embutido": 0.0,
+    "status": "Cancelado"
+   },
+   {
+    "assembleia": "17/12/2024",
+    "modalidade": "Lance Fixo",
+    "pct_lance": 35.0,
+    "pct_embutido": 0.0,
+    "status": "Ativo"
+   },
+   {
+    "assembleia": "18/11/2024",
+    "modalidade": "2º Lance Fixo",
+    "pct_lance": 25.0,
+    "pct_embutido": 0.0,
+    "status": "Ativo"
+   }
+  ],
+  "embutido_usado_max_pct": null,
+  "modalidades_no_historico": [
+   "2º Lance Fixo",
+   "Lance Fixo"
+  ]
+ },
+ "9021": {
+  "grupo": "9021",
+  "cota_lida": "218",
+  "lido_em": "2026-11-16",
+  "formulario_aberto": true,
+  "modalidades": {
+   "Livre": true,
+   "Fixo": true,
+   "2º Fixo": true,
+   "Limitado": true,
+   "Fidelidade": false
+  },
+  "lance_min_pct": 1.2821,
+  "lance_max_pct": 56.4124,
+  "lance_fixo_pct": 35.0,
+  "lance_2fixo_pct": 25.0,
+  "limitado_min_pct": null,
+  "limitado_max_pct": 100.0,
+  "fidelidade_max_pct": null,
+  "plano": "Prazo do Plano:",
+  "bem": "1344TX",
+  "assembleia_oferta": null,
+  "historico": [],
+  "embutido_usado_max_pct": null,
+  "modalidades_no_historico": []
+ },
+ "9029": {
+  "grupo": "9029",
+  "cota_lida": "1093",
+  "lido_em": "2026-11-16",
+  "formulario_aberto": true,
+  "modalidades": {
+   "Livre": true,
+   "Fixo": true,
+   "2º Fixo": true,
+   "Limitado": true,
+   "Fidelidade": false
+  },
+  "lance_min_pct": 2.1658,
+  "lance_max_pct": 58.9766,
+  "lance_fixo_pct": 35.0,
+  "lance_2fixo_pct": 25.0,
+  "limitado_min_pct": null,
+  "limitado_max_pct": 100.0,
+  "fidelidade_max_pct": null,
+  "plano": "Prazo do Plano:",
+  "bem": "1469TX",
+  "assembleia_oferta": null,
+  "historico": [],
+  "embutido_usado_max_pct": null,
+  "modalidades_no_historico": []
+ },
+ "9030": {
+  "grupo": "9030",
+  "cota_lida": "13",
+  "lido_em": "2026-11-16",
+  "formulario_aberto": false,
+  "modalidades": {},
+  "lance_min_pct": null,
+  "lance_max_pct": null,
+  "lance_fixo_pct": null,
+  "lance_2fixo_pct": null,
+  "limitado_min_pct": null,
+  "limitado_max_pct": null,
+  "fidelidade_max_pct": null,
+  "plano": null,
+  "bem": null,
+  "assembleia_oferta": null,
+  "historico": [
+   {
+    "assembleia": "17/06/2026",
+    "modalidade": "Lance Livre",
+    "pct_lance": 65.3871,
+    "pct_embutido": 0.0,
+    "status": "Ativo"
+   },
+   {
+    "assembleia": "17/06/2026",
+    "modalidade": "Lance Limitado",
+    "pct_lance": 62.5,
+    "pct_embutido": 0.0,
+    "status": "Cancelado"
+   },
+   {
+    "assembleia": "18/05/2026",
+    "modalidade": "Lance Limitado",
+    "pct_lance": 52.0,
+    "pct_embutido": 0.0,
+    "status": "Ativo"
+   },
+   {
+    "assembleia": "16/04/2026",
+    "modalidade": "Lance Limitado",
+    "pct_lance": 52.0,
+    "pct_embutido": 0.0,
+    "status": "Ativo"
+   },
+   {
+    "assembleia": "17/03/2026",
+    "modalidade": "Lance Limitado",
+    "pct_lance": 42.0,
+    "pct_embutido": 0.0,
+    "status": "Ativo"
+   },
+   {
+    "assembleia": "17/03/2026",
+    "modalidade": "Lance Limitado",
+    "pct_lance": 44.0,
+    "pct_embutido": 0.0,
+    "status": "Cancelado"
+   },
+   {
+    "assembleia": "18/02/2026",
+    "modalidade": "Lance Fixo",
+    "pct_lance": 35.0,
+    "pct_embutido": 15.0,
+    "status": "Ativo"
+   },
+   {
+    "assembleia": "15/01/2026",
+    "modalidade": "Lance Fixo",
+    "pct_lance": 35.0,
+    "pct_embutido": 15.0,
+    "status": "Ativo"
+   },
+   {
+    "assembleia": "16/12/2025",
+    "modalidade": "Lance Fixo",
+    "pct_lance": 35.0,
+    "pct_embutido": 0.0,
+    "status": "Ativo"
+   },
+   {
+    "assembleia": "16/12/2025",
+    "modalidade": "Lance Fixo",
+    "pct_lance": 35.0,
+    "pct_embutido": 15.0,
+    "status": "Cancelado"
+   },
+   {
+    "assembleia": "16/12/2025",
+    "modalidade": "Lance Fixo",
+    "pct_lance": 35.0,
+    "pct_embutido": 15.0,
+    "status": "Cancelado"
+   },
+   {
+    "assembleia": "18/11/2025",
+    "modalidade": "Lance Fixo",
+    "pct_lance": 35.0,
+    "pct_embutido": 0.0,
+    "status": "Ativo"
+   }
+  ],
+  "embutido_usado_max_pct": 15.0,
+  "modalidades_no_historico": [
+   "Lance Fixo",
+   "Lance Limitado",
+   "Lance Livre"
+  ]
+ },
+ "9036": {
+  "grupo": "9036",
+  "cota_lida": "197",
+  "lido_em": "2026-11-16",
+  "formulario_aberto": false,
+  "modalidades": {},
+  "lance_min_pct": null,
+  "lance_max_pct": null,
+  "lance_fixo_pct": null,
+  "lance_2fixo_pct": null,
+  "limitado_min_pct": null,
+  "limitado_max_pct": null,
+  "fidelidade_max_pct": null,
+  "plano": null,
+  "bem": null,
+  "assembleia_oferta": null,
+  "historico": [
+   {
+    "assembleia": "24/02/2025",
+    "modalidade": "Lance Livre",
+    "pct_lance": 66.0,
+    "pct_embutido": 15.0,
+    "status": "Ativo"
+   },
+   {
+    "assembleia": "23/01/2025",
+    "modalidade": "Lance Livre",
+    "pct_lance": 61.0,
+    "pct_embutido": 15.0,
+    "status": "Ativo"
+   }
+  ],
+  "embutido_usado_max_pct": 15.0,
+  "modalidades_no_historico": [
+   "Lance Livre"
+  ]
+ },
+ "9047": {
+  "grupo": "9047",
+  "cota_lida": "718",
+  "lido_em": "2026-11-16",
+  "formulario_aberto": true,
+  "modalidades": {
+   "Livre": true,
+   "Fixo": true,
+   "2º Fixo": true,
+   "Limitado": true,
+   "Fidelidade": false
+  },
+  "lance_min_pct": 1.2821,
+  "lance_max_pct": 65.3871,
+  "lance_fixo_pct": 35.0,
+  "lance_2fixo_pct": 25.0,
+  "limitado_min_pct": null,
+  "limitado_max_pct": 100.0,
+  "fidelidade_max_pct": null,
+  "plano": "Prazo do Plano:",
+  "bem": "1382TX",
+  "assembleia_oferta": null,
+  "historico": [],
+  "embutido_usado_max_pct": null,
+  "modalidades_no_historico": []
+ },
+ "9048": {
+  "grupo": "9048",
+  "cota_lida": "332",
+  "lido_em": "2026-11-16",
+  "formulario_aberto": true,
+  "modalidades": {
+   "Livre": true,
+   "Fixo": true,
+   "2º Fixo": true,
+   "Limitado": true,
+   "Fidelidade": false
+  },
+  "lance_min_pct": 1.2821,
+  "lance_max_pct": 65.3871,
+  "lance_fixo_pct": 35.0,
+  "lance_2fixo_pct": 25.0,
+  "limitado_min_pct": null,
+  "limitado_max_pct": 100.0,
+  "fidelidade_max_pct": null,
+  "plano": "Prazo do Plano:",
+  "bem": "1322TX",
+  "assembleia_oferta": null,
+  "historico": [],
+  "embutido_usado_max_pct": null,
+  "modalidades_no_historico": []
+ },
+ "9508": {
+  "grupo": "9508",
+  "cota_lida": "74",
+  "lido_em": "2026-11-16",
+  "formulario_aberto": false,
+  "modalidades": {},
+  "lance_min_pct": null,
+  "lance_max_pct": null,
+  "lance_fixo_pct": null,
+  "lance_2fixo_pct": null,
+  "limitado_min_pct": null,
+  "limitado_max_pct": null,
+  "fidelidade_max_pct": null,
+  "plano": null,
+  "bem": null,
+  "assembleia_oferta": null,
+  "historico": [
+   {
+    "assembleia": "18/05/2026",
+    "modalidade": "Lance Limitado",
+    "pct_lance": 40.0,
+    "pct_embutido": 0.0,
+    "status": "Ativo"
+   },
+   {
+    "assembleia": "16/04/2026",
+    "modalidade": "Lance Limitado",
+    "pct_lance": 40.0,
+    "pct_embutido": 0.0,
+    "status": "Ativo"
+   },
+   {
+    "assembleia": "16/04/2026",
+    "modalidade": "Lance Limitado",
+    "pct_lance": 40.0,
+    "pct_embutido": 0.0,
+    "status": "Cancelado"
+   },
+   {
+    "assembleia": "16/04/2026",
+    "modalidade": "Lance Limitado",
+    "pct_lance": 40.0,
+    "pct_embutido": 0.0,
+    "status": "Cancelado"
+   }
+  ],
+  "embutido_usado_max_pct": null,
+  "modalidades_no_historico": [
+   "Lance Limitado"
+  ]
+ },
+ "9542": {
+  "grupo": "9542",
+  "cota_lida": "126",
+  "lido_em": "2026-11-16",
+  "formulario_aberto": true,
+  "modalidades": {
+   "Livre": true,
+   "Fixo": true,
+   "2º Fixo": true,
+   "Limitado": true,
+   "Fidelidade": true
+  },
+  "lance_min_pct": 1.5044,
+  "lance_max_pct": 76.926,
+  "lance_fixo_pct": 35.0,
+  "lance_2fixo_pct": 10.0,
+  "limitado_min_pct": null,
+  "limitado_max_pct": 100.0,
+  "fidelidade_max_pct": 100.0,
+  "plano": "Prazo do Plano:",
+  "bem": "1499TX",
+  "assembleia_oferta": null,
+  "historico": [],
+  "embutido_usado_max_pct": null,
+  "modalidades_no_historico": []
+ },
+ "9551": {
+  "grupo": "9551",
+  "cota_lida": "466",
+  "lido_em": "2026-11-16",
+  "formulario_aberto": true,
+  "modalidades": {
+   "Livre": true,
+   "Fixo": true,
+   "2º Fixo": true,
+   "Limitado": true,
+   "Fidelidade": true
+  },
+  "lance_min_pct": 1.5304,
+  "lance_max_pct": 78.2081,
+  "lance_fixo_pct": 35.0,
+  "lance_2fixo_pct": 10.0,
+  "limitado_min_pct": null,
+  "limitado_max_pct": 100.0,
+  "fidelidade_max_pct": 0.0,
+  "plano": "Prazo do Plano:",
+  "bem": "1498TX",
+  "assembleia_oferta": null,
+  "historico": [],
+  "embutido_usado_max_pct": null,
+  "modalidades_no_historico": []
+ },
+ "9569": {
+  "grupo": "9569",
+  "cota_lida": "371",
+  "lido_em": "2026-11-16",
+  "formulario_aberto": true,
+  "modalidades": {
+   "Livre": true,
+   "Fixo": true,
+   "2º Fixo": true,
+   "Limitado": true,
+   "Fidelidade": true
+  },
+  "lance_min_pct": 1.5044,
+  "lance_max_pct": 80.7723,
+  "lance_fixo_pct": 35.0,
+  "lance_2fixo_pct": 10.0,
+  "limitado_min_pct": null,
+  "limitado_max_pct": 100.0,
+  "fidelidade_max_pct": 100.0,
+  "plano": "Prazo do Plano:",
+  "bem": "1499TX",
+  "assembleia_oferta": null,
+  "historico": [],
+  "embutido_usado_max_pct": null,
+  "modalidades_no_historico": []
+ },
+ "9572": {
+  "grupo": "9572",
+  "cota_lida": "344",
+  "lido_em": "2026-11-16",
+  "formulario_aberto": false,
+  "modalidades": {},
+  "lance_min_pct": null,
+  "lance_max_pct": null,
+  "lance_fixo_pct": null,
+  "lance_2fixo_pct": null,
+  "limitado_min_pct": null,
+  "limitado_max_pct": null,
+  "fidelidade_max_pct": null,
+  "plano": null,
+  "bem": null,
+  "assembleia_oferta": null,
+  "historico": [
+   {
+    "assembleia": "17/03/2026",
+    "modalidade": "Lance Livre",
+    "pct_lance": 55.0,
+    "pct_embutido": 15.0,
+    "status": "Ativo"
+   }
+  ],
+  "embutido_usado_max_pct": 15.0,
+  "modalidades_no_historico": [
+   "Lance Livre"
+  ]
+ },
+ "9582": {
+  "grupo": "9582",
+  "cota_lida": "333",
+  "lido_em": "2026-11-16",
+  "formulario_aberto": true,
+  "modalidades": {
+   "Livre": true,
+   "Fixo": true,
+   "2º Fixo": true,
+   "Limitado": true,
+   "Fidelidade": true
+  },
+  "lance_min_pct": 1.0524,
+  "lance_max_pct": 84.6186,
+  "lance_fixo_pct": 35.0,
+  "lance_2fixo_pct": 10.0,
+  "limitado_min_pct": null,
+  "limitado_max_pct": 100.0,
+  "fidelidade_max_pct": 100.0,
+  "plano": "Prazo do Plano:",
+  "bem": "1372TX",
+  "assembleia_oferta": null,
+  "historico": [],
+  "embutido_usado_max_pct": null,
+  "modalidades_no_historico": []
+ },
+ "9600": {
+  "grupo": "9600",
+  "cota_lida": "302",
+  "lido_em": "2026-11-16",
+  "formulario_aberto": true,
+  "modalidades": {
+   "Livre": true,
+   "Fixo": true,
+   "2º Fixo": false,
+   "Limitado": true,
+   "Fidelidade": true
+  },
+  "lance_min_pct": 1.2392,
+  "lance_max_pct": 96.6657,
+  "lance_fixo_pct": 25.0,
+  "lance_2fixo_pct": 0.0,
+  "limitado_min_pct": null,
+  "limitado_max_pct": 100.0,
+  "fidelidade_max_pct": 100.0,
+  "plano": "Prazo do Plano:",
+  "bem": "1413TX",
+  "assembleia_oferta": null,
+  "historico": [],
+  "embutido_usado_max_pct": null,
+  "modalidades_no_historico": []
+ }
+}

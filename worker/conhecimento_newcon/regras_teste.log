@@ -1,0 +1,5 @@
+>>> ROBÔ YAMAHA — REGRAS DE LANCE de 3 grupo(s) (só leitura, navegador único)
+[newcon] login feito no navegador único (fica aberto e logado).
+  + 10010: Livre, Fixo | fixo 30.0 | 2ºfixo None | limit None-None | fidel None | emb usado None | hist []
+  + 9045: (formulário fechado agora) | fixo None | 2ºfixo None | limit None-None | fidel None | emb usado 15.0 | hist ['2º Lance Fixo', 'Lance Fixo', 'Lance Limitado', 'Lance Livre']
+  + 9538: Livre, Fixo, 2º Fixo, Limitado, Fidelidade | fixo 35.0 | 2ºfixo 10.0 | limit None-100.0 | fidel 100.0 | emb usado None | hist []

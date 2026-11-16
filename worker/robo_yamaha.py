@@ -47,6 +47,13 @@ USO (PC do escritório):
     --headless                  navegador invisível
     --refazer                   ignora o progresso do dia e recomeça
 
+  MODO APRENDER (16/11/2026) — o robô explora o Newcon sozinho, só leitura:
+    python robo_yamaha.py --explorar             # todas as telas; se cair, retoma
+    python robo_yamaha.py --explorar --limite 5  # só 5 telas (teste)
+    python robo_yamaha.py --explorar --so GR/AA  # só um submenu (Grupo > Assembleia)
+    python robo_yamaha.py --mapa                 # regera MAPA_NEWCON.md / ONDE_ACHAR.md
+    Memória dele: worker/conhecimento_newcon/ (CONHECIMENTO.md, diario.log, telas/).
+
 Precisa das migrações 17, 18, 19 (e 20) rodadas no Supabase, e do
 worker/.env com SUPABASE_URL/KEY e SIMULACAO_CPF.
 """
@@ -341,6 +348,15 @@ def main():
 
     def opt(k, d=None):
         return a[a.index(k) + 1] if k in a else d
+
+    # MODO APRENDER: explora o Newcon (só leitura), anota cada tela e escreve
+    # conhecimento_newcon/MAPA_NEWCON.md + ONDE_ACHAR.md. Retoma de onde parou.
+    if "--regras-lance" in a:          # regras de lance de cada grupo (tela Oferta de Lance, só leitura)
+        import regras_lance
+        return regras_lance.main_robo(a)
+    if "--explorar" in a or "--mapa" in a:
+        import explorar_newcon
+        return explorar_newcon.main_robo(a)
 
     rapido = "--rapido" in a
     teste = "--teste" in a or rapido

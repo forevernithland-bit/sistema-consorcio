@@ -62,7 +62,8 @@ AVISOS = []
 RE_SEM_COMISSAO = re.compile(r"n.o\s+existe\s+comiss.o\s+paga", re.I)
 
 DATA_ALOCACAO_INI = "01/08/2024"
-DATA_ALOCACAO_FIM = "31/08/2026"
+# Data Alocacao final = HOJE (era fixa em 31/08/2026 e cortava tudo alocado depois: faltou R$ 240 na quinzena 01-15/11/2026).
+DATA_ALOCACAO_FIM = datetime.date.today().strftime("%d/%m/%Y")
 INICIO_HISTORICO = "01/10/2024"
 
 # ============================================================================
@@ -104,6 +105,23 @@ def _cred_newcon(sb):
 
 
 def _abrir(sb):
+    # 16/11/2026: NAVEGADOR ÚNICO (sempre aberto e logado) — abre só uma aba.
+    if os.getenv("NEWCON_NAVEGADOR_UNICO", "1") != "0":
+        import newcon_navegador
+        pw, browser, ctx, page = newcon_navegador.abrir_aba(sb, visivel=NAVEGADOR_VISIVEL, dialogo=None,
+                                                             timeout_ms=TIMEOUT_ELEMENTO * 1000)
+        def _dlg(d):
+            try:
+                AVISOS.append(d.message or ""); _log(f"  [dialogo] {d.message}")
+            except Exception:
+                pass
+            try:
+                d.accept()
+            except Exception:
+                pass
+        page.on("dialog", _dlg)
+        page.on("popup", lambda p: p.on("dialog", _dlg))   # só os popups DESTA aba
+        return pw, browser, ctx, page
     from playwright.sync_api import sync_playwright
     import newcon
     pw = sync_playwright().start()
@@ -650,7 +668,9 @@ def _conectar_sb():
     return create_client(url, key)
 
 
-def main():
+def main(page_externo=None):
+    """page_externo = página do Newcon JÁ ABERTA e logada (o worker passa a dele,
+    16/11/2026) -> não abre nem fecha navegador. Sem ela, abre o próprio (uso manual)."""
     args = sys.argv[1:]
     if "--help" in args or "-h" in args or "/?" in args:
         print(__doc__)
@@ -669,7 +689,15 @@ def main():
 
     if "--so" in args:
         so = args[args.index("--so") + 1]
-        periodos = [p for p in periodos if p["ini"] == so]
+        achados = [p for p in periodos if p["ini"] == so]
+        if not achados:                       # quinzena fora do JSON (mes recente) -> monta na hora
+            d = datetime.datetime.strptime(so, "%d/%m/%Y").date()
+            import calendar
+            fim_dia = 15 if d.day <= 15 else calendar.monthrange(d.year, d.month)[1]
+            ini_dia = 1 if d.day <= 15 else 16
+            achados = [{"ini": f"{ini_dia:02d}/{d.month:02d}/{d.year}", "fim": f"{fim_dia:02d}/{d.month:02d}/{d.year}",
+                        "arquivo": f"{d.year}-{d.month:02d}-{'1a' if ini_dia == 1 else '2a'}-quinzena - Comissoes Yamaha CCY10852.pdf"}]
+        periodos = achados
     if "--desde" in args:
         desde = args[args.index("--desde") + 1]
         d0 = datetime.datetime.strptime(desde, "%d/%m/%Y").date()
@@ -698,8 +726,12 @@ def main():
         print(f">>> mes {alvo}: {len(periodos)} quinzena(s)")
     refazer = "--refazer" in args
 
-    sb = _conectar_sb()
-    pw, browser, ctx, page = _abrir(sb)
+    if page_externo is not None:
+        pw = browser = None
+        page = page_externo
+    else:
+        sb = _conectar_sb()
+        pw, browser, ctx, page = _abrir(sb)
     resultados = {}
     try:
         if "--geral" in args:
@@ -717,7 +749,8 @@ def main():
                     resultados[p["arquivo"]] = f"ERRO: {e}"
                     print(f"  x {e}")
     finally:
-        browser.close(); pw.stop()
+        if browser is not None:            # só fecha o navegador que ELE abriu
+            browser.close(); pw.stop()
 
     print("\n===== RESUMO =====")
     for k, v in resultados.items():

@@ -199,6 +199,11 @@ def _conectar_sb():
 
 
 def _abrir(sb, visivel):
+    # 16/11/2026: usa o NAVEGADOR ÚNICO (sempre aberto e logado) — abre só uma aba.
+    # Volta pro jeito antigo (navegador próprio) só se NEWCON_NAVEGADOR_UNICO=0.
+    if os.getenv("NEWCON_NAVEGADOR_UNICO", "1") != "0":
+        import newcon_navegador
+        return newcon_navegador.abrir_aba(sb, visivel=visivel, dialogo="aceitar")
     from playwright.sync_api import sync_playwright
     import newcon
     pw = sync_playwright().start()
@@ -613,6 +618,25 @@ def _coletar_plano(page, plano_val, plano_txt, alvo=None, com_grupos=False,
     return meta, grupos
 
 
+def _salvar_plano_do_grupo(sb, prod_nome, g, agora):
+    """Guarda a taxa/parcela DESTE plano no grupo (grupos_yamaha.planos, migração 34).
+    No Newcon a taxa muda conforme o plano de venda — a coluna `taxa` só tem o último lido."""
+    try:
+        atual = (sb.table("grupos_yamaha").select("planos").eq("grupo", g["grupo"])
+                 .eq("tipo_bem", prod_nome).execute().data or [{}])[0].get("planos") or {}
+    except Exception:
+        return          # coluna ainda não existe (migração 34 não rodada)
+    atual[str(g["plano_cod"])] = {
+        "nome": g.get("plano_txt"), "taxa": g["taxa"], "parcela": g["parcela"], "credito": g["credito"],
+        "bem": g["bem"], "prazo_total": g["prazo_total"], "prazo_restante": g["prazo_restante"],
+        "parcela_reduzida": g.get("parcela_reduzida", False), "reducao_pct": g.get("reducao_pct") or None,
+        "base_parcela": g.get("base_parcela"), "visto_em": agora}
+    try:
+        sb.table("grupos_yamaha").update({"planos": atual}).eq("grupo", g["grupo"]).eq("tipo_bem", prod_nome).execute()
+    except Exception as e:
+        print(f"  ! planos do grupo {g['grupo']}: {str(e)[:100]}")
+
+
 def _salvar(sb, prod_nome, metas, grupos):
     agora = datetime.datetime.now(datetime.timezone.utc).isoformat()
     for m in metas:
@@ -639,6 +663,7 @@ def _salvar(sb, prod_nome, metas, grupos):
                 "base_parcela": g.get("base_parcela"),
                 "consultado_em": agora, "fonte": "newcon-venda-proposta",
             }, on_conflict="grupo,tipo_bem").execute()
+            _salvar_plano_do_grupo(sb, prod_nome, g, agora)
             sb.table("grupos_yamaha_consultas").insert({
                 "grupo": g["grupo"], "tipo_bem": prod_nome, "vagas": g["vagas"],
                 "credito": g["credito"], "consultado_em": agora}).execute()
