@@ -13,3 +13,8 @@ robo_login_travado.json
 robo_yamaha_progresso.json
 tabelas_yamaha_estado.json
 logs/
+# 17/11/2026: marcador de "continuar de onde parou" de cada conferência (CONFERIR_GRUPOS).
+# Os DADOS vão direto pro Supabase; este arquivo é só rascunho do robô e some sozinho.
+conferir_grupos_progresso*.json
+coletar_*_progresso*.json
+newcon_login.lock
