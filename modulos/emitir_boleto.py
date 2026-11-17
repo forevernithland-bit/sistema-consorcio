@@ -29,10 +29,71 @@ def _mapa_boletos_drive():
             return {}
         arquivos = listar_arquivos_drive(folder)
         return {str(a.get("name", "")).lower():
-                {"link": (a.get("webContentLink") or a.get("webViewLink") or ""), "id": a.get("id")}
+                {"link": (a.get("webContentLink") or a.get("webViewLink") or ""), "id": a.get("id"),
+                 "mod": a.get("modifiedTime") or ""}
                 for a in arquivos}
     except Exception:
         return {}
+
+
+def _achar_pdf_boleto(mapa, row):
+    """Acha o PDF do boleto desta linha da fila. O nome padrão é primeiroNome_grupo_cota.pdf,
+    mas boletos antigos saíram como None_grupo_cota.pdf (sem nome do cliente) e a mesma cota
+    pode ter PDFs de meses diferentes: escolhe o PDF gravado logo depois do pedido."""
+    atraso = bool(row.get('em_atraso'))
+    suf = f"_{row.get('grupo')}_{row.get('cota')}{'_atraso' if atraso else ''}.pdf".lower()
+    cands = [(n, i) for n, i in mapa.items()
+             if n.endswith(suf) and (atraso or not n.endswith("_atraso.pdf"))
+             and n.count("_") == suf.count("_")]
+    if not cands:
+        return None, None
+    ref = pd.to_datetime(row.get('criado_em'), utc=True, errors='coerce')
+    if pd.notna(ref):
+        depois = []
+        for n, i in cands:
+            mod = pd.to_datetime(i.get("mod"), utc=True, errors='coerce')
+            if pd.notna(mod) and mod >= ref - pd.Timedelta(minutes=10):
+                depois.append((mod, n, i))
+        if depois:
+            _, n, i = min(depois, key=lambda t: t[0])
+            return n, i
+    nome = _nome_arquivo_boleto(row.get('cliente'), row.get('grupo'), row.get('cota'), atraso=atraso)
+    if nome in mapa:
+        return nome, mapa[nome]
+    return None, None
+
+
+@st.cache_data(ttl=24 * 3600, show_spinner=False)
+def _ler_boleto_pdf(file_id, modificado=""):
+    """Baixa o PDF do Drive e lê o que está IMPRESSO no boleto: linha digitável, vencimento e valor.
+    {'codigo': '', 'venc': '', 'valor': None} quando não der para ler."""
+    vazio = {"codigo": "", "venc": "", "valor": None}
+    try:
+        import pdfplumber
+        dados = get_drive_service().files().get_media(fileId=file_id).execute()
+        with pdfplumber.open(io.BytesIO(dados)) as pdf:
+            txt = "\n".join((p.extract_text() or "") for p in pdf.pages)
+            p0 = pdf.pages[0]
+            palavras = p0.extract_words()
+            larg, alt = p0.width, p0.height
+    except Exception:
+        return vazio
+    m = re.search(r"(\d{5}\.\d{5}\s+\d{5}\.\d{6}\s+\d{5}\.\d{6}\s+\d\s+\d{14})", txt)
+    cod = re.sub(r"\s+", " ", m.group(1)).strip() if m else ""
+    # vencimento = a data do cantinho "Vencimento" (canto superior direito), não a do documento
+    datas = [w for w in palavras if re.fullmatch(r"\d{2}/\d{2}/\d{4}", w["text"])
+             and w["x0"] > larg * 0.7 and w["top"] < alt * 0.25]
+    venc = sorted(datas, key=lambda w: w["top"])[0]["text"] if datas else ""
+    if not venc:
+        mv = re.search(r"Vencimento\s*(\d{2}/\d{2}/\d{4})", txt)
+        venc = mv.group(1) if mv else ""
+    valor = None
+    if cod:
+        try:
+            valor = int(cod.split(" ")[-1][-10:]) / 100   # últimos 10 dígitos da linha = valor
+        except Exception:
+            valor = None
+    return {"codigo": cod, "venc": venc, "valor": valor}
 
 
 def _gerar_zip(itens):
@@ -402,59 +463,120 @@ def _painel_status(supabase, is_master, df_vendas_global=None):
         df_f['vencimento'] = ""
     if 'em_atraso' not in df_f.columns:
         df_f['em_atraso'] = None
-    # Link para baixar o PDF do boleto (Google Drive) e coleta dos itens p/ ZIP em lote
+    # PDF de cada boleto (Google Drive) + o que está impresso nele (código, vencimento, valor)
     mapa_pdf = _mapa_boletos_drive()
     itens_zip = []  # (label, nome_arquivo, file_id)
-
-    def _link_pdf(row):
-        if (row.get('status') or '').upper() != "SUCESSO":
-            return ""
-        nome = _nome_arquivo_boleto(row.get('cliente'), row.get('grupo'), row.get('cota'),
-                                    atraso=bool(row.get('em_atraso')))
-        info = mapa_pdf.get(nome)
-        if info and info.get("id"):
-            itens_zip.append((f"{row.get('cliente')} — {row.get('grupo')}/{row.get('cota')}"
-                              + (" (atraso)" if row.get('em_atraso') else ""), nome, info["id"]))
-        return (info or {}).get("link", "")
-    df_f['Baixar'] = df_f.apply(_link_pdf, axis=1)
-
     df_f['Boleto'] = df_f['em_atraso'].apply(lambda x: "⚠️ Em atraso" if x is True or x == True else "Do mês")  # noqa: E712
-    cols = ['cliente', 'Grupo/Cota', 'Boleto', 'Situação', 'vencimento', 'codigo_barras', 'Baixar']
-    df_show = df_f[cols].rename(columns={'cliente': 'Cliente', 'vencimento': 'Vencimento',
-                                         'codigo_barras': 'Código de Barras'})
 
     busca_h = st.text_input("🔍 Buscar no andamento (cliente, grupo/cota, código…)",
                             key="busca_boleto_hist", placeholder="Digite parte do nome, grupo/cota ou código…")
     if busca_h and busca_h.strip():
         b = busca_h.strip()
         mask = False
-        for c in ['Cliente', 'Grupo/Cota', 'Código de Barras', 'Situação']:
-            mask = mask | df_show[c].astype(str).str.contains(b, case=False, na=False)
-        df_show = df_show[mask]
+        for c in ['cliente', 'Grupo/Cota', 'codigo_barras', 'Situação']:
+            mask = mask | df_f[c].astype(str).str.contains(b, case=False, na=False)
+        df_f = df_f[mask]
+        if df_f.empty:
+            st.info(f"Nenhum boleto encontrado para “{busca_h}”.")
+            return
 
-    if df_show.empty:
-        st.info(f"Nenhum boleto encontrado para “{busca_h}”.")
-        return
-    st.dataframe(
-        df_show, use_container_width=True, hide_index=True,
-        column_config={
-            "Código de Barras": st.column_config.TextColumn("Código de Barras", width="large"),
-            "Baixar": st.column_config.LinkColumn("Baixar", display_text="📥 PDF"),
-        },
-    )
+    def _txt(v):
+        v = "" if v is None else str(v).strip()
+        return "" if v.lower() in ("", "none", "nan", "nat") else v
+
+    def _data_br(v):
+        v = _txt(v)
+        if not v:
+            return ""
+        if re.fullmatch(r"\d{2}/\d{2}/\d{4}", v):
+            return v
+        try:
+            return pd.to_datetime(v).strftime("%d/%m/%Y")
+        except Exception:
+            return v
+
+    linhas = df_f.to_dict("records")
+    POR_PAG = 20
+    if len(linhas) > POR_PAG:
+        paginas = (len(linhas) + POR_PAG - 1) // POR_PAG
+        pag = st.selectbox("Página", list(range(1, paginas + 1)), key="bol_hist_pag",
+                           format_func=lambda n: f"{n} de {paginas}")
+        linhas_pag = linhas[(pag - 1) * POR_PAG: pag * POR_PAG]
+    else:
+        linhas_pag = linhas
+
+    hoje_d = datetime.today().date()
+    with st.spinner("Conferindo código e vencimento nos PDFs…"):
+        for row in linhas_pag:
+            ok = (row.get('status') or '').upper() == "SUCESSO"
+            nome, info = _achar_pdf_boleto(mapa_pdf, row) if ok else (None, None)
+            lido = _ler_boleto_pdf(info["id"], info.get("mod", "")) if (info and info.get("id")) else {}
+            row['_link'] = (info or {}).get("link", "")
+            row['_nome'], row['_fid'] = nome, (info or {}).get("id")
+            cod_db, venc_db = _txt(row.get('codigo_barras')), _data_br(row.get('vencimento'))
+            row['_cod'] = lido.get("codigo") or cod_db
+            row['_venc'] = lido.get("venc") or venc_db
+            row['_venc_pdf'] = bool(lido.get("venc"))
+            row['_venc_db'] = venc_db
+            row['_valor'] = lido.get("valor")
+            # guarda no banco o que foi lido do PDF (busca por código e próximas aberturas)
+            if row.get('id') and lido.get("codigo") and (cod_db != lido["codigo"]
+                                                         or (lido.get("venc") and venc_db != lido["venc"])):
+                try:
+                    upd = {"codigo_barras": lido["codigo"]}
+                    if lido.get("venc"):
+                        upd["vencimento"] = lido["venc"]
+                    supabase.table("fila_automacao").update(upd).eq("id", row['id']).execute()
+                except Exception:
+                    pass
+
+    # itens do ZIP: todos os boletos do mês com PDF (não só a página aberta)
+    for row in linhas:
+        if (row.get('status') or '').upper() != "SUCESSO":
+            continue
+        nome, info = _achar_pdf_boleto(mapa_pdf, row)
+        if info and info.get("id"):
+            itens_zip.append((f"{row.get('cliente')} — {row.get('grupo')}/{row.get('cota')}"
+                              + (" (atraso)" if row.get('em_atraso') else ""), nome, info["id"]))
+
+    for row in linhas_pag:
+        with st.container(border=True):
+            c1, c2, c3, c4 = st.columns([3.2, 1.8, 2.6, 1.2], vertical_alignment="center")
+            with c1:
+                st.markdown(f"**{_txt(row.get('cliente')) or '—'}**")
+                st.caption(f"Grupo/Cota **{row['Grupo/Cota']}** · {row['Boleto']}")
+            with c2:
+                st.markdown(row['Situação'])
+            with c3:
+                venc = row['_venc']
+                if venc:
+                    try:
+                        vencido = datetime.strptime(venc, "%d/%m/%Y").date() < hoje_d
+                    except Exception:
+                        vencido = False
+                    st.markdown(f"📅 Vence **{venc}**" + (" · :red[**já venceu**]" if vencido else ""))
+                    extra = []
+                    if row['_valor']:
+                        extra.append(formatar_brl_puro(row['_valor']))
+                    if row['_venc_pdf']:
+                        extra.append("✅ conferido no PDF")
+                        if row['_venc_db'] and row['_venc_db'] != venc:
+                            extra.append(f"(sistema dizia {row['_venc_db']})")
+                    st.caption(" · ".join(extra) if extra else "vencimento do sistema (PDF não lido)")
+                else:
+                    st.markdown("📅 —")
+            with c4:
+                if row['_link']:
+                    st.link_button("📥 PDF", row['_link'], use_container_width=True)
+            if row['_cod']:
+                st.caption("Código de barras deste boleto (clique no ícone à direita para copiar):")
+                st.code(row['_cod'], language=None)
+            elif (row.get('status') or '').upper() == "SUCESSO":
+                st.caption("Código de barras não encontrado no PDF.")
+
     st.caption("ℹ️ Os boletos são gerados quando o **robô do escritório** está ligado. "
-               "Clique em **📥 PDF** para baixar. Os boletos deste mês somem sozinhos ao virar o mês.")
-
-    # --- Copia e cola do código de barras (o ícone de copiar aparece ao passar o mouse no código) ---
-    com_codigo = df_show[df_show['Código de Barras'].astype(str).str.strip().ne("")
-                         & df_show['Código de Barras'].notna()
-                         & df_show['Código de Barras'].astype(str).ne("None")]
-    if not com_codigo.empty:
-        with st.expander(f"📋 Copiar código de barras para enviar ao cliente ({len(com_codigo)})"):
-            st.caption("Passe o mouse sobre o código e clique no ícone de copiar (canto direito).")
-            for _, r in com_codigo.iterrows():
-                st.markdown(f"**{r['Cliente']}** — {r['Grupo/Cota']} — {r['Boleto']} — venc. {r['Vencimento'] or '—'}")
-                st.code(str(r['Código de Barras']), language=None)
+               "Código e vencimento são lidos do próprio PDF de cada boleto. "
+               "Os boletos deste mês somem sozinhos ao virar o mês.")
 
     # --- Baixar vários boletos de uma vez (ZIP) ---
     if itens_zip:
