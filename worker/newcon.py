@@ -15,7 +15,7 @@ import os
 import re
 import base64
 import unicodedata
-from datetime import datetime
+from datetime import datetime, date
 from playwright.sync_api import Page, BrowserContext, TimeoutError as PWTimeout
 
 # Sessão salva (login persistente) e pasta de comprovantes
@@ -576,135 +576,94 @@ def _extrair_pdf_da_aba(pg, cap, so_se_pdf_url=False):
         pass
 
 
-def gerar_boleto(page: Page, pedido: dict, timeout: int):
-    """Emite o boleto de uma cota no Newcon, baixa o PDF e lê o código de barras.
-
-    Fluxo (da gravação): Atendimento -> grupo/cota -> Localizar -> Emissão de Cobrança
-    -> ícone de emitir (linha do grid) -> "Emitir Cobrança" (abre o boleto num popup)
-    -> "Baixar" (PDF) -> "Gerar Cód. de barras" -> "Copiar Código".
-
-    Retorna (status, mensagem, extras) com extras = {codigo_barras, vencimento, em_atraso}."""
-    grupo = str(pedido.get("grupo", "")).strip()
-    cota = str(pedido.get("cota", "")).strip()
-
-    # Nome do arquivo do PDF: primeiroNome_grupo_cota.pdf (sem acento/caractere inválido)
-    _prim = str(pedido.get("cliente", "")).strip().split(" ")[0]
-    _prim = unicodedata.normalize("NFKD", _prim).encode("ascii", "ignore").decode()
-    _prim = re.sub(r"[^A-Za-z0-9]", "", _prim) or "cliente"
-    nome_arquivo = f"{_prim}_{grupo}_{cota}.pdf"
-
-    # 1) Buscar a cota (grupo + cota)
-    _ir_para_atendimento(page)
+def _linha_digitavel_do_pdf(caminho_pdf):
+    """Lê a linha digitável (e o vencimento impresso) direto do texto do PDF do boleto.
+    É o jeito mais confiável: não depende de clipboard nem de botão da tela.
+    Retorna (codigo, vencimento) — '' quando não achar."""
     try:
-        page.locator("#ctl00_Conteudo_edtGrupo").fill(grupo)
-    except Exception:
-        pass
-    page.locator("#ctl00_Conteudo_edtCota").fill(cota)
-    page.get_by_role("button", name="Localizar").click()
-    page.wait_for_load_state("networkidle")
-
-    # 2) Menu "Emissão de Cobrança"
-    try:
-        page.get_by_role("link", name="Emissão de Cobrança").click()
-        page.wait_for_load_state("networkidle")
-    except Exception:
-        cam = _print_tela(page, f"sem_emissao_cobranca_{grupo}_{cota}")
-        return "FALHA", (f"Não encontrei 'Emissão de Cobrança' para {grupo}/{cota}. "
-                         f"Print: {os.path.basename(cam)}"), {}
-
-    # 3) Detectar atraso e vencimento na tela (best-effort — validar no teste)
-    texto = _texto_pagina(page)
-    em_atraso = bool(re.search(r"em atraso|parcela.{0,12}vencid|situa.{0,6}atras", texto, re.I))
-    mv = re.search(r"Vencimento\D{0,20}?(\d{2}/\d{2}/\d{4})", texto, re.I)
-    vencimento = mv.group(1) if mv else ""
-
-    # 4) Ícone de emitir boleto. Se NÃO houver ícone de emitir:
-    #    - se a tela indica pago -> boleto do mês já foi pago
-    #    - senão -> não há boleto para emitir neste mês
-    #    (detecção best-effort por texto — validar no teste com a tela real)
-    if page.locator("[id*='imgEmite_Boleto']").count() == 0:
-        cam = _print_tela(page, f"sem_emitir_{grupo}_{cota}")
-        if re.search(r"\bpag[oa]\b|quitad|liquidad|baixad", texto, re.I):
-            mes = datetime.now().strftime("%m")
-            return "JA_PAGO", (f"Boleto do mês {mes} já está pago para {grupo}/{cota}. "
-                               f"Print: {os.path.basename(cam)}"), {"em_atraso": em_atraso}
-        return "SEM_BOLETO", (f"Não há boleto para emitir neste mês para {grupo}/{cota}. "
-                              f"Print: {os.path.basename(cam)}"), {"em_atraso": em_atraso}
-    # Escolha da pendência a emitir.
-    # REGRA (pedido do usuário): emitir SEMPRE a linha "RECBTO. PARCELA" e NUNCA a
-    # "RECBTO. DIFERENÇA" (linha de acerto de centavos, que pode até vir negativa —
-    # ex.: -3,40 — e antes era escolhida por engano). Ordem de preferência:
-    #   1) linha com "PARCELA" no histórico (a que queremos);
-    #   2) qualquer linha com valor POSITIVO que NÃO seja "DIFERENÇA" (reserva);
-    #   3) por último, a 1ª linha disponível.
-    controles = page.locator("[id*='imgEmite_Boleto']")
-
-    def _tem_valor_positivo(txt: str) -> bool:
-        # respeita o sinal: "-3,40" NÃO conta como positivo
-        for m in re.finditer(r"-?\s*\d[\d.]*,\d{2}", txt):
-            try:
-                if float(m.group(0).replace(" ", "").replace(".", "").replace(",", ".")) > 0:
-                    return True
-            except ValueError:
-                pass
-        return False
-
-    escolhido, escolhido_txt = None, ""
-    reserva, reserva_txt = None, ""
-    for i in range(controles.count()):
-        ctrl = controles.nth(i)
         try:
-            linha_txt = ctrl.locator("xpath=ancestor::tr[1]").inner_text()
-        except Exception:
-            linha_txt = ""
-        up = linha_txt.upper()
-        if "DIFEREN" in up:                      # RECBTO. DIFERENÇA -> nunca
-            continue
-        if "PARCELA" in up:                      # RECBTO. PARCELA -> é essa
-            escolhido, escolhido_txt = ctrl, linha_txt
-            break
-        if reserva is None and _tem_valor_positivo(linha_txt):
-            reserva, reserva_txt = ctrl, linha_txt
-
-    if escolhido is None:
-        if reserva is not None:
-            escolhido, escolhido_txt = reserva, reserva_txt
-        else:
-            escolhido, escolhido_txt = controles.first, ""
-
-    mdt = re.search(r"(\d{2}/\d{2}/\d{4})", escolhido_txt)  # vencimento da parcela
-    if mdt:
-        vencimento = mdt.group(1)
-    try:
-        escolhido.click()
-        page.wait_for_load_state("networkidle")
+            import fitz
+            txt = "".join(pg.get_text() for pg in fitz.open(caminho_pdf))
+        except ImportError:
+            from PyPDF2 import PdfReader
+            txt = "\n".join((pg.extract_text() or "") for pg in PdfReader(caminho_pdf).pages)
     except Exception:
-        cam = _print_tela(page, f"falha_emitir_{grupo}_{cota}")
-        return "FALHA", (f"Achei o boleto mas não consegui marcar a parcela de {grupo}/{cota}. "
-                         f"Print: {os.path.basename(cam)}"), {}
-
-    # 4b) Guarda: não emitir linha errada (ex.: "RECBTO. DIFERENÇA" com -3,40).
-    #     Se o "Total a receber" da tela não for positivo, aborta sem emitir.
-    try:
-        _mtot = re.search(r"Total a receber\D{0,20}?(-?\s*[\d.]+,\d{2})",
-                          _texto_pagina(page), re.I)
-        if _mtot:
-            _val = float(_mtot.group(1).replace(" ", "").replace(".", "").replace(",", "."))
-            if _val <= 0:
-                cam = _print_tela(page, f"boleto_total_invalido_{grupo}_{cota}")
-                return "FALHA", (f"Boleto de {grupo}/{cota} ficou com Total a receber "
-                                 f"{_mtot.group(1).strip()} (parece a linha de diferença). "
-                                 f"Não emiti. Print: {os.path.basename(cam)}"), {"em_atraso": em_atraso}
+        return "", ""
+    m = re.search(r"(\d{5}\.\d{5}\s+\d{5}\.\d{6}\s+\d{5}\.\d{6}\s+\d\s+\d{14})", txt)
+    cod = re.sub(r"\s+", " ", m.group(1)).strip() if m else ""
+    venc = ""
+    try:       # a data do cantinho "Vencimento" (canto superior direito) — não a do documento
+        import fitz
+        pg0 = fitz.open(caminho_pdf)[0]
+        datas = [w for w in pg0.get_text("words")
+                 if re.fullmatch(r"\d{2}/\d{2}/\d{4}", w[4]) and w[0] > pg0.rect.width * 0.7 and w[1] < pg0.rect.height * 0.25]
+        if datas:
+            venc = sorted(datas, key=lambda w: w[1])[0][4]
     except Exception:
         pass
+    if not venc:
+        mv = re.search(r"Vencimento\s*(\d{2}/\d{2}/\d{4})", txt)
+        venc = mv.group(1) if mv else ""
+    return cod, venc
 
-    # 5) "Emitir Cobrança". Fluxo atual do Newcon (conferido na gravação
-    #    roteiro_boleto.py): clicar "Emitir Cobrança" abre um popup de
-    #    confirmação; o PDF de verdade sai clicando "Baixar" DENTRO DE UM IFRAME
-    #    da tela de relatório do boleto (frmConCoRelBoletoAvulso.aspx) e vem como
-    #    DOWNLOAD. Também cobrimos os casos de aba com URL de PDF / blob: / data:.
+
+def _valor_positivo(txt: str) -> bool:
+    # respeita o sinal: "-3,40" NÃO conta como positivo
+    for m in re.finditer(r"-?\s*\d[\d.]*,\d{2}", txt):
+        try:
+            if float(m.group(0).replace(" ", "").replace(".", "").replace(",", ".")) > 0:
+                return True
+        except ValueError:
+            pass
+    return False
+
+
+def _classificar_pendencias(page: Page):
+    """Lê o grid de pendências da 'Emissão Boleto Avulso' e separa por vencimento:
+       'mes'    -> parcelas que vencem NO MÊS VIGENTE (boleto do mês);
+       'atraso' -> parcelas com vencimento ANTES do 1º dia do mês (boleto em atraso);
+       parcelas futuras são ignoradas; 'RECBTO. DIFERENÇA' nunca entra.
+    Retorna {'mes': [linhas], 'atraso': [linhas]}; cada linha = {i, venc(date|None), txt}."""
+    hoje = date.today()
+    ini_mes = hoje.replace(day=1)
+    fim_mes = (date(hoje.year + 1, 1, 1) if hoje.month == 12 else date(hoje.year, hoje.month + 1, 1))
+    controles = page.locator("[id*='imgEmite_Boleto']")
+    res = {"mes": [], "atraso": []}
+    for i in range(controles.count()):
+        try:
+            txt = controles.nth(i).locator("xpath=ancestor::tr[1]").inner_text()
+        except Exception:
+            txt = ""
+        up = txt.upper()
+        if "DIFEREN" in up:                          # RECBTO. DIFERENÇA -> nunca
+            continue
+        if "PARCELA" not in up and not _valor_positivo(txt):
+            continue
+        md = re.search(r"(\d{2})/(\d{2})/(\d{4})", txt)
+        venc = None
+        if md:
+            try:
+                venc = date(int(md.group(3)), int(md.group(2)), int(md.group(1)))
+            except ValueError:
+                venc = None
+        lin = {"i": i, "venc": venc, "txt": txt}
+        if venc is None or ini_mes <= venc < fim_mes:
+            res["mes"].append(lin)
+        elif venc < ini_mes:
+            res["atraso"].append(lin)
+        # venc >= fim_mes: parcela futura, não emite
+    return res
+
+
+def _emitir_e_baixar(page: Page, grupo: str, cota: str, nome_arquivo: str):
+    """Com as parcelas JÁ marcadas na tela: 'Emitir Cobrança', baixa o PDF e lê o código.
+    Retorna (caminho_pdf|'', codigo, vencimento_do_pdf)."""
     arquivo = ""
     ctx = page.context
+    _antes = set(ctx.pages)      # só mexe nas abas abertas durante esta emissão (nunca nas do navegador único)
+
+    def _novas():
+        return [p for p in ctx.pages if p is not page and p not in _antes]
     _cap = {"pdf": None}
 
     def _on_download(dl):
@@ -764,7 +723,7 @@ def gerar_boleto(page: Page, pedido: dict, timeout: int):
         except Exception:
             rel = None
         clicou_baixar = False
-        for alvo in ([rel] if rel else []) + [p for p in ctx.pages if p is not page]:
+        for alvo in ([rel] if rel else []) + _novas():
             try:
                 alvo.wait_for_load_state("networkidle", timeout=8000)
             except Exception:
@@ -790,7 +749,7 @@ def gerar_boleto(page: Page, pedido: dict, timeout: int):
             if _cap["pdf"]:
                 break
             page.wait_for_timeout(2000)
-            for pg in [p for p in ctx.pages if p is not page]:
+            for pg in _novas():
                 _extrair_pdf_da_aba(pg, _cap)
                 if _cap["pdf"]:
                     break
@@ -802,7 +761,7 @@ def gerar_boleto(page: Page, pedido: dict, timeout: int):
                 f.write(_cap["pdf"])
             arquivo = caminho_pdf
         else:                             # não veio PDF — diagnóstico
-            for i, pg in enumerate([p for p in ctx.pages if p is not page]):
+            for i, pg in enumerate(_novas()):
                 try:
                     _print_tela(pg, f"boleto_sem_pdf_{grupo}_{cota}_pop{i}")
                 except Exception:
@@ -817,38 +776,201 @@ def gerar_boleto(page: Page, pedido: dict, timeout: int):
         except Exception:
             pass
         # fecha os popups, deixando só a página principal (p/ o passo do código)
-        for p in list(ctx.pages):
-            if p is not page:
+        for p in _novas():
+            if True:
                 try:
                     p.close()
                 except Exception:
                     pass
 
-    # 6) Gerar + copiar o código de barras (vai para a área de transferência)
-    codigo = ""
+
+    # 6) Código de barras: 1º do próprio PDF; senão pelos botões da tela (clipboard)
+    codigo, venc_pdf = "", ""
+    if arquivo:
+        codigo, venc_pdf = _linha_digitavel_do_pdf(arquivo)
+    if not codigo:
+        codigo = ""
+        try:
+            page.get_by_role("button", name="Gerar Cód. de barras").click()
+            page.wait_for_timeout(1500)
+            page.get_by_role("button", name="Copiar Código").click()
+            page.wait_for_timeout(500)
+            codigo = (page.evaluate("() => navigator.clipboard.readText()") or "").strip()
+        except Exception:
+            pass
+        if not codigo:  # tenta ler a linha digitável direto do texto da página
+            m = re.search(r"(\d{5}\.?\d{5}\s+\d{5}\.?\d{6}\s+\d{5}\.?\d{6}\s+\d\s+\d{14})",
+                          _texto_pagina(page))
+            if m:
+                codigo = m.group(1)
+
+
+    return arquivo, codigo, venc_pdf
+
+
+def _tela_pendencias(page: Page):
+    """(Re)abre 'Emissão de Cobrança' da cota que está na tela."""
+    page.get_by_role("link", name="Emissão de Cobrança").click()
+    page.wait_for_load_state("networkidle")
+
+
+def _marcar_linhas(page: Page, linhas):
+    """Marca no grid as linhas dadas (1 postback por clique) e confere se ficaram marcadas."""
+    for lin in linhas:
+        ctrl = page.locator("[id*='imgEmite_Boleto']").nth(lin["i"])
+        ctrl.click()
+        page.wait_for_load_state("networkidle")
+        try:
+            if not ctrl.is_checked():
+                ctrl.click()
+                page.wait_for_load_state("networkidle")
+        except Exception:
+            pass
+
+
+def gerar_boleto(page: Page, pedido: dict, timeout: int):
+    """Emite o(s) boleto(s) de uma cota no Newcon, baixa o PDF e lê o código de barras.
+
+    REGRA (Breno, 17/11/2026): o boleto é SEMPRE o do mês vigente. Se a cota tiver parcela
+    em atraso, emite DOIS boletos separados: o do mês e o de atraso (todas as parcelas
+    atrasadas juntas num só, com multa/juros do Newcon). Parcela futura nunca é emitida.
+
+    Arquivos: primeiroNome_grupo_cota.pdf (mês) e primeiroNome_grupo_cota_atraso.pdf (atraso).
+
+    Retorna (status, mensagem, extras). extras = {codigo_barras, vencimento, em_atraso} do boleto
+    principal (o do mês; se só houver atraso, o de atraso) + extras['adicionais'] = lista de
+    {codigo_barras, vencimento, em_atraso, arquivo, mensagem} dos demais boletos."""
+    grupo = str(pedido.get("grupo", "")).strip()
+    cota = str(pedido.get("cota", "")).strip()
+
+    # Nome do arquivo do PDF: primeiroNome_grupo_cota.pdf (sem acento/caractere inválido)
+    _prim = str(pedido.get("cliente", "")).strip().split(" ")[0]
+    _prim = unicodedata.normalize("NFKD", _prim).encode("ascii", "ignore").decode()
+    _prim = re.sub(r"[^A-Za-z0-9]", "", _prim) or "cliente"
+    nome_mes = f"{_prim}_{grupo}_{cota}.pdf"
+    nome_atraso = f"{_prim}_{grupo}_{cota}_atraso.pdf"
+
+    # 1) Buscar a cota (grupo + cota)
+    _ir_para_atendimento(page)
     try:
-        page.get_by_role("button", name="Gerar Cód. de barras").click()
-        page.wait_for_timeout(1500)
-        page.get_by_role("button", name="Copiar Código").click()
-        page.wait_for_timeout(500)
-        codigo = (page.evaluate("() => navigator.clipboard.readText()") or "").strip()
+        page.locator("#ctl00_Conteudo_edtGrupo").fill(grupo)
     except Exception:
         pass
-    if not codigo:  # tenta ler a linha digitável direto do texto da página
-        m = re.search(r"(\d{5}\.?\d{5}\s+\d{5}\.?\d{6}\s+\d{5}\.?\d{6}\s+\d\s+\d{14})",
-                      _texto_pagina(page))
-        if m:
-            codigo = m.group(1)
+    page.locator("#ctl00_Conteudo_edtCota").fill(cota)
+    page.get_by_role("button", name="Localizar").click()
+    page.wait_for_load_state("networkidle")
 
-    extras = {"codigo_barras": codigo or None, "vencimento": vencimento or None, "em_atraso": em_atraso}
-    atraso_txt = " (⚠️ EM ATRASO)" if em_atraso else ""
+    # 2) Menu "Emissão de Cobrança"
+    try:
+        page.get_by_role("link", name="Emissão de Cobrança").click()
+        page.wait_for_load_state("networkidle")
+    except Exception:
+        cam = _print_tela(page, f"sem_emissao_cobranca_{grupo}_{cota}")
+        return "FALHA", (f"Não encontrei 'Emissão de Cobrança' para {grupo}/{cota}. "
+                         f"Print: {os.path.basename(cam)}"), {}
 
-    if codigo or arquivo:
-        msg = f"Boleto emitido{atraso_txt}."
-        if codigo:
-            msg += f" Código: {codigo}."
-        if arquivo:
-            msg += f" PDF salvo: {os.path.basename(arquivo)}."
-        return "OK", msg, extras
-    return "FALHA", (f"Emiti o boleto mas não li o código nem baixei o PDF de {grupo}/{cota}. "
-                     f"Confira manualmente.{atraso_txt}"), extras
+    texto = _texto_pagina(page)
+
+    # 3) Sem nenhuma pendência para emitir: pago ou sem boleto no mês
+    if page.locator("[id*='imgEmite_Boleto']").count() == 0:
+        cam = _print_tela(page, f"sem_emitir_{grupo}_{cota}")
+        if re.search(r"\bpag[oa]\b|quitad|liquidad|baixad", texto, re.I):
+            mes = datetime.now().strftime("%m")
+            return "JA_PAGO", (f"Boleto do mês {mes} já está pago para {grupo}/{cota}. "
+                               f"Print: {os.path.basename(cam)}"), {"em_atraso": False}
+        return "SEM_BOLETO", (f"Não há boleto para emitir neste mês para {grupo}/{cota}. "
+                              f"Print: {os.path.basename(cam)}"), {"em_atraso": False}
+
+    pend = _classificar_pendencias(page)
+    if not pend["mes"] and not pend["atraso"]:
+        cam = _print_tela(page, f"sem_parcela_mes_{grupo}_{cota}")
+        return "SEM_BOLETO", (f"Nenhuma parcela do mês nem em atraso para {grupo}/{cota} "
+                              f"(só parcelas futuras ou diferença). Print: {os.path.basename(cam)}"), {"em_atraso": False}
+
+    # 4) Quais boletos emitir (ordem: mês primeiro, depois atraso)
+    plano = []
+    if pend["mes"]:
+        plano.append(("mes", nome_mes))
+    if pend["atraso"]:
+        plano.append(("atraso", nome_atraso))
+
+    resultados = []   # {tipo, arquivo, codigo, vencimento, em_atraso}
+    falhas = []
+    for n, (tipo, nome_arq) in enumerate(plano):
+        try:
+            if n > 0:
+                _tela_pendencias(page)                       # volta ao grid limpo
+                pend = _classificar_pendencias(page)
+            linhas = pend[tipo]
+            if not linhas:
+                falhas.append(f"{tipo}: sumiu do grid depois da 1ª emissão")
+                continue
+            _marcar_linhas(page, linhas)
+
+            # Guarda: não emitir se o "Total a receber" da tela não for positivo
+            try:
+                _mtot = re.search(r"Total a receber\D{0,20}?(-?\s*[\d.]+,\d{2})", _texto_pagina(page), re.I)
+                if _mtot:
+                    _val = float(_mtot.group(1).replace(" ", "").replace(".", "").replace(",", "."))
+                    if _val <= 0:
+                        cam = _print_tela(page, f"boleto_total_invalido_{tipo}_{grupo}_{cota}")
+                        falhas.append(f"{tipo}: Total a receber {_mtot.group(1).strip()} (não emiti). "
+                                      f"Print: {os.path.basename(cam)}")
+                        continue
+            except Exception:
+                pass
+
+            arquivo, codigo, venc_pdf = _emitir_e_baixar(page, grupo, cota, nome_arq)
+            venc_linha = min((l["venc"] for l in linhas if l["venc"]), default=None)
+            venc = venc_pdf or (venc_linha.strftime("%d/%m/%Y") if venc_linha else "")
+            if codigo and any(r["codigo"] == codigo for r in resultados):
+                falhas.append(f"{tipo}: o PDF veio igual ao boleto anterior (mesmo código) — não gravei")
+                continue
+            if codigo or arquivo:
+                resultados.append({"tipo": tipo, "arquivo": arquivo, "codigo": codigo,
+                                   "vencimento": venc, "em_atraso": tipo == "atraso"})
+            else:
+                falhas.append(f"{tipo}: emiti mas não li o código nem baixei o PDF")
+        except Exception as e:
+            _print_tela(page, f"erro_boleto_{tipo}_{grupo}_{cota}")
+            falhas.append(f"{tipo}: {type(e).__name__}: {str(e)[:100]}")
+
+    # sem boleto de atraso nesta rodada: remove PDF de atraso velho (evita mandar boleto vencido)
+    if not pend["atraso"]:
+        try:
+            velho = os.path.join(PASTA_BOLETOS, nome_atraso)
+            if os.path.exists(velho):
+                os.remove(velho)
+        except Exception:
+            pass
+
+    if not resultados:
+        return "FALHA", (f"Não consegui emitir o boleto de {grupo}/{cota}. "
+                         f"{' | '.join(falhas)} Confira manualmente."), {}
+
+    prim = resultados[0]
+    extras = {"codigo_barras": prim["codigo"] or None, "vencimento": prim["vencimento"] or None,
+              "em_atraso": prim["em_atraso"]}
+    adicionais = []
+    for r in resultados[1:]:
+        adicionais.append({"codigo_barras": r["codigo"] or None, "vencimento": r["vencimento"] or None,
+                           "em_atraso": r["em_atraso"],
+                           "mensagem": ("Boleto EM ATRASO emitido." if r["em_atraso"] else "Boleto do mês emitido.")
+                                       + (f" Código: {r['codigo']}." if r["codigo"] else "")
+                                       + (f" PDF salvo: {os.path.basename(r['arquivo'])}." if r["arquivo"] else "")})
+    if adicionais:
+        extras["adicionais"] = adicionais
+
+    partes = []
+    for r in resultados:
+        rot = "EM ATRASO" if r["em_atraso"] else "do mês"
+        t = f"Boleto {rot} (venc. {r['vencimento'] or '?'})"
+        if r["codigo"]:
+            t += f" código {r['codigo']}"
+        if r["arquivo"]:
+            t += f", PDF {os.path.basename(r['arquivo'])}"
+        partes.append(t)
+    msg = "Boleto emitido: " + " + ".join(partes) + "."
+    if falhas:
+        msg += " ATENÇÃO, faltou: " + " | ".join(falhas) + "."
+    return "OK", msg, extras

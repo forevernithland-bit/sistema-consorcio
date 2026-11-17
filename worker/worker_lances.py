@@ -348,6 +348,8 @@ def processar_pedido(sb: Client, pedido: dict, contexto_newcon) -> str:
                 from newcon import ofertar_lance
                 status, mensagem, protocolo = ofertar_lance(page, pedido, TIMEOUT_CONFIRMACAO)
 
+        if isinstance(extras, dict):
+            extras.pop("adicionais", None)   # boleto extra (atraso) só é gravado pelo robô único
         if status == "OK":
             campos = {"status": "SUCESSO", "mensagem": mensagem,
                       "protocolo": protocolo, "concluido_em": agora_iso()}

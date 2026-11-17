@@ -147,7 +147,7 @@ def garantir_navegador(pw, visivel=True, url_inicial=None) -> None:
     os.makedirs(PERFIL, exist_ok=True)
     args = [exe, f"--remote-debugging-port={PORTA}", "--remote-debugging-address=127.0.0.1",
             f"--user-data-dir={PERFIL}", "--no-first-run", "--no-default-browser-check",
-            "--disable-features=Translate", "--window-size=1300,850"]
+            "--disable-features=Translate", "--disable-popup-blocking", "--window-size=1300,850"]
     if not visivel:
         args.append("--start-minimized")
     args.append(url_inicial or os.getenv("NEWCON_URL", "https://newkey.cny.com.br/Intranet/frmMain.aspx"))

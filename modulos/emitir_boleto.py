@@ -12,12 +12,13 @@ from database import carregar_dados_iniciais
 from escopo import filtrar_por_vendedor, filtrar_fila, preencher_cliente
 
 
-def _nome_arquivo_boleto(cliente, grupo, cota):
-    """Mesmo padrão que o robô usa para salvar: primeiroNome_grupo_cota.pdf (minúsculo)."""
+def _nome_arquivo_boleto(cliente, grupo, cota, atraso=False):
+    """Mesmo padrão que o robô usa para salvar: primeiroNome_grupo_cota.pdf (minúsculo);
+    o boleto EM ATRASO sai como primeiroNome_grupo_cota_atraso.pdf."""
     prim = str(cliente or "").strip().split(" ")[0]
     prim = unicodedata.normalize("NFKD", prim).encode("ascii", "ignore").decode()
     prim = re.sub(r"[^A-Za-z0-9]", "", prim) or "cliente"
-    return f"{prim}_{grupo}_{cota}.pdf".lower()
+    return f"{prim}_{grupo}_{cota}{'_atraso' if atraso else ''}.pdf".lower()
 
 
 def _mapa_boletos_drive():
@@ -408,14 +409,17 @@ def _painel_status(supabase, is_master, df_vendas_global=None):
     def _link_pdf(row):
         if (row.get('status') or '').upper() != "SUCESSO":
             return ""
-        nome = _nome_arquivo_boleto(row.get('cliente'), row.get('grupo'), row.get('cota'))
+        nome = _nome_arquivo_boleto(row.get('cliente'), row.get('grupo'), row.get('cota'),
+                                    atraso=bool(row.get('em_atraso')))
         info = mapa_pdf.get(nome)
         if info and info.get("id"):
-            itens_zip.append((f"{row.get('cliente')} — {row.get('grupo')}/{row.get('cota')}", nome, info["id"]))
+            itens_zip.append((f"{row.get('cliente')} — {row.get('grupo')}/{row.get('cota')}"
+                              + (" (atraso)" if row.get('em_atraso') else ""), nome, info["id"]))
         return (info or {}).get("link", "")
     df_f['Baixar'] = df_f.apply(_link_pdf, axis=1)
 
-    cols = ['cliente', 'Grupo/Cota', 'Situação', 'vencimento', 'codigo_barras', 'Baixar']
+    df_f['Boleto'] = df_f['em_atraso'].apply(lambda x: "⚠️ Em atraso" if x is True or x == True else "Do mês")  # noqa: E712
+    cols = ['cliente', 'Grupo/Cota', 'Boleto', 'Situação', 'vencimento', 'codigo_barras', 'Baixar']
     df_show = df_f[cols].rename(columns={'cliente': 'Cliente', 'vencimento': 'Vencimento',
                                          'codigo_barras': 'Código de Barras'})
 
@@ -440,6 +444,17 @@ def _painel_status(supabase, is_master, df_vendas_global=None):
     )
     st.caption("ℹ️ Os boletos são gerados quando o **robô do escritório** está ligado. "
                "Clique em **📥 PDF** para baixar. Os boletos deste mês somem sozinhos ao virar o mês.")
+
+    # --- Copia e cola do código de barras (o ícone de copiar aparece ao passar o mouse no código) ---
+    com_codigo = df_show[df_show['Código de Barras'].astype(str).str.strip().ne("")
+                         & df_show['Código de Barras'].notna()
+                         & df_show['Código de Barras'].astype(str).ne("None")]
+    if not com_codigo.empty:
+        with st.expander(f"📋 Copiar código de barras para enviar ao cliente ({len(com_codigo)})"):
+            st.caption("Passe o mouse sobre o código e clique no ícone de copiar (canto direito).")
+            for _, r in com_codigo.iterrows():
+                st.markdown(f"**{r['Cliente']}** — {r['Grupo/Cota']} — {r['Boleto']} — venc. {r['Vencimento'] or '—'}")
+                st.code(str(r['Código de Barras']), language=None)
 
     # --- Baixar vários boletos de uma vez (ZIP) ---
     if itens_zip:

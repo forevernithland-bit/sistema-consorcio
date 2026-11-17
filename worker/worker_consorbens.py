@@ -502,6 +502,23 @@ def _fechar_navegador(ctx):
 
 
 # --------------------------------------------------------------- HANDLERS
+def _gravar_boletos_adicionais(sb, pedido, adicionais):
+    """Cota com parcela em atraso: o robô emite 2 boletos (mês + atraso). O principal fica na
+    própria linha do pedido; cada boleto a mais vira uma linha nova (SUCESSO) na fila, para
+    aparecer no painel de Emissão de Boletos com código de barras e PDF próprios."""
+    for a in adicionais:
+        try:
+            linha = {k: pedido.get(k) for k in ("tipo", "venda_id", "cliente", "vendedor", "produto",
+                                                 "administradora", "grupo", "cota", "solicitado_por")}
+            linha.update({"status": "SUCESSO", "mensagem": a.get("mensagem"),
+                          "codigo_barras": a.get("codigo_barras"), "vencimento": a.get("vencimento"),
+                          "em_atraso": bool(a.get("em_atraso")), "concluido_em": agora_iso()})
+            sb.table("fila_automacao").insert(linha).execute()
+            log(f"   ➕ boleto {'EM ATRASO' if a.get('em_atraso') else 'do mês'} extra gravado ({pedido.get('grupo')}/{pedido.get('cota')})")
+        except Exception as e:
+            log(f"⚠️ não consegui gravar o boleto extra na fila: {e}")
+
+
 def h_lance_boleto(sb, pedido, ctx, cfg):
     """LANCE / BOLETO — copiado do worker_lances.processar_pedido."""
     pid = pedido["id"]
@@ -536,12 +553,15 @@ def h_lance_boleto(sb, pedido, ctx, cfg):
                     ped["simular"] = True          # teste: preenche e clica "Simular...", nunca Confirmar
                 status, mensagem, protocolo = ofertar_lance(page, ped, TIMEOUT_CONFIRMACAO)
 
+        adicionais = (extras or {}).pop("adicionais", None) if isinstance(extras, dict) else None
         if status == "OK":
             campos = {"status": "SUCESSO", "mensagem": mensagem,
                       "protocolo": protocolo, "concluido_em": agora_iso()}
             campos.update(extras)
             marcar(sb, pid, **campos)
             log(f"   ✅ #{pid} OK: {mensagem}")
+            if adicionais:
+                _gravar_boletos_adicionais(sb, pedido, adicionais)
             if tipo == "LANCE":
                 _programado_contar(sb, pedido)
             return {"ok": True}
