@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulador Consorbens</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Simulador Consorbens (universal) — 16/11/2026
+   Mesmo sistema de cores dos outros simuladores: teal escuro + laranja só para ação.
+   Os cards do cliente são claros (vão para o WhatsApp como imagem). */
+:root{
+  --bg:#071d1a; --s1:#0c2824; --s2:#10302b; --ln:#1f4a43; --ink:#eaf6f3; --mut:#a9c9c3; --dim:#8fb0aa;
+  --t1:#0b2d28; --t2:#123f3e; --t3:#17544b; --teal:#2dd4bf; --mint:#7fe9b4;
+  --or:#f69302; --or2:#ffb649; --ok:#12a66f; --okd:#0b7a51; --bad:#a33a17;
+  --ease:cubic-bezier(.2,.8,.2,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink)}
+body{font-family:"Plus Jakarta Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;padding:6px 4px 24px}
+.wrap{max-width:1240px;margin:0 auto}
+button{font:inherit;cursor:pointer}
+.mut{color:var(--mut)}
+
+/* ---------- topo ---------- */
+.hero{position:relative;overflow:hidden;border-radius:24px;padding:22px 28px;background:linear-gradient(135deg,var(--t1),var(--t2) 55%,var(--t3));
+  box-shadow:0 26px 50px -30px rgba(0,0,0,.8);isolation:isolate}
+.hero::before{content:"";position:absolute;width:380px;height:380px;right:-90px;top:-200px;border-radius:50%;background:rgba(45,212,191,.35);filter:blur(50px);z-index:-1}
+.hero::after{content:"";position:absolute;width:300px;height:300px;left:-110px;bottom:-210px;border-radius:50%;background:rgba(246,147,2,.25);filter:blur(50px);z-index:-1}
+.top{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{height:44px;padding:6px 12px;border-radius:14px;background:#fff;display:flex;align-items:center}
+.logo img{height:31px;width:auto;display:block}
+.brand small{font-size:11.5px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--mint)}
+.fontes{display:flex;gap:8px;flex-wrap:wrap}
+.fontes span{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:#d6efe8;background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:6px 12px}
+.fontes i{width:8px;height:8px;border-radius:50%;background:var(--teal)}
+.fontes i.velho{background:var(--or2)}
+.hero h1{font-size:clamp(24px,3vw,34px);font-weight:800;letter-spacing:-.03em;margin-top:16px;line-height:1.1}
+.hero h1 em{font-style:normal;color:var(--or2)}
+.hero p{color:var(--mut);font-size:14.5px;line-height:1.55;margin-top:8px;max-width:78ch}
+
+/* ---------- formulário ---------- */
+.form{margin-top:16px;background:var(--s1);border:1px solid var(--ln);border-radius:22px;padding:20px 22px}
+.form h2{font-size:16px;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.form h2 b{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--or);color:#2b1700;font-size:13px}
+.grid{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:14px}
+.fld label{display:block;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin-bottom:6px}
+.fld input{width:100%;height:46px;border-radius:13px;border:1.5px solid #2b5c54;background:#0a221e;color:#fff;font:inherit;font-size:16px;font-weight:700;padding:0 14px;outline:none}
+.fld input::placeholder{color:#7a9a94;font-weight:600}
+.fld input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(45,212,191,.18)}
+.fld small{display:block;font-size:11.5px;color:var(--dim);margin-top:5px;line-height:1.35}
+.prods{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0 4px}
+.prod{display:flex;align-items:center;gap:9px;height:46px;padding:0 16px;border-radius:13px;border:1.5px solid #2b5c54;background:#0a221e;color:#d9eeea;font-weight:800;font-size:14.5px}
+.prod svg{width:22px;height:22px}
+.prod:hover{border-color:var(--teal)}
+.prod.sel{background:linear-gradient(135deg,var(--or2),var(--or));border-color:transparent;color:#2b1700;box-shadow:0 12px 26px -14px rgba(246,147,2,.9)}
+.acoes{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px}
+.go{height:50px;padding:0 26px;border-radius:14px;border:0;background:linear-gradient(135deg,var(--or2),var(--or));color:#2b1700;font-weight:800;font-size:16px;
+  box-shadow:0 16px 30px -16px rgba(246,147,2,.95);transition:transform .2s var(--ease)}
+.go:hover{transform:translateY(-2px)}
+.erro{color:#ffd0bf;font-size:13.5px;font-weight:700}
+
+/* ---------- resultados ---------- */
+#res{margin-top:18px}
+.sec{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:22px 4px 10px;flex-wrap:wrap}
+.sec h2{font-size:18px;font-weight:800;letter-spacing:-.01em}
+.sec span{font-size:12.5px;color:var(--dim);font-weight:600}
+.reco{border-radius:20px;padding:18px 20px;background:linear-gradient(135deg,#0f4a3f,#12614f);border:1px solid #1f7a66;display:flex;gap:16px;align-items:flex-start}
+.reco .ic{flex:none;width:44px;height:44px;border-radius:14px;background:var(--mint);color:#06302a;display:grid;place-items:center;font-size:22px}
+.reco h3{font-size:17px;font-weight:800;line-height:1.35}
+.reco p{font-size:14px;color:#d3ece6;line-height:1.55;margin-top:4px}
+.reco.alerta{background:linear-gradient(135deg,#4a2a0c,#5e3510);border-color:#8a5a1f}
+.reco.alerta .ic{background:var(--or2);color:#2b1700}
+.reco.alerta p{color:#f6e2c6}
+
+.cmp{width:100%;border-collapse:separate;border-spacing:0;background:var(--s1);border:1px solid var(--ln);border-radius:18px;overflow:hidden;font-size:14px}
+.cmp th,.cmp td{padding:11px 14px;text-align:left;border-bottom:1px solid #18403a}
+.cmp tr:last-child td{border-bottom:0}
+.cmp th{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);background:#0a221e}
+.cmp th img{height:20px;vertical-align:middle;margin-right:6px;border-radius:4px}
+.cmp td:first-child{color:var(--mut);font-weight:700;width:28%}
+.cmp td{font-weight:700;color:#f1fbf8;font-variant-numeric:tabular-nums}
+.cmp td.best{color:var(--mint)}
+.cmp td.best::after{content:" ✓";font-weight:900}
+.cmp .na{color:var(--dim);font-weight:600}
+
+.adm{margin-top:18px;background:var(--s1);border:1px solid var(--ln);border-radius:22px;padding:18px}
+.adm-h{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.adm-h .t{display:flex;align-items:center;gap:12px}
+.adm-h .lg{height:40px;padding:6px 10px;border-radius:12px;background:#fff;display:flex;align-items:center}
+.adm-h .lg img{height:28px;width:auto}
+.adm-h .lg.i{padding:0;background:none}.adm-h .lg.i img{height:40px;border-radius:10px}
+.adm-h h3{font-size:18px;font-weight:800}
+.adm-h small{display:block;font-size:12.5px;color:var(--mut);font-weight:600}
+.opts{display:flex;gap:10px;margin-top:14px;overflow-x:auto;padding-bottom:4px}
+.opt{flex:0 0 auto;min-width:200px;text-align:left;border-radius:15px;padding:11px 14px;border:1.5px solid #2b5c54;background:#0a221e;color:#e6f6f2}
+.opt b{display:block;font-size:14.5px;font-weight:800}
+.opt span{display:block;font-size:12.5px;color:var(--mut);margin-top:2px;font-weight:600}
+.opt em{display:inline-block;font-style:normal;font-size:11.5px;font-weight:800;border-radius:999px;padding:2px 8px;margin-top:6px}
+.opt:hover{border-color:var(--teal)}
+.opt.sel{border-color:var(--or2);background:#13332d;box-shadow:0 0 0 1px var(--or2)}
+.nivel-alta{background:#d9f5e8;color:#0b5e3e}.nivel-media{background:#fff0c9;color:#6b4a00}.nivel-baixa{background:#fde3d8;color:#8a2f10}
+.nivel-zero{background:#f6d6d6;color:#7a1515}.nivel-sem{background:#e3ebea;color:#3c4f4d}
+.avisos{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+.avisos div{font-size:13px;line-height:1.45;color:#f6e2c6;background:rgba(246,147,2,.10);border:1px solid rgba(246,147,2,.35);border-radius:12px;padding:8px 12px}
+.avisos div.inf{color:#d3ece6;background:rgba(45,212,191,.08);border-color:rgba(45,212,191,.3)}
+.vazio{margin-top:14px;font-size:14px;color:var(--mut);background:#0a221e;border:1px dashed #2b5c54;border-radius:14px;padding:14px}
+
+.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:16px;align-items:start}
+.cardbox{min-width:0}
+.cbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.cbar button{height:40px;padding:0 14px;border-radius:12px;border:0;font-weight:800;font-size:13.5px;color:#fff}
+.b-png{background:linear-gradient(135deg,#17544b,#0f3a35)}
+.b-wa{background:linear-gradient(135deg,#15803d,#0f6b36)}
+.b-print{background:#0a221e;border:1.5px solid #2b5c54 !important;color:#d9eeea !important}
+.cbar button:disabled{opacity:.6;cursor:wait}
+
+/* ---------- card do cliente (claro; vira imagem) ---------- */
+.pc{width:100%;max-width:600px;margin:0 auto;background:#fff;color:#15302f;border-radius:22px;overflow:hidden;font-family:"Plus Jakarta Sans","Segoe UI",Arial,sans-serif;
+  box-shadow:0 22px 44px -26px rgba(0,0,0,.8)}
+.pc-hd{background:linear-gradient(135deg,#0f3735,#1b5e59);color:#fff;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px}
+.pc-hd .lg{background:#fff;border-radius:12px;padding:6px 10px;display:flex;align-items:center}
+.pc-hd .lg img{height:34px;width:auto;display:block}
+.pc-hd .tt{text-align:right}
+.pc-hd .tt small{display:block;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#bfe0da}
+.pc-hd .tt b{display:block;font-size:20px;font-weight:800;letter-spacing:.02em;margin-top:2px}
+.pc-ph{position:relative;height:190px;background-size:cover;background-position:center 40%}
+.pc-ph span{position:absolute;left:16px;bottom:14px;background:#0f3735;color:#fff;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:6px 14px}
+.pc-ph .adm-lg{position:absolute;right:14px;top:12px;background:rgba(255,255,255,.95);border-radius:12px;padding:6px 10px;display:flex}
+.pc-ph .adm-lg img{height:22px;width:auto}
+.pc-ph .adm-lg.i{padding:0;background:none}.pc-ph .adm-lg.i img{height:40px;border-radius:10px}
+.pc-para{background:#fff7e3;color:#5c4511;font-size:13px;font-weight:700;text-align:center;padding:8px 14px}
+.pc-para b{color:#3d2e08}
+.pc-cred{background:#eef5f4;text-align:center;padding:16px 14px}
+.pc-cred small{display:block;font-size:11.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#1f4f4a}
+.pc-cred b{display:block;font-size:30px;font-weight:800;color:#1b4b47;margin-top:2px;font-variant-numeric:tabular-nums}
+.pc-cred span{display:block;font-size:13px;color:#2f6b64;font-weight:700;margin-top:2px}
+.pc-g{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px}
+.pc-g div{border:1.5px solid #e1e8ec;background:#f5f7fa;border-radius:14px;padding:10px 12px;min-width:0}
+.pc-g div.v{background:#eef6f4;border-color:#bfdcd5}
+.pc-g small{display:block;font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#4a5866}
+.pc-g b{display:block;font-size:17px;font-weight:800;color:#10202a;margin-top:3px;font-variant-numeric:tabular-nums}
+.pc-g div.v b{color:#17544b}
+.pc-liq{margin:0 16px;border-radius:16px;background:linear-gradient(135deg,#0e8a5c,#0a6b47);color:#fff;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 18px}
+.pc-liq small{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fff}
+/* logo da Yamaha é branco: sempre sobre fundo azul-escuro */
+.ylg{background:#0b2340 !important;border-radius:10px}
+.adm-h .lg.ylg{padding:8px 12px}
+.cmp th img.ylg{padding:3px 6px !important;background:#0b2340 !important}
+.pc-liq b{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}
+.pc-obs{font-size:12px;color:#4a5866;text-align:center;line-height:1.5;padding:12px 18px 0}
+.pc-ft{margin-top:12px;border-top:1px solid #e6eceb;padding:12px 18px 16px;text-align:center;font-size:12.5px;color:#4a5866;line-height:1.5}
+.pc-ft b{color:#17544b}
+
+/* card de potencial */
+.po-hero{display:flex;gap:16px;align-items:center;padding:18px 18px 6px}
+.dn{position:relative;width:118px;height:118px;flex:none}
+.dn .v{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.dn .v b{font-size:30px;line-height:1;font-weight:900}
+.dn .v span{font-size:11px;color:#4a5866;margin-top:3px;font-weight:700}
+.po-badge{display:inline-block;font-weight:800;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;padding:5px 11px;border-radius:999px;margin-bottom:6px}
+.po-hero h4{font-size:16px;line-height:1.35;color:#15302f}
+.po-hero p{font-size:13px;color:#3f5160;line-height:1.45;margin-top:4px}
+.po-s{padding:12px 18px 0}
+.po-s h5{font-size:14.5px;color:#15302f}
+.po-s .lg{font-size:12px;color:#4a5866;margin:2px 0 8px;line-height:1.4}
+.ln{display:flex;align-items:stretch;gap:6px}
+.ln .b{flex:1;border-radius:12px;padding:9px 10px;background:#f3f7f6;min-width:0}
+.ln .b span{display:block;font-size:10.5px;color:#4a5866;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+.ln .b b{display:block;font-size:15.5px;margin-top:2px;font-variant-numeric:tabular-nums}
+.ln .b small{font-size:11px;color:#4a5866}
+.ln .op{align-self:center;font-size:18px;font-weight:900;color:#8aa09e}
+.ln .b.t{background:#0f3735;color:#fff}.ln .b.t span,.ln .b.t small{color:#cfe3e0}
+.chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px}
+.ch{border-radius:11px;padding:7px 4px;text-align:center}
+.ch.ok{background:#e4f6ee;color:#0b6b47}.ch.no{background:#f1f3f3;color:#5f6d6d}
+.ch .m{font-size:10.5px;font-weight:800;text-transform:uppercase}.ch .i{font-size:17px;font-weight:900;line-height:1.3}.ch .p{font-size:10px}
+.po-tip{margin:12px 18px 0;background:#fff7e3;border:1.5px solid #f0cf7a;border-radius:14px;padding:11px 14px;font-size:13px;line-height:1.5;color:#5c4511}
+.po-tip b{color:#3d2e08}
+.po-tip.zero{background:#fdeceb;border-color:#eba4a0;color:#6d1d18}.po-tip.zero b{color:#4d0f0b}
+.po-sem{margin:12px 18px 0;background:#f3f7f6;border-radius:14px;padding:12px 14px;font-size:13px;color:#3f5160;line-height:1.5}
+.svgbox svg{width:100%;height:auto;display:block}
+
+.rod{margin-top:22px;font-size:12px;color:var(--dim);line-height:1.6}
+
+@media (max-width:980px){
+  .grid{grid-template-columns:1fr 1fr}
+  .pair{grid-template-columns:1fr}
+}
+@media (max-width:560px){
+  body{padding:2px 0 16px}
+  .hero{padding:18px 16px;border-radius:20px}
+  .form,.adm{padding:16px 14px;border-radius:18px}
+  .grid{grid-template-columns:1fr}
+  .prod{flex:1 1 calc(50% - 10px);justify-content:center;padding:0 10px}
+  .go{width:100%}
+  .cmp{font-size:12.5px}.cmp th,.cmp td{padding:9px 8px}
+  .cmp td:first-child{width:34%}
+  .pc-cred b{font-size:25px}.pc-liq b{font-size:21px}
+  .pc-g{grid-template-columns:1fr 1fr;gap:8px;padding:12px}.pc-g b{font-size:15px}
+  .po-hero{flex-direction:column;align-items:flex-start}
+  .ln{flex-wrap:wrap}.ln .op{display:none}.ln .b{flex:1 1 40%}
+  .opt{min-width:170px}
+}
+@media print{
+  body{background:#fff;padding:0}
+  body.printing *{visibility:hidden}
+  body.printing .print-target,body.printing .print-target *{visibility:visible}
+  body.printing .print-target{position:absolute;left:0;top:0;box-shadow:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="hero">
+    <div class="top">
+      <div class="brand"><div class="logo" id="logo"></div><small>Simulador universal</small></div>
+      <div class="fontes" id="fontes"></div>
+    </div>
+    <h1>Simulador Consorbens: <em>Yamaha e Itaú</em> numa conta só</h1>
+    <p>Informe o que o cliente quer na mão, quanto tem para o lance e a parcela que aguenta depois de contemplar. O sistema cruza os grupos com vaga, as regras de lance e o histórico de lances que contemplaram, e devolve a melhor opção de cada administradora com o card e o potencial de contemplação.</p>
+  </section>
+
+  <section class="form" aria-labelledby="fh">
+    <h2 id="fh"><b>1</b>Dados do cliente</h2>
+    <div class="grid">
+      <div class="fld"><label for="nome">Nome do cliente</label><input id="nome" autocomplete="off" placeholder="Ex.: Maria Souza"></div>
+      <div class="fld"><label for="liq">Crédito líquido (na mão)</label><input id="liq" inputmode="decimal" placeholder="Ex.: 100.000"><small>O valor que sobra para ele depois do lance embutido.</small></div>
+      <div class="fld"><label for="rec">Tem para o lance</label><input id="rec" inputmode="decimal" placeholder="Ex.: 40.000"><small>Recursos próprios (do bolso). Pode ser 0.</small></div>
+      <div class="fld"><label for="par">Parcela que aguenta</label><input id="par" inputmode="decimal" placeholder="Ex.: 1.500"><small>Depois da contemplação. Em branco = sem limite.</small></div>
+    </div>
+    <div class="prods" id="prods" role="radiogroup" aria-label="Produto"></div>
+    <div class="acoes">
+      <button type="button" class="go" id="go">Gerar simulação Yamaha + Itaú</button>
+      <span class="erro" id="erro" role="alert"></span>
+    </div>
+  </section>
+
+  <div id="res"></div>
+
+  <div class="rod" id="rod"></div>
+</div>
+
+<script>
+var D = "__DADOS_UNIVERSAL__";
+(function(){
+"use strict";
+if (typeof D !== "object" || !D) D = {grupos:[], meta:{}, logos:{}, fotos:{}};
+
+/* ===================== números e textos ===================== */
+var MES = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+function moeda(v, dec){ dec = dec==null?2:dec; return (isFinite(v)?v:0).toLocaleString("pt-BR",{style:"currency",currency:"BRL",minimumFractionDigits:dec,maximumFractionDigits:dec}); }
+function m0(v){ return moeda(v,0); }
+function pc(v, d){ d = d==null?1:d; return (isFinite(v)?v:0).toLocaleString("pt-BR",{minimumFractionDigits:d,maximumFractionDigits:d})+"%"; }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
+function dBR(s){ var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s||""); return m? m[3]+"/"+m[2]+"/"+m[1] : (s||""); }
+function mesAno(s){ var m=/^(\d{4})-(\d{2})/.exec(s||""); return m? MES[+m[2]-1]+"/"+m[1].slice(2) : String(s||""); }
+function diasDesde(iso){ var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(iso||""); if(!m) return 999; var d=new Date(+m[1],+m[2]-1,+m[3]); return Math.floor((Date.now()-d.getTime())/864e5); }
+/* aceita "100.000", "100000,50", "100k", "1,2 mi", "100 mil" */
+function valor(txt){
+  var s = String(txt||"").toLowerCase().replace(/r\$|\s/g,"");
+  if(!s) return NaN;
+  var mult = 1;
+  if(/(k|mil)$/.test(s)){ mult=1e3; s=s.replace(/(k|mil)$/,""); }
+  else if(/(milh(ão|ao|ões|oes)?|mi)$/.test(s)){ mult=1e6; s=s.replace(/(milh(ão|ao|ões|oes)?|mi)$/,""); }
+  if(s.indexOf(",")>=0) s = s.replace(/\./g,"").replace(",",".");
+  else if((s.match(/\./g)||[]).length>1 || /\.\d{3}$/.test(s)) s = s.replace(/\./g,"");
+  var v = parseFloat(s); return isFinite(v)? v*mult : NaN;
+}
+function fmtCampo(el){ var v=valor(el.value); if(isFinite(v)) el.value = v.toLocaleString("pt-BR",{minimumFractionDigits:0,maximumFractionDigits:2}); }
+
+/* ===================== regras de cálculo ===================== */
+/* YAMAHA — modelo calibrado no "Simular..." do Newcon (16/11/2026, 11 cotas × 7 cenários):
+     C1 = crédito × (1 + taxa); parcela pura paga = crédito (reduzido, se PR) × (1+taxa) ÷ prazo
+     base do % do lance: reduzida → crédito reduzido × (1+taxa); integral → 96,191% de C1
+     embutido: % de (reduzida → crédito reduzido × (1+taxa); integral → crédito)
+     parcela depois = (C1 − 1 parcela paga − lance total) ÷ (prazo − 1) + seguro
+     seguro ≈ 0,0884% de C1 por mês (auto/moto/pesados); imóvel sem seguro na parcela.          */
+var FATOR_BASE_INTEGRAL = 0.96191, SEG_YAMAHA = 0.000884;
+/* ITAÚ — Simulador Estruturado (mesmo legCalc do Itaú · IA):
+     categoria = crédito × (1 + taxa 16% + fundo da Guia); parcela = categoria ÷ prazo
+     seguro = 0,0956%/mês (imóvel) ou 0,047%/mês (veículos) sobre a categoria
+     parcela depois = (categoria − 1 parcela − lance) ÷ (prazo − 1) + seguro; % do lance = lance ÷ crédito */
+var TAXA_ITAU = 0.16, SEG_ITAU = {imovel:0.000956, auto:0.00047}, EMB_ITAU = 0.30;
+var COTAS_MAX = {yamaha:4, itau:2}, FOLGA_LIQ = 1.30, TOL_PARC = 1.03;
+
+function simular(g, cotas, unit, L, R){
+  var C = cotas*unit, n = g.n, v;
+  if (!(n > 1) || C < L - 0.5) return null;
+  if (g.adm === "yamaha"){
+    var red = g.red > 0, C1 = C*(1+g.tx), redCred = red ? C*(1-g.red) : C;
+    var puraPaga = redCred*(1+g.tx)/n;
+    var B = red ? redCred*(1+g.tx) : FATOR_BASE_INTEGRAL*C1;
+    var embBase = red ? redCred*(1+g.tx) : C;
+    var embMax = g.emb*embBase;
+    var emb = Math.max(0, Math.min(embMax, C - L));
+    var liq = C - emb; if (liq < L - 0.5) return null;
+    var sdAtual = C1 - puraPaga;
+    var proprio = Math.max(0, Math.min(R, sdAtual*0.95 - emb));
+    var lance = emb + proprio;
+    var seg = g.prod === "imovel" ? 0 : SEG_YAMAHA*C1;
+    v = {C:C, liq:liq, emb:emb, embPct:emb/embBase*100, proprio:proprio, lance:lance, base:B, pct:lance/B*100,
+         antes:puraPaga+seg, pos:Math.max(sdAtual-lance,0)/(n-1)+seg, seg:seg, red:red};
+  } else {
+    var fr = g.fr || 0, div = C*(1+TAXA_ITAU+fr), base = div/n;
+    var segI = (g.prod === "imovel" ? SEG_ITAU.imovel : SEG_ITAU.auto)*div;
+    var embI = Math.max(0, Math.min(EMB_ITAU*C, C - L));
+    var liqI = C - embI; if (liqI < L - 0.5) return null;
+    var propI = Math.max(0, Math.min(R, (div-base)*0.95 - embI));
+    var lanceI = embI + propI;
+    v = {C:C, liq:liqI, emb:embI, embPct:embI/C*100, proprio:propI, lance:lanceI, base:C, pct:lanceI/C*100,
+         antes:base+segI, pos:Math.max(div-base-lanceI,0)/(n-1)+segI, seg:segI, red:false};
+  }
+  v.g = g; v.cotas = cotas; v.unit = unit; v.n = n;
+  v.ch = chance(v.pct, g.hist);
+  return v;
+}
+
+/* "Teria sido contemplado": lance ≥ menor lance livre que contemplou naquela assembleia */
+function chance(pct, hist){
+  var H = (hist||[]).filter(function(h){ return isFinite(h.mn); });
+  var N = H.length, hits = H.filter(function(h){ return pct >= h.mn - 1e-9; }).length;
+  var r = N ? hits/N : null, nivel;
+  if (!N) nivel = "sem"; else if (r >= 0.75) nivel = "alta"; else if (r >= 0.4) nivel = "media"; else if (hits > 0) nivel = "baixa"; else nivel = "zero";
+  var asc = H.map(function(h){ return h.mn; }).sort(function(a,b){ return a-b; });
+  return {N:N, hits:hits, r:r, nivel:nivel,
+          alvoMetade: N ? asc[Math.ceil(N/2)-1] + 0.1 : null,   // teria ganhado em pelo menos metade
+          alvoTodos: N ? asc[N-1] + 0.1 : null};                 // teria ganhado em todas
+}
+var NIVEL = {alta:{t:"Potencial alto",c:"#0b7a51",f:"#e4f6ee",o:4}, media:{t:"Potencial moderado",c:"#8a5d00",f:"#fff3d6",o:3},
+             baixa:{t:"Potencial baixo",c:"#a33a17",f:"#fde7df",o:2}, sem:{t:"Sem histórico",c:"#3c4f4d",f:"#e9efee",o:1},
+             zero:{t:"Sem chance assim",c:"#8f1d1d",f:"#fbe3e3",o:0}};
+
+/* quanto do bolso precisa para chegar a um % alvo */
+function precisa(v, alvoPct){ if (alvoPct == null) return null; return Math.max(0, Math.ceil((alvoPct/100*v.base - v.emb)/100)*100); }
+
+function candidatos(adm, prod, L, R, P){
+  var porGrupo = {};
+  D.grupos.forEach(function(g){
+    if (g.adm !== adm) return;
+    var alvoProd = adm === "itau" ? (prod === "imovel" ? "imovel" : "auto") : prod;
+    if (g.prod !== alvoProd) return;
+    var maxC = Math.min(COTAS_MAX[adm], g.vagas || 1);
+    (g.creds||[]).forEach(function(u){
+      for (var c = 1; c <= maxC; c++){
+        var C = c*u; if (C < L || C > L*1.6) continue;
+        var v = simular(g, c, u, L, R); if (!v || v.liq > L*FOLGA_LIQ) continue;
+        v.cabe = !(P > 0) || v.pos <= P*TOL_PARC;
+        var k = g.g;
+        if (!porGrupo[k] || melhor(v, porGrupo[k]) < 0) porGrupo[k] = v;
+      }
+    });
+  });
+  var lista = Object.keys(porGrupo).map(function(k){ return porGrupo[k]; });
+  lista.sort(melhor);
+  return lista;
+}
+/* ordem: cabe na parcela → nível de chance → % de vezes → menor sobra de crédito → menor parcela */
+function melhor(a, b){
+  if (a.cabe !== b.cabe) return a.cabe ? -1 : 1;
+  var na = NIVEL[a.ch.nivel].o, nb = NIVEL[b.ch.nivel].o; if (na !== nb) return nb - na;
+  var ra = a.ch.r||0, rb = b.ch.r||0; if (Math.abs(ra-rb) > 1e-9) return rb - ra;
+  if (a.ch.N !== b.ch.N) return b.ch.N - a.ch.N;
+  var ea = Math.round(a.C/1000), eb = Math.round(b.C/1000);   // crédito mais perto do que ele pediu
+  if (ea !== eb) return ea - eb;
+  return a.pos - b.pos;
+}
+
+/* ===================== estado / formulário ===================== */
+var PROD = [
+  {id:"auto", t:"Auto", n:"Automóvel", ico:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14M6.5 17v2M17.5 17v2M4 13l2-5h12l2 5v4H4z"/><circle cx="8" cy="14" r="1"/><circle cx="16" cy="14" r="1"/></svg>'},
+  {id:"imovel", t:"Imóvel", n:"Imóvel", ico:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg>'},
+  {id:"caminhao", t:"Caminhão", n:"Pesados", ico:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6h11v10H2zM13 9h5l4 4v3h-9z"/><circle cx="6" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/></svg>'},
+  {id:"moto", t:"Moto", n:"Motocicleta", ico:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="16" r="3.5"/><circle cx="18.5" cy="16" r="3.5"/><path d="M5.5 16h4.5l3.5-5h3l2 5"/><path d="M13.5 11l-1.5-3H9.5"/></svg>'}
+];
+var S = {prod:"auto", sel:{yamaha:0, itau:0}, res:null};
+var $ = function(id){ return document.getElementById(id); };
+
+function montarTopo(){
+  if (D.logos && D.logos.consorbens) $("logo").innerHTML = '<img alt="Consorbens" src="'+D.logos.consorbens+'">'; else $("logo").style.display="none";
+  var m = D.meta||{}, f = [];
+  var dy = diasDesde(m.yamaha);
+  f.push('<span><i class="'+(dy>6?"velho":"")+'"></i>Yamaha · robô Newcon '+(m.yamaha?dBR(m.yamaha):"sem data")+'</span>');
+  f.push('<span><i></i>Itaú · Guia de '+esc(m.itau||"—")+'</span>');
+  $("fontes").innerHTML = f.join("");
+  $("prods").innerHTML = PROD.map(function(p){
+    return '<button type="button" class="prod'+(p.id===S.prod?" sel":"")+'" role="radio" aria-checked="'+(p.id===S.prod)+'" data-p="'+p.id+'">'+p.ico+p.t+'</button>';
+  }).join("");
+  var ya = D.grupos.filter(function(g){return g.adm==="yamaha";}).length, it = D.grupos.length - ya;
+  $("rod").innerHTML = "Base de hoje: "+ya+" grupos Yamaha com vaga e "+it+" grupos Itaú (5+ vagas) da Guia de Oportunidades."
+    + ((m.erros||[]).length ? ' <b style="color:#ffd0bf">Falhou ao carregar: '+esc(m.erros.join(" · "))+'</b>' : "")
+    + " Simulação com valores aproximados. Não é garantia de contemplação; a liberação do crédito depende da análise de crédito da administradora.";
+}
+$("prods").addEventListener("click", function(e){
+  var b = e.target.closest(".prod"); if(!b) return;
+  S.prod = b.getAttribute("data-p");
+  [].forEach.call(document.querySelectorAll(".prod"), function(x){ var on = x===b; x.classList.toggle("sel", on); x.setAttribute("aria-checked", on); });
+  if (S.res) gerar();
+});
+["liq","rec","par"].forEach(function(id){
+  $(id).addEventListener("blur", function(){ fmtCampo(this); });
+  $(id).addEventListener("keydown", function(e){ if(e.key==="Enter"){ fmtCampo(this); gerar(); } });
+});
+$("nome").addEventListener("keydown", function(e){ if(e.key==="Enter") gerar(); });
+$("go").addEventListener("click", gerar);
+
+/* ===================== gerar ===================== */
+function gerar(){
+  var L = valor($("liq").value), R = valor($("rec").value), P = valor($("par").value);
+  if (!isFinite(R)) R = 0; if (!isFinite(P)) P = 0;
+  $("erro").textContent = "";
+  if (!(L > 0)) { $("erro").textContent = "Informe o crédito líquido que o cliente quer na mão."; $("liq").focus(); return; }
+  var nome = $("nome").value.trim();
+  var r = {L:L, R:R, P:P, nome:nome, prod:S.prod,
+           yamaha: candidatos("yamaha", S.prod, L, R, P), itau: candidatos("itau", S.prod, L, R, P)};
+  S.res = r; S.sel = {yamaha:0, itau:0};
+  render();
+}
+
+function render(){
+  var r = S.res, h = "";
+  var by = r.yamaha[0], bi = r.itau[0];
+  h += '<div class="sec"><h2>Resultado para '+esc(r.nome||"o cliente")+'</h2><span>'+esc(prodNome(r.prod))+' · '+m0(r.L)+' na mão · '+m0(r.R)+' de lance do bolso'+(r.P>0?' · parcela até '+m0(r.P):'')+'</span></div>';
+  h += recomendacao(r, by, bi);
+  h += comparativo(r, by, bi);
+  h += blocoAdm("yamaha", r);
+  h += blocoAdm("itau", r);
+  $("res").innerHTML = h;
+  ajusta();
+}
+function prodNome(p){ var x = PROD.filter(function(q){return q.id===p;})[0]; return x ? x.n : p; }
+function admNome(a){ return a === "yamaha" ? "Consórcio Yamaha" : "Itaú Consórcio"; }
+
+function recomendacao(r, by, bi){
+  var ops = [by, bi].filter(Boolean);
+  if (!ops.length) return '<div class="reco alerta"><div class="ic">!</div><div><h3>Nenhum grupo encontrado para '+m0(r.L)+' líquidos em '+esc(prodNome(r.prod))+'.</h3><p>Não há crédito com vaga nessa faixa hoje. Tente outro valor de crédito ou outro produto.</p></div></div>';
+  var top = ops.slice().sort(melhor)[0], g = top.g;
+  var bom = top.ch.nivel === "alta" || top.ch.nivel === "media";
+  /* sem opção boa: acha, entre TODOS os grupos que atendem, o menor lance do bolso que teria
+     contemplado em pelo menos metade das últimas assembleias (só grupos com 2+ assembleias) */
+  function menorNecessario(){
+    return r.yamaha.concat(r.itau).filter(function(o){ return o.ch.N >= 2 && (!(r.P > 0) || o.cabe); })
+      .map(function(o){ return {o:o, x:precisa(o, o.ch.alvoMetade)}; })
+      .sort(function(a,b){ return a.x - b.x; })[0];
+  }
+  if (!bom && (top.ch.nivel === "zero" || top.ch.nivel === "baixa" || top.ch.nivel === "sem")) {
+    var need = menorNecessario();
+    var msg = need ? 'Para ter chance real, o lance do bolso tem que ir para <b>pelo menos '+m0(Math.max(need.x, r.R))+'</b> ('+admNome(need.o.g.adm)+', grupo '+esc(need.o.g.g)+': lance de '+pc(need.o.ch.alvoMetade)+', que teria contemplado em metade das últimas '+need.o.ch.N+' assembleias)'+(need.x>r.R?', ou seja, <b>'+m0(need.x-r.R)+' a mais</b> do que ele tem hoje':'')+'.' : '';
+    var algum = ops.some(function(o){ return o.ch.hits > 0; });
+    var t1 = algum ? 'Chance baixa de contemplar com esse lance.' : 'Sem chance de contemplar dessa forma.';
+    var t2 = algum ? 'Com '+m0(r.R)+' do bolso, o melhor grupo ('+admNome(g.adm)+' '+esc(g.g)+') teria sido contemplado em só '+top.ch.hits+' de '+top.ch.N+' assembleias. '
+                   : 'Com '+m0(r.R)+' do bolso, nenhum grupo teria sido contemplado nas últimas assembleias. ';
+    return '<div class="reco alerta"><div class="ic">!</div><div><h3>'+t1+'</h3><p>'+t2+msg+'</p></div></div>';
+  }
+  var txt = admNome(g.adm)+', grupo '+esc(g.g)+(top.cotas>1?' ('+top.cotas+' cotas)':'')+': ';
+  txt += top.ch.N ? 'um lance de '+pc(top.pct)+' teria sido contemplado em <b>'+top.ch.hits+' de '+top.ch.N+'</b> assembleias' : 'grupo sem histórico de lance na base';
+  txt += ', parcela depois de '+moeda(top.pos)+(r.P>0 ? (top.cabe?' (cabe no orçamento)':' (<b>acima</b> dos '+m0(r.P)+' que ele aguenta)') : '')+'.';
+  var outro = ops.filter(function(o){return o!==top;})[0];
+  var p2 = outro ? ' Alternativa: '+admNome(outro.g.adm)+' grupo '+esc(outro.g.g)+' ('+(outro.ch.N?outro.ch.hits+' de '+outro.ch.N:'sem histórico')+', parcela '+moeda(outro.pos)+').' : '';
+  return '<div class="reco'+(bom?'':' alerta')+'"><div class="ic">'+(bom?'★':'!')+'</div><div><h3>Melhor caminho: '+txt+'</h3><p>'+(bom?'':'A chance é baixa com esse lance; veja abaixo quanto falta para melhorar. ')+p2+'</p></div></div>';
+}
+
+function comparativo(r, by, bi){
+  if (!by && !bi) return "";
+  var L = D.logos||{};
+  function col(v, f){ return v ? f(v) : '<span class="na">—</span>'; }
+  var linhas = [
+    ["Grupo", function(v){ return esc(v.g.g)+(v.cotas>1?' · '+v.cotas+' cotas':''); }, null],
+    ["Crédito contratado", function(v){ return moeda(v.C); }, null],
+    ["Crédito líquido", function(v){ return moeda(v.liq); }, "max", function(v){return v.liq;}],
+    ["Lance do bolso", function(v){ return moeda(v.proprio); }, null],
+    ["Embutido (da carta)", function(v){ return moeda(v.emb)+' ('+pc(v.embPct,0)+')'; }, null],
+    ["Lance total", function(v){ return moeda(v.lance)+' · '+pc(v.pct); }, null],
+    ["Parcela até contemplar", function(v){ return moeda(v.antes); }, "min", function(v){return v.antes;}],
+    ["Parcela depois", function(v){ return moeda(v.pos); }, "min", function(v){return v.pos;}],
+    ["Prazo", function(v){ return v.n+' meses'; }, null],
+    ["Chance (histórico)", function(v){ return v.ch.N ? v.ch.hits+' de '+v.ch.N+' assembleias' : 'sem histórico'; }, "max", function(v){return v.ch.N? v.ch.r : -1;}],
+    ["Próxima assembleia", function(v){ return esc(v.g.prox||"—"); }, null]
+  ];
+  var h = '<div class="sec"><h2>Comparativo</h2><span>melhor opção de cada administradora</span></div><table class="cmp"><thead><tr><th></th>'
+    + '<th>'+(L.yamaha?'<img class="ylg" alt="" src="'+L.yamaha+'">':'')+'Yamaha</th>'
+    + '<th>'+(L.itau?'<img alt="" src="'+L.itau+'">':'')+'Itaú</th></tr></thead><tbody>';
+  linhas.forEach(function(l){
+    var best = null;
+    if (l[2] && by && bi){ var a = l[3](by), b = l[3](bi); if (Math.abs(a-b) > 1e-6) best = (l[2]==="max" ? (a>b) : (a<b)) ? "y" : "i"; }
+    h += '<tr><td>'+l[0]+'</td><td'+(best==="y"?' class="best"':'')+'>'+col(by,l[1])+'</td><td'+(best==="i"?' class="best"':'')+'>'+col(bi,l[1])+'</td></tr>';
+  });
+  return h + '</tbody></table>';
+}
+
+function blocoAdm(adm, r){
+  var lista = r[adm], L = D.logos||{};
+  var lg = adm === "yamaha" ? (L.yamaha ? '<div class="lg ylg"><img alt="Yamaha" src="'+L.yamaha+'"></div>' : '')
+                            : (L.itau ? '<div class="lg i"><img alt="Itaú" src="'+L.itau+'"></div>' : '');
+  var sub = adm === "yamaha" ? "Grupos, vagas e lances do robô Newcon" : "Guia de Oportunidades · taxa 16% até confirmar no banco";
+  var h = '<section class="adm" data-adm="'+adm+'"><div class="adm-h"><div class="t">'+lg+'<div><h3>'+admNome(adm)+'</h3><small>'+sub+'</small></div></div>'
+        + (lista.length ? '<small class="mut">'+lista.length+' grupo(s) atendem · mostrando os melhores</small>' : '') + '</div>';
+  if (!lista.length){
+    var por = adm === "itau" && (r.prod === "moto") ? " A Guia do Itaú traz grupos de veículos (Rodas) e imóveis." : "";
+    return h + '<div class="vazio">Nenhum grupo '+(adm==="yamaha"?"Yamaha":"Itaú")+' com vaga para '+m0(r.L)+' líquidos em '+esc(prodNome(r.prod))+'.'+por+'</div></section>';
+  }
+  var top = lista.slice(0, 5), i = Math.min(S.sel[adm], top.length-1), v = top[i];
+  h += '<div class="opts" role="tablist">' + top.map(function(o, k){
+    var nv = NIVEL[o.ch.nivel];
+    return '<button type="button" class="opt'+(k===i?' sel':'')+'" role="tab" aria-selected="'+(k===i)+'" data-adm="'+adm+'" data-k="'+k+'">'
+      + '<b>'+(k===0?'★ ':'')+'Grupo '+esc(o.g.g)+(o.cotas>1?' · '+o.cotas+' cotas':'')+'</b>'
+      + '<span>'+m0(o.liq)+' líquido · parcela '+m0(o.pos)+(o.cabe?'':' ⚠')+'</span>'
+      + '<em class="nivel-'+o.ch.nivel+'">'+(o.ch.N? o.ch.hits+'/'+o.ch.N+' · ' : '')+nv.t+'</em></button>';
+  }).join("") + '</div>';
+  h += avisos(v, r);
+  h += '<div class="pair"><div class="cardbox">'+cardProposta(v, r, adm+"-p")+botoes(adm+"-p", v, r, "p")+'</div>'
+     + '<div class="cardbox">'+cardPotencial(v, r, adm+"-c")+botoes(adm+"-c", v, r, "c")+'</div></div>';
+  return h + '</section>';
+}
+
+function avisos(v, r){
+  var g = v.g, a = [];
+  if (!v.cabe && r.P > 0) a.push('Parcela depois da contemplação ('+moeda(v.pos)+') fica acima dos '+m0(r.P)+' que o cliente aguenta. Mais lance do bolso baixa essa parcela.');
+  if (g.adm === "yamaha"){
+    var dias = diasDesde(g.visto);
+    if (dias > 6 || (g.vagas||0) < 10) a.push('Vagas do grupo '+esc(g.g)+': '+(g.vagas||0)+' (conferidas em '+(g.visto?dBR(g.visto):'data desconhecida')+'). Antes de fechar, rodar o <b>conferir_vagas</b> do robô.');
+    if (v.red) a.push('<span>Plano de parcela reduzida: até contemplar paga '+pc((1-g.red)*100,0)+' da parcela; o restante é diluído nas parcelas depois da contemplação.</span>');
+    if (g.fixo && v.pct >= g.fixo) a.push('<span>O lance cobre o <b>lance fixo de '+pc(g.fixo,0)+'</b> deste grupo (concorre também no sorteio do fixo).</span>');
+  } else {
+    a.push('<span>Itaú: taxa de administração de 16% até confirmar no simulador do banco; fundo de reserva '+pc((g.fr||0)*100,1)+' da Guia. Embutido de até 30%: confirmar se o grupo aceita.</span>');
+    if (r.prod !== "auto" && r.prod !== "imovel") a.push('Grupo de veículos (Rodas) do Itaú: confirmar se o bem ('+esc(prodNome(r.prod).toLowerCase())+') entra neste grupo.');
+    if (v.ch.N && v.ch.N < 3) a.push('<span>O histórico do Itaú aqui vem só da Guia (as '+v.ch.N+' assembleias que ela traz).</span>');
+  }
+  if (!v.ch.N) a.push('Grupo sem histórico de lance na base: a chance não pode ser medida. Rodar o robô de assembleias antes de prometer prazo.');
+  if (!a.length) return "";
+  return '<div class="avisos">'+a.map(function(x){ return x.indexOf("<span>")===0 ? '<div class="inf">'+x.slice(6,-7)+'</div>' : '<div>'+x+'</div>'; }).join("")+'</div>';
+}
+
+/* ---------- card 1: proposta (mesmo layout dos cards que o Breno aprovou) ---------- */
+function cardProposta(v, r, id){
+  var g = v.g, L = D.logos||{}, foto = (D.fotos||{})[r.prod] || "";
+  var admLg = g.adm === "yamaha" ? (L.yamaha?'<div class="adm-lg ylg"><img alt="Yamaha" src="'+L.yamaha+'"></div>':'') : (L.itau?'<div class="adm-lg i"><img alt="Itaú" src="'+L.itau+'"></div>':'');
+  return '<div class="pc" id="'+id+'">'
+    + '<div class="pc-hd"><div class="lg">'+(L.consorbens?'<img alt="Consorbens" src="'+L.consorbens+'">':'<b style="color:#0f3735">CONSORBENS</b>')+'</div>'
+    +   '<div class="tt"><small>Proposta de consórcio '+(g.adm==="yamaha"?"Yamaha":"Itaú")+'</small><b>GRUPO '+esc(g.g)+'</b></div></div>'
+    + '<div class="pc-ph" style="background-image:'+(foto?'url('+foto+')':'linear-gradient(135deg,#123f3e,#17544b)')+'">'+admLg+'<span>Consórcio '+esc(prodNome(r.prod))+'</span></div>'
+    + (r.nome ? '<div class="pc-para">Proposta preparada para <b>'+esc(r.nome)+'</b></div>' : '')
+    + '<div class="pc-cred"><small>Crédito contratado</small><b>'+moeda(v.C)+'</b>'+(v.cotas>1?'<span>'+v.cotas+' cotas de '+moeda(v.unit)+'</span>':'')+'</div>'
+    + '<div class="pc-g">'
+    +   '<div><small>Quantidade de cotas</small><b>'+v.cotas+'</b></div>'
+    +   '<div><small>Prazo contratado (meses)</small><b>'+v.n+'</b></div>'
+    +   '<div><small>Parcela inicial (aprox.)</small><b>'+moeda(v.antes)+'</b></div>'
+    +   '<div><small>Lance · recursos próprios</small><b>'+moeda(v.proprio)+'</b></div>'
+    +   '<div><small>Lance embutido (valor)</small><b>'+moeda(v.emb)+(v.emb>0?' ('+pc(v.embPct,0)+')':'')+'</b></div>'
+    +   '<div class="v"><small>Parcela após contemplação</small><b>'+moeda(v.pos)+'</b></div>'
+    +   '<div class="v"><small>Prazo após contemplação (meses)</small><b>'+(v.n-1)+'</b></div>'
+    +   '<div><small>Lance total</small><b>'+moeda(v.lance)+' ('+pc(v.pct,0)+')</b></div>'
+    + '</div>'
+    + '<div class="pc-liq"><small>Crédito líquido na contemplação</small><b>'+moeda(v.liq)+'</b></div>'
+    + '<div class="pc-obs">Simulado com valores aproximados · não é garantia de contemplação. A liberação do crédito depende da análise de crédito '+(g.adm==="yamaha"?"da Yamaha":"do Itaú")+'.</div>'
+    + '<div class="pc-ft"><b>CONSORBENS</b> · Consórcio de veículos e imóveis<br>'+esc(D.contato||"consorbens.com.br")+'</div>'
+    + '</div>';
+}
+
+/* ---------- card 2: potencial de contemplação (porta do gerar_potencial.py) ---------- */
+function grafico(H, lance){
+  var W=560, Hh=250, ml=40, mr=92, mt=20, mb=34;
+  var lo = Math.floor((Math.min.apply(null, H.map(function(r){return r.mn;}).concat([lance]))-4)/10)*10;
+  var hi = Math.ceil((Math.max.apply(null, H.map(function(r){return r.mx;}).concat([lance]))+3)/10)*10;
+  lo = Math.max(0, lo); if (hi <= lo) hi = lo + 10;
+  var X = function(i){ return ml + (i+.5)*(W-ml-mr)/H.length; }, Y = function(v){ return mt + (hi-v)*(Hh-mt-mb)/(hi-lo); };
+  var s = '<svg viewBox="0 0 '+W+' '+Hh+'" xmlns="http://www.w3.org/2000/svg" font-family="Plus Jakarta Sans,Segoe UI,Arial" role="img" aria-label="Lances que contemplaram x seu lance">';
+  var passo = (hi-lo) > 60 ? 20 : 10;
+  for (var t = lo; t <= hi; t += passo) s += '<line x1="'+ml+'" x2="'+(W-mr)+'" y1="'+Y(t).toFixed(1)+'" y2="'+Y(t).toFixed(1)+'" stroke="#e6eeed"/><text x="'+(ml-6)+'" y="'+(Y(t)+4).toFixed(1)+'" text-anchor="end" font-size="11" fill="#5b6b80">'+t+'%</text>';
+  var bw = Math.min(30, (W-ml-mr)/H.length*.5);
+  H.forEach(function(r, i){
+    var ok = lance >= r.mn - 1e-9, x = X(i), col = ok ? "#12a66f" : "#c9d3d2";
+    s += '<rect x="'+(x-bw/2).toFixed(1)+'" y="'+Y(r.mx).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(Y(r.mn)-Y(r.mx),3).toFixed(1)+'" rx="5" fill="'+col+'"/>';
+    s += '<text x="'+x.toFixed(1)+'" y="'+(Y(r.mn)+13).toFixed(1)+'" text-anchor="middle" font-size="10" font-weight="700" fill="'+(ok?"#0b6b47":"#5f6d6d")+'">'+Math.round(r.mn)+'%</text>';
+    s += '<text x="'+x.toFixed(1)+'" y="'+(Hh-mb+18)+'" text-anchor="middle" font-size="10.5" fill="#4a5866">'+esc(rot(r.d))+'</text>';
+  });
+  var y = Y(lance);
+  s += '<line x1="'+ml+'" x2="'+(W-mr)+'" y1="'+y.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="#0f3735" stroke-width="2.4" stroke-dasharray="7 5"/>';
+  s += '<rect x="'+(W-mr+5)+'" y="'+(y-19).toFixed(1)+'" width="'+(mr-7)+'" height="38" rx="10" fill="#0f3735"/>'
+     + '<text x="'+(W-mr+5+(mr-7)/2).toFixed(1)+'" y="'+(y-4).toFixed(1)+'" text-anchor="middle" font-size="10.5" fill="#cfe3e0">Seu lance</text>'
+     + '<text x="'+(W-mr+5+(mr-7)/2).toFixed(1)+'" y="'+(y+12).toFixed(1)+'" text-anchor="middle" font-size="13.5" font-weight="800" fill="#fff">'+pc(lance)+'</text>';
+  return s + '</svg>';
+}
+function rot(d){ return /^\d{4}-\d{2}/.test(d||"") ? mesAno(d) : String(d||""); }
+
+function cardPotencial(v, r, id){
+  var g = v.g, ch = v.ch, H = (g.hist||[]).filter(function(h){return isFinite(h.mn);}), L = D.logos||{};
+  var nv = NIVEL[ch.nivel], taxa = ch.N ? ch.hits/ch.N : 0;
+  var Rr = 50, circ = 2*Math.PI*Rr;
+  var dn = '<svg width="118" height="118" viewBox="0 0 118 118"><circle cx="59" cy="59" r="'+Rr+'" fill="none" stroke="#e8eeee" stroke-width="12"/>'
+         + '<circle cx="59" cy="59" r="'+Rr+'" fill="none" stroke="'+nv.c+'" stroke-width="12" stroke-linecap="round" stroke-dasharray="'+(circ*taxa).toFixed(1)+' '+circ.toFixed(1)+'" transform="rotate(-90 59 59)"/></svg>';
+  var frase, sub;
+  if (!ch.N){ frase = "Este grupo ainda não tem histórico de lances na nossa base."; sub = "Sem o histórico não dá para medir a chance; vale consultar as últimas assembleias antes de apresentar."; }
+  else if (ch.hits === ch.N){ frase = "Nas últimas "+ch.N+" assembleias, um lance igual ao seu teria sido contemplado <b>todas as vezes</b>."; }
+  else if (!ch.hits){ frase = "<b>Sem chance de contemplar dessa forma:</b> nas últimas "+ch.N+" assembleias, um lance igual ao seu não teria sido contemplado."; }
+  else { frase = "Em <b>"+ch.hits+" das últimas "+ch.N+"</b> assembleias, um lance igual ao seu teria sido contemplado."; }
+  if (ch.N){
+    var maxmin = Math.max.apply(null, H.map(function(h){return h.mn;})), folga = v.pct - maxmin;
+    sub = 'Seu lance ficou <b>'+Math.abs(folga).toLocaleString("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1})+' pontos '+(folga>=0?"acima":"abaixo")+'</b> do maior "menor lance vencedor" do período.';
+  }
+  var h = '<div class="pc" id="'+id+'">'
+    + '<div class="pc-hd"><div class="lg">'+(L.consorbens?'<img alt="Consorbens" src="'+L.consorbens+'">':'')+'</div>'
+    +   '<div class="tt"><small>Potencial de contemplação</small><b>'+(g.adm==="yamaha"?"YAMAHA":"ITAÚ")+' · GRUPO '+esc(g.g)+'</b></div></div>'
+    + (r.nome ? '<div class="pc-para">Estudo preparado para <b>'+esc(r.nome)+'</b></div>' : '')
+    + '<div class="po-hero"><div class="dn">'+dn+'<div class="v"><b style="color:'+nv.c+'">'+(ch.N?Math.round(taxa*100)+'%':'—')+'</b><span>'+(ch.N?ch.hits+' de '+ch.N:'sem dados')+'</span></div></div>'
+    +   '<div><span class="po-badge" style="color:'+nv.c+';background:'+nv.f+'">'+nv.t+'</span><h4>'+frase+'</h4><p>'+(sub||"")+'</p></div></div>'
+    + '<div class="po-s"><h5>O seu lance</h5><div class="lg">O embutido sai da própria carta: o cliente não tira esse valor do bolso.</div>'
+    +   '<div class="ln"><div class="b"><span>Do bolso</span><b>'+m0(v.proprio)+'</b></div><div class="op">+</div>'
+    +   '<div class="b"><span>Embutido</span><b>'+m0(v.emb)+'</b></div><div class="op">=</div>'
+    +   '<div class="b t"><span>Lance total</span><b>'+m0(v.lance)+'</b><small>'+pc(v.pct)+' do plano</small></div></div></div>';
+  if (ch.N){
+    h += '<div class="po-s"><h5>Assembleia a assembleia: o lance teria ganhado?</h5><div class="lg">✓ = o lance era maior que o menor lance contemplado naquela assembleia.</div><div class="chips">'
+      + H.map(function(x){ var ok = v.pct >= x.mn - 1e-9; return '<div class="ch '+(ok?"ok":"no")+'"><div class="m">'+esc(rot(x.d))+'</div><div class="i">'+(ok?"✓":"✗")+'</div><div class="p">ganhou c/ '+pc(x.mn,0)+'</div></div>'; }).join("")
+      + '</div></div>';
+    h += '<div class="po-s"><h5>Seu lance × lances que ganharam</h5><div class="lg">Cada barra vai do menor ao maior lance contemplado. Verde: o seu lance (linha tracejada) estava dentro.</div><div class="svgbox">'+grafico(H, v.pct)+'</div></div>';
+    if (ch.hits < ch.N){
+      var xm = precisa(v, ch.alvoMetade), xt = precisa(v, ch.alvoTodos);
+      if (!ch.hits) h += '<div class="po-tip zero"><b>Sem chance de contemplar dessa forma.</b> Para ter chance, aumente o lance do bolso para <b>pelo menos '+m0(xm)+'</b>'+(xm>v.proprio?' ('+m0(xm-v.proprio)+' a mais)':'')+': '+pc(ch.alvoMetade)+' do plano, que teria contemplado em metade das últimas '+ch.N+' assembleias. Para ter entrado em todas: '+m0(xt)+'.</div>';
+      else h += '<div class="po-tip"><b>Quer aumentar a chance?</b> Para ter entrado em todas as '+ch.N+' assembleias, o lance precisaria chegar a '+pc(ch.alvoTodos)+': cerca de <b>'+m0(Math.max(0,xt-v.proprio))+' a mais do bolso</b> (total do bolso ≈ '+m0(xt)+'). Lance maior também deixa a parcela depois da contemplação menor.</div>';
+    }
+  } else {
+    h += '<div class="po-sem">Assim que o robô ler as assembleias deste grupo, este card mostra mês a mês se o lance teria sido contemplado.</div>';
+  }
+  h += '<div class="pc-obs" style="padding-top:14px"><b>Estimativa com base no histórico real do grupo, não é garantia de contemplação</b>: o resultado depende dos lances ofertados em cada assembleia. Após a contemplação, a liberação do crédito passa pela análise da administradora. Próxima assembleia: '+esc(g.prox||"—")+'.</div>'
+    + '<div class="pc-ft"><b>CONSORBENS</b> · '+esc(D.contato||"consorbens.com.br")+'</div></div>';
+  return h;
+}
+
+/* ---------- botões dos cards ---------- */
+function botoes(id, v, r, tipo){
+  return '<div class="cbar"><button type="button" class="b-png" data-png="'+id+'">🖼️ Baixar imagem</button>'
+    + '<button type="button" class="b-wa" data-wa="'+id+'">📲 Texto p/ WhatsApp</button>'
+    + '<button type="button" class="b-print" data-pr="'+id+'">📄 PDF</button></div>';
+}
+function selAtual(id){ var adm = id.split("-")[0]; var lista = S.res[adm].slice(0,5); return lista[Math.min(S.sel[adm], lista.length-1)]; }
+function textoWa(v, r){
+  var g = v.g, t = '*PROPOSTA DE CONSÓRCIO — CONSORBENS ('+(g.adm==="yamaha"?"Yamaha":"Itaú")+')*\n\n';
+  if (r.nome) t += 'Para: '+r.nome+'\n';
+  t += 'Grupo: '+g.g+'\nCrédito contratado: '+moeda(v.C)+(v.cotas>1?' ('+v.cotas+' cotas de '+moeda(v.unit)+')':'')+'\n'
+    + 'Prazo: '+v.n+' meses\nParcela inicial (aprox.): '+moeda(v.antes)+'\n'
+    + 'Lance: '+moeda(v.proprio)+' do bolso + '+moeda(v.emb)+' embutido = '+moeda(v.lance)+' ('+pc(v.pct)+')\n'
+    + 'Parcela após contemplação: '+moeda(v.pos)+' (por '+(v.n-1)+' meses)\n'
+    + '*Crédito líquido na contemplação: '+moeda(v.liq)+'*\n\n';
+  if (v.ch.N) t += 'Histórico do grupo: um lance igual a esse teria sido contemplado em '+v.ch.hits+' das últimas '+v.ch.N+' assembleias.\n\n';
+  return t + '_Simulado com valores aproximados. Não é garantia de contemplação; a liberação do crédito depende da análise de crédito da administradora._';
+}
+var H2C = null;
+function carregaH2C(cb){
+  if (window.html2canvas) return cb();
+  if (H2C) return H2C.push(cb);
+  H2C = [cb];
+  var s = document.createElement("script");
+  s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+  s.onload = function(){ H2C.forEach(function(f){ f(); }); };
+  s.onerror = function(){ alert("Não consegui carregar o gerador de imagem. Use o botão PDF."); H2C = null; };
+  document.head.appendChild(s);
+}
+function baixarPng(id, btn){
+  var el = $(id); if (!el) return;
+  btn.disabled = true; var t0 = btn.textContent; btn.textContent = "Gerando…";
+  carregaH2C(function(){
+    window.html2canvas(el, {scale:2, backgroundColor:"#ffffff", useCORS:true}).then(function(cv){
+      var v = selAtual(id), nome = (id.indexOf("-c")>0?"Potencial":"Proposta")+"-"+(v.g.adm==="yamaha"?"Yamaha":"Itau")+"-"+v.g.g+"-"+Math.round(v.liq/1000)+"k.png";
+      cv.toBlob(function(b){
+        var a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = nome;
+        document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+        btn.disabled = false; btn.textContent = t0;
+      }, "image/png");
+    }).catch(function(){ btn.disabled = false; btn.textContent = t0; alert("Não consegui gerar a imagem. Use o botão PDF."); });
+  });
+}
+function imprimir(id){
+  var el = $(id); if (!el) return;
+  el.classList.add("print-target"); document.body.classList.add("printing");
+  setTimeout(function(){ window.print(); el.classList.remove("print-target"); document.body.classList.remove("printing"); }, 200);
+}
+$("res").addEventListener("click", function(e){
+  var o = e.target.closest(".opt");
+  if (o){ S.sel[o.getAttribute("data-adm")] = +o.getAttribute("data-k"); render(); return; }
+  var b = e.target.closest("button"); if (!b) return;
+  if (b.hasAttribute("data-png")) baixarPng(b.getAttribute("data-png"), b);
+  else if (b.hasAttribute("data-wa")){ var id = b.getAttribute("data-wa"); window.open("https://wa.me/?text="+encodeURIComponent(textoWa(selAtual(id), S.res)), "_blank"); }
+  else if (b.hasAttribute("data-pr")) imprimir(b.getAttribute("data-pr"));
+});
+
+/* ---------- altura do iframe = altura do conteúdo ---------- */
+function ajusta(){
+  try{
+    var h = Math.ceil(document.documentElement.scrollHeight) + 4, fe = window.frameElement;
+    if (fe && Math.abs(fe.offsetHeight - h) > 4){ fe.style.height = h + "px"; fe.setAttribute("height", h); }
+  }catch(e){}
+}
+window.addEventListener("load", ajusta);
+window.addEventListener("resize", ajusta);
+if (window.ResizeObserver) new ResizeObserver(ajusta).observe(document.body);
+
+montarTopo();
+window.__univ = {simular:simular, candidatos:candidatos, gerar:gerar, S:S};
+})();
+</script>
+</body>
+</html>

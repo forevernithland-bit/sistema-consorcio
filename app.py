@@ -251,6 +251,20 @@ def _marcar_presenca_crm(_sb):
 
 
 _marcar_presenca_crm(supabase)
+
+
+# 16/11/2026 (pedido do Breno): o robô tem que ficar ligado SEMPRE que o ERP estiver logado,
+# mesmo com a tela parada. Antes a presença só era marcada quando alguém clicava; com o ERP
+# aberto e parado por 1h o watchdog desligava o robô. Agora este pedacinho roda sozinho a cada
+# 2 min enquanto a aba do ERP estiver aberta e logada (para quando fecha a aba ou desloga).
+@st.fragment(run_every=120)
+def _presenca_viva():
+    _marcar_presenca_crm(supabase)
+
+
+if is_logado:
+    with st.sidebar:
+        _presenca_viva()
 _online = _status_robo(supabase)
 _titulo = "Robô ligado" if _online else "Robô desligado"
 # CSS da sidebar (modulos/sidebar.py): placeholder no topo, preenchido ao final

@@ -160,7 +160,7 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:
 <body>
 <div class="wrap">
   <div class="brand"><div class="logo">IA</div><h1>Lance por <span>IA</span> · Itaú Consórcios</h1></div>
-  <div class="sub">Encontramos o melhor caminho para sua contemplação, direto da Guia de Oportunidades.</div>
+  <div class="sub">Sugestões de grupos a partir da Guia de Oportunidades do Itaú.</div>
   <div style="text-align:center"><span class="guiaver" id="guiaVer"></span></div>
   <div class="panel">
     <div id="wizard">
@@ -211,11 +211,11 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:
 
         <div class="sbgroup">
           <div class="gt">Propostas a exibir</div>
-          <label class="sbtoggle"><input type="checkbox" id="pRapida" checked onchange="togShow()"> ⚡ Contemplação rápida</label>
+          <label class="sbtoggle"><input type="checkbox" id="pRapida" checked onchange="togShow()"> ⚡ Lance livre · melhor posição</label>
           <label class="sbtoggle"><input type="checkbox" id="pMix" checked onchange="togShow()"> 🧩 Mix lance livre + fixo</label>
           <label class="sbtoggle"><input type="checkbox" id="pFixo" checked onchange="togShow()"> 📌 100% lance fixo</label>
-          <label class="sbtoggle"><input type="checkbox" id="pIdeal" onchange="togShow()"> ✨ Recomendação ideal da IA</label>
-          <label class="sbtoggle"><input type="checkbox" id="pC2" onchange="togShow()"> 🎯 Crédito desejado (alta chance)</label>
+          <label class="sbtoggle"><input type="checkbox" id="pIdeal" onchange="togShow()"> ✨ Sugestão da IA</label>
+          <label class="sbtoggle"><input type="checkbox" id="pC2" onchange="togShow()"> 🎯 Crédito desejado (lance acima da média)</label>
           <label class="sbtoggle"><input type="checkbox" id="pC3" onchange="togShow()"> 💳 Maior crédito no seu bolso</label>
         </div>
 
@@ -232,19 +232,19 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:
         <div class="refine">
           <h3>Não ficou ideal? 🤔</h3>
           <p>Escreva o que o cliente gostaria de mudar e a IA refaz a proposta.</p>
-          <textarea id="feedback" placeholder="Ex: a parcela ficou alta demais / queria um crédito maior / quero contemplar mais rápido / prazo menor"></textarea>
+          <textarea id="feedback" placeholder="Ex: a parcela ficou alta demais / queria um crédito maior / quero um lance mais competitivo / prazo menor"></textarea>
           <div class="chips" id="chips"></div>
           <div class="nav"><span></span><button class="btn prim" onclick="refinar()">🔄 Refazer proposta</button></div>
         </div>
         <div class="actions"><button class="btn ghost" onclick="abrirManual('results')">✏️ Montar manualmente</button><button class="btn prim" onclick="window.print()">🖨️ Imprimir / PDF</button><button class="btn ghost" onclick="reiniciar()">↺ Nova simulação</button></div>
-        <div class="foot">Valores com as fórmulas oficiais do Simulador Estruturado Itaú (taxa total 16% até confirmação; proteção 0,09560%/mês no imóvel e 0,04700%/mês em auto, sobre a categoria). Só grupos COM vagas. Contemplação depende de sorteio ou lance em assembleia. <span id="fontemeta"></span></div>
+        <div class="foot">Valores estimados com as regras do Simulador Estruturado Itaú (taxa total 16% até confirmação; proteção 0,09560%/mês no imóvel e 0,04700%/mês em auto, sobre a categoria). Só grupos COM vagas. Contemplação depende de sorteio ou lance em assembleia; a liberação do crédito passa pela análise de crédito do Itaú. <span id="fontemeta"></span></div>
       </div>
      </div>
     </div>
     <div id="manual">
       <button class="btn ghost" onclick="fecharManual()">← Voltar</button>
       <h2 style="font-size:22px;margin:16px 0 4px">🛠️ Montar proposta manualmente</h2>
-      <p style="color:var(--mut);font-size:13px;margin-bottom:6px">Escolha grupos com vaga, o crédito, a quantidade de cotas e se a carta entra como <b>lance livre</b> ou <b>fixo</b>. A IA calcula a probabilidade.</p>
+      <p style="color:var(--mut);font-size:13px;margin-bottom:6px">Escolha grupos com vaga, o crédito, a quantidade de cotas e se a carta entra como <b>lance livre</b> ou <b>fixo</b>. A IA compara seu lance com o histórico do grupo.</p>
       <div class="minilbl">Tipo de bem</div>
       <div class="toggle" id="mTipo"><button data-v="Imóvel" class="sel" onclick="mSelTipo(this)">🏠 Imóvel</button><button data-v="Rodas" onclick="mSelTipo(this)">🚗 Automóvel</button></div>
       <div class="artbanner" id="artManual"></div>
@@ -531,22 +531,22 @@ function numero(v){if(!v)return 0;return parseFloat((''+v).replace(/[^\d,]/g,'')
 ['credito','parcela','lance','mRecurso'].forEach(id=>{const e=document.getElementById(id);if(e)e.addEventListener('input',()=>{e.value=maskMoeda(e.value);});});
 document.getElementById('nome').addEventListener('keydown',e=>{if(e.key==='Enter')next(0);});
 function brl(v){return 'R$ '+(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
-function pct(v){return (v*100).toFixed(1)+'%';}
+function pct(v){return ((v||0)*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';}
 function modStats(p){let lct=0,llance=0,lmed=0,fct=0;p.legs.forEach(l=>{if(l.modalidade==='fixo'){fct+=l.ct;}else{lct+=l.ct;llance+=l.lance;lmed=Math.max(lmed,l.med||0);}});return {lct,llancePct:lct?llance/lct:0,lmed,fct,hasL:lct>0,hasF:fct>0};}
 function velocidade(p){const s=modStats(p);
-  if(s.hasF&&!s.hasL)return 'depende de sorteio';
-  if(s.hasF&&s.hasL)return 'moderada';
+  if(s.hasF&&!s.hasL)return 'fila do lance fixo';
+  if(s.hasF&&s.hasL)return 'livre + fixo';
   const mg=p.lancePct-(p.medWorst||0);
-  return (p.mxWorst&&p.lancePct>=p.mxWorst)?'muito rápida':(mg>=0.05?'rápida':(mg>=-0.005?'moderada':'depende de sorteio'));}
+  return (p.mxWorst&&p.lancePct>=p.mxWorst)?'acima do maior contemplado':(mg>=0.05?'acima da média':(mg>=-0.005?'perto da média':'abaixo da média'));}
 function tagChance(p,o){const s=modStats(p);
-  if(s.hasF&&!s.hasL)return '<span class="tag low">chance baixa (lance fixo)</span>';
-  if(s.hasF&&s.hasL)return '<span class="tag mid">chance média (livre + fixo)</span>';
+  if(s.hasF&&!s.hasL)return '<span class="tag low">lance fixo · disputa na fila do fixo</span>';
+  if(s.hasF&&s.hasL)return '<span class="tag mid">lance livre + fixo</span>';
   const m=p.lancePct-(p.medWorst||0);
   if(!p.medWorst)return '<span class="tag mid">sem histórico</span>';
-  if(p.mxWorst&&p.lancePct>=p.mxWorst)return '<span class="tag ok">chance excelente</span>';
-  if(m>=0.05)return '<span class="tag ok">chance alta</span>';
-  if(m>=-0.03)return '<span class="tag mid">chance média</span>';
-  return '<span class="tag low">chance baixa</span>';}
+  if(p.mxWorst&&p.lancePct>=p.mxWorst)return '<span class="tag ok">lance acima do maior contemplado (histórico)</span>';
+  if(m>=0.05)return '<span class="tag ok">lance acima da média do grupo</span>';
+  if(m>=-0.03)return '<span class="tag mid">lance perto da média do grupo</span>';
+  return '<span class="tag low">lance abaixo da média do grupo</span>';}
 function legsHTML(p){return '<div class="legs">'+p.legs.map(l=>
   `<div class="leg">Grupo <b>${l.g.grupo}</b> · <b>${l.cotas}</b>×${brl(l.cu)} · prazo <b>${l.prazo}m</b> · vagas ${l.vagas}`+
   (l.modalidade?`<span class="lmod ${l.modalidade}">${l.modalidade}</span>`:'')+
@@ -570,7 +570,7 @@ function card(p,o){o=o||{};const vel=velocidade(p);
       <div><span class="l">Lance ofertado</span><b class="o">${brl(p.lance)} (${pct(p.lancePct)})</b></div>
       <div><span class="l">Crédito total</span><b>${brl(p.ct)}</b></div>
       <div><span class="l">Recurso do bolso</span><b>${brl(p.ownCash!=null?p.ownCash:p.RP)}</b></div>
-      <div><span class="l">Velocidade</span><b>${vel}</b></div>
+      <div><span class="l">Seu lance × histórico</span><b>${vel}</b></div>
     </div>
     ${legsHTML(p)}
     ${temRed(p)?`<div class="note" style="background:rgba(56,189,248,.10);border:1px solid rgba(56,189,248,.28)">🔻 <b>Parcela reduzida</b> em ${p.nRed} de ${p.legs.length} carta(s) até a contemplação — cheia seria <b>${brl(p.pCheiaCom)}</b>. Depois de contemplar a parcela sobe (veja "Parcela DEPOIS").</div>`:''}
@@ -600,25 +600,25 @@ function gerar(st,ajuste){
     if(r&&r.longe){const a=r.alvoDesejado,tetoP=isFinite(F.parcelaMax)?F.parcelaMax*1.3:Infinity;let comp='';
       if(a){const precisaLance=a.extra>a.ct*0.02,precisaParcela=a.parcela>tetoP;
         if(precisaLance)comp=`Para tirar os ${brl(F.desejado)}, o lance precisaria ser ~<b>${brl(a.lanceNec)}</b> — cerca de <b>${brl(a.extra)}</b> a mais de recursos próprios (além do embutido)`+(precisaParcela?`, e a parcela subiria para ~<b>${brl(a.parcela)}</b>/mês`:'')+`.`;
-        else if(precisaParcela)comp=`O crédito de ${brl(F.desejado)} <b>cabe no seu lance</b>, mas a parcela ficaria em ~<b>${brl(a.parcela)}</b>/mês (acima do seu limite). Para caber na sua parcela, o máximo com alta chance é <b>${brl(r.liq)}</b> — ou aumente a parcela para chegar mais perto.`;}
-      note=`<div class="faltam">⚠️ <b>Os ${brl(F.desejado)} não saem rápido com este lance/parcela.</b><br>O mais perto viável com alta chance é <b>${brl(r.liq)}</b> (lance ${pct(r.lancePct)}, parcela ${brl(r.pIniCom)}). ${comp}</div>`;}
-    else{note=`Grupo <b>rodado</b> (média baixa): oferta ~<b>${brl(r?r.lance:0)}</b> de lance e recebe <b>${brl(r?r.liq:0)}</b> líquido — alavancagem real, sem depender de sorteio.`;}
-    g+=add(r,{scen:'rapida',badge:'⚡ Contemplação rápida',bcls:'b1',dest:true,note});}
+        else if(precisaParcela)comp=`O crédito de ${brl(F.desejado)} <b>cabe no seu lance</b>, mas a parcela ficaria em ~<b>${brl(a.parcela)}</b>/mês (acima do seu limite). Para caber na sua parcela, o maior crédito com lance acima da média é <b>${brl(r.liq)}</b> — ou aumente a parcela para chegar mais perto.`;}
+      note=`<div class="faltam">⚠️ <b>Com este lance e esta parcela, ${brl(F.desejado)} fica abaixo da média de lance dos grupos.</b><br>O crédito mais próximo com lance acima da média é <b>${brl(r.liq)}</b> (lance ${pct(r.lancePct)}, parcela ${brl(r.pIniCom)}). ${comp}</div>`;}
+    else{note=`Grupo com <b>média de lance mais baixa</b>: oferta ~<b>${brl(r?r.lance:0)}</b> de lance e recebe <b>${brl(r?r.liq:0)}</b> líquido — lance é oferta: o resultado depende de cada assembleia.`;}
+    g+=add(r,{scen:'rapida',badge:'⚡ Lance livre · melhor posição no histórico',bcls:'b1',dest:true,note});}
   if(F.show.mix){const m=propostaMix(F);
     if(m){const comp=`${m.nLivre} carta(s) no lance livre + ${m.nFixo} no lance fixo`;
       g+=add(m,{scen:'mix',badge:'🧩 Mix lance livre + fixo',bcls:'b4',
-        note:`<b>${comp}</b>. A parte livre é dimensionada para <b>bater a fila</b> (alta chance) com seu lance; o restante entra no <b>lance fixo</b> em grupos mais novos (maior prazo) — isso derruba o lance total e a parcela. Custo do bolso: <b>${brl(m.ownCash)}</b>.`});}}
+        note:`<b>${comp}</b>. A parte livre é dimensionada para ficar <b>acima da média de lance recente</b> com seu lance; o restante entra no <b>lance fixo</b> em grupos mais novos (maior prazo) — isso derruba o lance total e a parcela. Custo do bolso: <b>${brl(m.ownCash)}</b>.`});}}
   if(F.show.fixo){const f=propostaFixo(F);
     if(f)g+=add(f,{scen:'fixo',badge:'📌 100% lance fixo',bcls:'b5',fixo:true,
       note:`${f.legs.length} carta(s) no lance fixo (40%) em grupos de <b>maior prazo</b> para a parcela ficar menor. Disputa na fila do lance fixo.`});}
   if(F.show.ideal){const id=cenIdeal(F.desejado,F.RP,F.parcelaMax,F.aba);
-    if(id.p)g+=add(id.p,{scen:'ideal',badge:'✨ Recomendação ideal da IA',bcls:'bideal',dest:true,
-      sub:'Maior crédito que cabe na parcela e que você tira com o lance atual — contemplação '+velocidade(id.p)+'.'});}
+    if(id.p)g+=add(id.p,{scen:'ideal',badge:'✨ Sugestão da IA',bcls:'bideal',dest:true,
+      sub:'Maior crédito que cabe na parcela com o lance atual — seu lance fica '+velocidade(id.p)+' do grupo.'});}
   if(F.show.c2){const s2=cen2(F.desejado,F.RP,F.aba);
     if(s2){const falta=Math.max(0,s2.rpNeed-F.RP);
       g+=add(s2,{scen:'c2',badge:'🎯 Crédito desejado',bcls:'b2',note:falta>0
-        ?`<div class="faltam">Para alta chance neste crédito o lance ideal é <b>${brl(s2.rpNeed)}</b> → <b>faltam ${brl(falta)}</b>.</div>`
-        :`<div class="tem">Seu lance já tira esse crédito com alta chance! 🎉</div>`});}}
+        ?`<div class="faltam">Para ficar acima da média de lance neste crédito, o lance seria <b>${brl(s2.rpNeed)}</b> → <b>faltam ${brl(falta)}</b>.</div>`
+        :`<div class="tem">Seu lance está acima da média recente deste grupo. A contemplação depende das ofertas de cada assembleia.</div>`});}}
   if(F.show.c3){const s3=cen3(F.desejado,F.RP,F.parcelaMax,F.aba);
     if(s3)g+=add(s3,{scen:'c3',badge:'💳 No seu bolso',bcls:'b3',note:`Maior crédito mantendo a parcela em até ${brl(F.parcelaMax)}.`});}
   document.getElementById('cards').innerHTML=g||'<div class="empty">Sem grupos com vaga compatíveis. Ajuste os filtros ao lado (aumente a parcela/lance ou o prazo).</div>';
@@ -723,12 +723,12 @@ function onTaxa(){const tx=numero(document.getElementById('dTaxa').value)/100;
   const fr=(DFR_TOUCH&&raw!=='')?numero(raw)/100:(raw!==''?numero(raw)/100:null);
   const p=recompute(CHOSEN.parts,tx,fr);
   const frTxt=fr==null?frDe(CHOSEN.parts.map(x=>x.g)).map(f=>pct(f)).join(' / ')+' (da Guia)':pct(fr);
-  document.getElementById('dTaxaInfo').innerText='Categoria = crédito × (1 + '+(tx*100).toFixed(2)+'% + '+frTxt+')';
+  document.getElementById('dTaxaInfo').innerText='Categoria = crédito × (1 + '+(tx*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% + '+frTxt+')';
   document.getElementById('dCard').innerHTML=card(p,{badge:CHOSEN.badge,bcls:CHOSEN.bcls,cls:CHOSEN.cls,dest:CHOSEN.dest,fixo:CHOSEN.fixo,noBtn:true});}
 function voltar(){document.getElementById('detalhe').style.display='none';
   document.getElementById('results').style.display='block';document.getElementById('results').classList.add('on');}
 /* feedback */
-const CHIPS=['quero parcela reduzida','Parcela ficou alta','Quero crédito maior','Quero contemplar mais rápido','Prazo menor','Tirar o seguro'];
+const CHIPS=['quero parcela reduzida','Parcela ficou alta','Quero crédito maior','Quero um lance mais competitivo','Prazo menor','Tirar o seguro'];
 function renderChips(){document.getElementById('chips').innerHTML=CHIPS.map(c=>`<span class="chip" onclick="addChip('${c}')">${c}</span>`).join('');}
 function addChip(t){const f=document.getElementById('feedback');f.value=(f.value?f.value+'. ':'')+t;f.focus();}
 function refinar(){const txt=(document.getElementById('feedback').value||'').toLowerCase();if(!txt.trim())return shake('feedback');
@@ -769,7 +769,7 @@ function mTaxaChg(){MANUAL.taxa=numero(document.getElementById('mTaxa').value)/1
   mTaxaInfoUpd();mFundoGuiaHint();renderManual();mPreviewRed();}
 function mTaxaInfoUpd(){const el=document.getElementById('mTaxaInfo');if(!el)return;
   const frTxt=MANUAL.fr==null?(frDe(mGruposEmUso()).map(f=>pct(f)).join(' / ')||'—')+' (da Guia)':pct(MANUAL.fr);
-  el.innerText='Categoria = crédito × (1 + '+(MANUAL.taxa*100).toFixed(2)+'% + '+frTxt+')';}
+  el.innerText='Categoria = crédito × (1 + '+(MANUAL.taxa*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'% + '+frTxt+')';}
 function mGruposEmUso(){const gs=MANUAL.items.map(it=>grupoByItem(it)).filter(g=>g);
   if(!gs.length){const g=mGrupoSel();if(g)gs.push(g);}
   return gs;}

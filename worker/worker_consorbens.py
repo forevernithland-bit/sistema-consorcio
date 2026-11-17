@@ -144,7 +144,8 @@ def marcar(sb: Client, pid, **campos):
 
 
 # fallback fixo — vale mesmo se o robo_config.toml não parsear.
-_PRIO_FIXA = {"LANCE": 10, "BOLETO": 10, "PLANEJAR_SIMULACAO": 40,
+# CONFERIR_GRUPOS = 30: tem gente esperando na tela do simulado → passa na frente das coletas
+_PRIO_FIXA = {"LANCE": 10, "BOLETO": 10, "CONFERIR_GRUPOS": 30, "PLANEJAR_SIMULACAO": 40,
               "COLETA_GRUPOS": 50, "COLETA_ASSEMBLEIAS": 50,
               "COLETA_TABELAS": 50, "RELATORIO_COMISSAO": 60, "EXPLORAR_NEWCON": 70}
 # Erro técnico volta pra fila sozinho quando o robô liga — mas no máximo até aqui.
@@ -643,6 +644,21 @@ def h_coleta_assembleias(sb, pedido, ctx, cfg):
     return _fechar_fila(sb, pid, r)
 
 
+def h_conferir_grupos(sb, pedido, ctx, cfg):
+    """CONFERIR_GRUPOS — o Simulador Consorbens pede na hora do simulado: confere vaga e/ou
+    assembleia SÓ dos grupos que apareceram na simulação (payload {"vagas": [...],
+    "assembleias": [...]}). O ERP mostra "Aguarde, atualizando grupos…" e recarrega quando
+    esta tarefa vira SUCESSO/ERRO."""
+    pid = pedido["id"]
+    prio = _prio_pedido(pedido, cfg)
+    payload = pedido.get("payload") or {}
+    marcar(sb, pid, status="PROCESSANDO", iniciado_em=agora_iso())
+    r = handlers_coleta.conferir_grupos(
+        sb, ctx, _reabrir_holder["fn"], vagas=payload.get("vagas"),
+        assembleias=payload.get("assembleias"), ceder_cb=_ceder_cb_factory(sb, cfg, prio))
+    return _fechar_fila(sb, pid, r)
+
+
 def h_coleta_tabelas(sb, pedido, ctx, cfg):
     pid = pedido["id"]
     payload = pedido.get("payload") or {}
@@ -795,6 +811,7 @@ HANDLERS = {
     "RELATORIO_COMISSAO": h_relatorio_comissao,
     "COLETA_GRUPOS": h_coleta_grupos,
     "COLETA_ASSEMBLEIAS": h_coleta_assembleias,
+    "CONFERIR_GRUPOS": h_conferir_grupos,
     "COLETA_TABELAS": h_coleta_tabelas,
     "BAIXAR_GMAIL_YAMAHA": h_baixar_gmail,
     "BAIXAR_GMAIL_ITAU": h_baixar_gmail,
@@ -806,7 +823,7 @@ HANDLERS = {
 }
 # handlers que o supervisor abre a sessão Newcon ANTES de chamar.
 # RELATORIO_COMISSAO fica de fora: ele abre e fecha o SEU próprio navegador.
-PRECISA_NEWCON = {"LANCE", "BOLETO", "COLETA_GRUPOS", "COLETA_ASSEMBLEIAS",
+PRECISA_NEWCON = {"LANCE", "BOLETO", "COLETA_GRUPOS", "COLETA_ASSEMBLEIAS", "CONFERIR_GRUPOS",
                   "RELATORIO_COMISSAO", "EXPLORAR_NEWCON"}   # todos na MESMA janela
 
 _reabrir_holder = {"fn": None}   # o loop principal injeta a função de reabrir o Newcon

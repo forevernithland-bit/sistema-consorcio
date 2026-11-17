@@ -73,6 +73,22 @@ def situacao(sb, grupos):
     return out
 
 
+def planos_alvo(alvo, planos_extra=None):
+    """{prod_in: {cod_plano,...}} dos grupos a conferir: o plano da base + todos os planos
+    já vistos do grupo (grupos_yamaha.planos) + extras. Usado aqui e no CONFERIR_GRUPOS."""
+    so_planos = {}
+    for s in alvo:
+        for r in s["linhas"]:
+            p = PROD_IN.get(r.get("tipo_bem"))
+            if not p:
+                continue
+            cods = [r.get("plano_codigo")] + list((r.get("planos") or {}).keys()) + list(planos_extra or [])
+            for c in cods:
+                if c:
+                    so_planos.setdefault(p, set()).add(CG._cod(c))
+    return so_planos
+
+
 def conferir(sb, grupos, forcar=False, so_ver=False, visivel=True, planos_extra=None):
     """planos_extra = códigos de plano a tentar além dos da base (ex.: '184,185')."""
     sit = situacao(sb, grupos)
@@ -85,18 +101,8 @@ def conferir(sb, grupos, forcar=False, so_ver=False, visivel=True, planos_extra=
               f"`robo_yamaha.py --so-grupos --salvar` ou cadastre o grupo pelo Simulador.")
     if so_ver or not alvo:
         return sit
-    so_planos = {}
-    for s in alvo:
-        for r in s["linhas"]:
-            p = PROD_IN.get(r.get("tipo_bem"))
-            if not p:
-                continue
-            # o grupo pode vender por mais de um plano (e o plano antigo pode sair de venda):
-            # tenta o plano da base + todos os planos já vistos (grupos_yamaha.planos) + os extras
-            cods = [r.get("plano_codigo")] + list((r.get("planos") or {}).keys()) + list(planos_extra or [])
-            for c in cods:
-                if c:
-                    so_planos.setdefault(p, set()).add(CG._cod(c))
+    # o grupo pode vender por mais de um plano (e o plano antigo pode sair de venda)
+    so_planos = planos_alvo(alvo, planos_extra)
     if not so_planos:
         print("  ! nenhum plano de venda conhecido para os grupos a conferir.")
         return sit

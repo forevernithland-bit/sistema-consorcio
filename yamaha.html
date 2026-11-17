@@ -217,8 +217,10 @@ body{
 .resumo-acoes{display:none;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:12px;}
 .resumo-acoes.show{display:flex;}
 .resumo-acoes button{flex:1;max-width:280px;min-width:180px;padding:13px 18px;border:none;border-radius:12px;font-weight:800;font-size:14px;cursor:pointer;color:#fff;transition:.18s;}
-.btn-whats{background:linear-gradient(135deg,#25d366,#128c4b);}
-.btn-pdf{background:linear-gradient(135deg,#ef4444,#b91c1c);}
+/* auditoria 16/11/2026: verde mais escuro (texto branco legível) e PDF em teal da marca (vermelho = erro) */
+.btn-whats{background:linear-gradient(135deg,#16a34a,#0f7a3e);}
+.btn-pdf{background:linear-gradient(135deg,#17544b,#0f3a35);}
+.resumo-acoes .cbx-btn{color:#2b1700 !important;}
 .resumo-acoes button:hover{filter:brightness(1.06);transform:translateY(-1px);}
 
 /* Modal genérico */
@@ -1227,7 +1229,7 @@ resultado.innerHTML=`
       <div class="proposta-pessoal-bottom" id="ppBottom"></div>
     </div>
     <div class="proposta-disc">
-      Simulado com valores aproximados · não é garantia de contemplação
+      Simulação com valores aproximados. Não é garantia de contemplação; a liberação do crédito depende da análise de crédito da Yamaha.
     </div>
     <div class="proposta-rodape">
       <b>CONSORBENS</b> · Consórcio de veículos e imóveis<br>
@@ -1715,7 +1717,7 @@ function montarInfoGrupo(g,plano,resumo){
   }
   body+='</div>';
   if(resumo && (resumo.de||resumo.ate)){
-    body+=`<div class="ig-foot">Assembleias analisadas: ${resumo.assembleias_analisadas||0} · período ${resumo.de||'—'} → ${resumo.ate||'—'}</div>`;
+    body+=`<div class="ig-foot">Assembleias analisadas: ${resumo.assembleias_analisadas||0} · período ${_dBR(resumo.de)} → ${_dBR(resumo.ate)}</div>`;
   }
   box.innerHTML =
     `<div class="ig-header"><h4>ℹ️ Grupo ${g.grupo} <span class="badge-tipo">${tipoLabel}</span></h4>`+
@@ -1839,7 +1841,8 @@ function setAba(n){
 
 function _esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function _brl(v){ v=parseFloat(v); if(isNaN(v)) return '—'; return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
-function _pct(v){ v=parseFloat(v); if(isNaN(v)||v===0) return '—'; return v.toFixed(4).replace(/\.?0+$/,'')+'%'; }
+function _pct(v){ v=parseFloat(v); if(isNaN(v)||v===0) return '—'; return v.toLocaleString('pt-BR',{maximumFractionDigits:2})+'%'; }
+function _dBR(s){ const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(s||'')); return m?m[3]+'/'+m[2]+'/'+m[1]:(s||'—'); }
 function _num(v){ return (v==null||v==='')?'—':v; }
 function _dtBase(iso){
   if(!iso) return '—';
@@ -2065,7 +2068,7 @@ function _pintaGrupos(){
       _brl(g.credito),
       _pill((g.vagas||0)>0, _num(g.vagas)+' vagas', 'sem vaga','vaga','semvaga'),
       _brl(g.parcela),
-      (g.taxa!=null? (+g.taxa).toFixed(2)+'%':'—'),
+      (g.taxa!=null? (+g.taxa).toLocaleString('pt-BR',{maximumFractionDigits:2})+'%':'—'),
       _esc(g.prox_assembleia||'—'),
       (g.prazo_restante!=null && g.prazo_total!=null? g.prazo_restante+'/'+g.prazo_total : '—'),
       _pct(g.lance_medio),
@@ -2121,7 +2124,7 @@ function _pintaResumo(){
     .map(r=>[
       _esc(r.grupo), _prod(r.tipo_bem),
       _num(r.assembleias_analisadas),
-      _esc(r.de||'—')+' → '+_esc(r.ate||'—'),
+      _esc(_dBR(r.de))+' → '+_esc(_dBR(r.ate)),
       _pct(r.lance_livre_medio_periodo),
       (r.lance_livre_min_periodo? _pct(r.lance_livre_min_periodo)+' – '+_pct(r.lance_livre_max_periodo):'—'),
       _pct(r.lance_fixo_medio_periodo),
@@ -2457,8 +2460,8 @@ function gerarPropostaEstr(){
         </div>
         <div class="proposta-pessoal-bottom pp-bottom" style="display:none"></div>
       </div>
-      <div class="proposta-disc">Simulado com valores aproximados · não é garantia de contemplação</div>
-      <div class="proposta-rodape"><b>CONSORBENS</b> · Consórcio de veículos e imóveis<br>www.consorbens.com</div>
+      <div class="proposta-disc">Simulação com valores aproximados. Não é garantia de contemplação; a liberação do crédito depende da análise de crédito da Yamaha.</div>
+      <div class="proposta-rodape"><b>CONSORBENS</b> · Consórcio de veículos e imóveis<br>consorbens.com.br · (31) 99894-2219</div>
     </div>
   </div>`;
   document.getElementById('resumoAcoesEstr').classList.add('show'); _estrEm=Date.now();

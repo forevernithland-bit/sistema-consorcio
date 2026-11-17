@@ -276,6 +276,17 @@ html[data-cbx="itau_ia"] .field::placeholder{color:#4f7a73}
 html[data-cbx="itau_ia"] .foot{color:var(--cb-tx3)}
 html[data-cbx="itau_ia"] .therm .bar,html[data-cbx="itau_ia"] .mitem{background:var(--cb-field)}
 html[data-cbx="itau_ia"] .fbtn{background:var(--cb-s2)}
+/* auditoria 16/11/2026 — progresso aceso, botão escolhido visível, celular sem rolagem lateral */
+html[data-cbx="itau_ia"] .dot.on{background:linear-gradient(90deg,var(--cb-or),var(--cb-or2))}
+html[data-cbx="itau_ia"] .toggle button.sel,html[data-cbx="itau_ia"] .sbtipo button.sel{background:rgba(246,147,2,.16);border-color:var(--cb-or);color:var(--cb-or2)}
+html[data-cbx="itau_ia"] .taxbox{flex-wrap:wrap}
+html[data-cbx="itau_ia"] .taxbox span{flex:1 1 220px;min-width:0;overflow-wrap:anywhere}
+html[data-cbx="itau_ia"] .addbtn{background:linear-gradient(135deg,var(--cb-or2),var(--cb-or));color:#2b1700}
+html[data-cbx="itau_ia"] .choose{white-space:nowrap}
+@media(max-width:620px){html[data-cbx="itau_ia"] .btn{min-width:0;white-space:normal;flex:1 1 auto}}
+/* Itaú Manual: modal (Lembretes) é branco → texto escuro (estava claro sobre branco, ilegível) */
+html[data-cbx="itau_manual"] .modal{color:#10302b}
+html[data-cbx="itau_manual"] .modal h2,html[data-cbx="itau_manual"] .modal h3{color:#0f2a2a}
 @media(max-width:620px){html[data-cbx="itau_ia"] .wrap{padding:0 11px}html[data-cbx="itau_ia"] .panel{padding:20px 16px;border-radius:20px}}
 
 /* =====================================================================

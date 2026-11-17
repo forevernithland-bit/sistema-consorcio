@@ -24,10 +24,23 @@ import statistics
 import streamlit as st
 import streamlit.components.v1 as components
 
+from modulos import simuladores_temas as _temas
+
 HUB_MENU = "🧮 Simuladores"
 
 # id, permissão (seguranca.PERMISSOES), rótulo, ícone, descrição
 OPCOES = [
+    # 16/11/2026: simulador universal — cruza Yamaha (robô Newcon) + Itaú (Guia) e devolve card + potencial.
+    # Mostra para quem tem os DOIS simuladores (Yamaha e Itaú IA) liberados.
+    {"id": "consorbens", "perm": "sim_yamaha", "perm_todas": ("sim_yamaha", "sim_itau_v2"),
+     "titulo": "Simulador Consorbens", "ico": "✨",
+     "sub": "Universal · Yamaha + Itaú numa conta só",
+     "adm": "Yamaha + Itaú", "selo": "Universal · IA Consorbens", "img": "imoveis.jpg", "icone": "ia",
+     "destaque": True,
+     "desc": "Nome, produto, crédito líquido, lance e parcela que o cliente aguenta: o sistema cruza "
+             "grupos com vaga, regras de lance e o histórico de contemplação das duas administradoras "
+             "e devolve o comparativo, os cards e a chance de contemplar.",
+     "tags": ["Auto", "Imóvel", "Caminhão", "Moto", "Comparativo"]},
     {"id": "yamaha", "perm": "sim_yamaha", "titulo": "Yamaha", "ico": "🏍️",
      "sub": "Motos, autos, imóveis e pesados · dados do robô Newcon",
      "adm": "Consórcio Yamaha", "selo": "Robô Newcon", "img": "yamaha_moto.jpg", "icone": "moto",
@@ -51,6 +64,11 @@ EM_BREVE = ["Porto Seguro", "Embracon", "Bradesco"]
 PERMS_HUB = {o["perm"] for o in OPCOES}
 
 _ASSETS = os.path.join("assets", "simulador")
+
+
+def _pode(o, perms):
+    p = set(perms or ())
+    return set(o["perm_todas"]) <= p if o.get("perm_todas") else o["perm"] in p
 
 
 def tem_acesso(perms, is_master):
@@ -98,6 +116,16 @@ def _data_br(v):
         return datetime.date.fromisoformat(s).strftime("%d/%m/%Y")
     except ValueError:
         return s
+
+
+def _slug_prod(t):
+    """'Imóvel' / 'Automóvel' / 'Auto' / 'Moto' / 'Caminhão' -> imovel / auto / moto / caminhao."""
+    import unicodedata
+    s = unicodedata.normalize("NFD", str(t or "")).encode("ascii", "ignore").decode().lower()
+    for k in ("imov", "caminh", "moto", "auto", "rodas"):
+        if k in s:
+            return {"imov": "imovel", "caminh": "caminhao", "rodas": "auto"}.get(k, k)
+    return s
 
 
 def _grupos_yamaha(base):
@@ -181,10 +209,7 @@ def _dados_painel(opc, supabase):
 # ------------------------------------------------------------------ #
 # Camada de apresentação injetada no simulador original
 # ------------------------------------------------------------------ #
-_FONTE = ('<link rel="preconnect" href="https://fonts.googleapis.com">'
-          '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
-          '<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800'
-          '&display=swap" rel="stylesheet">')
+_FONTE = _temas.FONTES
 # foto da capa do modo apresentação por produto
 _FOTOS = {"imovel": "casa.jpg", "auto": "auto.jpg", "caminhao": "pesados.jpg", "moto": "yamaha_moto.jpg"}
 # logo da administradora (hero do simulador, cards da tela inicial e capa da apresentação)
@@ -273,60 +298,42 @@ def _camada(pasta, opc, linhas, meta):
         "whats": "(31) 99894-2219", "site": "consorbens.com.br",
         "dif": _diferenciais(pasta, opc),
         "grupos": {l["g"]: l for l in linhas},
+        # grupo MISTO (ex.: Yamaha 9045 vende R7 e Argo): uma linha por produto → o deck usa a do
+        # produto escolhido (antes pegava a última e mostrava "9045 Moto" numa simulação de auto)
+        "grupos_prod": {f'{l["g"]}|{_slug_prod(l.get("tipo"))}': l for l in linhas if l.get("tipo")},
         "meta": {k: meta.get(k) for k in ("adm", "fonte", "atualizado", "erro") if meta.get(k)},
         "fotos": {k: v for k, v in _fotos_uri(pasta).items() if v},
         "logo_adm": _img_data_uri(os.path.join(pasta, _ASSETS, _LOGO_ADM.get(opc, ""))),
     }
+    tema, origem = _temas.tema_atual()
+    ctx["tema"] = tema
     css = _ler(os.path.join(pasta, _ASSETS, "hub_skin.css"))
+    # cartões do cliente (propostas): estilo separado e SEM data-cbx-skin, para o modo
+    # apresentação levar junto (ele copia os <style> do simulador, menos a skin)
+    cartoes = _ler(os.path.join(pasta, _ASSETS, "hub_cartoes.css"))
     js = _ler(os.path.join(pasta, _ASSETS, "hub_apresentacao.js"))
     payload = json.dumps(ctx, ensure_ascii=False, default=str).replace("</", "<\\/")
-    return (_FONTE + '<style data-cbx-skin="1">' + css + "</style>"
+    return (_temas.js_aplicar(tema, origem) + _temas.head_tema()
+            + '<style data-cbx-skin="1">' + css + "</style>"
+            + '<style data-cbx-cartoes="1">' + cartoes + "</style>"
             + "<script>window.CBX_CTX=" + payload + ";</script><script>" + js + "</script>")
 
 
 # ------------------------------------------------------------------ #
 # Tela
 # ------------------------------------------------------------------ #
-# Fundo da página na rota "🧮 Simuladores" (aplicado pelo app.py). É o mesmo
-# sistema de cores da tela inicial, da skin e da camada: os iframes têm fundo
-# transparente, então página e simulador se fundem sem emenda.
-FUNDO_PAGINA = """<style>
-.stApp{background:radial-gradient(1100px 520px at 100% -10%,rgba(45,212,191,.10),transparent 60%),
-  radial-gradient(900px 520px at -10% 110%,rgba(246,147,2,.06),transparent 60%),
-  linear-gradient(180deg,#061a17 0%,#0a231f 100%) !important;background-attachment:fixed !important}
-[data-testid="stHeader"]{background:transparent !important}
-.stApp iframe{background:transparent !important;color-scheme:normal}
-</style>"""
-
-_CSS = """<style>
-.hub-ou{font-size:12.5px;color:#8fb0aa;margin:2px 0 4px}
-[class*="st-key-hubsel_"] button{min-height:0 !important;padding:4px 12px !important;border-radius:999px !important;
-  background:#0c2824 !important;border:1px solid #1f4a43 !important;color:#cfe3df !important}
-[class*="st-key-hubsel_"] button:hover{border-color:#2dd4bf !important;color:#fff !important}
-[class*="st-key-hubsel_"] button p{font-size:13px !important}
-.st-key-hub_escolha_raw{position:absolute !important;left:-9999px !important;width:1px !important;height:1px !important;
-  overflow:hidden !important;opacity:0 !important}
-/* barra de troca de administradora: pílulas no mesmo sistema de cores do hub */
-.st-key-hub_seg [data-testid="stWidgetLabel"]{display:none}
-.st-key-hub_seg [role="radiogroup"]{gap:4px;padding:5px;border-radius:999px;background:#0c2824;border:1px solid #1f4a43;
-  width:max-content;max-width:100%;flex-wrap:wrap}
-.st-key-hub_seg button{border:0 !important;border-radius:999px !important;background:transparent !important;color:#cfe3df !important;
-  min-height:0 !important;padding:7px 16px !important;box-shadow:none !important;transition:background .2s,color .2s}
-.st-key-hub_seg button p{font-size:14px !important;font-weight:700 !important;color:inherit !important}
-.st-key-hub_seg button:hover{background:#153a34 !important;color:#fff !important}
-.st-key-hub_seg button[aria-checked="true"]{background:linear-gradient(135deg,#ffb649,#f69302) !important;color:#2b1700 !important;
-  box-shadow:0 10px 22px -12px rgba(246,147,2,.9) !important}
-[data-testid="stColumn"]:has(.st-key-hub_trocar) [data-testid="stVerticalBlock"]{align-items:flex-end}
-.st-key-hub_trocar button{min-height:0 !important;padding:8px 16px !important;border-radius:999px !important;background:transparent !important;
-  border:1px solid #2a5d55 !important;color:#cfe3df !important;width:auto !important}
-.st-key-hub_trocar button:hover{border-color:#2dd4bf !important;color:#fff !important;background:#0c2824 !important}
-.st-key-hub_trocar button p{font-size:13.5px !important;font-weight:700 !important}
-</style>"""
+# Fundo da página na rota "🧮 Simuladores" (aplicado pelo app.py). Os iframes têm
+# fundo transparente, então página e simulador se fundem sem emenda. O tema
+# escolhido (modulos/simuladores_temas.py) é reaplicado pelo render_hub, por cima
+# deste fundo (que é o do tema padrão).
+FUNDO_PAGINA = _temas.FUNDO_PAGINA
 
 
 def render_hub(supabase, pasta, perms, is_master):
-    st.markdown(_CSS, unsafe_allow_html=True)
-    opcoes = [o for o in OPCOES if is_master or o["perm"] in (perms or ())]
+    tema, origem = _temas.tema_atual()
+    st.markdown(_temas.css_pagina(tema) + _temas.CSS_BARRA, unsafe_allow_html=True)
+    _temas.processar_ponte()
+    opcoes = [o for o in OPCOES if is_master or _pode(o, perms)]
     if not opcoes:
         st.warning("🔒 Nenhum simulador liberado para o seu usuário.")
         return
@@ -336,11 +343,11 @@ def render_hub(supabase, pasta, perms, is_master):
         escolha = None
 
     if escolha is None:
-        _tela_inicial(pasta, opcoes, ids)
+        _tela_inicial(pasta, opcoes, ids, tema, origem)
         return
 
     # ---- barra de troca ----
-    c1, c2 = st.columns([5, 1.2], vertical_alignment="center")
+    c1, c3, c2 = st.columns([5, 1, 1.1], vertical_alignment="center")
     with c1:
         nova = st.segmented_control(
             "Simulador", ids, default=escolha, key="hub_seg", label_visibility="collapsed",
@@ -348,12 +355,19 @@ def render_hub(supabase, pasta, perms, is_master):
         if nova and nova != escolha:
             st.session_state["hub_sim"] = nova
             st.rerun()
+    with c3:
+        _temas.render_seletor()
     with c2:
         if st.button("← Início", key="hub_trocar"):
             st.session_state.pop("hub_sim", None)
             st.session_state.pop("hub_seg", None)
             _limpar_ponte()
             st.rerun()
+
+    if escolha == "consorbens":
+        from modulos.simulador_universal import render_universal
+        render_universal(supabase, pasta)
+        return
 
     # o Guia de Grupos agora é uma aba DENTRO do simulador (camada injetada)
     linhas, meta = _dados_painel(escolha, supabase)
@@ -371,6 +385,14 @@ def render_hub(supabase, pasta, perms, is_master):
         except FileNotFoundError:
             st.error("⚠️ itau.html não encontrado no servidor.")
             return
+        # logo da proposta apontava pra um endereço externo que não carrega → usa o logo embutido
+        try:
+            from modulos.yamaha_sim import _logo_data_uri
+            _lg = _logo_data_uri(pasta)
+            if _lg:
+                html = html.replace("https://www.consorbens.com/assets/logo-consorbens-DZ8uSiSJ.png", _lg)
+        except Exception:
+            pass
         components.html(_injetar(html, extra), height=1300, scrolling=True)
 
 
@@ -380,7 +402,7 @@ def render_hub(supabase, pasta, perms, is_master):
 _LABEL_ESCOLHA = "hub_escolha"          # aria-label do campo oculto (o iframe procura por ele)
 _KEY_ESCOLHA = "hub_escolha_raw"
 _KEY_PROC = "_hub_escolha_proc"
-_CAMPOS_CARD = ("id", "titulo", "sub", "selo", "adm", "img", "icone", "desc", "tags")
+_CAMPOS_CARD = ("id", "titulo", "sub", "selo", "adm", "img", "icone", "desc", "tags", "destaque")
 
 
 @st.cache_data
@@ -402,10 +424,10 @@ def _img_data_uri(caminho):
     return _img_cache(caminho, _mtime(caminho))
 
 
-def _html_inicio(pasta, ids):
+def _html_inicio(pasta, ids, tema=None, origem=None):
     """HTML da tela inicial com os dados já injetados. Cada leitura de arquivo é
     cacheada (com mtime); o resultado é determinístico, então o iframe não
-    recarrega entre reruns."""
+    recarrega entre reruns (só quando o tema muda)."""
     base = os.path.join(pasta, _ASSETS)
     opcoes = [{k: o.get(k) for k in _CAMPOS_CARD} for o in OPCOES if o["id"] in ids]
     imgs = {o["img"]: _img_data_uri(os.path.join(base, o["img"])) for o in opcoes if o.get("img")}
@@ -414,11 +436,16 @@ def _html_inicio(pasta, ids):
         if lg and lg not in imgs:
             imgs[lg] = _img_data_uri(os.path.join(base, lg))
         o["logo"] = lg
-    hub = {"opcoes": opcoes, "em_breve": EM_BREVE, "imgs": imgs,
+        if o.get("destaque"):            # card universal: mostra as duas administradoras
+            o["logos"] = []
+            for nome in ("logo_yamaha_h.png", "logo_itau.svg"):
+                imgs.setdefault(nome, _img_data_uri(os.path.join(base, nome)))
+                o["logos"].append(nome)
+    hub ={"opcoes": opcoes, "em_breve": EM_BREVE, "imgs": imgs,
            "logo": _img_data_uri(os.path.join(base, "logo.png"))}
     payload = json.dumps(hub, ensure_ascii=False).replace("</", "<\\/")
     html = _ler(os.path.join(base, "hub_inicio.html"))
-    return html.replace('"__HUB_INICIO__"', payload, 1)
+    return _temas.aplicar_html(html.replace('"__HUB_INICIO__"', payload, 1), tema, origem)
 
 
 def _limpar_ponte():
@@ -426,7 +453,7 @@ def _limpar_ponte():
     st.session_state.pop(_KEY_PROC, None)
 
 
-def _tela_inicial(pasta, opcoes, ids):
+def _tela_inicial(pasta, opcoes, ids, tema=None, origem=None):
     # ponte: o iframe escreve "id|nonce" neste campo oculto e dá Enter
     raw = st.text_input(_LABEL_ESCOLHA, key=_KEY_ESCOLHA, label_visibility="collapsed")
     if raw and raw != st.session_state.get(_KEY_PROC):
@@ -436,8 +463,12 @@ def _tela_inicial(pasta, opcoes, ids):
             st.session_state["hub_sim"] = alvo
             st.rerun()
 
+    _c, c_tema = st.columns([6, 1], vertical_alignment="center")
+    with c_tema:
+        _temas.render_seletor()
+
     altura = 760 if len(opcoes) > 1 else 700
-    components.html(_html_inicio(pasta, tuple(ids)), height=altura, scrolling=False)
+    components.html(_html_inicio(pasta, tuple(ids), tema, origem), height=altura, scrolling=False)
 
     # fallback acessível (se a ponte do iframe não funcionar)
     st.markdown('<div class="hub-ou">Ou escolha aqui:</div>', unsafe_allow_html=True)

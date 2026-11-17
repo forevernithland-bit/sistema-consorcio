@@ -31,3 +31,7 @@ backups/
 # previews locais do simulador
 _preview*.html
 _pv.js
+
+# historicos de conversa do Claude ficam SO no Google Drive (16/11/2026)
+_historico_conversas_claude/
+*.jsonl

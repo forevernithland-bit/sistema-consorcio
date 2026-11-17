@@ -285,7 +285,7 @@
     el.innerHTML = '<div class="gg-top">' + V.map(function (l, i) {
       return '<div class="gg-c' + (i === 0 ? " first" : "") + '" style="animation-delay:' + (i * 50) + 'ms"><span class="rk">#' + (i + 1) + '</span><div class="gn">Grupo ' + esc(l.g) + '</div><div class="tp">' + esc(l.tipo || "—") + "</div>"
         + '<div class="md"><b>' + pct(l.media) + '</b><span>média de lance</span></div><div class="gg-meter"><i style="width:' + Math.max(2, Math.min(100, l.media)) + '%"></i></div>'
-        + '<div class="ln"><i>Menor que ganhou</i><span>' + pct(l.menor) + "</span></div>"
+        + '<div class="ln"><i>Menor lance contemplado</i><span>' + pct(l.menor) + "</span></div>"
         + '<div class="ln"><i>Vagas</i><span>' + (l.vagas == null ? "—" : l.vagas) + "</span></div>"
         + '<div class="ln"><i>Prazo</i><span>' + (l.prazo ? l.prazo + " meses" : "—") + "</span></div>"
         + '<div class="ln"><i>Crédito</i><span>' + faixa(l) + "</span></div>"
@@ -360,8 +360,13 @@
     ["#grupo", "#mGrupo", "#mGrupoManual"].forEach(function (s) { var e = q(s); if (e && vis(e.closest("div") || e) && e.value) cands.push(e.value); });
     var m = /grupo\s*:?\s*0*(\d{3,6})/i.exec(textos || "");
     if (m) cands.unshift(m[1]);
+    var pr = "";
+    try { pr = produtoAtual(textos); } catch (e) { pr = ""; }
+    pr = norm(pr); pr = pr.indexOf("imov") >= 0 ? "imovel" : pr.indexOf("caminh") >= 0 ? "caminhao" : pr.indexOf("moto") >= 0 ? "moto" : pr ? "auto" : "";
     for (var i = 0; i < cands.length; i++) {
       var g = String(cands[i]).replace(/\D/g, "").replace(/^0+/, "");
+      // grupo misto (moto + auto): usa a linha do produto escolhido no simulador
+      if (g && pr && C.grupos_prod && C.grupos_prod[g + "|" + pr]) return C.grupos_prod[g + "|" + pr];
       if (g && C.grupos && C.grupos[g]) return C.grupos[g];
     }
     return null;
@@ -387,6 +392,10 @@
       var s = d.createElement("b"); s.textContent = v || ""; inp.replaceWith(s);
     });
     c.querySelectorAll("button,.actions,.resumo-acoes,.no-apres,details,script").forEach(function (e) { e.remove(); });
+    // Itaú IA: as notas do card são de uso INTERNO do vendedor (quanto falta, custo do bolso...) — não vão pro cliente
+    if (d.documentElement.getAttribute("data-cbx") === "itau_ia") {
+      c.querySelectorAll(".note,.faltam,.tem,.combo-tag,.swapedit,.cbtns").forEach(function (e) { e.remove(); });
+    }
     c.removeAttribute("id"); c.querySelectorAll("[id]").forEach(function (e) { e.removeAttribute("id"); });
     c.style.display = ""; c.style.margin = "0";
     return c.outerHTML;
@@ -552,7 +561,7 @@
     if (n.liquido && n.credito && !somaCotas) steps += '<div class="dk-b-st" data-step><span>Crédito líquido na contemplação<small>valor para a compra, após a análise de crédito da administradora</small></span><b data-count data-dur="1.4">' + esc(n.liquido) + "</b></div>";
     if (n.parcela && n.parcelaPos) steps += '<div class="dk-b-pp" data-step><div><small>Até a contemplação</small><b>' + esc(n.parcela) + '<em>/mês</em></b></div><i>→</i><div class="o"><small>Depois de contemplado</small><b>' + esc(n.parcelaPos) + "<em>/mês</em></b></div></div>";
     return '<div class="dk-s dk-b" data-fx="wipe" data-prop="1"><span' + dA(.05, "dk-eye") + ">Agora, a sua proposta</span>"
-      + "<h2" + dA(.15) + ">" + (X.cli ? primeiro(X.cli) + ", este é o seu crédito" : "Este é o seu crédito") + (somaCotas ? " liberado" : "") + "</h2>"
+      + "<h2" + dA(.15) + ">" + (X.cli ? primeiro(X.cli) + ", este é o seu crédito contratado" : "Seu crédito contratado") + (somaCotas ? " (soma das cotas)" : "") + "</h2>"
       + '<div' + dA(.3, "dk-b-v") + '><b data-count data-delay=".4" data-dur="1.8">' + esc(big) + '</b><i class="dk-b-u"></i></div>'
       + (meta.length ? "<div" + dA(1.9, "dk-b-meta") + ">" + meta.join('<i class="sep">·</i>') + "</div>" : "")
       + steps + (steps ? '<div class="dk-b-dica">▶ avance para revelar</div>' : "") + "<p" + dA(2.2, "dk-rod") + ">Valores aproximados da simulação. " + rodape("") + "</p></div>";
