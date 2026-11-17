@@ -170,7 +170,9 @@ def html_universal(supabase, pasta):
     payload = json.dumps(montar_payload(supabase, pasta), ensure_ascii=False).replace("</", "<\\/")
     from modulos.simuladores_hub import _ler
     html = _ler(os.path.join(pasta, _ASSETS, "universal.html"))
-    return html.replace('"__DADOS_UNIVERSAL__"', payload, 1)
+    html = html.replace('"__DADOS_UNIVERSAL__"', payload, 1)
+    from modulos.simuladores_temas import aplicar_universal   # tema escolhido no hub (16/11/2026)
+    return aplicar_universal(html)
 
 
 # ------------------------------------------------------------------ #
@@ -349,9 +351,27 @@ def _acompanhar(sb):
             pass
         st.rerun(scope="app")
     fase = "O robô está no Newcon conferindo" if est["estado"] == "rodando" else "Pedido enviado ao robô — vai conferir"
-    st.info(f"⏳ **Aguarde, atualizando grupos enquanto o robô atualiza.** {fase}: {_detalhe(est)}. "
-            f"A simulação abaixo já aparece com a base mais recente e se atualiza sozinha quando o robô terminar."
-            + (f"  \n_{est.get('prog')}_" if est.get("prog") else ""), icon=None)
+    c1, c2 = st.columns([5, 1.4], vertical_alignment="center")
+    with c1:
+        st.info(f"⏳ **Aguarde, atualizando grupos enquanto o robô atualiza.** {fase}: {_detalhe(est)}. "
+                f"A simulação abaixo já aparece com a base mais recente e se atualiza sozinha quando o robô terminar. "
+                f"Com pressa? Use a base salva."
+                + (f"  \n_{est.get('prog')}_" if est.get("prog") else ""), icon=None)
+    with c2:
+        if st.button("⚡ Usar base salva", key="univ_base_salva", use_container_width=True,
+                     help="Para de esperar o robô e segue com os dados que já estão no sistema. "
+                          "O robô continua atualizando em segundo plano para a próxima simulação."):
+            usar_base_salva()
+            st.rerun(scope="app")
+
+
+def usar_base_salva():
+    """O usuário está com pressa: para de esperar. A tarefa do robô continua na fila
+    (atualiza a base para as próximas simulações), só não recarrega mais esta tela."""
+    est = st.session_state.get("univ_robo") or {}
+    if est.get("estado") in ("fila", "rodando"):
+        est.update(estado="base_salva", fim=datetime.datetime.now().timestamp())
+        st.session_state["univ_robo"] = est
 
 
 def _mostrar_status(sb):
@@ -375,6 +395,9 @@ def _mostrar_status(sb):
     elif e == "demorou":
         st.info(f"⌛ O robô ainda não terminou de conferir {_detalhe(est)} (pode estar ocupado ou o Newcon não entrou). "
                 f"A simulação usa a base mais recente ({_base_txt(sb)}); a conferência continua na fila.")
+    elif e == "base_salva":
+        st.info(f"⚡ Usando a base salva ({_base_txt(sb)}). O robô continua conferindo {_detalhe(est)} "
+                f"em segundo plano: na próxima simulação os dados já estarão atualizados.")
 
 
 def _robo_para_pagina(est):
@@ -391,11 +414,15 @@ _CSS_PONTE = ("<style>.st-key-univ_conferir_raw{position:absolute !important;lef
 
 def render_universal(supabase, pasta):
     st.markdown(_CSS_PONTE, unsafe_allow_html=True)
-    # ponte: a página escreve "9510,9049|nonce" neste campo oculto e dá Enter
+    # ponte: a página escreve "9510,9049|nonce" (ou "__BASE__|nonce" = botão "Usar base salva"
+    # da faixa do simulador) neste campo oculto e dá Enter
     raw = st.text_input(_LABEL_CONF, key=_KEY_CONF, label_visibility="collapsed")
     if raw and raw != st.session_state.get(_KEY_PROC):
         st.session_state[_KEY_PROC] = raw
-        pedir_conferencia(supabase, raw.split("|")[0].split(","))
+        if raw.startswith("__BASE__"):
+            usar_base_salva()
+        else:
+            pedir_conferencia(supabase, raw.split("|")[0].split(","))
     with st.container():
         _mostrar_status(supabase)
     html = html_universal(supabase, pasta)

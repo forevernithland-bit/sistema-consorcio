@@ -265,6 +265,16 @@ def _presenca_viva():
 if is_logado:
     with st.sidebar:
         _presenca_viva()
+    # 16/11/2026: atualização preliminar — ao logar, pede ao robô (prioridade baixa) o que está
+    # pendente nos grupos Yamaha; lance/boleto/simulado passam na frente (ver modulos/atualizacao_robo.py)
+    if not st.session_state.get("_pre_atualizacao_feita"):
+        st.session_state["_pre_atualizacao_feita"] = True
+        try:
+            from modulos.atualizacao_robo import pre_atualizar_no_login
+            st.session_state["_pre_atualizacao_msg"] = pre_atualizar_no_login(
+                supabase, str(st.session_state.get("usuario_logado") or "ERP"))
+        except Exception:
+            pass
 _online = _status_robo(supabase)
 _titulo = "Robô ligado" if _online else "Robô desligado"
 # CSS da sidebar (modulos/sidebar.py): placeholder no topo, preenchido ao final

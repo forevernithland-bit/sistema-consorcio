@@ -138,6 +138,44 @@ def _matar(pid: int):
         log(f"falha ao matar {pid}: {e}")
 
 
+def _config_sessao() -> tuple[bool, int]:
+    """[sessao_newcon] manter_viva (padrão true), ping_min (padrão 10)."""
+    try:
+        with open(CONFIG, "rb") as f:
+            c = tomllib.load(f).get("sessao_newcon", {})
+        return bool(c.get("manter_viva", True)), int(c.get("ping_min", 10))
+    except Exception:
+        return True, 10
+
+
+PING_MARCA = os.path.join(_AQUI, "logs", "ping_newcon.txt")
+
+
+def _manter_sessao_newcon():
+    """Robô desligado: se o Chrome do Newcon continua aberto, recarrega a home a cada ping_min
+    para a sessão não expirar. Assim, quando o robô voltar, NÃO precisa logar de novo
+    (16/11/2026, pedido do Breno: aproveitar ao máximo o login ativo). Nunca loga daqui."""
+    ativo, minutos = _config_sessao()
+    if not ativo:
+        return
+    try:
+        if (datetime.now().timestamp() - os.path.getmtime(PING_MARCA)) < minutos * 60:
+            return
+    except OSError:
+        pass
+    try:
+        with open(PING_MARCA, "w", encoding="utf-8") as f:
+            f.write(datetime.now().isoformat())
+        py = os.path.join(os.path.dirname(PY_ROBO[0]), "python.exe")
+        r = subprocess.run([py if os.path.exists(py) else "python", "newcon_navegador.py", "--ping"],
+                           cwd=_AQUI, capture_output=True, text=True, timeout=120, creationflags=_SEM_JANELA)
+        res = (r.stdout or "").strip().splitlines()[-1:] or [(r.stderr or "").strip()[-150:]]
+        if "fechado" not in res[0]:
+            log(f"sessão do Newcon (robô desligado): {res[0]}")
+    except Exception as e:
+        log(f"ping do Newcon falhou: {e}")
+
+
 def _subir():
     """Sobe o robô direto no Python 3.14, sem janela, com a saída indo para logs/console.log."""
     try:
@@ -161,6 +199,8 @@ def main():
     pid = _pid_vivo()
     acao, motivo = decidir(hb, crm, coluna, ocupada, sob, minutos, pid)
     log(f"{acao.upper()} — {motivo} (heartbeat {'?' if hb is None else f'{hb:.0f}s'}, pid {pid})")
+    if acao == "nada" and not SIMULAR:
+        _manter_sessao_newcon()
     if SIMULAR or acao in ("ok", "nada"):
         return
     if acao == "desligar":

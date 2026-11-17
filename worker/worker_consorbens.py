@@ -407,6 +407,11 @@ def preparar_newcon(sb: Client, visivel: bool):
         log("Newcon: sessão inválida — logando (1 tentativa só)…")
         try:
             newcon.fazer_login(page, context, login_newcon, senha_newcon)
+            try:
+                import newcon_navegador
+                newcon_navegador.registrar_login("preparar_newcon (navegador próprio)")
+            except Exception:
+                pass
         except Exception as e:
             # Falha no login = senha errada/expirada (ou o Newcon pediu troca).
             # NÃO repete: trava e espera o usuário destravar de propósito.
@@ -655,7 +660,7 @@ def h_conferir_grupos(sb, pedido, ctx, cfg):
     marcar(sb, pid, status="PROCESSANDO", iniciado_em=agora_iso())
     r = handlers_coleta.conferir_grupos(
         sb, ctx, _reabrir_holder["fn"], vagas=payload.get("vagas"),
-        assembleias=payload.get("assembleias"), ceder_cb=_ceder_cb_factory(sb, cfg, prio))
+        assembleias=payload.get("assembleias"), ceder_cb=_ceder_cb_factory(sb, cfg, prio), chave=pid)
     return _fechar_fila(sb, pid, r)
 
 

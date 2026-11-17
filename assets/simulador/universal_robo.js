@@ -23,7 +23,8 @@
     ok:      ["#e4f6ee", "#0b5e3e", "#9fd8bd"],
     offline: ["#fdeceb", "#6d1d18", "#eba4a0"],
     erro:    ["#fdeceb", "#6d1d18", "#eba4a0"],
-    demorou: ["#eef3f7", "#24384a", "#b9c8d6"]
+    demorou: ["#eef3f7", "#24384a", "#b9c8d6"],
+    base_salva: ["#eef3f7", "#24384a", "#b9c8d6"]
   };
   function textoFaixa() {
     var d = R.detalhe ? " (" + R.detalhe + ")" : "";
@@ -34,6 +35,7 @@
       case "offline": return "<b>🔌 Robô desligado:</b> não deu para conferir agora" + d + ". A simulação usa a base mais recente do sistema; confira a vaga antes de fechar.";
       case "erro": return "<b>⚠️ O Newcon não respondeu agora</b>" + d + ". A simulação usa a base mais recente do sistema.";
       case "demorou": return "<b>⌛ O robô ainda não terminou de conferir</b>" + d + ". A simulação usa a base mais recente; a conferência continua na fila.";
+      case "base_salva": return "<b>⚡ Usando a base salva.</b> O robô continua conferindo em segundo plano" + d + "; na próxima simulação os dados já estarão atualizados.";
     }
     return "";
   }
@@ -49,6 +51,15 @@
       d.style.cssText = "margin:4px 0 12px;padding:12px 16px;border-radius:14px;font-size:14px;line-height:1.5;"
         + "background:" + c[0] + ";color:" + c[1] + ";border:1.5px solid " + c[2];
       d.innerHTML = t;
+      if (R.estado === "fila" || R.estado === "rodando") {
+        var b = document.createElement("button");
+        b.type = "button"; b.textContent = "⚡ Usar base salva";
+        b.title = "Para de esperar o robô e segue com os dados que já estão no sistema";
+        b.style.cssText = "display:inline-block;margin-left:10px;margin-top:6px;padding:7px 14px;border-radius:10px;border:0;"
+          + "background:#5c4511;color:#fff;font:inherit;font-weight:800;font-size:13px;cursor:pointer";
+        b.addEventListener("click", function () { b.disabled = true; b.textContent = "Usando a base salva…"; ponte("__BASE__"); });
+        d.appendChild(b);
+      }
       res.insertBefore(d, res.firstChild);
     }
     setTimeout(function () { mexendo = false; }, 0);
@@ -84,15 +95,19 @@
     if (!lista.length) return;
     var chave = lista.join(",");
     if (ss(K_ENV) === chave) return;
+    if (ponte(chave)) ss(K_ENV, chave);
+  }
+  /* escreve no campo oculto do ERP e dá Enter (o Streamlit roda de novo com o valor) */
+  function ponte(valor) {
     try {
-      var P = window.parent, doc = P && P.document; if (!doc || P === window) return;
-      var inp = doc.querySelector('input[aria-label="univ_conferir"]'); if (!inp) return;
-      ss(K_ENV, chave);
+      var P = window.parent, doc = P && P.document; if (!doc || P === window) return false;
+      var inp = doc.querySelector('input[aria-label="univ_conferir"]'); if (!inp) return false;
       var setter = Object.getOwnPropertyDescriptor(P.HTMLInputElement.prototype, "value").set;
-      setter.call(inp, chave + "|" + Date.now().toString(36));
+      setter.call(inp, valor + "|" + Date.now().toString(36));
       inp.dispatchEvent(new P.Event("input", { bubbles: true }));
       inp.dispatchEvent(new P.KeyboardEvent("keydown", { key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true }));
-    } catch (e) { /* fora do ERP (arquivo solto): só não pede ao robô */ }
+      return true;
+    } catch (e) { return false; /* fora do ERP (arquivo solto): só não pede ao robô */ }
   }
 
   var res = $("res");

@@ -1,0 +1,71 @@
+/* =====================================================================
+   Cartões do CLIENTE dos simuladores antigos (proposta Yamaha, relatório
+   estruturado, fluxo e proposta Itaú manual). Injetado pela camada
+   (modulos/simuladores_hub.py -> _camada) SEM data-cbx-skin, para o modo
+   apresentação levar junto. Os cartões continuam CLAROS (viram PNG/PDF):
+   do tema só vêm o cabeçalho, os acentos e a faixa do crédito líquido.
+   Tokens: --k-pc-* (modulos/simuladores_temas.py). Só aparência.
+   ===================================================================== */
+
+/* ---------- YAMAHA ---------- */
+[data-cbx="yamaha"] .summary,[data-cbx="yamaha"] .fluxo-box{
+  --navy:var(--k-pc-ink);--teal:var(--k-pc-acc);--teal-d:var(--k-pc-acc);--teal-l:var(--k-pc-soft-ln);--ok:#047857;
+  --field-line:#e4e8ef;--ink:#0f172a;
+  background:#fff;color:#0f172a;border:1px solid var(--k-ln)}
+[data-cbx="yamaha"] .summary .proposta-head{background:var(--k-pc-hd);color:#fff}
+[data-cbx="yamaha"] .summary .proposta-head img{background:#fff}
+[data-cbx="yamaha"] .summary .proposta-head .ph-fallback{background:#fff;color:var(--k-pc-ink)}
+[data-cbx="yamaha"] .summary .proposta-titulo{color:var(--k-pc-hd-tx2)}
+[data-cbx="yamaha"] .summary .proposta-titulo b{color:#fff}
+[data-cbx="yamaha"] .summary .proposta-pessoal-top{background:var(--k-pc-soft);color:var(--k-pc-acc);border-bottom:1px solid var(--k-pc-soft-ln)}
+[data-cbx="yamaha"] .summary .proposta-pessoal-top .pp-rotulo{color:var(--k-pc-acc)}
+[data-cbx="yamaha"] .summary .proposta-pessoal-top b{color:var(--k-pc-ink)}
+[data-cbx="yamaha"] .summary .proposta-img-label{background:var(--k-pc-tag)}
+[data-cbx="yamaha"] .summary .proposta-credito{background:linear-gradient(180deg,var(--k-pc-soft),#fff)}
+[data-cbx="yamaha"] .summary .proposta-credito span{color:var(--k-pc-acc)}
+[data-cbx="yamaha"] .summary .proposta-credito b{color:var(--k-pc-ink)}
+[data-cbx="yamaha"] .summary .pg-item{background:#f7f8fb;border-color:#e4e8ef}
+[data-cbx="yamaha"] .summary .pg-item span{color:#4a5568}
+[data-cbx="yamaha"] .summary .pg-item b{color:#0f172a}
+[data-cbx="yamaha"] .summary .pg-item b.pg-pay{color:var(--k-pc-acc)}
+[data-cbx="yamaha"] .summary .pg-item.d-pos{background:var(--k-pc-soft);border-color:var(--k-pc-soft-ln)}
+[data-cbx="yamaha"] .summary .pg-item.d-pos b{color:var(--k-pc-acc)}
+[data-cbx="yamaha"] .summary .proposta-liquido{background:var(--k-pc-liq);color:var(--k-pc-liq-on)}
+[data-cbx="yamaha"] .summary .proposta-liquido span{color:var(--k-pc-liq-on2)}
+[data-cbx="yamaha"] .summary .proposta-pessoal-bottom{color:#0f172a}
+[data-cbx="yamaha"] .summary .proposta-pessoal-bottom .pp-rotulo{color:#4a5568}
+[data-cbx="yamaha"] .summary .proposta-pessoal-bottom b,[data-cbx="yamaha"] .summary .proposta-rodape b{color:var(--k-pc-acc)}
+[data-cbx="yamaha"] .summary .proposta-disc,[data-cbx="yamaha"] .summary .proposta-rodape{color:#4a5568}
+[data-cbx="yamaha"] .summary small[style*="color:#4f8a8a"]{color:var(--k-pc-acc) !important}
+[data-cbx="yamaha"] .summary .estr-linha-rel .er-g,[data-cbx="yamaha"] .fluxo-box .fluxo-tit,[data-cbx="yamaha"] .fluxo-box .fluxo-total{color:var(--k-pc-ink)}
+[data-cbx="yamaha"] .summary .estr-linha-rel .er-v{color:#334155}
+[data-cbx="yamaha"] .summary .estr-linha-rel .er-v small{color:#4a5568}
+[data-cbx="yamaha"] .fluxo-box .fluxo-tab th{color:#475569}
+
+/* ---------- ITAÚ · MANUAL ---------- */
+[data-cbx="itau_manual"] .proposta{background:#fff;color:#0f172a;padding:0 25px 25px;overflow:hidden;border:1px solid var(--k-ln)}
+[data-cbx="itau_manual"] .proposta-header{background:var(--k-pc-hd);border-bottom:0;margin:0 -25px 22px;width:auto;padding:18px 25px}
+[data-cbx="itau_manual"] .proposta-title{color:#fff;letter-spacing:.02em}
+[data-cbx="itau_manual"] .proposta .info{color:#0f172a}
+[data-cbx="itau_manual"] .proposta .green{display:block;background:var(--k-pc-liq);color:var(--k-pc-liq-on);border-radius:14px;padding:12px 16px;margin:6px 0 14px}
+[data-cbx="itau_manual"] .proposta .green span{color:inherit}
+[data-cbx="itau_manual"] .proposta .red{color:#4a5568}
+[data-cbx="itau_manual"] .proposta hr{background:#e4e8ef !important}
+[data-cbx="itau_manual"] .proposta .logoConsorbens{background:#fff}
+
+/* ---------- ITAÚ · IA (cards de resultado; o modo apresentação leva junto) ---------- */
+[data-cbx="itau_ia"]{--bg1:var(--k-bg);--bg2:var(--k-bg);--card:var(--k-s1);--card2:var(--k-s2);--line:var(--k-ln);--mut:var(--k-tx3);--txt:var(--k-tx);
+  --orange:var(--k-ac);--orange2:var(--k-ac-tx);--green:var(--k-ok-tx);--amber:var(--k-warn-tx);--blue:var(--k-info-tx);--red:var(--k-bad-tx)}
+[data-cbx="itau_ia"] .rc{background:var(--k-s2);border-color:var(--k-ln);color:var(--k-tx)}
+[data-cbx="itau_ia"] .rc.dest{border-color:var(--k-ac)}
+[data-cbx="itau_ia"] .rc .big{color:var(--k-tx)}
+[data-cbx="itau_ia"] .rc .bideal{background:linear-gradient(90deg,var(--k-act1),var(--k-act2));color:var(--k-act-on)}
+[data-cbx="itau_ia"] .rc .mgrid div,[data-cbx="itau_ia"] .rc .leg,[data-cbx="itau_ia"] .rc .note{background:var(--k-field)}
+[data-cbx="itau_ia"] .rc .therm .bar{background:var(--k-field)}
+[data-cbx="itau_ia"] .rc .therm .mark{background:var(--k-tx)}
+[data-cbx="itau_ia"] .rc .tag.ok,[data-cbx="itau_ia"] .rc .lmod.livre{background:var(--k-ok-soft);color:var(--k-ok-tx)}
+[data-cbx="itau_ia"] .rc .tag.mid{background:var(--k-warn-soft);color:var(--k-warn-tx)}
+[data-cbx="itau_ia"] .rc .tag.low{background:var(--k-bad-soft);color:var(--k-bad-tx)}
+[data-cbx="itau_ia"] .rc .tag.fixo,[data-cbx="itau_ia"] .rc .lmod.fixo{background:var(--k-vio-soft);color:var(--k-vio-tx)}
+[data-cbx="itau_ia"] .rc .lmod.red{background:var(--k-info-soft);color:var(--k-info-tx)}
+[data-cbx="itau_ia"] .rc .redtag{color:var(--k-info-tx)}

@@ -85,25 +85,34 @@ def coleta_assembleias(sb, ctx, reabrir_fn, *, n_ass=3, salvar=True,
     return {"ok": True, "mensagem": f"assembleias coletadas ({feitas} grupo(s))"}
 
 
-def conferir_grupos(sb, ctx, reabrir_fn, *, vagas=None, assembleias=None, ceder_cb=None) -> dict:
+def conferir_grupos(sb, ctx, reabrir_fn, *, vagas=None, assembleias=None, ceder_cb=None, chave=None) -> dict:
     """CONFERIR_GRUPOS (16/11/2026) — pedido pelo Simulador Consorbens na hora do simulado.
     Confere SÓ os grupos pedidos, na mesma janela do Newcon:
       vagas       = grupos cuja vaga está velha (>6 dias) ou com poucas vagas (<10)
                     → busca só o(s) plano(s) de venda desses grupos;
       assembleias = grupos sem resultado de assembleia recente → lê as últimas.
-    Usa um progresso próprio (não mexe na varredura semanal do robo_yamaha)."""
+    Usa um progresso próprio por tarefa (`chave` = id da fila): se ceder a vez para um
+    lance/boleto/simulado, volta depois e CONTINUA de onde parou (não refaz o que já fez)."""
     import datetime
+    import json
     import conferir_vagas as CV
     vagas = [str(g) for g in (vagas or [])]
     assembleias = [str(g) for g in (assembleias or [])]
     sx, reabrir = _sx_do_ctx(ctx, reabrir_fn)
     prog_orig = RY.PROG
-    RY.PROG = os.path.join(_AQUI, "conferir_grupos_progresso.json")
-    prog = {"data": datetime.date.today().isoformat(), "fase": "grupos", "planos_feitos": {},
-            "grupos_com_vaga": {}, "assembleias_feitas": []}
-    msgs, ok = [], True
+    arq = os.path.join(_AQUI, f"conferir_grupos_progresso_{chave or 'x'}.json")
+    RY.PROG = arq
+    prog = None
     try:
-        if vagas:
+        prog = json.load(open(arq, encoding="utf-8"))
+    except Exception:
+        pass
+    if not prog:
+        prog = {"data": datetime.date.today().isoformat(), "fase": "grupos", "planos_feitos": {},
+                "grupos_com_vaga": {}, "assembleias_feitas": []}
+    msgs, ok, cedeu = [], True, False
+    try:
+        if vagas and prog.get("fase") == "grupos":
             sit = CV.situacao(sb, vagas)
             so_planos = CV.planos_alvo([s for s in sit if s.get("atual")])
             antes = {s["grupo"]: str((s.get("atual") or {}).get("consultado_em")) for s in sit}
@@ -111,38 +120,45 @@ def conferir_grupos(sb, ctx, reabrir_fn, *, vagas=None, assembleias=None, ceder_
                 r = RY.fase_grupos(sx, sb, prog, list(so_planos), True, "longo", True, None, True,
                                    reabrir, ceder_cb=ceder_cb, so_planos=so_planos)
                 if r == "CEDEU":
-                    return {"ok": True, "ceder": True, "mensagem": "conferência pausada (cede a vez)"}
+                    cedeu = True
+                    return {"ok": True, "ceder": True, "mensagem": "conferência pausada (cedeu a vez) — retoma depois"}
                 ok = ok and bool(r)
+            prog["fase"] = "assembleias"
+            RY._prog_gravar(prog)
             depois = {s["grupo"]: s for s in CV.situacao(sb, vagas)}
             novos = [g for g in vagas if str((depois.get(g) or {}).get("atual", {}).get("consultado_em")) != antes.get(g)]
             falhou = [g for g in vagas if g not in novos]
             msgs.append(f"vagas conferidas: {', '.join(novos) or 'nenhum'}"
                         + (f"; sem conferir (plano não abriu): {', '.join(falhou)}" if falhou else ""))
         if assembleias:
-            tipos = {}
-            poucas = False
-            for g in assembleias:
-                try:
-                    rows = sb.table("grupos_yamaha").select("tipo_bem").eq("grupo", g).limit(1).execute().data or []
-                    tipos[g] = (rows[0].get("tipo_bem") if rows else None) or "Auto"
-                    n = (sb.table("yamaha_assembleias").select("grupo", count="exact")
-                         .eq("grupo", g).execute().count or 0)
-                    poucas = poucas or n < 3
-                except Exception:
-                    tipos[g] = "Auto"
-            prog["grupos_com_vaga"] = tipos
-            prog["assembleias_feitas"] = []
-            r = RY.fase_assembleias(sx, sb, prog, 6 if poucas else 3, True, reabrir, False, ceder_cb=ceder_cb)
+            if not prog.get("ass_preparado"):          # 1ª vez nesta tarefa (não é retomada)
+                tipos = {}
+                poucas = False
+                for g in assembleias:
+                    try:
+                        rows = sb.table("grupos_yamaha").select("tipo_bem").eq("grupo", g).limit(1).execute().data or []
+                        tipos[g] = (rows[0].get("tipo_bem") if rows else None) or "Auto"
+                        n = (sb.table("yamaha_assembleias").select("grupo", count="exact")
+                             .eq("grupo", g).execute().count or 0)
+                        poucas = poucas or n < 3
+                    except Exception:
+                        tipos[g] = "Auto"
+                prog.update(grupos_com_vaga=tipos, assembleias_feitas=[], ass_preparado=True,
+                            n_ass=6 if poucas else 3, fase="assembleias")
+                RY._prog_gravar(prog)
+            r = RY.fase_assembleias(sx, sb, prog, prog.get("n_ass", 3), True, reabrir, False, ceder_cb=ceder_cb)
             if r == "CEDEU":
-                return {"ok": True, "ceder": True, "mensagem": "conferência pausada (cede a vez)"}
+                cedeu = True
+                return {"ok": True, "ceder": True, "mensagem": "conferência pausada (cedeu a vez) — retoma depois"}
             ok = ok and bool(r)
-            msgs.append(f"assembleias lidas: {', '.join(prog.get('assembleias_feitas') or []) or 'nenhuma'}")
+            msgs.append(f"assembleias lidas: {len(prog.get('assembleias_feitas') or [])} grupo(s)")
     finally:
         RY.PROG = prog_orig
-        try:
-            os.remove(os.path.join(_AQUI, "conferir_grupos_progresso.json"))
-        except Exception:
-            pass
+        if not cedeu:                                  # terminou (ou falhou): limpa o progresso
+            try:
+                os.remove(arq)
+            except Exception:
+                pass
     return {"ok": ok, "mensagem": " | ".join(msgs) or "nada a conferir"}
 
 

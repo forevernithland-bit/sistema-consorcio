@@ -40,6 +40,104 @@ def _no_ar() -> bool:
         return False
 
 
+def _lancar_solto(args) -> None:
+    """Abre o Chrome do Newcon FORA da árvore de processos do robô (16/11/2026).
+    Motivo: o watchdog desliga o robô com `taskkill /T` (mata o processo e os FILHOS). Com o
+    Chrome como filho do robô, cada desligamento derrubava o navegador → login perdido →
+    novo login quando o robô voltava. Pelo `cmd /c start` o Chrome nasce de um cmd que
+    termina na hora: fica órfão, o /T não o alcança e a sessão do Newcon continua viva.
+    (Também evita o CREATE_BREAKAWAY_FROM_JOB, que dava WinError 5 dentro do Agendador.)"""
+    base = dict(close_fds=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL)
+    if os.name != "nt":
+        subprocess.Popen(args, start_new_session=True, **base)
+        return
+    try:
+        # string montada à mão: o `start ""` (título vazio) não sobrevive ao list2cmdline
+        subprocess.Popen('cmd /c start "" /b ' + subprocess.list2cmdline(args),
+                         creationflags=0x08000000, **base)          # CREATE_NO_WINDOW
+        return
+    except Exception:
+        pass
+    flags = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+    try:
+        subprocess.Popen(args, creationflags=flags | 0x01000000, **base)   # + BREAKAWAY_FROM_JOB
+    except PermissionError:
+        subprocess.Popen(args, creationflags=flags, **base)
+
+
+# ------------------------------------------------------------ contador de logins
+ARQ_LOGINS = os.path.join(PASTA, "logs", "logins_newcon.log")
+LOGINS_ALERTA_HORA = int(os.getenv("NEWCON_LOGINS_ALERTA_HORA", "4"))
+
+
+def registrar_login(origem: str) -> int:
+    """Anota cada login feito no Newcon (data, origem). Devolve quantos houve na última hora.
+    Se passar de LOGINS_ALERTA_HORA, deixa um aviso com as causas prováveis no próprio arquivo
+    e no log do robô — para alguém entender o motivo em vez de o robô ficar logando à toa."""
+    agora = time.time()
+    try:
+        os.makedirs(os.path.dirname(ARQ_LOGINS), exist_ok=True)
+        with open(ARQ_LOGINS, "a", encoding="utf-8") as f:
+            f.write(f"{agora:.0f}\t{time.strftime('%d/%m %H:%M:%S')}\tLOGIN\t{origem}\n")
+        n = 0
+        with open(ARQ_LOGINS, encoding="utf-8") as f:
+            for ln in f:
+                try:
+                    if "\tLOGIN\t" in ln and agora - float(ln.split("\t", 1)[0]) <= 3600:
+                        n += 1
+                except ValueError:
+                    pass
+        if n >= LOGINS_ALERTA_HORA:
+            aviso = (f"⚠️ {n} logins no Newcon na última hora (o normal é 0 ou 1). Causas prováveis: "
+                     "alguém usando o MESMO usuário do Newcon em outro navegador (um derruba o outro); "
+                     "o navegador do robô sendo fechado (PC dormiu/reiniciou, alguém fechou a janela); "
+                     "tarefa falhando e reabrindo. Veja logs/logins_newcon.log e logs/robo.log.")
+            print("[newcon] " + aviso)
+            with open(ARQ_LOGINS, "a", encoding="utf-8") as f:
+                f.write(f"{agora:.0f}\t{time.strftime('%d/%m %H:%M:%S')}\tALERTA\t{aviso}\n")
+        return n
+    except Exception:
+        return 0
+
+
+def resumo_logins(horas=24) -> str:
+    agora, linhas = time.time(), []
+    try:
+        with open(ARQ_LOGINS, encoding="utf-8") as f:
+            for ln in f:
+                p = ln.rstrip("\n").split("\t")
+                if len(p) >= 4 and p[2] == "LOGIN" and agora - float(p[0]) <= horas * 3600:
+                    linhas.append(f"{p[1]}  ({p[3]})")
+    except Exception:
+        pass
+    return f"{len(linhas)} login(s) nas últimas {horas} h" + ("".join("\n  " + x for x in linhas) if linhas else "")
+
+
+# ------------------------------------------------------------ manter a sessão viva
+def ping(timeout_ms=30000) -> str:
+    """Robô desligado mas o Chrome do Newcon aberto: recarrega a home NA ABA QUE JÁ EXISTE para a
+    sessão não expirar (chamado pelo watchdog a cada X min). NUNCA loga e nunca abre aba nova.
+    Retorna 'fechado' | 'sem_aba' | 'logado' | 'caiu'."""
+    if not _no_ar():
+        return "fechado"
+    from playwright.sync_api import sync_playwright
+    import newcon
+    pw = sync_playwright().start()
+    try:
+        browser = pw.chromium.connect_over_cdp(CDP_URL)
+        pages = [p for c in browser.contexts for p in c.pages if "newkey.cny.com.br" in (p.url or "")]
+        if not pages:
+            return "sem_aba"
+        page = pages[0]
+        page.goto(newcon.HOME_URL, wait_until="domcontentloaded", timeout=timeout_ms)
+        return "logado" if newcon.esta_logado(page) else "caiu"
+    finally:
+        try:
+            pw.stop()            # só desconecta: o Chrome continua aberto
+        except Exception:
+            pass
+
+
 def garantir_navegador(pw, visivel=True, url_inicial=None) -> None:
     """Se o navegador único não está aberto, abre (processo separado: fica aberto
     mesmo depois que o script que abriu terminar)."""
@@ -53,13 +151,7 @@ def garantir_navegador(pw, visivel=True, url_inicial=None) -> None:
     if not visivel:
         args.append("--start-minimized")
     args.append(url_inicial or os.getenv("NEWCON_URL", "https://newkey.cny.com.br/Intranet/frmMain.aspx"))
-    flags = 0
-    if os.name == "nt":
-        # BREAKAWAY: o navegador não morre quando o processo que abriu termina/é encerrado
-        flags = (subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
-                 | getattr(subprocess, "CREATE_BREAKAWAY_FROM_JOB", 0x01000000))
-    subprocess.Popen(args, creationflags=flags, close_fds=True,
-                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL)
+    _lancar_solto(args)
     for _ in range(60):
         if _no_ar():
             time.sleep(1.5)
@@ -170,6 +262,7 @@ def abrir_aba(sb=None, visivel=True, dialogo="aceitar", login=None, senha=None, 
                             raise RuntimeError("sem credencial para logar no Newcon")
                         login, senha = _credenciais(sb)
                     newcon.fazer_login(page, ctx, login, senha)
+                    registrar_login("abrir_aba")
                     print("[newcon] login feito no navegador único (fica aberto e logado).")
         else:
             print("[newcon] navegador único já aberto e logado — só abri uma aba.")
@@ -185,6 +278,11 @@ def abrir_aba(sb=None, visivel=True, dialogo="aceitar", login=None, senha=None, 
 if __name__ == "__main__":
     if "--status" in sys.argv:
         print("navegador único:", "ABERTO" if _no_ar() else "fechado", f"(porta {PORTA}, perfil {PERFIL})")
+        print(resumo_logins())
+        sys.exit(0)
+    if "--ping" in sys.argv:
+        sys.path.insert(0, PASTA)
+        print("ping:", ping())
         sys.exit(0)
     sys.path.insert(0, PASTA)
     from dotenv import load_dotenv

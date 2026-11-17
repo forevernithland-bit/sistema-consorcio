@@ -323,6 +323,29 @@ def aplicar_html(html, tema=None, origem=None):
     return head_tema() + html
 
 
+# Simulador universal: o gráfico do card de potencial vem com cores fixas no SVG
+# (#0f3735 / #cfe3e0). O CSS já recolore na tela; isto grava a cor do tema nos
+# atributos para o PNG (html2canvas serializa o SVG sem a folha de estilo).
+_JS_UNIVERSAL = """<script data-cbx-tema-svg>(function(){
+var MAP={"#0f3735":"--k-pc-ink","#cfe3e0":"--k-pc-hd-tx2"};
+function cor(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+function pinta(raiz){[].forEach.call((raiz||document).querySelectorAll('.svgbox [fill],.svgbox [stroke]'),function(e){
+ ["fill","stroke"].forEach(function(a){var v=(e.getAttribute("data-k-"+a)||e.getAttribute(a)||"").toLowerCase();
+  if(MAP[v]){e.setAttribute("data-k-"+a,v);var c=cor(MAP[v]);if(c)e.setAttribute(a,c);}});});}
+function liga(){var r=document.getElementById("res");if(!r||!window.MutationObserver)return;
+ new MutationObserver(function(){pinta(r);}).observe(r,{childList:true,subtree:true});
+ new MutationObserver(function(){pinta(r);}).observe(document.documentElement,{attributes:true,attributeFilter:["data-tema"]});pinta(r);}
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",liga);else liga();
+})();</script>"""
+
+
+def aplicar_universal(html):
+    """Tema no Simulador Consorbens (universal.html): data-tema + tokens + recolor do SVG."""
+    html = aplicar_html(html)
+    i = html.rfind("</body>")
+    return html[:i] + _JS_UNIVERSAL + html[i:] if i >= 0 else html + _JS_UNIVERSAL
+
+
 def js_aplicar(tema, origem):
     """Para os simuladores antigos (só recebem um trecho antes do </body>)."""
     return ('<script>(function(){var R=document.documentElement;R.setAttribute("data-tema",%s);'

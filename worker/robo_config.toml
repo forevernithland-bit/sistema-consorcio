@@ -123,4 +123,17 @@ backup_erp           = 'G:\Meu Drive\CLODE\BACKUP_ERP'
 # ------------------------------------------------------------------------
 [sob_demanda]
 ativo              = true
-minutos_apos_sair  = 60
+minutos_apos_sair  = 120
+
+# ------------------------------------------------------------------------
+# SESSÃO DO NEWCON (16/11/2026): evitar logar/deslogar à toa.
+# O Chrome do Newcon (porta 9333) fica aberto e logado mesmo com o robô desligado
+# (nasce fora da árvore do robô, o `taskkill /T` do watchdog não o derruba).
+# Com o robô desligado, o watchdog recarrega a home a cada `ping_min` minutos para a
+# sessão não expirar — nunca loga daqui. Cada login fica em logs/logins_newcon.log;
+# 4+ logins na mesma hora geram um ALERTA com as causas prováveis.
+# Ver status: python newcon_navegador.py --status
+# ------------------------------------------------------------------------
+[sessao_newcon]
+manter_viva = true
+ping_min    = 10

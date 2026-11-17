@@ -272,6 +272,11 @@ def garantir_sessao(page: Page, context: BrowserContext, login: str = None, senh
         raise RuntimeError("sessão do Newcon caiu e não tenho credencial para relogar")
     fazer_login(page, context, login, senha)
     try:
+        import newcon_navegador
+        newcon_navegador.registrar_login("garantir_sessao (sessão tinha caído)")
+    except Exception:
+        pass
+    try:
         context.storage_state(path=STORAGE_STATE)
     except Exception:
         pass
