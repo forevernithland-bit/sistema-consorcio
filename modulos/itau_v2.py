@@ -183,14 +183,17 @@ def _parse_guia(xls_bytes, nome_arquivo, modified_iso):
     import openpyxl
     wb = openpyxl.load_workbook(io.BytesIO(xls_bytes), data_only=True)
     grupos = []
+    formacao = []          # grupos "Formação" (ainda sem a 1ª assembleia): só o Simulador Consorbens usa
     for aba in wb.sheetnames:
         ws = wb[aba]
         for r in range(3, ws.max_row + 1):
             n = ws.cell(r, 2).value
             if n is None:
                 continue
-            if str(ws.cell(r, 3).value or "").strip().lower() != "andamento":
+            situacao = str(ws.cell(r, 3).value or "").strip()
+            if situacao.lower() not in ("andamento", "formação", "formacao"):
                 continue
+            destino = grupos if situacao.lower() == "andamento" else formacao
             vagas = int(_num(ws.cell(r, 26).value))
             valores = []
             for x in str(ws.cell(r, 17).value or "").split(","):
@@ -210,9 +213,12 @@ def _parse_guia(xls_bytes, nome_arquivo, modified_iso):
             except ValueError:
                 fixo_ok = False
                 fixo_pct = None
-            grupos.append({
+            destino.append({
                 "grupo": int(n), "aba": aba,
                 "prazo": int(_num(ws.cell(r, 11).value)),
+                # 17/11/2026 (Simulador Consorbens): tipo do grupo bem explicado
+                "situacao": situacao, "prazoOrig": int(_num(ws.cell(r, 10).value)),
+                "indexador": str(ws.cell(r, 8).value or "").strip(),
                 "fundo": _num(ws.cell(r, 14).value),
                 "vagas": vagas,
                 "fixoOk": fixo_ok, "fixoPct": fixo_pct,
@@ -243,6 +249,7 @@ def _parse_guia(xls_bytes, nome_arquivo, modified_iso):
             "red_total": sum(1 for g in grupos if g.get("red")),
         },
         "grupos": grupos,
+        "formacao": formacao,
     }
 
 

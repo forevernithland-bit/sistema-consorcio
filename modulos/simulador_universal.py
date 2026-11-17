@@ -111,7 +111,8 @@ ITAU_PRAZO = {"imovel": (90, 240), "auto": (24, 140)}
 
 def dados_itau(guia):
     out = []
-    for g in (guia or {}).get("grupos") or []:
+    # "formacao" = grupos que ainda não tiveram a 1ª assembleia (entram como "Grupo em formação")
+    for g in list((guia or {}).get("grupos") or []) + list((guia or {}).get("formacao") or []):
         prod = "imovel" if str(g.get("aba", "")).lower().startswith("im") else "auto"
         lo, hi = ITAU_PRAZO[prod]
         if (g.get("vagas") or 0) < ITAU_VAGAS_MIN or not (lo <= (g.get("prazo") or 0) <= hi):
@@ -128,6 +129,7 @@ def dados_itau(guia):
             "redOk": bool(g.get("red")), "emb": 0.30, "creds": g.get("valores") or [],
             "fixo": g.get("fixoPct"), "livre": True, "hist": hist, "prox": g.get("assembleia") or "",
             "cont": g.get("contLivre"),
+            "sit": g.get("situacao") or "Andamento", "pt": g.get("prazoOrig") or None, "idx": g.get("indexador") or "",
         })
     return out
 

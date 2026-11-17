@@ -51,6 +51,17 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--k-ac);outline-o
 .fld input:hover{border-color:var(--k-ac-ln)}
 .fld input:focus{border-color:var(--k-ac);background:var(--k-s1);box-shadow:0 0 0 4px var(--k-focus)}
 .fld small{display:block;font-size:11.5px;color:var(--k-tx3);margin-top:5px;line-height:1.35}
+/* opção "menor possível" (varredura) embaixo dos campos de lance e parcela */
+.fld label.opmin{display:inline-flex;align-items:center;gap:8px;width:auto;margin:8px 0 0;padding:6px 13px 6px 8px;border-radius:999px;border:1.5px solid var(--k-ln2);background:var(--k-field);color:var(--k-tx2);font-size:12.5px;font-weight:800;letter-spacing:0;text-transform:none;line-height:1.2;cursor:pointer;user-select:none;transition:.15s}
+.fld label.opmin:hover{border-color:var(--k-ac);color:var(--k-tx)}
+.fld .opmin input{appearance:none;-webkit-appearance:none;width:18px;height:18px;min-width:18px;margin:0;padding:0;border-radius:6px;border:2px solid var(--k-ln2);background:var(--k-s1);display:grid;place-content:center;cursor:pointer;flex:none;box-shadow:none}
+.fld .opmin input::after{content:"";width:9px;height:5px;border:2.5px solid var(--k-ac-on);border-top:0;border-right:0;transform:rotate(-45deg) translate(1px,-1px);opacity:0}
+.fld .opmin input:checked{background:var(--k-ac);border-color:var(--k-ac-on)}
+.fld .opmin input:checked::after{opacity:1}
+.fld .opmin input:focus-visible{box-shadow:0 0 0 4px var(--k-focus)}
+.fld label.opmin:has(input:checked){background:var(--k-ac);border-color:transparent;color:var(--k-ac-on)}
+.fld input:disabled{opacity:.55;cursor:not-allowed}
+.reco .vs{margin:6px 0 0;font-size:14px;line-height:1.5}
 .prods{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 4px}
 .prod{display:flex;align-items:center;gap:9px;height:46px;padding:0 16px;border-radius:13px;border:1.5px solid var(--k-ln2);background:var(--k-field);color:var(--k-tx2);font-weight:800;font-size:14.5px;transition:.15s}
 .prod svg{width:22px;height:22px}
@@ -104,6 +115,21 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--k-ac);outline-o
 .opt.sel{border-color:var(--k-ac);background:linear-gradient(var(--k-ac-soft),var(--k-ac-soft)),var(--k-s1);box-shadow:0 0 0 1px var(--k-ac)}
 .nivel-alta{background:#d9f5e8;color:#0b5e3e}.nivel-media{background:#fff0c9;color:#6b4a00}.nivel-baixa{background:#fde3d8;color:#8a2f10}
 .nivel-zero{background:#f6d6d6;color:#7a1515}.nivel-sem{background:#e3ebea;color:#3c4f4d}
+/* tipo do grupo (novo / em formação / em andamento / reta final · parcela reduzida ou cheia · reajuste · lance fixo) */
+.tps{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.tp{display:inline-block;font-style:normal;font-size:11px;font-weight:800;border-radius:7px;padding:2px 7px;line-height:1.35;white-space:nowrap}
+.tp-novo{background:#dbe8ff;color:#173f8a}.tp-form{background:#e6dcff;color:#46208f}.tp-and{background:#e6ecef;color:#33454d}
+.tp-fim{background:#ffe2cc;color:#7a3300}.tp-red{background:#fff0c9;color:#6b4a00}.tp-cheia{background:#dcf3e8;color:#0b5e3e}
+.tp-idx{background:#eceff3;color:#3d4756}.tp-fixo{background:#f3e3f7;color:#6a1f7d}
+.tipo-box{margin-top:12px;background:var(--k-s1);border:1px solid var(--k-ln);border-radius:16px;padding:12px 14px}
+.tipo-box h4{margin:0 0 8px;font-size:13.5px;font-weight:800;color:var(--k-tx)}
+.tipo-box ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:7px}
+.tipo-box li{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.45;color:var(--k-tx2)}
+.tipo-box li .tp{flex:none;min-width:132px;text-align:center;font-size:11.5px}
+.pc-tipo{padding:9px 14px 2px;text-align:center}
+.pc-tipo .tps{justify-content:center;margin:0}
+.pc-tipo p{margin:6px 0 0;font-size:11.5px;line-height:1.4;color:#4a5866}
+@media (max-width:640px){ .tipo-box li{flex-direction:column;gap:3px} .tipo-box li .tp{min-width:0} }
 .avisos{margin-top:12px;display:flex;flex-direction:column;gap:6px}
 .avisos div{font-size:13px;line-height:1.45;color:var(--k-warn-tx);background:var(--k-warn-soft);border:1px solid var(--k-warn-ln);border-radius:12px;padding:8px 12px}
 .avisos div.inf{color:var(--k-tx2);background:var(--k-ac-soft);border-color:var(--k-ac-ln)}
@@ -240,8 +266,10 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--k-ac);outline-o
     <div class="grid">
       <div class="fld"><label for="nome">Nome do cliente</label><input id="nome" autocomplete="off" placeholder="Ex.: Maria Souza"></div>
       <div class="fld"><label for="liq">Crédito líquido (na mão)</label><input id="liq" inputmode="decimal" placeholder="Ex.: 100.000"><small>O valor que sobra para ele depois do lance embutido.</small></div>
-      <div class="fld"><label for="rec">Tem para o lance</label><input id="rec" inputmode="decimal" placeholder="Ex.: 40.000"><small>Recursos próprios (do bolso). Pode ser 0.</small></div>
-      <div class="fld"><label for="par">Parcela que aguenta</label><input id="par" inputmode="decimal" placeholder="Ex.: 1.500"><small>Depois da contemplação. Em branco = sem limite.</small></div>
+      <div class="fld"><label for="rec">Tem para o lance</label><input id="rec" inputmode="decimal" placeholder="Ex.: 40.000"><small>Recursos próprios (do bolso). Pode ser 0.</small>
+        <label class="opmin" title="Varre todos os grupos com vaga e acha o menor lance do bolso que teria contemplado em pelo menos metade das últimas assembleias"><input type="checkbox" id="minLance">Menor valor possível</label></div>
+      <div class="fld"><label for="par">Parcela que aguenta</label><input id="par" inputmode="decimal" placeholder="Ex.: 1.500"><small>Depois da contemplação. Em branco = sem limite.</small>
+        <label class="opmin" title="Varre todos os grupos com vaga e acha a menor parcela depois da contemplação"><input type="checkbox" id="minParc">Menor parcela possível</label></div>
     </div>
     <div class="prods" id="prods" role="radiogroup" aria-label="Produto"></div>
     <div class="acoes">
@@ -282,6 +310,22 @@ function valor(txt){
   var v = parseFloat(s); return isFinite(v)? v*mult : NaN;
 }
 function fmtCampo(el){ var v=valor(el.value); if(isFinite(v)) el.value = v.toLocaleString("pt-BR",{minimumFractionDigits:0,maximumFractionDigits:2}); }
+/* separador de milhar enquanto digita: 120000 → 120.000 (vírgula = centavos).
+   Com letra ("100 mil", "1,2 mi", "100k") não mexe: formata ao sair do campo. */
+function mascaraMilhar(el){
+  var v = el.value;
+  if (!v || /[a-z\s]/i.test(v)) return;
+  var pos = el.selectionStart == null ? v.length : el.selectionStart;
+  var noFim = pos >= v.length, digAntes = v.slice(0, pos).replace(/\D/g, "").length;
+  var partes = v.replace(/[^\d,]/g, "").split(",");
+  var fmt = partes[0].replace(/^0+(?=\d)/, "").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  if (partes.length > 1) fmt += "," + partes.slice(1).join("").slice(0, 2);
+  if (fmt === v) return;
+  el.value = fmt;
+  var i = fmt.length;
+  if (!noFim) { var n = 0; i = 0; while (i < fmt.length && n < digAntes) { if (/\d/.test(fmt[i])) n++; i++; } }
+  try { el.setSelectionRange(i, i); } catch (e) {}
+}
 
 /* ===================== regras de cálculo ===================== */
 /* YAMAHA — modelo calibrado no "Simular..." do Newcon (16/11/2026, 11 cotas × 7 cenários):
@@ -345,11 +389,68 @@ var NIVEL = {alta:{t:"Potencial alto",c:"#0b7a51",f:"#e4f6ee",o:4}, media:{t:"Po
              baixa:{t:"Potencial baixo",c:"#a33a17",f:"#fde7df",o:2}, sem:{t:"Sem histórico",c:"#3c4f4d",f:"#e9efee",o:1},
              zero:{t:"Sem chance assim",c:"#8f1d1d",f:"#fbe3e3",o:0}};
 
+/* ===================== tipo do grupo (Breno 17/11/2026) =====================
+   Deixa claro, em português simples, que grupo é esse:
+     fase:     em formação (Itaú, sem 1ª assembleia) · novo (até 6 meses rodados) · em andamento · reta final
+     parcela:  reduzida (Yamaha: % até contemplar; Itaú: grupo aceita) · cheia
+     reajuste: INCC / IPCA / pré-fixado (Itaú, coluna Indexador) · IPCA (Yamaha, quando o plano diz)
+     lance fixo do grupo                                                                   */
+function idxTexto(idx){
+  var s = String(idx||"").toUpperCase(), m = /PR[ÉE]-?FIXADO\s*([\d,.]+)\s*%/.exec(s);
+  if (/INCC/.test(s)) return {t:"Reajuste INCC", d:"Crédito e parcela reajustados uma vez por ano pelo INCC (índice da construção civil)."};
+  if (/IPCA/.test(s)) return {t:"Reajuste IPCA", d:"Crédito e parcela reajustados uma vez por ano pelo IPCA (inflação oficial)."};
+  if (m) return {t:"Pré-fixado "+m[1]+"%", d:"Reajuste fixo de "+m[1]+"% ao ano, já combinado: não depende da inflação."};
+  return s ? {t:"Reajuste "+idx, d:"Índice de reajuste do grupo: "+idx+"."} : null;
+}
+function tipoGrupo(g){
+  var t = [], n = g.n, pt = g.pt, dec = (pt && n) ? pt - n : null, nh = (g.hist||[]).length;
+  var sit = String(g.sit||"").toLowerCase();
+  if (sit.indexOf("forma") === 0)
+    t.push({c:"form", t:"Grupo em formação", d:"Ainda não teve a 1ª assembleia: prazo cheio de "+n+" meses e nenhum histórico de lance para medir a chance."});
+  else if ((dec != null && dec <= 6) || (dec == null && !nh))
+    t.push({c:"novo", t:"Grupo novo", d:"Começou há pouco (até uns 6 meses): prazo quase cheio"+(pt?" ("+n+" de "+pt+" meses)":"")+" e "
+      + (nh ? "pouco histórico de lance ("+nh+" assembleia(s) na base)" : "ainda sem histórico de lance na base")+", então a chance é menos previsível."});
+  else
+    t.push({c:"and", t:"Grupo em andamento", d:(dec != null ? "Já rodou cerca de "+dec+" de "+pt+" meses. " : "")+"Quem entra agora paga em "+n+" meses (o que falta do grupo)"
+      + (nh ? " e já tem histórico de lances para comparar ("+nh+" assembleia(s) na base)." : ", mas ainda não temos o histórico de lances dele na base.")});
+  if (pt && dec > 6 && n/pt <= 0.3)
+    t.push({c:"fim", t:"Reta final", d:"Faltam só "+n+" de "+pt+" meses: como o crédito é pago em menos meses, a parcela fica mais alta."});
+  if (g.adm === "yamaha"){
+    if (g.red > 0) t.push({c:"red", t:"Parcela reduzida "+pc((1-g.red)*100,0), d:"Até ser contemplado paga só "+pc((1-g.red)*100,0)+" da parcela. Os "+pc(g.red*100,0)+" que faltam são somados às parcelas depois da contemplação, por isso a parcela depois sobe."});
+    else t.push({c:"cheia", t:"Parcela cheia", d:"Paga a parcela integral desde o início: não fica diferença para somar depois da contemplação."});
+    if (/IPCA/i.test(g.plano||"")) t.push({c:"idx", t:"Reajuste IPCA", d:"Plano "+(g.plano||"")+": crédito e parcela reajustados pelo IPCA (inflação oficial)."});
+  } else {
+    if (g.redOk) t.push({c:"red", t:"Aceita parcela reduzida", d:"O grupo permite pagar parcela reduzida até contemplar (a diferença vai para depois). A simulação aqui está com a parcela cheia: para a reduzida, confirmar no simulador do Itaú."});
+    else t.push({c:"cheia", t:"Parcela cheia", d:"Grupo só com parcela integral desde o início."});
+    var ix = idxTexto(g.idx); if (ix) t.push({c:"idx", t:ix.t, d:ix.d});
+  }
+  var fx = g.fixo > 0 ? (g.fixo <= 1 ? g.fixo*100 : g.fixo) : 0;
+  if (fx) t.push({c:"fixo", t:"Lance fixo "+pc(fx,0), d:"Além do lance livre, o grupo contempla pelo lance fixo de "+pc(fx,0)+" (todos ofertam o mesmo %; se sobrar gente, desempata por sorteio)."});
+  return t;
+}
+function tagsHtml(g, max){
+  var t = tipoGrupo(g); if (max) t = t.slice(0, max);
+  return '<span class="tps">'+t.map(function(x){ return '<i class="tp tp-'+x.c+'" title="'+esc(x.d)+'">'+esc(x.t)+'</i>'; }).join("")+'</span>';
+}
+function tipoBox(g){
+  return '<div class="tipo-box"><h4>Que grupo é esse? (grupo '+esc(g.g)+(g.plano?' · plano '+esc(g.plano):'')+')</h4><ul>'
+    + tipoGrupo(g).map(function(x){ return '<li><i class="tp tp-'+x.c+'">'+esc(x.t)+'</i><span>'+esc(x.d)+'</span></li>'; }).join("")
+    + '</ul></div>';
+}
+function tipoCurto(g){ return tipoGrupo(g).map(function(x){ return x.t; }).join(" · "); }
+
 /* quanto do bolso precisa para chegar a um % alvo */
 function precisa(v, alvoPct){ if (alvoPct == null) return null; return Math.max(0, Math.ceil((alvoPct/100*v.base - v.emb)/100)*100); }
 
-function candidatos(adm, prod, L, R, P){
-  var porGrupo = {};
+/* modo = {minLance, minParc} — varredura completa (Breno 17/11/2026):
+   minLance: para CADA grupo/cota com vaga, calcula o menor lance do bolso que teria contemplado em
+             pelo menos metade das últimas assembleias (precisa de 2+ assembleias na base) e simula com ele;
+   minParc:  ignora o limite de parcela e ordena pela menor parcela depois da contemplação.
+   Os dois juntos: cada grupo com o seu menor lance; ordena por menor lance e depois menor parcela. */
+function candidatos(adm, prod, L, R, P, modo){
+  modo = modo || {};
+  var cmp = ordem(modo), porGrupo = {};
+  if (modo.minParc) P = 0;
   D.grupos.forEach(function(g){
     if (g.adm !== adm) return;
     var alvoProd = adm === "itau" ? (prod === "imovel" ? "imovel" : "auto") : prod;
@@ -358,16 +459,39 @@ function candidatos(adm, prod, L, R, P){
     (g.creds||[]).forEach(function(u){
       for (var c = 1; c <= maxC; c++){
         var C = c*u; if (C < L || C > L*1.6) continue;
-        var v = simular(g, c, u, L, R); if (!v || v.liq > L*FOLGA_LIQ) continue;
+        var v;
+        if (modo.minLance){
+          var v0 = simular(g, c, u, L, 0); if (!v0 || v0.liq > L*FOLGA_LIQ || v0.ch.N < 2) continue;
+          var alvo = v0.ch.alvoMetade, need = precisa(v0, alvo);
+          v = simular(g, c, u, L, need);
+          if (!v || v.pct < alvo - 1e-6) continue;          // nem com o máximo do bolso chega lá
+          v.need = v.proprio;
+        } else {
+          v = simular(g, c, u, L, R); if (!v || v.liq > L*FOLGA_LIQ) continue;
+        }
         v.cabe = !(P > 0) || v.pos <= P*TOL_PARC;
         var k = g.g;
-        if (!porGrupo[k] || melhor(v, porGrupo[k]) < 0) porGrupo[k] = v;
+        if (!porGrupo[k] || cmp(v, porGrupo[k]) < 0) porGrupo[k] = v;
       }
     });
   });
   var lista = Object.keys(porGrupo).map(function(k){ return porGrupo[k]; });
-  lista.sort(melhor);
+  lista.sort(cmp);
   return lista;
+}
+function comChance(v){ return v.ch.nivel === "alta" || v.ch.nivel === "media"; }
+function ordem(modo){
+  if (modo.minLance) return function(a, b){                    // menor lance → (cabe) → menor parcela
+    if (a.cabe !== b.cabe) return a.cabe ? -1 : 1;
+    var d = Math.round(a.need/100) - Math.round(b.need/100); if (d) return d;
+    return a.pos - b.pos;
+  };
+  if (modo.minParc) return function(a, b){                     // com chance real primeiro → menor parcela
+    var ca = comChance(a), cb = comChance(b); if (ca !== cb) return ca ? -1 : 1;
+    if (Math.abs(a.pos - b.pos) > 0.5) return a.pos - b.pos;
+    return melhor(a, b);
+  };
+  return melhor;
 }
 /* ordem: cabe na parcela → nível de chance → % de vezes → menor sobra de crédito → menor parcela */
 function melhor(a, b){
@@ -411,7 +535,19 @@ $("prods").addEventListener("click", function(e){
   [].forEach.call(document.querySelectorAll(".prod"), function(x){ var on = x===b; x.classList.toggle("sel", on); x.setAttribute("aria-checked", on); });
   if (S.res) gerar();
 });
+/* "Menor valor possível" / "Menor parcela possível": trava o campo ao lado e refaz se já tem resultado */
+function syncMin(){
+  [["minLance","rec","Menor valor possível"], ["minParc","par","Menor parcela possível"]].forEach(function(x){
+    var on = $(x[0]).checked, inp = $(x[1]);
+    if (!inp.dataset.ph) inp.dataset.ph = inp.placeholder;
+    inp.disabled = on; inp.placeholder = on ? x[2] : inp.dataset.ph;
+  });
+}
+["minLance","minParc"].forEach(function(id){
+  $(id).addEventListener("change", function(){ syncMin(); if (S.res) gerar(); });
+});
 ["liq","rec","par"].forEach(function(id){
+  $(id).addEventListener("input", function(){ mascaraMilhar(this); });
   $(id).addEventListener("blur", function(){ fmtCampo(this); });
   $(id).addEventListener("keydown", function(e){ if(e.key==="Enter"){ fmtCampo(this); gerar(); } });
 });
@@ -425,8 +561,11 @@ function gerar(){
   $("erro").textContent = "";
   if (!(L > 0)) { $("erro").textContent = "Informe o crédito líquido que o cliente quer na mão."; $("liq").focus(); return; }
   var nome = $("nome").value.trim();
-  var r = {L:L, R:R, P:P, nome:nome, prod:S.prod,
-           yamaha: candidatos("yamaha", S.prod, L, R, P), itau: candidatos("itau", S.prod, L, R, P)};
+  var modo = {minLance: $("minLance").checked, minParc: $("minParc").checked};
+  if (modo.minLance) R = 0;
+  if (modo.minParc) P = 0;
+  var r = {L:L, R:R, P:P, nome:nome, prod:S.prod, modo:modo,
+           yamaha: candidatos("yamaha", S.prod, L, R, P, modo), itau: candidatos("itau", S.prod, L, R, P, modo)};
   S.res = r; S.sel = {yamaha:0, itau:0};
   render();
 }
@@ -434,7 +573,10 @@ function gerar(){
 function render(){
   var r = S.res, h = "";
   var by = r.yamaha[0], bi = r.itau[0];
-  h += '<div class="sec"><h2>Resultado para '+esc(r.nome||"o cliente")+'</h2><span>'+esc(prodNome(r.prod))+' · '+m0(r.L)+' na mão · '+m0(r.R)+' de lance do bolso'+(r.P>0?' · parcela até '+m0(r.P):'')+'</span></div>';
+  var md = r.modo || {};
+  h += '<div class="sec"><h2>Resultado para '+esc(r.nome||"o cliente")+'</h2><span>'+esc(prodNome(r.prod))+' · '+m0(r.L)+' na mão · '
+     + (md.minLance ? 'menor lance possível' : m0(r.R)+' de lance do bolso')
+     + (md.minParc ? ' · menor parcela possível' : (r.P>0?' · parcela até '+m0(r.P):''))+'</span></div>';
   h += recomendacao(r, by, bi);
   h += comparativo(r, by, bi);
   h += blocoAdm("yamaha", r);
@@ -445,7 +587,42 @@ function render(){
 function prodNome(p){ var x = PROD.filter(function(q){return q.id===p;})[0]; return x ? x.n : p; }
 function admNome(a){ return a === "yamaha" ? "Consórcio Yamaha" : "Itaú Consórcio"; }
 
+/* recomendação da varredura (menor lance e/ou menor parcela), comparando Yamaha × Itaú */
+function recoVarredura(r){
+  var md = r.modo, todos = r.yamaha.concat(r.itau), cmp = ordem(md);
+  if (!todos.length){
+    var t = md.minLance
+      ? 'Nenhum grupo com vaga para '+m0(r.L)+' líquidos em '+esc(prodNome(r.prod))+' tem histórico suficiente (2+ assembleias) para calcular o menor lance.'
+      : 'Nenhum grupo encontrado para '+m0(r.L)+' líquidos em '+esc(prodNome(r.prod))+'.';
+    return '<div class="reco alerta"><div class="ic">!</div><div><h3>'+t+'</h3><p>'+(md.minLance?'Desmarque "Menor valor possível" e informe quanto ele tem para o lance, ou rode o robô de assembleias.':'Não há crédito com vaga nessa faixa hoje. Tente outro valor de crédito ou outro produto.')+'</p></div></div>';
+  }
+  function linha(v, rot){
+    var g = v.g;
+    return '<p class="vs"><b>'+rot+':</b> '+admNome(g.adm)+', grupo '+esc(g.g)+(v.cotas>1?' ('+v.cotas+' cotas)':'')
+      + ' · lance do bolso <b>'+m0(v.proprio)+'</b> + embutido '+m0(v.emb)+' = '+pc(v.pct)
+      + (v.ch.N ? ' (teria sido contemplado em '+v.ch.hits+' de '+v.ch.N+' assembleias)' : ' (sem histórico)')
+      + ' · parcela depois <b>'+moeda(v.pos)+'</b> por '+(v.n-1)+' meses.</p>';
+  }
+  var top = todos.slice().sort(cmp)[0], h = '';
+  var n = todos.length, tit;
+  if (md.minLance && md.minParc){
+    var pMin = todos.slice().sort(function(a,b){ return a.pos - b.pos; })[0];
+    tit = 'Varredura completa em '+n+' grupo(s) com vaga: menor lance e menor parcela';
+    h = linha(top, 'Menor lance') + (pMin !== top ? linha(pMin, 'Menor parcela (com o menor lance de cada grupo)') : '<p class="vs">Esse mesmo grupo também tem a menor parcela.</p>');
+  } else if (md.minLance){
+    tit = 'Menor lance possível: '+m0(top.proprio)+' do bolso ('+admNome(top.g.adm)+', grupo '+esc(top.g.g)+')';
+    h = linha(top, 'Melhor opção') + '<p class="vs">Lance calculado para ter sido contemplado em pelo menos metade das últimas assembleias de cada grupo. Varredura em '+n+' grupo(s) com vaga e histórico.</p>';
+  } else {
+    tit = 'Menor parcela possível: '+moeda(top.pos)+' depois da contemplação ('+admNome(top.g.adm)+', grupo '+esc(top.g.g)+')';
+    h = linha(top, 'Melhor opção') + (comChance(top) ? '' : '<p class="vs"><b>Atenção:</b> com '+m0(r.R)+' do bolso nenhum grupo teria chance real de contemplar; marque também "Menor valor possível" para ver quanto de lance precisa.</p>')
+      + '<p class="vs">Varredura em '+n+' grupo(s) com vaga; grupos com chance real de contemplar aparecem primeiro.</p>';
+  }
+  var bom = comChance(top);
+  return '<div class="reco'+(bom?'':' alerta')+'"><div class="ic">'+(bom?'★':'!')+'</div><div><h3>'+tit+'</h3>'+h+'</div></div>';
+}
+
 function recomendacao(r, by, bi){
+  if (r.modo && (r.modo.minLance || r.modo.minParc)) return recoVarredura(r);
   var ops = [by, bi].filter(Boolean);
   if (!ops.length) return '<div class="reco alerta"><div class="ic">!</div><div><h3>Nenhum grupo encontrado para '+m0(r.L)+' líquidos em '+esc(prodNome(r.prod))+'.</h3><p>Não há crédito com vaga nessa faixa hoje. Tente outro valor de crédito ou outro produto.</p></div></div>';
   var top = ops.slice().sort(melhor)[0], g = top.g;
@@ -480,6 +657,7 @@ function comparativo(r, by, bi){
   function col(v, f){ return v ? f(v) : '<span class="na">—</span>'; }
   var linhas = [
     ["Grupo", function(v){ return esc(v.g.g)+(v.cotas>1?' · '+v.cotas+' cotas':''); }, null],
+    ["Tipo do grupo", function(v){ return tagsHtml(v.g); }, null],
     ["Crédito contratado", function(v){ return moeda(v.C); }, null],
     ["Crédito líquido", function(v){ return moeda(v.liq); }, "max", function(v){return v.liq;}],
     ["Lance do bolso", function(v){ return moeda(v.proprio); }, null],
@@ -519,8 +697,10 @@ function blocoAdm(adm, r){
     return '<button type="button" class="opt'+(k===i?' sel':'')+'" role="tab" aria-selected="'+(k===i)+'" data-adm="'+adm+'" data-k="'+k+'">'
       + '<b>'+(k===0?'★ ':'')+'Grupo '+esc(o.g.g)+(o.cotas>1?' · '+o.cotas+' cotas':'')+'</b>'
       + '<span>'+m0(o.liq)+' líquido · parcela '+m0(o.pos)+(o.cabe?'':' ⚠')+'</span>'
-      + '<em class="nivel-'+o.ch.nivel+'">'+(o.ch.N? o.ch.hits+'/'+o.ch.N+' · ' : '')+nv.t+'</em></button>';
+      + '<em class="nivel-'+o.ch.nivel+'">'+(o.ch.N? o.ch.hits+'/'+o.ch.N+' · ' : '')+nv.t+'</em>'
+      + tagsHtml(o.g, 2) + '</button>';
   }).join("") + '</div>';
+  h += tipoBox(v.g);
   h += avisos(v, r);
   h += '<div class="pair"><div class="cardbox">'+cardProposta(v, r, adm+"-p")+botoes(adm+"-p", v, r, "p")+'</div>'
      + '<div class="cardbox">'+cardPotencial(v, r, adm+"-c")+botoes(adm+"-c", v, r, "c")+'</div></div>';
@@ -533,7 +713,6 @@ function avisos(v, r){
   if (g.adm === "yamaha"){
     var dias = diasDesde(g.visto);
     if (dias > 6 || (g.vagas||0) < 10) a.push('Vagas do grupo '+esc(g.g)+': '+(g.vagas||0)+' (conferidas em '+(g.visto?dBR(g.visto):'data desconhecida')+'). Antes de fechar, rodar o <b>conferir_vagas</b> do robô.');
-    if (v.red) a.push('<span>Plano de parcela reduzida: até contemplar paga '+pc((1-g.red)*100,0)+' da parcela; o restante é diluído nas parcelas depois da contemplação.</span>');
     if (g.fixo && v.pct >= g.fixo) a.push('<span>O lance cobre o <b>lance fixo de '+pc(g.fixo,0)+'</b> deste grupo (concorre também no sorteio do fixo).</span>');
   } else {
     a.push('<span>Itaú: taxa de administração de 16% até confirmar no simulador do banco; fundo de reserva '+pc((g.fr||0)*100,1)+' da Guia. Embutido de até 30%: confirmar se o grupo aceita.</span>');
@@ -543,6 +722,12 @@ function avisos(v, r){
   if (!v.ch.N) a.push('Grupo sem histórico de lance na base: a chance não pode ser medida. Rodar o robô de assembleias antes de prometer prazo.');
   if (!a.length) return "";
   return '<div class="avisos">'+a.map(function(x){ return x.indexOf("<span>")===0 ? '<div class="inf">'+x.slice(6,-7)+'</div>' : '<div>'+x+'</div>'; }).join("")+'</div>';
+}
+
+/* faixa "tipo do grupo" no card do cliente: etiquetas + a frase que mais importa (reduzida / formação / novo) */
+function pcTipo(g){
+  var t = tipoGrupo(g), dest = t.filter(function(x){ return x.c === "red" || x.c === "form" || x.c === "novo" || x.c === "fim"; });
+  return '<div class="pc-tipo">'+tagsHtml(g)+dest.map(function(x){ return '<p><b>'+esc(x.t)+':</b> '+esc(x.d)+'</p>'; }).join("")+'</div>';
 }
 
 /* ---------- card 1: proposta (mesmo layout dos cards que o Breno aprovou) ---------- */
@@ -555,6 +740,7 @@ function cardProposta(v, r, id){
     + '<div class="pc-ph" style="background-image:'+(foto?'url('+foto+')':'linear-gradient(135deg,#123f3e,#17544b)')+'">'+admLg+'<span>Consórcio '+esc(prodNome(r.prod))+'</span></div>'
     + (r.nome ? '<div class="pc-para">Proposta preparada para <b>'+esc(r.nome)+'</b></div>' : '')
     + '<div class="pc-cred"><small>Crédito contratado</small><b>'+moeda(v.C)+'</b>'+(v.cotas>1?'<span>'+v.cotas+' cotas de '+moeda(v.unit)+'</span>':'')+'</div>'
+    + pcTipo(g)
     + '<div class="pc-g">'
     +   '<div><small>Quantidade de cotas</small><b>'+v.cotas+'</b></div>'
     +   '<div><small>Prazo contratado (meses)</small><b>'+v.n+'</b></div>'
@@ -650,7 +836,9 @@ function selAtual(id){ var adm = id.split("-")[0]; var lista = S.res[adm].slice(
 function textoWa(v, r){
   var g = v.g, t = '*PROPOSTA DE CONSÓRCIO — CONSORBENS ('+(g.adm==="yamaha"?"Yamaha":"Itaú")+')*\n\n';
   if (r.nome) t += 'Para: '+r.nome+'\n';
-  t += 'Grupo: '+g.g+'\nCrédito contratado: '+moeda(v.C)+(v.cotas>1?' ('+v.cotas+' cotas de '+moeda(v.unit)+')':'')+'\n'
+  t += 'Grupo: '+g.g+' ('+tipoCurto(g)+')\n';
+  tipoGrupo(g).forEach(function(x){ if (x.c === "red" || x.c === "form" || x.c === "novo" || x.c === "fim") t += '• '+x.t+': '+x.d+'\n'; });
+  t += 'Crédito contratado: '+moeda(v.C)+(v.cotas>1?' ('+v.cotas+' cotas de '+moeda(v.unit)+')':'')+'\n'
     + 'Prazo: '+v.n+' meses\nParcela inicial (aprox.): '+moeda(v.antes)+'\n'
     + 'Lance: '+moeda(v.proprio)+' do bolso + '+moeda(v.emb)+' embutido = '+moeda(v.lance)+' ('+pc(v.pct)+')\n'
     + 'Parcela após contemplação: '+moeda(v.pos)+' (por '+(v.n-1)+' meses)\n'
@@ -710,6 +898,7 @@ if (window.ResizeObserver) new ResizeObserver(ajusta).observe(document.body);
 
 montarTopo();
 window.__univ = {simular:simular, candidatos:candidatos, gerar:gerar, S:S};
+window.syncMin = syncMin;
 })();
 </script>
 </body>

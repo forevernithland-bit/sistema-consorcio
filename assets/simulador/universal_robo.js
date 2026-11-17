@@ -69,12 +69,16 @@
   function guardar() {
     var S = U().S; if (!S || !S.res) return;
     ss(K_ULT, JSON.stringify({ nome: $("nome").value, liq: $("liq").value, rec: $("rec").value, par: $("par").value,
+                               ml: !!($("minLance") && $("minLance").checked), mp: !!($("minParc") && $("minParc").checked),
                                prod: S.prod, sel: S.sel, t: Date.now() }));
   }
   function restaurar() {
     var x; try { x = JSON.parse(ss(K_ULT) || "null"); } catch (e) { x = null; }
     if (!x || Date.now() - x.t > 30 * 60 * 1000 || ($("res") && $("res").firstChild)) return;
     $("nome").value = x.nome || ""; $("liq").value = x.liq || ""; $("rec").value = x.rec || ""; $("par").value = x.par || "";
+    if ($("minLance")) $("minLance").checked = !!x.ml;
+    if ($("minParc")) $("minParc").checked = !!x.mp;
+    if (typeof window.syncMin === "function") window.syncMin();
     var b = document.querySelector('.prod[data-p="' + x.prod + '"]'); if (b) b.click();
     if (!x.liq) return;
     $("go").click();

@@ -1,0 +1,38 @@
+{
+ "data": "2026-11-16",
+ "fase": "grupos",
+ "planos_feitos": {
+  "auto": [
+   "067"
+  ]
+ },
+ "grupos_com_vaga": {
+  "9564": "Auto",
+  "9050": "Auto",
+  "9515": "Auto",
+  "9053": "Auto",
+  "9600": "Auto",
+  "9045": "Auto",
+  "9511": "Auto",
+  "9510": "Auto",
+  "9598": "Auto",
+  "9047": "Auto",
+  "9514": "Auto",
+  "9555": "Auto",
+  "9522": "Auto",
+  "9048": "Auto",
+  "9538": "Auto",
+  "9504": "Auto",
+  "9547": "Auto",
+  "9531": "Auto",
+  "9506": "Auto",
+  "9520": "Auto",
+  "9590": "Auto",
+  "9507": "Auto",
+  "9580": "Auto",
+  "9604": "Auto",
+  "9049": "Auto"
+ },
+ "assembleias_feitas": [],
+ "atualizado_em": "2026-11-16T23:42:26"
+}
