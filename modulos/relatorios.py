@@ -680,8 +680,9 @@ def _aba_previsto(prev, site_prev):
 def _aba_cartas(site_ok):
     st.markdown("#### 🎯 Cartas Contempladas")
     st.caption("Operações **concluídas** no admin do Site. A receita aqui é o **ágio** "
-               "(valor ao cliente − valor ao cedente − custos + ajuste), dividido 50/50 "
-               "entre os sócios. Hoje o ágio entra sem desconto de imposto.")
+               "(valor ao cliente − valor ao cedente − custos + ajuste), dividido entre os sócios "
+               "pela **Divisão** escolhida na venda: Consorbens 50/50 · Vendedor Breno 70% Breno/30% Uriel · "
+               "Vendedor Uriel 70% Uriel/30% Breno. Hoje o ágio entra sem desconto de imposto.")
     if site_ok is None or site_ok.empty:
         return _vazio("Nenhuma operação de carta contemplada concluída "
                       "(ou a integração com o Site está desligada).")
@@ -713,6 +714,7 @@ def _aba_cartas(site_ok):
             "Grupo/Cota": d["grupo_cota"].values if "grupo_cota" in d.columns else "—",
             "Cliente": d["cliente"].values,
             "Representante": d["representante"].values,
+            "Divisão": d["divisao"].values if "divisao" in d.columns else "Consorbens",
             "Produto": d["produto"].values,
             "Administradora": d["administradora"].values,
             "Crédito": d["credito_total"].apply(formatar_brl_puro).values,

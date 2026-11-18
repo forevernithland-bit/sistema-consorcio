@@ -290,14 +290,17 @@ def _render_previsao_site(site_prev):
                "entram quando a operação for **concluída**.")
     p1, p2, p3 = st.columns(3)
     p1.metric("Ágio previsto (total)", formatar_brl_puro(site_prev['agio'].sum()))
-    p2.metric("Breno (50%)", formatar_brl_puro(site_prev['breno'].sum()))
-    p3.metric("Uriel (50%)", formatar_brl_puro(site_prev['uriel'].sum()))
+    p2.metric("Breno", formatar_brl_puro(site_prev['breno'].sum()))
+    p3.metric("Uriel", formatar_brl_puro(site_prev['uriel'].sum()))
     view = pd.DataFrame({
         "Grupo/Cota": site_prev['grupo_cota'].values if 'grupo_cota' in site_prev.columns else "—",
         "Cliente": site_prev['cliente'].values,
         "Vendedor": site_prev['representante'].values,
+        "Divisão": site_prev['divisao'].values if 'divisao' in site_prev.columns else "Consorbens",
         "Produto": site_prev['produto'].values,
         "Ágio previsto": site_prev['agio'].apply(formatar_brl_puro).values,
+        "Breno": site_prev['breno'].apply(formatar_brl_puro).values,
+        "Uriel": site_prev['uriel'].apply(formatar_brl_puro).values,
     })
     st.dataframe(view, use_container_width=True, hide_index=True)
 
@@ -621,6 +624,7 @@ def _detalhe_site(df, mes_lbl):
         "Grupo/Cota": df["grupo_cota"].values if "grupo_cota" in df.columns else "—",
         "Cliente": df["cliente"].values,
         "Vendedor": df["representante"].values,
+        "Divisão": df["divisao"].values if "divisao" in df.columns else "Consorbens",
         "Produto": df["produto"].values,
         "Ágio": df["agio"].apply(formatar_brl_puro).values,
         "Breno": df["breno"].apply(formatar_brl_puro).values,

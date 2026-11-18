@@ -9,8 +9,15 @@ Requer os secrets SITE_SUPABASE_URL / SITE_SUPABASE_KEY no ERP. Sem eles, a
 integração fica desligada (retorna DataFrame vazio) e o ERP funciona normal.
 
 Ágio da operação = valor_total − valor_cedente − outros_custos + lucro_ajuste
-(mesma fórmula do 'lucroFinal' do painel de operações do Site). Divisão 50/50
-entre Breno e Uriel (por enquanto).
+(mesma fórmula do 'lucroFinal' do painel de operações do Site).
+
+Divisão do ágio entre os sócios = coluna vendas.vendedor_comissao do Site
+(migração sql/16_divisao_comissao.sql do Site, regra do Breno de 17/11/2026):
+  consorbens -> 50% Breno / 50% Uriel   (padrão; também se a coluna não existir)
+  breno      -> 70% Breno / 30% Uriel   (Vendedor Breno)
+  uriel      -> 30% Breno / 70% Uriel   (Vendedor Uriel)
+É a mesma proporção usada nas comissões das administradoras (regras.py /
+importar_comissoes.dividir_socios). O Site usa a mesma tabela (operacoes.js).
 """
 import pandas as pd
 import streamlit as st
@@ -23,6 +30,20 @@ STATUS_LABEL = {
     "nao_aprovado": "Não aprovado",
     "cancelado": "Cancelado",
 }
+
+# vendedor_comissao -> (rótulo, % Breno, % Uriel)
+DIVISAO_SITE = {
+    "consorbens": ("Consorbens", 50.0, 50.0),
+    "breno": ("Vendedor Breno", 70.0, 30.0),
+    "uriel": ("Vendedor Uriel", 30.0, 70.0),
+}
+
+
+def dividir_agio_site(agio, vendedor_comissao):
+    """Ágio de carta contemplada -> (rótulo, parte Breno, parte Uriel)."""
+    rot, pb, pu = DIVISAO_SITE.get((vendedor_comissao or "consorbens").strip().lower(),
+                                   DIVISAO_SITE["consorbens"])
+    return rot, round(agio * pb / 100.0, 2), round(agio * pu / 100.0, 2)
 
 
 def _ym(data_str):
@@ -62,6 +83,7 @@ def carregar_operacoes_site():
         outros = parse_float_safe(v.get("outros_custos", 0))
         ajuste = parse_float_safe(v.get("lucro_ajuste", 0))
         agio = round(valor_total - valor_cedente - outros + ajuste, 2)
+        divisao, breno, uriel = dividir_agio_site(agio, v.get("vendedor_comissao"))
 
         data_venda = v.get("data_venda") or ""
         data_conclusao = v.get("data_conclusao") or ""
@@ -80,8 +102,9 @@ def carregar_operacoes_site():
             "valor_total": valor_total,
             "valor_cedente": valor_cedente,
             "agio": agio,
-            "breno": round(agio / 2, 2),
-            "uriel": round(agio / 2, 2),
+            "divisao": divisao,
+            "breno": breno,
+            "uriel": uriel,
             "data_venda": str(data_venda)[:10],
             "data_conclusao": str(data_conclusao)[:10],
             "ym": ym,
